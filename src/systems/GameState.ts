@@ -1,6 +1,10 @@
 import { Events, gameEvents } from '../core/EventBus';
 import { saveStore } from '../core/SaveStore';
-import type { CharacterClassId, GearInstance } from '../types/game';
+import type {
+  CharacterClassId,
+  CharacterGender,
+  GearInstance,
+} from '../types/game';
 import type { CharacterSave } from '../types/save';
 import { CombatSystem } from './CombatSystem';
 import { CraftingSystem } from './CraftingSystem';
@@ -17,6 +21,7 @@ export class GameState {
   readonly combat = new CombatSystem(this.inventory, this.progression);
 
   name = 'Wanderer';
+  gender: CharacterGender = 'male';
   hp = 100;
   maxHp = 100;
   worldX = 8;
@@ -26,8 +31,13 @@ export class GameState {
   playTimeSec = 0;
   pendingSessionToken: string | null = null;
 
-  createNew(name: string, classId: CharacterClassId): void {
+  createNew(
+    name: string,
+    classId: CharacterClassId,
+    gender: CharacterGender = 'male',
+  ): void {
     this.name = name.trim() || 'Wanderer';
+    this.gender = gender;
     this.progression.initClass(classId);
     this.inventory.load([], emptyEquipment());
     const def = getClassDef(classId);
@@ -61,6 +71,7 @@ export class GameState {
 
   applySave(data: CharacterSave): void {
     this.name = data.name;
+    this.gender = data.gender ?? 'male';
     this.progression.load(
       data.level,
       data.xp,
@@ -80,9 +91,10 @@ export class GameState {
 
   toSave(): CharacterSave {
     return {
-      version: 2,
+      version: 3,
       name: this.name,
       classId: this.progression.classId,
+      gender: this.gender,
       level: this.progression.level,
       xp: this.progression.xp,
       unspentStatPoints: this.progression.unspentStatPoints,
@@ -127,7 +139,7 @@ export class GameState {
 
   recalcMaxHp(): void {
     const gear = this.inventory.totalGearStats();
-    this.maxHp = this.progression.baseMaxHp(gear.vitality) + gear.maxHp;
+    this.maxHp = this.progression.baseMaxHp(gear.stamina) + gear.maxHp;
     this.hp = Math.min(this.hp, this.maxHp);
   }
 
@@ -144,7 +156,7 @@ export class GameState {
     this.hp = this.maxHp;
   }
 
-  spendStat(stat: 'strength' | 'vitality' | 'intellect' | 'spirit'): boolean {
+  spendStat(stat: 'strength' | 'dexterity' | 'stamina' | 'intellect'): boolean {
     const ok = this.progression.spendStat(stat);
     if (ok) {
       this.recalcMaxHp();

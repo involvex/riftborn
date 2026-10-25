@@ -38,8 +38,8 @@ bun run build:portable   # → release/Riftborn-*-portable.exe
 | E     | Gather                    |
 | F     | Craft (at bench)          |
 | C     | Character / spend stats   |
+| I     | Inventory (big bag)       |
 | 3     | Equip tool                |
-| 4–9   | Equip gear from bag       |
 | Space | Dash                      |
 | R     | Enter / exit rift dungeon |
 | P     | Co-op join/leave          |

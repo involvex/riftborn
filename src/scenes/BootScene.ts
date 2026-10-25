@@ -1,28 +1,38 @@
 import Phaser from 'phaser';
 import { saveStore } from '../core/SaveStore';
+import { ensureGameSprites, preloadGameSprites } from '../render/SpriteAtlas';
 import { gameState } from '../systems/GameState';
+import { uiFont } from '../core/UiScale';
 
 export class BootScene extends Phaser.Scene {
   constructor() {
     super('BootScene');
   }
 
+  preload(): void {
+    this.load.on('loaderror', (file: Phaser.Loader.File) => {
+      console.warn('[sprites] missing asset, will use fallback:', file.key);
+    });
+    preloadGameSprites(this);
+  }
+
   create(): void {
+    ensureGameSprites(this);
     const { width, height } = this.scale;
     this.cameras.main.setBackgroundColor('#0a0c10');
 
     this.add
-      .text(width / 2, height * 0.28, 'RIFTBORN', {
+      .text(width / 2, height * 0.26, 'RIFTBORN', {
         fontFamily: 'Georgia, "Times New Roman", serif',
-        fontSize: '64px',
+        fontSize: uiFont(this, 64, 40, 80),
         color: '#e8e4d8',
       })
       .setOrigin(0.5);
 
     this.add
-      .text(width / 2, height * 0.38, 'Carve power from the rifts.', {
+      .text(width / 2, height * 0.36, 'Carve power from the rifts.', {
         fontFamily: 'Segoe UI, sans-serif',
-        fontSize: '18px',
+        fontSize: uiFont(this, 20, 15, 26),
         color: '#8a9aaa',
       })
       .setOrigin(0.5);

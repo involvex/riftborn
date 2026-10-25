@@ -21,7 +21,17 @@ export function xpForLevel(level: number): number {
 }
 
 export function emptyStats(): PlayerStats {
-  return { strength: 0, vitality: 0, intellect: 0, spirit: 0 };
+  return { strength: 0, dexterity: 0, stamina: 0, intellect: 0 };
+}
+
+/** Migrate legacy vitality/spirit saves into stamina/dexterity. */
+export function normalizeStats(raw: Record<string, number>): PlayerStats {
+  return {
+    strength: raw.strength ?? 0,
+    dexterity: raw.dexterity ?? raw.spirit ?? 0,
+    stamina: raw.stamina ?? raw.vitality ?? 0,
+    intellect: raw.intellect ?? 0,
+  };
 }
 
 export class ProgressionSystem {
@@ -35,13 +45,13 @@ export class ProgressionSystem {
     level: number,
     xp: number,
     unspent: number,
-    stats: PlayerStats,
+    stats: PlayerStats | Record<string, number>,
     classId: CharacterClassId,
   ): void {
     this.level = Math.min(MAX_LEVEL, level);
     this.xp = xp;
     this.unspentStatPoints = unspent;
-    this.stats = { ...stats };
+    this.stats = normalizeStats(stats as Record<string, number>);
     this.classId = classId;
   }
 
@@ -90,16 +100,25 @@ export class ProgressionSystem {
     return getClassDef(this.classId);
   }
 
-  /** Bonus damage from allocated + class primary stat (gear added elsewhere). */
   damageBonus(gearPrimary = 0): number {
     const def = this.classDef();
     const primary = this.stats[def.damageStat] + gearPrimary;
     return Math.floor(primary * 0.85) + Math.floor((this.level - 1) * 0.6);
   }
 
-  baseMaxHp(gearVitality = 0): number {
+  baseMaxHp(gearStamina = 0): number {
     const def = this.classDef();
-    const vit = this.stats.vitality + gearVitality;
-    return 80 + vit * def.hpPerVitality + (this.level - 1) * 6;
+    const sta = this.stats.stamina + gearStamina;
+    return 80 + sta * def.hpPerStamina + (this.level - 1) * 6;
+  }
+
+  /** Move speed multiplier from DEX. */
+  moveSpeedMult(): number {
+    return 1 + this.stats.dexterity * 0.015;
+  }
+
+  /** Attack cooldown seconds (lower with DEX). */
+  attackCooldown(): number {
+    return Math.max(0.2, 0.38 - this.stats.dexterity * 0.008);
   }
 }

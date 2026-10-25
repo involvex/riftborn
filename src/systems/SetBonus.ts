@@ -15,9 +15,9 @@ export type ActiveSetBonus = {
 function empty(): GearStats & { maxHp: number } {
   return {
     strength: 0,
-    vitality: 0,
+    dexterity: 0,
+    stamina: 0,
     intellect: 0,
-    spirit: 0,
     armor: 0,
     damage: 0,
     maxHp: 0,
@@ -66,18 +66,18 @@ function mergeBonus(
   bonus: {
     armor?: number;
     strength?: number;
-    vitality?: number;
+    dexterity?: number;
+    stamina?: number;
     intellect?: number;
-    spirit?: number;
     damage?: number;
     maxHp?: number;
   },
 ): void {
   stats.armor += bonus.armor ?? 0;
   stats.strength += bonus.strength ?? 0;
-  stats.vitality += bonus.vitality ?? 0;
+  stats.dexterity += bonus.dexterity ?? 0;
+  stats.stamina += bonus.stamina ?? 0;
   stats.intellect += bonus.intellect ?? 0;
-  stats.spirit += bonus.spirit ?? 0;
   stats.damage += bonus.damage ?? 0;
   stats.maxHp += bonus.maxHp ?? 0;
 }
@@ -89,9 +89,9 @@ export function sumSetStats(
   for (const bonus of resolveSetBonuses(equipment)) {
     total.armor += bonus.stats.armor;
     total.strength += bonus.stats.strength;
-    total.vitality += bonus.stats.vitality;
+    total.dexterity += bonus.stats.dexterity;
+    total.stamina += bonus.stats.stamina;
     total.intellect += bonus.stats.intellect;
-    total.spirit += bonus.stats.spirit;
     total.damage += bonus.stats.damage;
     total.maxHp += bonus.stats.maxHp;
   }

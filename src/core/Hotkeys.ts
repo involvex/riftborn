@@ -44,6 +44,7 @@ export const HOTKEY_LABELS: Record<HotkeyAction, string> = {
   gather: 'Gather',
   craft: 'Craft / Bench',
   character: 'Character',
+  inventory: 'Inventory',
   portal: 'Rift portal',
   dash: 'Dash',
   coop: 'Co-op',

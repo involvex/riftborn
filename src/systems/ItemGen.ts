@@ -50,11 +50,25 @@ function pickRarity(rnd: () => number, eliteBonus = 0): GearRarity {
 function emptyStats(): GearStats {
   return {
     strength: 0,
-    vitality: 0,
+    dexterity: 0,
+    stamina: 0,
     intellect: 0,
-    spirit: 0,
     armor: 0,
     damage: 0,
+  };
+}
+
+/** Migrate legacy vitality/spirit gear rolls into stamina/dexterity. */
+export function normalizeGearStats(
+  raw: Partial<GearStats> & Record<string, number>,
+): GearStats {
+  return {
+    strength: raw.strength ?? 0,
+    dexterity: raw.dexterity ?? raw.spirit ?? 0,
+    stamina: raw.stamina ?? raw.vitality ?? 0,
+    intellect: raw.intellect ?? 0,
+    armor: raw.armor ?? 0,
+    damage: raw.damage ?? 0,
   };
 }
 
@@ -66,9 +80,9 @@ function rollAffix(
   const amount = 1 + Math.floor(rnd() * (2 + itemLevel / 8));
   const picks: (keyof GearStats)[] = [
     'strength',
-    'vitality',
+    'dexterity',
+    'stamina',
     'intellect',
-    'spirit',
     'armor',
     'damage',
   ];
@@ -146,16 +160,16 @@ export function createStarterLoadout(
       ? { strength: 2 }
       : classId === 'mage'
         ? { intellect: 2 }
-        : { spirit: 2 };
+        : { dexterity: 2 };
 
   return {
     weapon: createStarterWeapon(classId, weaponDamage),
     hat: makeStarterPiece(`${setPrefix}_hat`, primaryExtra),
     chest: makeStarterPiece(`${setPrefix}_chest`, {
       ...primaryExtra,
-      vitality: 2,
+      stamina: 2,
     }),
-    legs: makeStarterPiece(`${setPrefix}_legs`, { vitality: 1 }),
+    legs: makeStarterPiece(`${setPrefix}_legs`, { stamina: 1 }),
     feet: makeStarterPiece(`${setPrefix}_feet`),
   };
 }
@@ -222,9 +236,9 @@ export function describeGear(item: GearInstance): string {
   if (s.damage) parts.push(`DMG ${s.damage}`);
   if (s.armor) parts.push(`ARM ${s.armor}`);
   if (s.strength) parts.push(`STR ${s.strength}`);
-  if (s.vitality) parts.push(`VIT ${s.vitality}`);
+  if (s.dexterity) parts.push(`DEX ${s.dexterity}`);
+  if (s.stamina) parts.push(`STA ${s.stamina}`);
   if (s.intellect) parts.push(`INT ${s.intellect}`);
-  if (s.spirit) parts.push(`SPI ${s.spirit}`);
   if (item.setId) parts.push(`Set:${item.setId}`);
   return parts.join(' · ');
 }

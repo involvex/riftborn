@@ -1,4 +1,9 @@
-import type { CharacterClassId, GearInstance, PlayerStats } from './game';
+import type {
+  CharacterClassId,
+  CharacterGender,
+  GearInstance,
+  PlayerStats,
+} from './game';
 
 export type StackSlot = {
   kind: 'stack';
@@ -23,9 +28,10 @@ export type EquipmentSlots = {
 };
 
 export type CharacterSave = {
-  version: 2;
+  version: 3;
   name: string;
   classId: CharacterClassId;
+  gender: CharacterGender;
   level: number;
   xp: number;
   unspentStatPoints: number;

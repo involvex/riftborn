@@ -2,6 +2,7 @@ export type HotkeyAction =
   | 'gather'
   | 'craft'
   | 'character'
+  | 'inventory'
   | 'portal'
   | 'dash'
   | 'coop'
@@ -25,6 +26,7 @@ export const DEFAULT_HOTKEYS: HotkeyMap = {
   gather: 'E',
   craft: 'F',
   character: 'C',
+  inventory: 'I',
   portal: 'R',
   dash: 'SPACE',
   coop: 'P',

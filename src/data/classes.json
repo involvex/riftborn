@@ -2,31 +2,46 @@
   "warrior": {
     "id": "warrior",
     "name": "Warrior",
-    "blurb": "Frontline fighter. Strength and vitality rule the blade.",
+    "blurb": "Frontline fighter. Strength and stamina rule the blade.",
     "color": "#c45c3a",
-    "baseStats": { "strength": 6, "vitality": 5, "intellect": 1, "spirit": 2 },
+    "baseStats": {
+      "strength": 6,
+      "dexterity": 2,
+      "stamina": 5,
+      "intellect": 1
+    },
     "starterWeaponDamage": 7,
-    "hpPerVitality": 12,
+    "hpPerStamina": 12,
     "damageStat": "strength"
   },
   "mystic": {
     "id": "mystic",
     "name": "Mystic",
-    "blurb": "Balanced rift-walker. Spirit fuels hybrid strikes.",
+    "blurb": "Balanced rift-walker. Dexterity fuels swift hybrid strikes.",
     "color": "#6ec6a0",
-    "baseStats": { "strength": 3, "vitality": 4, "intellect": 3, "spirit": 4 },
+    "baseStats": {
+      "strength": 3,
+      "dexterity": 5,
+      "stamina": 4,
+      "intellect": 3
+    },
     "starterWeaponDamage": 6,
-    "hpPerVitality": 10,
-    "damageStat": "spirit"
+    "hpPerStamina": 10,
+    "damageStat": "dexterity"
   },
   "mage": {
     "id": "mage",
     "name": "Mage",
-    "blurb": "Glass cannon. Intellect and spirit bend the rift.",
+    "blurb": "Glass cannon. Intellect bends the rift; stamina keeps you standing.",
     "color": "#5a8fd4",
-    "baseStats": { "strength": 1, "vitality": 3, "intellect": 6, "spirit": 4 },
+    "baseStats": {
+      "strength": 1,
+      "dexterity": 3,
+      "stamina": 3,
+      "intellect": 6
+    },
     "starterWeaponDamage": 8,
-    "hpPerVitality": 8,
+    "hpPerStamina": 8,
     "damageStat": "intellect"
   }
 }

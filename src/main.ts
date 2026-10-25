@@ -22,7 +22,8 @@ new Phaser.Game({
   scene: [BootScene, CharacterCreateScene, WorldScene, UIScene],
   banner: false,
   render: {
-    antialias: true,
-    pixelArt: false,
+    antialias: false,
+    pixelArt: true,
+    roundPixels: true,
   },
 });

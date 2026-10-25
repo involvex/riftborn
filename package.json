@@ -3,7 +3,7 @@
   "private": true,
   "version": "0.1.0",
   "description": "Riftborn — 2.5D isometric ARPG",
-  "author": "Riftborn",
+  "author": "involvex",
   "type": "module",
   "main": "electron/main.cjs",
   "scripts": {
@@ -15,6 +15,7 @@
     "desktop": "bun run scripts/desktop.mjs",
     "desktop:prod": "bun run build && bunx electron . --dist",
     "icons": "bun run scripts/make-icons.mjs",
+    "sprites:process": "bun run scripts/process-sprites.mjs",
     "build:portable": "bun run icons && bun run build && electron-builder --win portable",
     "lint": "eslint .",
     "format": "prettier . --write",

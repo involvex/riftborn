@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { depthFromWorld, worldToScreen } from '../core/IsoMath';
+import { ensureGameSprites, isPaintedSprite } from '../render/SpriteAtlas';
 import { getNodeDef } from '../systems/GatheringSystem';
 
 export class ResourceNode {
@@ -11,7 +12,7 @@ export class ResourceNode {
   maxHp: number;
   depleted = false;
   readonly body: Phaser.GameObjects.Container;
-  private readonly gfx: Phaser.GameObjects.Graphics;
+  private readonly sprite: Phaser.GameObjects.Sprite;
   private readonly bar: Phaser.GameObjects.Graphics;
 
   constructor(
@@ -21,6 +22,7 @@ export class ResourceNode {
     worldX: number,
     worldY: number,
   ) {
+    ensureGameSprites(scene);
     this.id = id;
     this.defId = defId;
     this.worldX = worldX;
@@ -28,41 +30,30 @@ export class ResourceNode {
     const def = getNodeDef(defId);
     this.maxHp = def?.hp ?? 30;
     this.hp = this.maxHp;
-    this.gfx = scene.add.graphics();
+    const tex = defId.includes('tree') ? 'spr_tree' : 'spr_vein';
+    this.sprite = scene.add.sprite(0, -4, tex);
+    this.sprite.setOrigin(0.5, 0.85);
+    this.sprite.setScale(isPaintedSprite(tex) ? 0.7 : 1.25);
     this.bar = scene.add.graphics();
-    this.body = scene.add.container(0, 0, [this.gfx, this.bar]);
+    this.body = scene.add.container(0, 0, [this.sprite, this.bar]);
     this.redraw();
     this.syncScreen();
   }
 
-  private color(): number {
-    const def = getNodeDef(this.defId);
-    return Phaser.Display.Color.HexStringToColor(def?.color ?? '#2E5A3C').color;
-  }
-
   redraw(): void {
-    this.gfx.clear();
-    if (this.depleted) return;
-    const c = this.color();
-    if (this.defId.includes('tree')) {
-      this.gfx.fillStyle(0x4a3020, 1);
-      this.gfx.fillRect(-4, -4, 8, 14);
-      this.gfx.fillStyle(c, 1);
-      this.gfx.fillCircle(0, -14, 16);
-    } else {
-      this.gfx.fillStyle(c, 1);
-      this.gfx.fillTriangle(0, -18, -14, 8, 14, 8);
-      this.gfx.fillStyle(0x6ec6ff, 0.7);
-      this.gfx.fillCircle(0, -4, 4);
-    }
     this.bar.clear();
+    if (this.depleted) {
+      this.sprite.setVisible(false);
+      return;
+    }
+    this.sprite.setVisible(true);
     if (this.hp < this.maxHp) {
       const w = 28;
       const ratio = this.hp / this.maxHp;
       this.bar.fillStyle(0x1a1a1a, 0.8);
-      this.bar.fillRect(-w / 2, -34, w, 4);
+      this.bar.fillRect(-w / 2, -40, w, 4);
       this.bar.fillStyle(0x6ecf7a, 1);
-      this.bar.fillRect(-w / 2, -34, w * ratio, 4);
+      this.bar.fillRect(-w / 2, -40, w * ratio, 4);
     }
   }
 
@@ -75,6 +66,10 @@ export class ResourceNode {
   applyDamage(amount: number): boolean {
     if (this.depleted) return false;
     this.hp -= amount;
+    this.sprite.setTint(0xffffff);
+    this.sprite.scene.time.delayedCall(50, () => {
+      if (!this.depleted) this.sprite.clearTint();
+    });
     this.redraw();
     if (this.hp <= 0) {
       this.depleted = true;

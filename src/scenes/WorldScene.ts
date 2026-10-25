@@ -222,7 +222,8 @@ export class WorldScene extends Phaser.Scene {
     this.tiles.clear();
     for (let y = 0; y < HUB_SIZE; y++) {
       for (let x = 0; x < HUB_SIZE; x++) {
-        this.drawIsoTile(x, y, (x + y) % 2 === 0 ? 0x1e2a22 : 0x18241c);
+        // Dark Sanctuary / Diablo hub dirt — low-contrast diamonds
+        this.drawIsoTile(x, y, (x + y) % 2 === 0 ? 0x243028 : 0x1c2620);
       }
     }
     this.tiles.setDepth(-1000);
@@ -233,12 +234,12 @@ export class WorldScene extends Phaser.Scene {
     for (let y = 0; y < map.height; y++) {
       for (let x = 0; x < map.width; x++) {
         if (map.cells[y][x] !== 1) continue;
-        const shade = (x + y) % 2 === 0 ? 0x1a2430 : 0x15202a;
+        const shade = (x + y) % 2 === 0 ? 0x1c2836 : 0x16202c;
         this.drawIsoTile(x, y, shade);
         if (Math.random() > 0.94) {
           const { screenX, screenY } = worldToScreen(x, y);
-          this.tiles.fillStyle(0x2a5070, 0.35);
-          this.tiles.fillCircle(screenX, screenY, 4);
+          this.tiles.fillStyle(0x3a6088, 0.4);
+          this.tiles.fillCircle(screenX, screenY, 3);
         }
       }
     }
@@ -255,6 +256,9 @@ export class WorldScene extends Phaser.Scene {
     this.tiles.lineTo(screenX - 32, screenY);
     this.tiles.closePath();
     this.tiles.fillPath();
+    // Soft edge so the grid reads like a Sanctuary floor, not flat UI
+    this.tiles.lineStyle(1, 0x000000, 0.22);
+    this.tiles.strokePath();
   }
 
   update(_time: number, delta: number): void {
@@ -352,7 +356,8 @@ export class WorldScene extends Phaser.Scene {
 
   private tryAttack(): void {
     if (this.player.attackCooldown > 0) return;
-    this.player.attackCooldown = 0.35;
+    this.player.attackCooldown = gameState.progression.attackCooldown();
+    this.player.playAttack();
     const range = gameState.inventory.weaponRange();
     const dmg = gameState.combat.playerAttackDamage();
     let hit = false;

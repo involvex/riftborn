@@ -23,3 +23,8 @@ release
 *.njsproj
 *.sln
 *.sw?
+
+.cline
+
+# Intermediate AI downloads (PNG sources + game/ sheets are enough)
+public/assets/sprites/*.webp

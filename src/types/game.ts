@@ -59,11 +59,13 @@ export type LootTableDef = {
 
 export type CharacterClassId = 'warrior' | 'mystic' | 'mage';
 
+export type CharacterGender = 'male' | 'female' | 'nonbinary';
+
 export type PlayerStats = {
   strength: number;
-  vitality: number;
+  dexterity: number;
+  stamina: number;
   intellect: number;
-  spirit: number;
 };
 
 export type GearSlot = 'weapon' | 'hat' | 'chest' | 'legs' | 'feet';
@@ -72,9 +74,9 @@ export type GearRarity = 'common' | 'magic' | 'rare' | 'legendary';
 
 export type GearStats = {
   strength: number;
-  vitality: number;
+  dexterity: number;
+  stamina: number;
   intellect: number;
-  spirit: number;
   armor: number;
   damage: number;
 };
@@ -99,18 +101,18 @@ export type ArmorSetDef = {
     label: string;
     armor?: number;
     strength?: number;
-    vitality?: number;
+    dexterity?: number;
+    stamina?: number;
     intellect?: number;
-    spirit?: number;
     damage?: number;
   };
   fourPiece: {
     label: string;
     armor?: number;
     strength?: number;
-    vitality?: number;
+    dexterity?: number;
+    stamina?: number;
     intellect?: number;
-    spirit?: number;
     damage?: number;
     maxHp?: number;
   };
@@ -123,6 +125,6 @@ export type ClassDef = {
   color: string;
   baseStats: PlayerStats;
   starterWeaponDamage: number;
-  hpPerVitality: number;
+  hpPerStamina: number;
   damageStat: keyof PlayerStats;
 };

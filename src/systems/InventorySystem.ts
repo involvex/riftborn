@@ -2,6 +2,7 @@ import { Events, gameEvents } from '../core/EventBus';
 import type { GearInstance, GearStats, ItemDef } from '../types/game';
 import type { EquipmentSlots, InventorySlot } from '../types/save';
 import itemsData from '../data/items.json';
+import { normalizeGearStats } from './ItemGen';
 import { sumSetStats } from './SetBonus';
 
 const items = itemsData as Record<string, ItemDef>;
@@ -24,31 +25,41 @@ export function emptyEquipment(): EquipmentSlots {
 function emptyGearStats(): GearStats {
   return {
     strength: 0,
-    vitality: 0,
+    dexterity: 0,
+    stamina: 0,
     intellect: 0,
-    spirit: 0,
     armor: 0,
     damage: 0,
+  };
+}
+
+function migrateGear(item: GearInstance): GearInstance {
+  return {
+    ...item,
+    stats: normalizeGearStats(item.stats as GearStats & Record<string, number>),
   };
 }
 
 export class InventorySystem {
   slots: InventorySlot[] = [];
   equipment: EquipmentSlots = emptyEquipment();
-  readonly capacity = 28;
+  /** Big bag: 8×6 grid. */
+  readonly capacity = 48;
+  readonly bagCols = 8;
+  readonly bagRows = 6;
 
   load(slots: InventorySlot[], equipment: EquipmentSlots): void {
     this.slots = slots.map((s) =>
       s.kind === 'stack'
         ? { ...s }
-        : { kind: 'gear', item: { ...s.item, stats: { ...s.item.stats } } },
+        : { kind: 'gear', item: migrateGear(s.item) },
     );
     this.equipment = {
-      weapon: equipment.weapon ? { ...equipment.weapon } : null,
-      hat: equipment.hat ? { ...equipment.hat } : null,
-      chest: equipment.chest ? { ...equipment.chest } : null,
-      legs: equipment.legs ? { ...equipment.legs } : null,
-      feet: equipment.feet ? { ...equipment.feet } : null,
+      weapon: equipment.weapon ? migrateGear(equipment.weapon) : null,
+      hat: equipment.hat ? migrateGear(equipment.hat) : null,
+      chest: equipment.chest ? migrateGear(equipment.chest) : null,
+      legs: equipment.legs ? migrateGear(equipment.legs) : null,
+      feet: equipment.feet ? migrateGear(equipment.feet) : null,
       tool: equipment.tool,
     };
   }
@@ -184,17 +195,17 @@ export class InventorySystem {
       const g = this.equipment[slot];
       if (!g) continue;
       total.strength += g.stats.strength;
-      total.vitality += g.stats.vitality;
+      total.dexterity += g.stats.dexterity;
+      total.stamina += g.stats.stamina;
       total.intellect += g.stats.intellect;
-      total.spirit += g.stats.spirit;
       total.armor += g.stats.armor;
       total.damage += g.stats.damage;
     }
     const set = sumSetStats(this.equipment);
     total.strength += set.strength;
-    total.vitality += set.vitality;
+    total.dexterity += set.dexterity;
+    total.stamina += set.stamina;
     total.intellect += set.intellect;
-    total.spirit += set.spirit;
     total.armor += set.armor;
     total.damage += set.damage;
     total.maxHp += set.maxHp;
@@ -214,7 +225,7 @@ export class InventorySystem {
   }
 
   maxHpBonus(): number {
-    return this.totalGearStats().maxHp + this.totalGearStats().vitality * 2;
+    return this.totalGearStats().maxHp + this.totalGearStats().stamina * 2;
   }
 
   gatherMultiplier(): number {

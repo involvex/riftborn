@@ -5,8 +5,8 @@
     "color": "#8B5A2B",
     "twoPiece": { "label": "+8 Armor", "armor": 8 },
     "fourPiece": {
-      "label": "+20 Vitality, +40 Max HP",
-      "vitality": 20,
+      "label": "+20 Stamina, +40 Max HP",
+      "stamina": 20,
       "maxHp": 40
     }
   },
@@ -16,9 +16,9 @@
     "color": "#4DB6FF",
     "twoPiece": { "label": "+6 Damage", "damage": 6 },
     "fourPiece": {
-      "label": "+15 Intellect, +10 Spirit",
+      "label": "+15 Intellect, +10 Dexterity",
       "intellect": 15,
-      "spirit": 10
+      "dexterity": 10
     }
   },
   "bone": {
