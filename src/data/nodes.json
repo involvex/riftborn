@@ -1,0 +1,21 @@
+{
+  "ash_tree": {
+    "id": "ash_tree",
+    "name": "Ash Tree",
+    "hp": 30,
+    "color": "#2E5A3C",
+    "drops": [{ "itemId": "wood", "qtyMin": 2, "qtyMax": 4 }],
+    "toolBonusItem": "hatchet"
+  },
+  "rift_vein": {
+    "id": "rift_vein",
+    "name": "Rift Vein",
+    "hp": 40,
+    "color": "#4A5A6A",
+    "drops": [
+      { "itemId": "ore", "qtyMin": 1, "qtyMax": 3 },
+      { "itemId": "rift_shard", "qtyMin": 0, "qtyMax": 1 }
+    ],
+    "toolBonusItem": "hatchet"
+  }
+}

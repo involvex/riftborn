@@ -1,0 +1,81 @@
+{
+  "wood": {
+    "id": "wood",
+    "name": "Ash Wood",
+    "stack": 50,
+    "kind": "material",
+    "color": "#8B5A2B"
+  },
+  "ore": {
+    "id": "ore",
+    "name": "Rift Ore",
+    "stack": 50,
+    "kind": "material",
+    "color": "#7A8B99"
+  },
+  "scrap": {
+    "id": "scrap",
+    "name": "Bone Scrap",
+    "stack": 50,
+    "kind": "material",
+    "color": "#C4B59A"
+  },
+  "rift_shard": {
+    "id": "rift_shard",
+    "name": "Rift Shard",
+    "stack": 20,
+    "kind": "material",
+    "color": "#6EC6FF"
+  },
+  "hatchet": {
+    "id": "hatchet",
+    "name": "Ash Hatchet",
+    "stack": 1,
+    "kind": "tool",
+    "color": "#A67C52",
+    "gatherBonus": 1.5
+  },
+  "iron_blade": {
+    "id": "iron_blade",
+    "name": "Iron Blade",
+    "stack": 1,
+    "kind": "weapon",
+    "color": "#B0B8C0",
+    "damage": 8,
+    "attackRange": 1.2
+  },
+  "rift_blade": {
+    "id": "rift_blade",
+    "name": "Rift Blade",
+    "stack": 1,
+    "kind": "weapon",
+    "color": "#4DB6FF",
+    "damage": 14,
+    "attackRange": 1.4
+  },
+  "leather_vest": {
+    "id": "leather_vest",
+    "name": "Leather Vest",
+    "stack": 1,
+    "kind": "armor",
+    "color": "#6B4F3A",
+    "armor": 4,
+    "maxHpBonus": 20
+  },
+  "rift_mail": {
+    "id": "rift_mail",
+    "name": "Rift Mail",
+    "stack": 1,
+    "kind": "armor",
+    "color": "#3A5A7A",
+    "armor": 10,
+    "maxHpBonus": 40
+  },
+  "gold": {
+    "id": "gold",
+    "name": "Gold",
+    "stack": 999,
+    "kind": "currency",
+    "color": "#E6C35C"
+  }
+}

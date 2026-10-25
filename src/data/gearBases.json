@@ -1,0 +1,118 @@
+{
+  "ashen_hat": {
+    "id": "ashen_hat",
+    "name": "Ashen Hood",
+    "slot": "hat",
+    "setId": "ashen",
+    "armorBias": 1.0
+  },
+  "ashen_chest": {
+    "id": "ashen_chest",
+    "name": "Ashen Vest",
+    "slot": "chest",
+    "setId": "ashen",
+    "armorBias": 1.6
+  },
+  "ashen_legs": {
+    "id": "ashen_legs",
+    "name": "Ashen Greaves",
+    "slot": "legs",
+    "setId": "ashen",
+    "armorBias": 1.3
+  },
+  "ashen_feet": {
+    "id": "ashen_feet",
+    "name": "Ashen Boots",
+    "slot": "feet",
+    "setId": "ashen",
+    "armorBias": 0.9
+  },
+  "rift_hat": {
+    "id": "rift_hat",
+    "name": "Riftbound Circlet",
+    "slot": "hat",
+    "setId": "riftbound",
+    "armorBias": 0.8
+  },
+  "rift_chest": {
+    "id": "rift_chest",
+    "name": "Riftbound Robe",
+    "slot": "chest",
+    "setId": "riftbound",
+    "armorBias": 1.2
+  },
+  "rift_legs": {
+    "id": "rift_legs",
+    "name": "Riftbound Leggings",
+    "slot": "legs",
+    "setId": "riftbound",
+    "armorBias": 1.0
+  },
+  "rift_feet": {
+    "id": "rift_feet",
+    "name": "Riftbound Sandals",
+    "slot": "feet",
+    "setId": "riftbound",
+    "armorBias": 0.7
+  },
+  "bone_hat": {
+    "id": "bone_hat",
+    "name": "Bone Helm",
+    "slot": "hat",
+    "setId": "bone",
+    "armorBias": 1.2
+  },
+  "bone_chest": {
+    "id": "bone_chest",
+    "name": "Bone Plating",
+    "slot": "chest",
+    "setId": "bone",
+    "armorBias": 1.8
+  },
+  "bone_legs": {
+    "id": "bone_legs",
+    "name": "Bone Legguards",
+    "slot": "legs",
+    "setId": "bone",
+    "armorBias": 1.4
+  },
+  "bone_feet": {
+    "id": "bone_feet",
+    "name": "Bone Treads",
+    "slot": "feet",
+    "setId": "bone",
+    "armorBias": 1.0
+  },
+  "iron_blade": {
+    "id": "iron_blade",
+    "name": "Iron Blade",
+    "slot": "weapon",
+    "setId": null,
+    "armorBias": 0,
+    "damageBias": 1.0
+  },
+  "rift_blade": {
+    "id": "rift_blade",
+    "name": "Rift Blade",
+    "slot": "weapon",
+    "setId": null,
+    "armorBias": 0,
+    "damageBias": 1.35
+  },
+  "bone_cleaver": {
+    "id": "bone_cleaver",
+    "name": "Bone Cleaver",
+    "slot": "weapon",
+    "setId": null,
+    "armorBias": 0,
+    "damageBias": 1.2
+  },
+  "ash_staff": {
+    "id": "ash_staff",
+    "name": "Ash Staff",
+    "slot": "weapon",
+    "setId": null,
+    "armorBias": 0,
+    "damageBias": 1.15
+  }
+}

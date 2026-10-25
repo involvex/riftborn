@@ -1,0 +1,128 @@
+export type ItemKind = 'material' | 'tool' | 'weapon' | 'armor' | 'currency';
+
+export type ItemDef = {
+  id: string;
+  name: string;
+  stack: number;
+  kind: ItemKind;
+  color: string;
+  gatherBonus?: number;
+  damage?: number;
+  attackRange?: number;
+  armor?: number;
+  maxHpBonus?: number;
+};
+
+export type NodeDef = {
+  id: string;
+  name: string;
+  hp: number;
+  color: string;
+  drops: { itemId: string; qtyMin: number; qtyMax: number }[];
+  toolBonusItem?: string;
+};
+
+export type RecipeDef = {
+  id: string;
+  name: string;
+  resultId: string;
+  resultQty: number;
+  ingredients: { itemId: string; qty: number }[];
+};
+
+export type EnemyDef = {
+  id: string;
+  name: string;
+  hp: number;
+  damage: number;
+  speed: number;
+  attackRange: number;
+  attackCooldown: number;
+  xp: number;
+  color: string;
+  radius: number;
+  lootTable: string;
+  isElite: boolean;
+};
+
+export type LootRoll = {
+  itemId: string;
+  chance: number;
+  qtyMin: number;
+  qtyMax: number;
+};
+
+export type LootTableDef = {
+  id: string;
+  rolls: LootRoll[];
+};
+
+export type CharacterClassId = 'warrior' | 'mystic' | 'mage';
+
+export type PlayerStats = {
+  strength: number;
+  vitality: number;
+  intellect: number;
+  spirit: number;
+};
+
+export type GearSlot = 'weapon' | 'hat' | 'chest' | 'legs' | 'feet';
+
+export type GearRarity = 'common' | 'magic' | 'rare' | 'legendary';
+
+export type GearStats = {
+  strength: number;
+  vitality: number;
+  intellect: number;
+  spirit: number;
+  armor: number;
+  damage: number;
+};
+
+export type GearInstance = {
+  uid: string;
+  baseId: string;
+  name: string;
+  slot: GearSlot;
+  setId: string | null;
+  rarity: GearRarity;
+  itemLevel: number;
+  stats: GearStats;
+  attackRange?: number;
+};
+
+export type ArmorSetDef = {
+  id: string;
+  name: string;
+  color: string;
+  twoPiece: {
+    label: string;
+    armor?: number;
+    strength?: number;
+    vitality?: number;
+    intellect?: number;
+    spirit?: number;
+    damage?: number;
+  };
+  fourPiece: {
+    label: string;
+    armor?: number;
+    strength?: number;
+    vitality?: number;
+    intellect?: number;
+    spirit?: number;
+    damage?: number;
+    maxHp?: number;
+  };
+};
+
+export type ClassDef = {
+  id: CharacterClassId;
+  name: string;
+  blurb: string;
+  color: string;
+  baseStats: PlayerStats;
+  starterWeaponDamage: number;
+  hpPerVitality: number;
+  damageStat: keyof PlayerStats;
+};

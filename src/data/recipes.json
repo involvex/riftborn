@@ -1,0 +1,32 @@
+{
+  "hatchet": {
+    "id": "hatchet",
+    "name": "Ash Hatchet",
+    "resultId": "hatchet",
+    "resultQty": 1,
+    "ingredients": [
+      { "itemId": "wood", "qty": 5 },
+      { "itemId": "ore", "qty": 2 }
+    ]
+  },
+  "iron_blade": {
+    "id": "iron_blade",
+    "name": "Iron Blade",
+    "resultId": "iron_blade",
+    "resultQty": 1,
+    "ingredients": [
+      { "itemId": "ore", "qty": 6 },
+      { "itemId": "wood", "qty": 2 }
+    ]
+  },
+  "leather_vest": {
+    "id": "leather_vest",
+    "name": "Leather Vest",
+    "resultId": "leather_vest",
+    "resultQty": 1,
+    "ingredients": [
+      { "itemId": "scrap", "qty": 8 },
+      { "itemId": "wood", "qty": 2 }
+    ]
+  }
+}

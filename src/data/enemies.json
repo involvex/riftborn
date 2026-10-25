@@ -1,0 +1,58 @@
+{
+  "shade": {
+    "id": "shade",
+    "name": "Rift Shade",
+    "hp": 28,
+    "damage": 4,
+    "speed": 2.2,
+    "attackRange": 0.9,
+    "attackCooldown": 0.9,
+    "xp": 12,
+    "color": "#5A3A6A",
+    "radius": 10,
+    "lootTable": "shade_loot",
+    "isElite": false
+  },
+  "crawler": {
+    "id": "crawler",
+    "name": "Bone Crawler",
+    "hp": 40,
+    "damage": 6,
+    "speed": 1.6,
+    "attackRange": 1.0,
+    "attackCooldown": 1.1,
+    "xp": 18,
+    "color": "#8A7A60",
+    "radius": 12,
+    "lootTable": "crawler_loot",
+    "isElite": false
+  },
+  "wisp": {
+    "id": "wisp",
+    "name": "Ember Wisp",
+    "hp": 18,
+    "damage": 3,
+    "speed": 3.0,
+    "attackRange": 0.8,
+    "attackCooldown": 0.7,
+    "xp": 10,
+    "color": "#E07040",
+    "radius": 8,
+    "lootTable": "wisp_loot",
+    "isElite": false
+  },
+  "rift_lord": {
+    "id": "rift_lord",
+    "name": "Rift Lord",
+    "hp": 160,
+    "damage": 12,
+    "speed": 1.8,
+    "attackRange": 1.4,
+    "attackCooldown": 1.2,
+    "xp": 80,
+    "color": "#2A80C0",
+    "radius": 16,
+    "lootTable": "elite_loot",
+    "isElite": true
+  }
+}

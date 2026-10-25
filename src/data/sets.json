@@ -1,0 +1,35 @@
+{
+  "ashen": {
+    "id": "ashen",
+    "name": "Ashen",
+    "color": "#8B5A2B",
+    "twoPiece": { "label": "+8 Armor", "armor": 8 },
+    "fourPiece": {
+      "label": "+20 Vitality, +40 Max HP",
+      "vitality": 20,
+      "maxHp": 40
+    }
+  },
+  "riftbound": {
+    "id": "riftbound",
+    "name": "Riftbound",
+    "color": "#4DB6FF",
+    "twoPiece": { "label": "+6 Damage", "damage": 6 },
+    "fourPiece": {
+      "label": "+15 Intellect, +10 Spirit",
+      "intellect": 15,
+      "spirit": 10
+    }
+  },
+  "bone": {
+    "id": "bone",
+    "name": "Bone",
+    "color": "#C4B59A",
+    "twoPiece": { "label": "+10 Strength", "strength": 10 },
+    "fourPiece": {
+      "label": "+18 Armor, +12 Strength",
+      "armor": 18,
+      "strength": 12
+    }
+  }
+}

@@ -1,0 +1,34 @@
+{
+  "shade_loot": {
+    "id": "shade_loot",
+    "rolls": [
+      { "itemId": "scrap", "chance": 0.7, "qtyMin": 1, "qtyMax": 3 },
+      { "itemId": "gold", "chance": 0.5, "qtyMin": 1, "qtyMax": 4 }
+    ]
+  },
+  "crawler_loot": {
+    "id": "crawler_loot",
+    "rolls": [
+      { "itemId": "scrap", "chance": 0.85, "qtyMin": 2, "qtyMax": 5 },
+      { "itemId": "ore", "chance": 0.25, "qtyMin": 1, "qtyMax": 2 },
+      { "itemId": "gold", "chance": 0.6, "qtyMin": 2, "qtyMax": 6 }
+    ]
+  },
+  "wisp_loot": {
+    "id": "wisp_loot",
+    "rolls": [
+      { "itemId": "rift_shard", "chance": 0.35, "qtyMin": 1, "qtyMax": 1 },
+      { "itemId": "gold", "chance": 0.4, "qtyMin": 1, "qtyMax": 3 }
+    ]
+  },
+  "elite_loot": {
+    "id": "elite_loot",
+    "rolls": [
+      { "itemId": "rift_shard", "chance": 1, "qtyMin": 2, "qtyMax": 4 },
+      { "itemId": "ore", "chance": 0.8, "qtyMin": 3, "qtyMax": 6 },
+      { "itemId": "gold", "chance": 1, "qtyMin": 10, "qtyMax": 25 },
+      { "itemId": "rift_blade", "chance": 0.15, "qtyMin": 1, "qtyMax": 1 },
+      { "itemId": "rift_mail", "chance": 0.12, "qtyMin": 1, "qtyMax": 1 }
+    ]
+  }
+}

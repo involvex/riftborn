@@ -1,0 +1,8 @@
+dist
+release
+node_modules
+Plan1.md
+Plan2.md
+desktop/src-tauri
+public/coop-port.json
+*.lock

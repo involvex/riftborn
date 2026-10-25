@@ -1,0 +1,32 @@
+{
+  "warrior": {
+    "id": "warrior",
+    "name": "Warrior",
+    "blurb": "Frontline fighter. Strength and vitality rule the blade.",
+    "color": "#c45c3a",
+    "baseStats": { "strength": 6, "vitality": 5, "intellect": 1, "spirit": 2 },
+    "starterWeaponDamage": 7,
+    "hpPerVitality": 12,
+    "damageStat": "strength"
+  },
+  "mystic": {
+    "id": "mystic",
+    "name": "Mystic",
+    "blurb": "Balanced rift-walker. Spirit fuels hybrid strikes.",
+    "color": "#6ec6a0",
+    "baseStats": { "strength": 3, "vitality": 4, "intellect": 3, "spirit": 4 },
+    "starterWeaponDamage": 6,
+    "hpPerVitality": 10,
+    "damageStat": "spirit"
+  },
+  "mage": {
+    "id": "mage",
+    "name": "Mage",
+    "blurb": "Glass cannon. Intellect and spirit bend the rift.",
+    "color": "#5a8fd4",
+    "baseStats": { "strength": 1, "vitality": 3, "intellect": 6, "spirit": 4 },
+    "starterWeaponDamage": 8,
+    "hpPerVitality": 8,
+    "damageStat": "intellect"
+  }
+}
