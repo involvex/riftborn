@@ -1,5 +1,8 @@
 dist
 release
 node_modules
+mobile/node_modules
+mobile/game-dist
+mobile/.expo
 public/coop-port.json
 *.lock

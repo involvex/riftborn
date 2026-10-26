@@ -39,11 +39,14 @@ export class MiniMap {
   }
 
   layout(): void {
-    // Top-right; leave gap for rift progress HUD on the right edge
-    const x = this.scene.scale.width - SIZE / 2 - 44;
-    const y = SIZE / 2 + 28;
+    // Flush top-right corner (12px inset)
+    const x = this.scene.scale.width - SIZE / 2 - 12;
+    const y = SIZE / 2 + 12;
     this.root.setPosition(x, y);
   }
+
+  /** Pixel size — used to offset rift progress HUD. */
+  static readonly SIZE = SIZE;
 
   apply(snap: MapSnapshot): void {
     this.snap = snap;

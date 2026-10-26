@@ -4,14 +4,7 @@ import { inPlaza, type WildernessPoi } from '../world/MapGen';
 export type MapCellKind = 'wall' | 'floor' | 'plaza' | 'path' | 'poi' | 'wild';
 
 export type MapMarkerKind =
-  | 'player'
-  | 'npc'
-  | 'poi'
-  | 'chest'
-  | 'elite'
-  | 'boss'
-  | 'portal'
-  | 'mob';
+  'player' | 'npc' | 'poi' | 'chest' | 'elite' | 'boss' | 'portal' | 'mob';
 
 export type MapMarker = {
   kind: MapMarkerKind;

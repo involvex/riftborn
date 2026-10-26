@@ -27,13 +27,15 @@ import { SkillTreePanel } from '../ui/SkillTreePanel';
 import { MiniMap } from '../ui/MiniMap';
 import { MapOverlay } from '../ui/MapOverlay';
 import type { MapSnapshot } from '../ui/MapModel';
-import { uiFont } from '../core/UiScale';
+import { HotkeyDock } from '../ui/HotkeyDock';
+import { shouldShowTouchControls, TouchControls } from '../ui/TouchControls';
 
 type MenuPage = 'root' | 'settings' | 'hotkeys';
 
 export class UIScene extends Phaser.Scene {
   private hudBars!: HudBars;
-  private hudHint!: Phaser.GameObjects.Text;
+  private hotkeyDock!: HotkeyDock;
+  private touchControls!: TouchControls;
   private toastText!: Phaser.GameObjects.Text;
   private craftPanel!: Phaser.GameObjects.Container;
   private charPanel!: Phaser.GameObjects.Container;
@@ -75,15 +77,11 @@ export class UIScene extends Phaser.Scene {
     this.bindHotkeys();
 
     this.hudBars = new HudBars(this);
-
-    this.hudHint = this.add
-      .text(16, 72, '', {
-        fontFamily: 'Segoe UI, sans-serif',
-        fontSize: uiFont(this, 12, 10, 15),
-        color: '#6a7a8a',
-      })
-      .setScrollFactor(0)
-      .setDepth(10_000);
+    this.hotkeyDock = new HotkeyDock(this);
+    this.touchControls = new TouchControls(this);
+    const touchOn = shouldShowTouchControls();
+    this.touchControls.setEnabled(touchOn);
+    this.hotkeyDock.setVisible(!touchOn);
 
     this.toastText = this.add
       .text(this.scale.width / 2, 80, '', {
@@ -288,19 +286,40 @@ export class UIScene extends Phaser.Scene {
         );
         this.refresh();
       }),
-      gameEvents.on(Events.SETTINGS_CHANGED, () => this.bindHotkeys()),
+      gameEvents.on(Events.SETTINGS_CHANGED, () => {
+        this.bindHotkeys();
+        this.hotkeyDock.refresh();
+      }),
       gameEvents.on('ui:mapSnapshot', (p) => {
         const snap = p as MapSnapshot;
         this.lastMapSnap = snap;
         this.miniMap.apply(snap);
         this.mapOverlay.apply(snap);
       }),
+      gameEvents.on('ui:openInventory', () => {
+        this.hideCraft();
+        this.hideShop();
+        this.hideTrader();
+        this.hideChar();
+        this.skillPanel.hide();
+        this.mapOverlay.hide();
+        this.inventoryPanel.toggle();
+      }),
+      gameEvents.on('ui:toggleMap', () => {
+        this.mapOverlay.toggle(this.lastMapSnap);
+      }),
+      gameEvents.on('ui:toggleMenu', () => {
+        if (this.menuOpen) this.hideMenu();
+        else this.showMenu();
+      }),
     );
 
     this.scale.on('resize', () => {
       this.toastText.setX(this.scale.width / 2);
       this.hudBars.layout();
-      this.hudHint.setFontSize(uiFont(this, 12, 10, 15));
+      this.hotkeyDock.layout();
+      this.hotkeyDock.refresh();
+      this.touchControls.layout();
       if (this.inventoryPanel.open) this.inventoryPanel.layout();
       if (this.shopPanel.open) this.shopPanel.layout();
       if (this.traderPanel.open) this.traderPanel.layout();
@@ -766,9 +785,7 @@ export class UIScene extends Phaser.Scene {
 
   private refresh(): void {
     this.hudBars.refresh();
-    this.hudHint.setText(
-      `${formatHotkey('inventory')} Inv · ${formatHotkey('character')} Char · ${formatHotkey('skills')} Skills · ${formatHotkey('map')} Map · ${formatHotkey('portal')} Rift · ${formatHotkey('town')} Town · Esc`,
-    );
+    this.hotkeyDock.refresh();
     this.abilityBar.refresh();
   }
 

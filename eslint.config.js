@@ -9,6 +9,7 @@ export default tseslint.config(
       'dist/**',
       'node_modules/**',
       'electron/**',
+      'mobile/**',
       'release/**',
       'artifacts/**',
       'test-results/**',

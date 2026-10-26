@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { MiniMap } from './MiniMap';
 
 /** Side progress bar for rift kill → boss → exit flow. */
 export class RiftProgressHud {
@@ -34,9 +35,11 @@ export class RiftProgressHud {
   }
 
   layout(): void {
+    // Sit below the top-right minimap so frames don't overlap
+    const mapClearance = MiniMap.SIZE + 28;
     this.root.setPosition(
       this.scene.scale.width - 28,
-      this.scene.scale.height / 2 + 40,
+      Math.max(mapClearance + this.barH / 2, this.scene.scale.height / 2 + 40),
     );
   }
 

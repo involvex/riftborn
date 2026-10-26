@@ -36,14 +36,7 @@ export type HubDecorKind =
 export type HubDecor = SpawnPoint & { kind: HubDecorKind };
 
 export type PoiKind =
-  | 'camp'
-  | 'ruin'
-  | 'scout'
-  | 'shrine'
-  | 'warren'
-  | 'grove'
-  | 'watch'
-  | 'cairn';
+  'camp' | 'ruin' | 'scout' | 'shrine' | 'warren' | 'grove' | 'watch' | 'cairn';
 
 /** Named wilderness landmark with mid-tier packs. */
 export type WildernessPoi = SpawnPoint & {

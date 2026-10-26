@@ -54,6 +54,7 @@ import {
   type RiftModifier,
 } from '../systems/RiftModifiers';
 import { buildMapSnapshot } from '../ui/MapModel';
+import { shouldShowTouchControls } from '../ui/TouchControls';
 
 const DEFAULT_HUB_SIZE = HUB_SIZE;
 const TOWN_SPAWN = { ...HUB_SPAWN };
@@ -108,6 +109,9 @@ export class WorldScene extends Phaser.Scene {
   private remoteGhosts = new Map<string, Phaser.GameObjects.Container>();
   private unsubNet: (() => void) | null = null;
   private mapEmitAcc = 0;
+  private touchDx = 0;
+  private touchDy = 0;
+  private inputUnsubs: (() => void)[] = [];
 
   constructor() {
     super('WorldScene');
@@ -167,6 +171,8 @@ export class WorldScene extends Phaser.Scene {
     clearRiftbornDebug();
     this.unsubNet?.();
     this.unsubNet = null;
+    for (const u of this.inputUnsubs) u();
+    this.inputUnsubs = [];
     this.player?.destroy();
     for (const n of this.nodes) n.destroy();
     for (const e of this.enemies) e.destroy();
@@ -185,14 +191,28 @@ export class WorldScene extends Phaser.Scene {
     this.rebindActionKeys();
 
     this.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
+      // Touch mode uses ATK button — avoid double-fire from UI taps
+      if (shouldShowTouchControls()) return;
       if (pointer.leftButtonDown()) this.tryAttack();
     });
 
-    gameEvents.on(Events.SETTINGS_CHANGED, () => this.rebindActionKeys());
-    gameEvents.on('combat:castSkill', (p) => {
-      const d = p as { slot: number };
-      this.tryCastSkill(d.slot);
-    });
+    this.inputUnsubs.push(
+      gameEvents.on(Events.SETTINGS_CHANGED, () => this.rebindActionKeys()),
+      gameEvents.on('combat:castSkill', (p) => {
+        const d = p as { slot: number };
+        this.tryCastSkill(d.slot);
+      }),
+      gameEvents.on('input:move', (p) => {
+        const d = p as { dx: number; dy: number };
+        this.touchDx = d.dx;
+        this.touchDy = d.dy;
+      }),
+      gameEvents.on('combat:attack', () => this.tryAttack()),
+      gameEvents.on('ui:interact', () => this.tryInteract()),
+      gameEvents.on('combat:dash', () => {
+        this.tryDash(this.touchDx || 0, this.touchDy || 0);
+      }),
+    );
   }
 
   /** Re-read hotkeys from settings (after ESC menu changes). */
@@ -787,6 +807,10 @@ export class WorldScene extends Phaser.Scene {
     if (this.wasd.D.isDown || this.cursors.right?.isDown) dx += 1;
     if (this.wasd.W.isDown || this.cursors.up?.isDown) dy -= 1;
     if (this.wasd.S.isDown || this.cursors.down?.isDown) dy += 1;
+    if (dx === 0 && dy === 0) {
+      dx = this.touchDx;
+      dy = this.touchDy;
+    }
 
     if (!netClient.connected) {
       this.player.move(dx, dy, dt);

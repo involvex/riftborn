@@ -19,6 +19,7 @@ Guidance for AI coding agents working in this repo. Prefer this file over guessi
 | Inventory icons     | `public/assets/icons/`                                                       |
 | Co-op server        | `server/index.ts`                                                            |
 | Electron shell      | `electron/main.cjs`                                                          |
+| Mobile shell        | `mobile/` (Expo WebView → Vite/`dist`, Phaser `?touch=1`)                    |
 | Agent smoke         | `e2e/hub.smoke.spec.ts`                                                      |
 
 Package manager: **Bun**. TypeScript strict. Phaser **4.2.x**.
@@ -38,6 +39,17 @@ bunx playwright install chromium   # once per machine
 ```
 
 Desktop: `bun run desktop` / `bun run desktop:prod`.
+
+Mobile (Expo WebView, not a React Native rewrite of the game):
+
+```bash
+bun run dev                 # Vite with host:true for LAN
+bun run mobile:lan          # print http://<lan-ip>:5173/?touch=1
+bun run mobile:dev          # Expo Go → that URL (touch stick in Phaser)
+bun run mobile:build        # build + sync dist → mobile/game-dist + preview + Expo
+```
+
+On-screen controls: `src/ui/TouchControls.ts` when `/?touch=1` or coarse/small screen. Desktop HUD: `HotkeyDock` bottom-left; `MiniMap` top-right.
 
 **Before declaring done:** typecheck + lint + format:check + build. After map/POI/town-safety changes, also run `bun run test:smoke`.
 
@@ -79,6 +91,8 @@ Do not rely on paste-a-screenshot alone after map/POI edits — prefer smoke + `
 ## Controls (player)
 
 WASD move · LMB attack · E interact/gather/chest/shrine · F craft · 1/2/3 skills · M map · R rift · B town · I inventory · C character · K skill tree · Esc settings.
+
+Touch (`/?touch=1` or coarse/small): virtual stick · ATK · E · DASH · INV/MAP/MENU · ability bar 1/2/3.
 
 ## Coding conventions
 
