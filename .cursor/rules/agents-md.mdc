@@ -1,0 +1,12 @@
+---
+description: Always follow repo AGENTS.md for Riftborn agent workflow
+alwaysApply: true
+---
+
+# Project agent guide
+
+Before non-trivial work in this repo, read and follow **[AGENTS.md](../../AGENTS.md)** at the repository root.
+
+It covers stack layout, verify commands (`typecheck` / `lint` / `format` / `build` / `test:smoke`), `window.__RIFTBORN` + `/?smoke=1`, hub/POI/chest design anchors, and commit/push rules.
+
+Prefer AGENTS.md over inventing parallel workflows. After map or POI changes, run `bun run test:smoke` and use `__RIFTBORN` / `artifacts/hub.png` instead of screenshot-only checks.

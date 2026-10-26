@@ -39,6 +39,7 @@ export const Events = {
   ITEM_REMOVED: 'item:removed',
   EQUIP_CHANGED: 'equip:changed',
   PLAYER_DAMAGED: 'player:damaged',
+  PLAYER_HEALED: 'player:healed',
   ENEMY_DIED: 'enemy:died',
   NODE_DEPLETED: 'node:depleted',
   XP_GAINED: 'xp:gained',

@@ -171,6 +171,7 @@ export class UIScene extends Phaser.Scene {
       }),
       gameEvents.on(Events.SKILL_CAST, () => this.abilityBar.refresh()),
       gameEvents.on(Events.PLAYER_DAMAGED, () => this.refresh()),
+      gameEvents.on(Events.PLAYER_HEALED, () => this.refresh()),
       gameEvents.on(Events.CRAFT_SUCCESS, () => {
         this.toast('Crafted!');
         this.refresh();

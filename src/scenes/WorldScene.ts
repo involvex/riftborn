@@ -749,6 +749,7 @@ export class WorldScene extends Phaser.Scene {
     const dt = Math.min(0.05, delta / 1000);
     gameState.playTimeSec += dt;
     this.player.tick(dt);
+    gameState.tickRegen(dt);
 
     let dx = 0;
     let dy = 0;

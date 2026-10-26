@@ -8,6 +8,7 @@ import {
 } from '../systems/ItemGen';
 import { getItemDef } from '../systems/InventorySystem';
 import { gameState } from '../systems/GameState';
+import { addSlotIcon } from '../render/ItemIcons';
 import type { EquipmentSlots, InventorySlot } from '../types/save';
 import { uiFont, uiPanelSize } from '../core/UiScale';
 
@@ -145,15 +146,34 @@ export class InventoryPanel {
         .rectangle(x, y, eqCellW, eqCellH, 0x1a2230, 1)
         .setStrokeStyle(1, 0x4a5568)
         .setInteractive({ useHandCursor: true });
+      const iconSize = Math.min(36, eqCellH - 8);
+      const iconX = x - eqCellW / 2 + 6;
+      const iconY = y - iconSize / 2;
+      const icons: Phaser.GameObjects.GameObject[] = [];
+      if (s.key === 'tool' && eq.tool) {
+        icons.push(
+          ...addSlotIcon(this.scene, iconX, iconY, iconSize, {
+            kind: 'stack',
+            itemId: eq.tool,
+          }),
+        );
+      } else if (s.key !== 'tool' && eq[s.key]) {
+        icons.push(
+          ...addSlotIcon(this.scene, iconX, iconY, iconSize, {
+            kind: 'gear',
+            item: eq[s.key]!,
+          }),
+        );
+      }
       const label =
         s.key === 'tool'
           ? eq.tool
             ? (getItemDef(eq.tool)?.name ?? eq.tool)
             : '—'
           : (eq[s.key]?.name ?? '—');
-      const short = label.length > 18 ? `${label.slice(0, 16)}…` : label;
+      const short = label.length > 16 ? `${label.slice(0, 14)}…` : label;
       const text = this.scene.add
-        .text(x - eqCellW / 2 + 8, y, `${s.label}  ${short}`, {
+        .text(iconX + iconSize + 8, y, `${s.label}  ${short}`, {
           fontFamily: 'Segoe UI, sans-serif',
           fontSize: '11px',
           color: '#e8e4d8',
@@ -167,7 +187,7 @@ export class InventoryPanel {
           this.detail.setText(getItemDef(eq.tool)?.name ?? eq.tool);
         }
       });
-      this.eqRoot.add([cell, text]);
+      this.eqRoot.add([cell, ...icons, text]);
     });
 
     const eqBlockH = 2 * eqCellH + eqGap;
@@ -217,58 +237,32 @@ export class InventoryPanel {
       const contents: Phaser.GameObjects.GameObject[] = [rect];
       if (slot) {
         if (slot.kind === 'stack') {
-          const def = getItemDef(slot.itemId);
-          const color = Phaser.Display.Color.HexStringToColor(
-            def?.color ?? '#888888',
-          ).color;
-          const gem = this.scene.add.circle(
-            x + cell / 2,
-            y + cell / 2 - 2,
-            Math.max(5, cell * 0.18),
-            color,
+          contents.push(
+            ...addSlotIcon(this.scene, x, y, cell, {
+              kind: 'stack',
+              itemId: slot.itemId,
+            }),
           );
           const qty = this.scene.add
             .text(x + cell - 3, y + cell - 3, `x${slot.qty}`, {
               fontFamily: 'Consolas, monospace',
               fontSize: `${Math.max(9, Math.floor(cell * 0.22))}px`,
               color: '#e8e4d8',
+              stroke: '#0a0c10',
+              strokeThickness: 3,
             })
             .setOrigin(1, 1);
-          contents.push(gem, qty);
+          contents.push(qty);
         } else {
           const req = resolveGearClass(slot.item);
           const usable = !req || req === playerClass;
-          const rarityColor =
-            slot.item.rarity === 'legendary'
-              ? 0xffb74d
-              : slot.item.rarity === 'rare'
-                ? 0x4db6ff
-                : slot.item.rarity === 'magic'
-                  ? 0x81c784
-                  : 0xb0bec5;
-          const gem = this.scene.add
-            .rectangle(
-              x + cell / 2,
-              y + cell / 2 - 2,
-              cell * 0.4,
-              cell * 0.4,
-              rarityColor,
-              usable ? 0.9 : 0.35,
-            )
-            .setStrokeStyle(1, usable ? 0xffffff : 0xaa4444, 0.45);
-          const tag = this.scene.add
-            .text(
-              x + cell / 2,
-              y + cell - 4,
-              slot.item.slot.slice(0, 3).toUpperCase(),
-              {
-                fontFamily: 'Segoe UI, sans-serif',
-                fontSize: `${Math.max(8, Math.floor(cell * 0.2))}px`,
-                color: usable ? '#e8e4d8' : '#c07070',
-              },
-            )
-            .setOrigin(0.5, 1);
-          contents.push(gem, tag);
+          contents.push(
+            ...addSlotIcon(this.scene, x, y, cell, {
+              kind: 'gear',
+              item: slot.item,
+              dimmed: !usable,
+            }),
+          );
         }
       }
 

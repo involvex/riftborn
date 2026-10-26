@@ -34,6 +34,9 @@ export class GameState {
   riftSeed: number | null = null;
   playTimeSec = 0;
   pendingSessionToken: string | null = null;
+  /** Seconds before passive regen resumes after a hit. */
+  private regenDelay = 0;
+  private regenAcc = 0;
 
   createNew(
     name: string,
@@ -166,9 +169,42 @@ export class GameState {
       return 0;
     }
     this.hp = Math.max(0, this.hp - dealt);
+    this.regenDelay = 5;
+    this.regenAcc = 0;
     gameEvents.emit(Events.PLAYER_DAMAGED, { dealt, hp: this.hp });
     if (this.hp <= 0) gameEvents.emit(Events.PLAYER_DIED, {});
     return dealt;
+  }
+
+  /**
+   * Passive HP regen — only while out of combat (after hit delay).
+   * Out-of-combat rate is large (% max HP) so downtime recovers fast.
+   * Call once per frame from WorldScene.
+   */
+  tickRegen(dt: number): void {
+    if (this.hp <= 0 || this.hp >= this.maxHp) {
+      this.regenAcc = 0;
+      return;
+    }
+    this.regenDelay = Math.max(0, this.regenDelay - dt);
+    // In combat (recently hit): no regen.
+    if (this.regenDelay > 0) return;
+
+    const gearSta = this.inventory.totalGearStats().stamina;
+    const sta = this.progression.stats.stamina + gearSta;
+    // Out of combat: strong recovery — ~4% maxHP/s + STA, more in town.
+    const maxFrac = this.inRift ? 0.035 : 0.055;
+    const perSec = 3 + sta * 0.28 + this.maxHp * maxFrac;
+    this.regenAcc += perSec * dt;
+    if (this.regenAcc < 1) return;
+    const heal = Math.floor(this.regenAcc);
+    this.regenAcc -= heal;
+    const before = this.hp;
+    this.hp = Math.min(this.maxHp, this.hp + heal);
+    const gained = this.hp - before;
+    if (gained > 0) {
+      gameEvents.emit(Events.PLAYER_HEALED, { amount: gained, hp: this.hp });
+    }
   }
 
   spendSkill(nodeId: string): boolean {

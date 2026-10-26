@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { saveStore } from '../core/SaveStore';
+import { preloadItemIcons } from '../render/ItemIcons';
 import { ensureGameSprites, preloadGameSprites } from '../render/SpriteAtlas';
 import { gameState } from '../systems/GameState';
 import { uiFont } from '../core/UiScale';
@@ -14,6 +15,7 @@ export class BootScene extends Phaser.Scene {
       console.warn('[sprites] missing asset, will use fallback:', file.key);
     });
     preloadGameSprites(this);
+    preloadItemIcons(this);
   }
 
   create(): void {
