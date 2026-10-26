@@ -56,4 +56,6 @@ export const Events = {
   SKILL_CHANGED: 'skill:changed',
   SKILL_CAST: 'skill:cast',
   RIFT_PROGRESS: 'rift:progress',
+  BOUNTY_CHANGED: 'bounty:changed',
+  BOUNTY_COMPLETE: 'bounty:complete',
 } as const;

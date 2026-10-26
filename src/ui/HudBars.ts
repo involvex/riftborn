@@ -14,6 +14,7 @@ export class HudBars {
   private readonly xpFill: Phaser.GameObjects.Rectangle;
   private readonly xpText: Phaser.GameObjects.Text;
   private readonly meta: Phaser.GameObjects.Text;
+  private readonly bounty: Phaser.GameObjects.Text;
   private readonly barW = 220;
   private readonly barH = 16;
 
@@ -57,6 +58,12 @@ export class HudBars {
       })
       .setOrigin(0.5);
 
+    this.bounty = scene.add.text(0, 66, '', {
+      fontFamily: 'Segoe UI, sans-serif',
+      fontSize: '11px',
+      color: '#e0c890',
+    });
+
     this.root.add([
       this.meta,
       this.hpBg,
@@ -65,6 +72,7 @@ export class HudBars {
       this.xpBg,
       this.xpFill,
       this.xpText,
+      this.bounty,
     ]);
     this.refresh();
   }
@@ -87,6 +95,10 @@ export class HudBars {
     }
     if (gameState.inRift) bits.push('[Rift]');
     this.meta.setText(bits.join('  '));
+
+    const bountyLine = gameState.bounties.statusLine();
+    this.bounty.setText(bountyLine ? `★ ${bountyLine}` : '');
+    this.bounty.setVisible(!!bountyLine);
 
     const hpRatio = Phaser.Math.Clamp(
       gameState.hp / Math.max(1, gameState.maxHp),

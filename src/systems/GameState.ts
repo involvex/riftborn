@@ -12,6 +12,7 @@ import { GatheringSystem } from './GatheringSystem';
 import { emptyEquipment, InventorySystem } from './InventorySystem';
 import { createStarterLoadout } from './ItemGen';
 import { getClassDef, ProgressionSystem } from './ProgressionSystem';
+import { BountySystem } from './BountySystem';
 import { ShopSystem } from './ShopSystem';
 import { SkillSystem } from './SkillSystem';
 
@@ -23,6 +24,7 @@ export class GameState {
   readonly combat = new CombatSystem(this.inventory, this.progression);
   readonly shop = new ShopSystem(this.inventory);
   readonly skills = new SkillSystem();
+  readonly bounties = new BountySystem();
 
   name = 'Wanderer';
   gender: CharacterGender = 'male';

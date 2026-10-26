@@ -786,6 +786,7 @@ export class WorldScene extends Phaser.Scene {
     }
 
     gameState.skills.tick(dt);
+    gameState.bounties.tick(dt);
 
     if (Phaser.Input.Keyboard.JustDown(this.keyE)) this.tryInteract();
     if (Phaser.Input.Keyboard.JustDown(this.keyF)) this.tryCraftNearby();
@@ -990,6 +991,10 @@ export class WorldScene extends Phaser.Scene {
         }
       },
     });
+    if (!gameState.inRift) {
+      if (scoutKill) gameState.bounties.noteScoutKill();
+      else gameState.bounties.noteWildernessKill();
+    }
     gameState.persist();
     this.shakeUntil = this.time.now + 80;
     if (!gameState.inRift) return;
@@ -1158,6 +1163,10 @@ export class WorldScene extends Phaser.Scene {
         gameEvents.emit('ui:openCraft', {});
         return;
       }
+      if (this.nearNpc.role === 'board') {
+        this.tryBountyBoard();
+        return;
+      }
     }
     if (this.tryShrine()) return;
     if (this.tryOpenChest()) return;
@@ -1166,6 +1175,30 @@ export class WorldScene extends Phaser.Scene {
       return;
     }
     this.tryGather();
+  }
+
+  private tryBountyBoard(): void {
+    if (gameState.inRift) {
+      gameEvents.emit('ui:toast', { text: 'Bounties are posted in town' });
+      return;
+    }
+    const line = gameState.bounties.statusLine();
+    if (line) {
+      gameEvents.emit('ui:toast', { text: `Active: ${line}` });
+      return;
+    }
+    if (!gameState.bounties.canAccept()) {
+      gameEvents.emit('ui:toast', {
+        text: 'Board resting — try again shortly',
+      });
+      return;
+    }
+    const b = gameState.bounties.accept();
+    if (!b) return;
+    audioBus.uiClick();
+    gameEvents.emit('ui:toast', {
+      text: `Bounty: ${b.label} · reward ${b.rewardGold}g + ${b.rewardXp} XP`,
+    });
   }
 
   private tryShrine(): boolean {
@@ -1251,6 +1284,7 @@ export class WorldScene extends Phaser.Scene {
     }
 
     chest.markLooted();
+    if (!gameState.inRift) gameState.bounties.noteChestOpen();
     audioBus.hit();
     this.shakeUntil = this.time.now + 60;
     gameState.persist();

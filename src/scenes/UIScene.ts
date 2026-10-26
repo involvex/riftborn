@@ -248,6 +248,21 @@ export class UIScene extends Phaser.Scene {
       gameEvents.on(Events.PLAYER_DIED, () => {
         this.refresh();
       }),
+      gameEvents.on(Events.BOUNTY_CHANGED, () => this.refresh()),
+      gameEvents.on(Events.BOUNTY_COMPLETE, (p) => {
+        const d = p as {
+          bounty: { label: string; rewardGold: number; rewardXp: number };
+        };
+        const b = d.bounty;
+        gameState.inventory.add('gold', b.rewardGold);
+        gameState.progression.addXp(b.rewardXp);
+        gameState.persist();
+        audioBus.loot('rare');
+        this.toast(
+          `Bounty complete — ${b.label} · +${b.rewardGold}g +${b.rewardXp} XP`,
+        );
+        this.refresh();
+      }),
       gameEvents.on(Events.SETTINGS_CHANGED, () => this.bindHotkeys()),
     );
 
