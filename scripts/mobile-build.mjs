@@ -1,65 +1,72 @@
 /**
- * Build Phaser → sync into mobile/game-dist → preview on :4173 → Expo.
+ * Release APK with game bundled offline (no Vite / Metro game server).
+ * Usage: bun run mobile:build
  */
-import { spawn, spawnSync } from 'node:child_process';
-import { networkInterfaces } from 'node:os';
+import { spawnSync } from 'node:child_process';
+import { existsSync, writeFileSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const mobile = join(root, 'mobile');
 
-function lanIp() {
-  const nets = networkInterfaces();
-  for (const list of Object.values(nets)) {
-    if (!list) continue;
-    for (const n of list) {
-      if (n.family === 'IPv4' && !n.internal) return n.address;
-    }
-  }
-  return '127.0.0.1';
-}
-
-function run(cmd, args) {
-  const r = spawnSync(cmd, args, {
-    cwd: root,
-    stdio: 'inherit',
-    shell: true,
-  });
+function run(cmd, args, cwd = root) {
+  const r = spawnSync(cmd, args, { cwd, stdio: 'inherit', shell: true });
   if (r.status !== 0) process.exit(r.status ?? 1);
 }
 
+console.log('1/4 Build Phaser …');
 run('bun', ['run', 'build']);
+
+console.log('2/4 Sync into Android assets …');
 run('bun', ['run', 'scripts/mobile-sync.mjs']);
 
-const url =
-  process.env.EXPO_PUBLIC_GAME_URL || `http://${lanIp()}:4173/?touch=1`;
-
-console.log(`Preview + Expo → ${url}`);
-
-const preview = spawn('bunx', ['vite', 'preview', '--host', '--port', '4173'], {
-  cwd: root,
-  stdio: 'inherit',
-  shell: true,
-});
-
-const expo = spawn('bunx', ['expo', 'start'], {
-  cwd: mobile,
-  stdio: 'inherit',
-  shell: true,
-  env: { ...process.env, EXPO_PUBLIC_GAME_URL: url },
-});
-
-function shutdown() {
-  preview.kill();
-  expo.kill();
-  process.exit(0);
+const www = join(mobile, 'android', 'app', 'src', 'main', 'assets', 'www');
+if (!existsSync(www)) {
+  console.error(
+    'No android project yet. Run once: cd mobile && bunx expo prebuild --platform android',
+  );
+  process.exit(1);
 }
 
-process.on('SIGINT', shutdown);
-process.on('SIGTERM', shutdown);
+writeFileSync(
+  join(mobile, '.env'),
+  `# Release — bundled game, no LAN server\n` +
+    `EXPO_PUBLIC_GAME_BUNDLE=1\n` +
+    `EXPO_PUBLIC_GAME_URL=\n`,
+  'utf8',
+);
 
-expo.on('exit', (code) => {
-  preview.kill();
-  process.exit(code ?? 0);
-});
+console.log('3/4 Assemble release APK …');
+run('bunx', ['expo', 'run:android', '--variant', 'release'], mobile);
+
+const apkCandidates = [
+  join(
+    mobile,
+    'android',
+    'app',
+    'build',
+    'outputs',
+    'apk',
+    'release',
+    'app-release.apk',
+  ),
+  join(
+    mobile,
+    'android',
+    'app',
+    'build',
+    'outputs',
+    'apk',
+    'release',
+    'app-release-unsigned.apk',
+  ),
+];
+const apk = apkCandidates.find((p) => existsSync(p));
+console.log('4/4 Done.');
+if (apk) {
+  console.log(`APK → ${apk}`);
+  console.log('Install: adb install -r "' + apk + '"');
+} else {
+  console.log('APK built under mobile/android/app/build/outputs/apk/');
+}

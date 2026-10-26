@@ -1,3 +1,4 @@
+import Constants from 'expo-constants';
 import { StatusBar } from 'expo-status-bar';
 import * as ScreenOrientation from 'expo-screen-orientation';
 import { useEffect, useMemo, useState } from 'react';
@@ -10,6 +11,8 @@ import {
 } from 'react-native';
 import { WebView } from 'react-native-webview';
 
+type WebSource = { uri: string };
+
 function withTouch(raw: string): string {
   try {
     const u = new URL(raw);
@@ -21,31 +24,45 @@ function withTouch(raw: string): string {
   }
 }
 
-function defaultGameUrl(): string {
-  const env = process.env.EXPO_PUBLIC_GAME_URL;
-  if (env && env.length > 0) return withTouch(env);
-  // Android emulator loopback to host machine
-  if (Platform.OS === 'android') {
-    return withTouch('http://10.0.2.2:5173/');
+function isBundled(): boolean {
+  if (process.env.EXPO_PUBLIC_GAME_BUNDLE === '1') return true;
+  const extra = Constants.expoConfig?.extra as
+    { gameBundle?: boolean } | undefined;
+  return !!extra?.gameBundle;
+}
+
+function resolveSource(): WebSource {
+  // Offline release: game copied into android assets/www
+  if (isBundled() && Platform.OS === 'android') {
+    return { uri: 'file:///android_asset/www/index.html' };
   }
-  return withTouch('http://localhost:5173/');
+
+  const env = process.env.EXPO_PUBLIC_GAME_URL?.trim();
+  if (env) return { uri: withTouch(env) };
+
+  const extra = Constants.expoConfig?.extra as { gameUrl?: string } | undefined;
+  if (extra?.gameUrl?.trim()) return { uri: withTouch(extra.gameUrl.trim()) };
+
+  if (Platform.OS === 'android') {
+    return { uri: withTouch('http://10.0.2.2:5173/') };
+  }
+  return { uri: withTouch('http://localhost:5173/') };
 }
 
 /**
- * Native shell: full-screen WebView over the Phaser Vite build.
- * Touch UI lives inside Phaser (`/?touch=1`) — not React Native.
+ * Native shell: full-screen WebView over the Phaser build.
+ * Dev → LAN Vite. Release → bundled file:// assets (no server).
  */
 export default function App() {
-  const uri = useMemo(() => defaultGameUrl(), []);
+  const source = useMemo(() => resolveSource(), []);
+  const bundled = isBundled();
   const [ready, setReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     ScreenOrientation.lockAsync(
       ScreenOrientation.OrientationLock.LANDSCAPE,
-    ).catch(() => {
-      /* portrait still works with on-screen stick */
-    });
+    ).catch(() => {});
   }, []);
 
   return (
@@ -54,21 +71,25 @@ export default function App() {
       {!ready && !error && (
         <View style={styles.overlay}>
           <ActivityIndicator color="#c4a574" size="large" />
-          <Text style={styles.hint}>Loading Riftborn…</Text>
-          <Text style={styles.uri}>{uri}</Text>
+          <Text style={styles.hint}>
+            {bundled ? 'Starting Riftborn…' : 'Loading Riftborn…'}
+          </Text>
+          <Text style={styles.uri}>{source.uri}</Text>
         </View>
       )}
       {error && (
         <View style={styles.overlay}>
           <Text style={styles.err}>{error}</Text>
+          <Text style={styles.uri}>{source.uri}</Text>
           <Text style={styles.hint}>
-            Start the game with `bun run dev`, set EXPO_PUBLIC_GAME_URL to your
-            LAN IP (see `bun run mobile:lan`), then reload.
+            {bundled
+              ? 'Rebuild with bun run mobile:build'
+              : 'Run bun run mobile:dev (starts Vite + installs debug app)'}
           </Text>
         </View>
       )}
       <WebView
-        source={{ uri }}
+        source={source}
         style={styles.webview}
         originWhitelist={['*']}
         allowsInlineMediaPlayback
@@ -76,15 +97,17 @@ export default function App() {
         javaScriptEnabled
         domStorageEnabled
         allowFileAccess
+        allowFileAccessFromFileURLs
+        allowUniversalAccessFromFileURLs
         mixedContentMode="always"
         setSupportMultipleWindows={false}
         onLoadEnd={() => setReady(true)}
         onError={(e) => {
-          setError(e.nativeEvent.description || 'Could not reach the game URL');
+          setError(e.nativeEvent.description || 'Could not load the game');
         }}
         onHttpError={(e) => {
           if (e.nativeEvent.statusCode >= 400) {
-            setError(`HTTP ${e.nativeEvent.statusCode} loading game`);
+            setError(`HTTP ${e.nativeEvent.statusCode}`);
           }
         }}
       />
@@ -93,14 +116,8 @@ export default function App() {
 }
 
 const styles = StyleSheet.create({
-  root: {
-    flex: 1,
-    backgroundColor: '#0e1218',
-  },
-  webview: {
-    flex: 1,
-    backgroundColor: '#0e1218',
-  },
+  root: { flex: 1, backgroundColor: '#0e1218' },
+  webview: { flex: 1, backgroundColor: '#0e1218' },
   overlay: {
     ...StyleSheet.absoluteFill,
     zIndex: 2,
@@ -114,6 +131,7 @@ const styles = StyleSheet.create({
     color: '#a8b0b8',
     fontSize: 13,
     textAlign: 'center',
+    lineHeight: 20,
   },
   uri: {
     marginTop: 8,

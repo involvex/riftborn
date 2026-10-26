@@ -3,6 +3,7 @@ import { gameEvents } from '../core/EventBus';
 import { formatHotkey } from '../core/Hotkeys';
 import { gameState } from '../systems/GameState';
 import { ACTIVE_SLOTS, getAbilityDef } from '../systems/SkillSystem';
+import { shouldShowTouchControls } from './TouchControls';
 
 /**
  * Bottom ability strip (PC hotkeys 1–3). Same buttons can later double as
@@ -65,17 +66,22 @@ export class AbilityBar {
   }
 
   layout(): void {
-    const gap = 8;
-    const w = 96;
+    const touch = shouldShowTouchControls();
+    const gap = touch ? 6 : 8;
+    const w = touch ? 78 : 96;
     const total = ACTIVE_SLOTS * w + (ACTIVE_SLOTS - 1) * gap;
     const startX = -total / 2 + w / 2;
-    const y = this.scene.scale.height - 44;
+    // Raise above stick / ATK pads on phones
+    const y = this.scene.scale.height - (touch ? 108 : 44);
     this.root.setPosition(this.scene.scale.width / 2, y);
     this.slots.forEach((s, i) => {
       const x = startX + i * (w + gap);
+      s.bg.setSize(w, touch ? 46 : 52);
       s.bg.setPosition(x, 0);
-      s.name.setPosition(x, -8);
-      s.cd.setPosition(x, 12);
+      s.name.setPosition(x, touch ? -6 : -8);
+      s.name.setFontSize(touch ? '10px' : '11px');
+      s.cd.setPosition(x, touch ? 10 : 12);
+      s.key.setVisible(!touch);
       s.key.setPosition(x + 38, -18);
       s.key.setText(
         formatHotkey((['skill1', 'skill2', 'skill3'] as const)[i]!),

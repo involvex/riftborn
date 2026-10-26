@@ -5,6 +5,8 @@ import { audioBus } from '../core/AudioBus';
 /** Detect whether on-screen controls should show. */
 export function shouldShowTouchControls(): boolean {
   try {
+    const w = window as Window & { __RIFTBORN_TOUCH?: number };
+    if (w.__RIFTBORN_TOUCH) return true;
     const params = new URLSearchParams(window.location.search);
     if (params.has('touch') && params.get('touch') !== '0') return true;
     if (params.get('touch') === '0') return false;
@@ -19,19 +21,31 @@ export function shouldShowTouchControls(): boolean {
   return coarse || small;
 }
 
+type Btn = {
+  root: Phaser.GameObjects.Container;
+  bg: Phaser.GameObjects.Arc;
+  label: Phaser.GameObjects.Text;
+};
+
 /**
- * Virtual stick + action buttons for phone / ?touch=1.
- * Emits EventBus events consumed by WorldScene / UIScene.
+ * Landscape phone pad: stick BL · ATK/E/DASH BR · INV/MAP/MENU top-right.
  */
 export class TouchControls {
   readonly root: Phaser.GameObjects.Container;
   private readonly scene: Phaser.Scene;
   private stickBase!: Phaser.GameObjects.Arc;
   private stickKnob!: Phaser.GameObjects.Arc;
+  private stickHit!: Phaser.GameObjects.Zone;
   private stickPointerId: number | null = null;
   private stickCx = 0;
   private stickCy = 0;
-  private readonly stickR = 52;
+  private stickR = 58;
+  private actions!: Phaser.GameObjects.Container;
+  private quick!: Phaser.GameObjects.Container;
+  private atk!: Btn;
+  private interact!: Btn;
+  private dash!: Btn;
+  private quickBtns: Btn[] = [];
   dx = 0;
   dy = 0;
   private active = false;
@@ -63,30 +77,55 @@ export class TouchControls {
   layout(): void {
     const w = this.scene.scale.width;
     const h = this.scene.scale.height;
-    this.stickCx = 88;
-    this.stickCy = h - 100;
+    const short = Math.min(w, h);
+    const pad = Math.max(16, Math.round(short * 0.03));
+    const landscape = w >= h;
+
+    this.stickR = landscape ? 56 : 48;
+    this.stickBase.setRadius(this.stickR);
+    this.stickKnob.setRadius(Math.round(this.stickR * 0.42));
+    this.stickHit.setSize(this.stickR * 2.4, this.stickR * 2.4);
+
+    this.stickCx = pad + this.stickR + 8;
+    this.stickCy = h - pad - this.stickR - (landscape ? 12 : 28);
     this.stickBase.setPosition(this.stickCx, this.stickCy);
+    this.stickHit.setPosition(this.stickCx, this.stickCy);
     this.resetKnob();
 
-    const actions = this.root.getData(
-      'actions',
-    ) as Phaser.GameObjects.Container;
-    actions.setPosition(w - 100, h - 110);
+    const ax = w - pad - 72;
+    const ay = h - pad - (landscape ? 88 : 120);
+    this.actions.setPosition(ax, ay);
+    this.styleBtn(this.atk, 38, '14px');
+    this.styleBtn(this.interact, 28, '13px');
+    this.styleBtn(this.dash, 28, '11px');
+    this.atk.root.setPosition(0, 0);
+    this.interact.root.setPosition(-68, -8);
+    this.dash.root.setPosition(8, -72);
 
-    const quick = this.root.getData('quick') as Phaser.GameObjects.Container;
-    quick.setPosition(w - 16, 160);
+    this.quick.setPosition(w - pad, landscape ? 148 : 120);
+    this.quickBtns.forEach((b, i) => {
+      this.styleBtn(b, 22, '10px');
+      b.root.setPosition(-28, i * 46);
+    });
+  }
+
+  private styleBtn(b: Btn, r: number, fontSize: string): void {
+    b.bg.setRadius(r);
+    b.label.setFontSize(fontSize);
   }
 
   private buildStick(): void {
     this.stickBase = this.scene.add
-      .circle(0, 0, this.stickR, 0x121820, 0.55)
-      .setStrokeStyle(2, 0x4a6070, 0.85)
-      .setInteractive();
+      .circle(0, 0, this.stickR, 0x121820, 0.5)
+      .setStrokeStyle(2, 0x4a6070, 0.8);
     this.stickKnob = this.scene.add
-      .circle(0, 0, 22, 0xc4a574, 0.85)
-      .setStrokeStyle(2, 0xe8e4d8, 0.5);
+      .circle(0, 0, 24, 0xc4a574, 0.9)
+      .setStrokeStyle(2, 0xe8e4d8, 0.55);
+    this.stickHit = this.scene.add
+      .zone(0, 0, this.stickR * 2.4, this.stickR * 2.4)
+      .setInteractive();
 
-    this.stickBase.on('pointerdown', (p: Phaser.Input.Pointer) => {
+    this.stickHit.on('pointerdown', (p: Phaser.Input.Pointer) => {
       this.stickPointerId = p.id;
       this.updateStick(p.x, p.y);
     });
@@ -94,16 +133,18 @@ export class TouchControls {
       if (this.stickPointerId !== p.id) return;
       this.updateStick(p.x, p.y);
     });
-    this.scene.input.on('pointerup', (p: Phaser.Input.Pointer) => {
+    const end = (p: Phaser.Input.Pointer) => {
       if (this.stickPointerId !== p.id) return;
       this.stickPointerId = null;
       this.dx = 0;
       this.dy = 0;
       this.resetKnob();
       gameEvents.emit('input:move', { dx: 0, dy: 0 });
-    });
+    };
+    this.scene.input.on('pointerup', end);
+    this.scene.input.on('pointerupoutside', end);
 
-    this.root.add([this.stickBase, this.stickKnob]);
+    this.root.add([this.stickBase, this.stickKnob, this.stickHit]);
   }
 
   private updateStick(px: number, py: number): void {
@@ -118,12 +159,10 @@ export class TouchControls {
     this.stickKnob.setPosition(this.stickCx + dx, this.stickCy + dy);
     const nx = dx / max;
     const ny = dy / max;
-    // Deadzone
     this.dx =
-      Math.abs(nx) < 0.2 ? 0 : Math.sign(nx) * (Math.abs(nx) > 0.55 ? 1 : 0.5);
+      Math.abs(nx) < 0.22 ? 0 : Math.sign(nx) * (Math.abs(nx) > 0.5 ? 1 : 0.5);
     this.dy =
-      Math.abs(ny) < 0.2 ? 0 : Math.sign(ny) * (Math.abs(ny) > 0.55 ? 1 : 0.5);
-    // Quantize to 8-way
+      Math.abs(ny) < 0.22 ? 0 : Math.sign(ny) * (Math.abs(ny) > 0.5 ? 1 : 0.5);
     if (this.dx !== 0 || this.dy !== 0) {
       this.dx = Math.sign(this.dx);
       this.dy = Math.sign(this.dy);
@@ -136,51 +175,57 @@ export class TouchControls {
   }
 
   private buildActions(): void {
-    const c = this.scene.add.container(0, 0);
-    c.add(this.btn(0, -50, 'ATK', () => gameEvents.emit('combat:attack', {})));
-    c.add(this.btn(-55, 10, 'E', () => gameEvents.emit('ui:interact', {})));
-    c.add(this.btn(55, 10, 'DASH', () => gameEvents.emit('combat:dash', {})));
-    this.root.add(c);
-    this.root.setData('actions', c);
+    this.actions = this.scene.add.container(0, 0);
+    this.atk = this.makeBtn(0, 0, 'ATK', () =>
+      gameEvents.emit('combat:attack', {}),
+    );
+    this.interact = this.makeBtn(0, 0, 'E', () =>
+      gameEvents.emit('ui:interact', {}),
+    );
+    this.dash = this.makeBtn(0, 0, 'DASH', () =>
+      gameEvents.emit('combat:dash', {}),
+    );
+    this.actions.add([this.atk.root, this.interact.root, this.dash.root]);
+    this.root.add(this.actions);
   }
 
   private buildQuick(): void {
-    const c = this.scene.add.container(0, 0);
-    const mk = (y: number, label: string, ev: string) => {
-      const b = this.btn(0, y, label, () => {
+    this.quick = this.scene.add.container(0, 0);
+    const entries: [string, string][] = [
+      ['INV', 'ui:openInventory'],
+      ['MAP', 'ui:toggleMap'],
+      ['MENU', 'ui:toggleMenu'],
+    ];
+    this.quickBtns = entries.map(([label, ev]) =>
+      this.makeBtn(0, 0, label, () => {
         audioBus.uiClick();
         gameEvents.emit(ev, {});
-      });
-      // Origin right
-      b.setPosition(-40, y);
-      return b;
-    };
-    c.add(mk(0, 'INV', 'ui:openInventory'));
-    c.add(mk(48, 'MAP', 'ui:toggleMap'));
-    c.add(mk(96, 'MENU', 'ui:toggleMenu'));
-    this.root.add(c);
-    this.root.setData('quick', c);
+      }),
+    );
+    this.quick.add(this.quickBtns.map((b) => b.root));
+    this.root.add(this.quick);
   }
 
-  private btn(
+  private makeBtn(
     x: number,
     y: number,
     label: string,
     onClick: () => void,
-  ): Phaser.GameObjects.Container {
+  ): Btn {
     const bg = this.scene.add
-      .circle(0, 0, 28, 0x1a2230, 0.85)
+      .circle(0, 0, 28, 0x1a2230, 0.82)
       .setStrokeStyle(2, 0x6ec6a0, 0.9)
       .setInteractive({ useHandCursor: true });
     bg.on('pointerup', onClick);
     const t = this.scene.add
       .text(0, 0, label, {
         fontFamily: 'Segoe UI, sans-serif',
-        fontSize: label.length > 3 ? '10px' : '12px',
+        fontSize: '12px',
         color: '#e8e4d8',
         fontStyle: 'bold',
       })
       .setOrigin(0.5);
-    return this.scene.add.container(x, y, [bg, t]);
+    const root = this.scene.add.container(x, y, [bg, t]);
+    return { root, bg, label: t };
   }
 }

@@ -26,11 +26,9 @@
     "typecheck": "tsc --noEmit",
     "test:smoke": "playwright test e2e/hub.smoke.spec.ts",
     "test:smoke:headed": "playwright test e2e/hub.smoke.spec.ts --headed",
-    "mobile:lan": "bun run scripts/mobile-lan.mjs",
-    "mobile:sync": "bun run scripts/mobile-sync.mjs",
     "mobile:dev": "bun run scripts/mobile-dev.mjs",
     "mobile:build": "bun run scripts/mobile-build.mjs",
-    "mobile:start": "bun run --filter @riftborn/mobile start"
+    "mobile:lan": "bun run scripts/mobile-lan.mjs"
   },
   "build": {
     "appId": "dev.riftborn.game",

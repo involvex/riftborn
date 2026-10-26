@@ -38,18 +38,17 @@ bun run test:smoke       # Playwright hub smoke → artifacts/hub.png
 bunx playwright install chromium   # once per machine
 ```
 
-Desktop: `bun run desktop` / `bun run desktop:prod`.
+Desktop: `bun run desktop` / `bun run desktop:prod`. Icons: put art in `electron/build/source-icon.jpg` then `bun run icons` (Electron ICO + Expo `mobile/assets` + favicon).
 
 Mobile (Expo WebView, not a React Native rewrite of the game):
 
 ```bash
-bun run dev                 # Vite with host:true for LAN
-bun run mobile:lan          # print http://<lan-ip>:5173/?touch=1
-bun run mobile:dev          # Expo Go → that URL (touch stick in Phaser)
-bun run mobile:build        # build + sync dist → mobile/game-dist + preview + Expo
+bun run mobile:dev      # Vite (if needed) + debug APK on device (LAN)
+bun run mobile:build    # release APK with game bundled offline (no server)
+bun run mobile:lan      # optional: only write mobile/.env
 ```
 
-On-screen controls: `src/ui/TouchControls.ts` when `/?touch=1` or coarse/small screen. Desktop HUD: `HotkeyDock` bottom-left; `MiniMap` top-right.
+Touch HUD: `TouchControls` (stick / ATK / E / DASH) + raised ability bar. Desktop: `HotkeyDock` + flush `MiniMap`.
 
 **Before declaring done:** typecheck + lint + format:check + build. After map/POI/town-safety changes, also run `bun run test:smoke`.
 

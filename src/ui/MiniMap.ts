@@ -1,7 +1,9 @@
 import Phaser from 'phaser';
 import { MAP_CELL_COLOR, MAP_MARKER_COLOR, type MapSnapshot } from './MapModel';
+import { shouldShowTouchControls } from './TouchControls';
 
 const SIZE = 140;
+const SIZE_TOUCH = 108;
 const PAD = 3;
 
 /**
@@ -39,14 +41,21 @@ export class MiniMap {
   }
 
   layout(): void {
-    // Flush top-right corner (12px inset)
-    const x = this.scene.scale.width - SIZE / 2 - 12;
-    const y = SIZE / 2 + 12;
+    const size = shouldShowTouchControls() ? SIZE_TOUCH : SIZE;
+    const scale = size / SIZE;
+    this.root.setScale(scale);
+    // Flush top-right corner (10–12px inset)
+    const x = this.scene.scale.width - size / 2 - 10;
+    const y = size / 2 + 10;
     this.root.setPosition(x, y);
   }
 
   /** Pixel size — used to offset rift progress HUD. */
   static readonly SIZE = SIZE;
+
+  static displaySize(): number {
+    return shouldShowTouchControls() ? SIZE_TOUCH : SIZE;
+  }
 
   apply(snap: MapSnapshot): void {
     this.snap = snap;

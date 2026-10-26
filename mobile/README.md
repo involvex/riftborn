@@ -1,24 +1,27 @@
 # Riftborn mobile (Expo shell)
 
-Phaser stays the game. This app is a full-screen **WebView** that loads the Vite build with `?touch=1` so on-screen stick / ATK / E / DASH work inside Phaser.
+Phaser is the game. Expo is a WebView shell.
 
-## Dev (phone on same Wi‑Fi)
+## Commands (from repo root)
 
-1. Root: `bun run dev` (Vite on `:5173`)
-2. Print LAN URL: `bun run mobile:lan`
-3. Root: `set EXPO_PUBLIC_GAME_URL=http://<lan-ip>:5173/?touch=1` then `bun run mobile:dev`  
-   (or `cd mobile && bunx expo start` with that env var)
-
-Scan the QR code with Expo Go. Landscape preferred; portrait still gets the touch pad.
-
-## Prod-ish (built `dist/`)
+| Script                 | What it does                                                                 |
+| ---------------------- | ---------------------------------------------------------------------------- |
+| `bun run mobile:dev`   | Starts Vite if needed, writes LAN `.env`, installs **debug** APK             |
+| `bun run mobile:build` | Builds Phaser → packs into APK assets → **release** APK (offline, no server) |
 
 ```bash
-bun run mobile:build
+bun run mobile:dev     # iterate with hot Vite on Wi‑Fi
+bun run mobile:build   # shareable APK, no laptop required
 ```
 
-Builds the game, syncs `dist/` → `mobile/game-dist/`, starts `vite preview` on `:4173`, and opens Expo pointed at that preview URL. True App Store offline packaging is out of scope for this slice.
+Release APK path (typical):
 
-## Desktop
+`mobile/android/app/build/outputs/apk/release/app-release.apk`
 
-Keep using Electron (`bun run desktop`) — not this folder.
+## Layout (touch)
+
+Stick bottom-left · ATK / E / DASH bottom-right · skills raised center · INV/MAP/MENU under minimap.
+
+## App icon
+
+`bun run icons` then rebuild the app.

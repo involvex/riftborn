@@ -9,6 +9,7 @@ node_modules/
 dist/
 web-build/
 game-dist/
+android/app/src/main/assets/www/
 expo-env.d.ts
 
 # Native
@@ -33,6 +34,7 @@ yarn-error.*
 *.pem
 
 # local env files
+.env
 .env*.local
 
 # typescript

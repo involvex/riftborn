@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { uiFont } from '../core/UiScale';
 import { gameState } from '../systems/GameState';
 import { MAX_LEVEL, xpForLevel } from '../systems/ProgressionSystem';
+import { shouldShowTouchControls } from './TouchControls';
 
 /** Classic top-left HP (red) + XP bars with compact labels. */
 export class HudBars {
@@ -78,8 +79,9 @@ export class HudBars {
   }
 
   layout(): void {
-    this.root.setPosition(16, 12);
-    this.meta.setFontSize(uiFont(this.scene, 15, 12, 18));
+    const touch = shouldShowTouchControls();
+    this.root.setPosition(touch ? 12 : 16, touch ? 8 : 12);
+    this.meta.setFontSize(uiFont(this.scene, touch ? 13 : 15, 11, 18));
   }
 
   refresh(): void {
