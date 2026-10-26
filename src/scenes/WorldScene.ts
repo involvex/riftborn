@@ -7,18 +7,24 @@ import {
 } from '../core/IsoMath';
 import { Events, gameEvents } from '../core/EventBus';
 import { Enemy } from '../entities/Enemy';
+import { LootChest } from '../entities/LootChest';
 import { Npc } from '../entities/Npc';
 import { Player } from '../entities/Player';
 import { ResourceNode } from '../entities/ResourceNode';
-import { describeGear } from '../systems/ItemGen';
+import { describeGear, gearDropChance, rollGearDrop } from '../systems/ItemGen';
 import { gameState } from '../systems/GameState';
 import {
   generateHub,
+  HUB_SIZE,
+  HUB_SPAWN,
   inPlaza,
+  PLAZA,
   type HubDecor,
+  type PoiKind,
   type WildernessPoi,
   type ZoneLayout,
 } from '../world/MapGen';
+import type { LootTier } from '../types/game';
 import {
   generateDungeon,
   isWalkable,
@@ -29,8 +35,8 @@ import { bindAction } from '../core/Hotkeys';
 import { audioBus } from '../core/AudioBus';
 import { settingsStore } from '../core/SettingsStore';
 
-const DEFAULT_HUB_SIZE = 36;
-const TOWN_SPAWN = { x: 17.5, y: 18.5 };
+const DEFAULT_HUB_SIZE = HUB_SIZE;
+const TOWN_SPAWN = { ...HUB_SPAWN };
 
 export class WorldScene extends Phaser.Scene {
   private player!: Player;
@@ -71,8 +77,11 @@ export class WorldScene extends Phaser.Scene {
   private hubSize = DEFAULT_HUB_SIZE;
   private wildernessPois: WildernessPoi[] = [];
   private announcedPois = new Set<string>();
+  private chests: LootChest[] = [];
+  private shrineReadyAt = 0;
   private enemySeq = 0;
   private nodeSeq = 0;
+  private chestSeq = 0;
   private dungeon: DungeonMap | null = null;
   private remoteGhosts = new Map<string, Phaser.GameObjects.Container>();
   private unsubNet: (() => void) | null = null;
@@ -105,8 +114,10 @@ export class WorldScene extends Phaser.Scene {
     this.player?.destroy();
     for (const n of this.nodes) n.destroy();
     for (const e of this.enemies) e.destroy();
+    for (const c of this.chests) c.destroy();
     this.nodes = [];
     this.enemies = [];
+    this.chests = [];
     for (const g of this.remoteGhosts.values()) g.destroy(true);
     this.remoteGhosts.clear();
   }
@@ -191,10 +202,12 @@ export class WorldScene extends Phaser.Scene {
   private spawnFromLayout(layout: ZoneLayout): void {
     for (const n of this.nodes) n.destroy();
     for (const e of this.enemies) e.destroy();
+    for (const c of this.chests) c.destroy();
     for (const n of this.npcs) n.destroy();
     for (const d of this.decor) d.destroy(true);
     this.nodes = [];
     this.enemies = [];
+    this.chests = [];
     this.npcs = [];
     this.decor = [];
     this.nearNpc = null;
@@ -208,6 +221,7 @@ export class WorldScene extends Phaser.Scene {
     this.riftBossDead = false;
     this.riftKillGoal = layout.killGoal ?? 18;
     this.bossAnchor = layout.elite ? { ...layout.elite } : null;
+    this.shrineReadyAt = 0;
 
     for (const n of layout.nodes) {
       const p = snapToTile(n.x, n.y);
@@ -225,13 +239,33 @@ export class WorldScene extends Phaser.Scene {
         const p = snapToTile(pack.x + ox, pack.y + oy);
         if (!gameState.inRift && inPlaza(p.x, p.y)) continue;
         const elitePack = gameState.inRift && Math.random() < 0.14;
-        this.enemies.push(
-          new Enemy(this, `enemy_${this.enemySeq++}`, pack.enemyId, p.x, p.y, {
+        const enemy = new Enemy(
+          this,
+          `enemy_${this.enemySeq++}`,
+          pack.enemyId,
+          p.x,
+          p.y,
+          {
             elitePack,
             levelScale: gameState.progression.level,
-          }),
+          },
         );
+        enemy.maxBound = gameState.inRift ? 22 : this.hubSize - 0.5;
+        this.enemies.push(enemy);
       }
+    }
+
+    for (const ch of layout.chests ?? []) {
+      const p = snapToTile(ch.x, ch.y);
+      this.chests.push(
+        new LootChest(
+          this,
+          ch.id || `chest_${this.chestSeq++}`,
+          p.x,
+          p.y,
+          ch.lootTier,
+        ),
+      );
     }
 
     if (layout.portal) {
@@ -248,9 +282,9 @@ export class WorldScene extends Phaser.Scene {
         const p = snapToTile(n.x, n.y);
         this.npcs.push(new Npc(this, n.id, n.role, n.name, p.x, p.y));
       }
-      this.makeBuilding(15.5, 15.5, 0x3a3028, 'Shop');
-      this.makeBuilding(19.5, 15.5, 0x2a3a32, 'Forge');
-      this.makeBuilding(17.5, 20.5, 0x2a2838, 'Inn');
+      this.makeBuilding(30.5, 30.5, 0x3a3028, 'Shop');
+      this.makeBuilding(34.5, 30.5, 0x2a3a32, 'Forge');
+      this.makeBuilding(32.5, 35.5, 0x2a2838, 'Inn');
       for (const d of layout.decor ?? []) this.makeHubDecor(d);
       this.wildernessPois = layout.pois ?? [];
       this.announcedPois.clear();
@@ -263,41 +297,91 @@ export class WorldScene extends Phaser.Scene {
     this.emitRiftProgress();
   }
 
+  private poiStyle(kind: PoiKind): {
+    accent: number;
+    subtitle: string;
+    titleColor: string;
+    tip: string;
+  } {
+    switch (kind) {
+      case 'camp':
+        return {
+          accent: 0xc45c3a,
+          subtitle: 'Bandit camp · chest',
+          titleColor: '#e8b090',
+          tip: 'mid-tier bandits & a stash chest',
+        };
+      case 'scout':
+        return {
+          accent: 0xc4a040,
+          subtitle: 'Elite scout · magic loot',
+          titleColor: '#e8d080',
+          tip: 'lone elite, always drops magic gear',
+        };
+      case 'shrine':
+        return {
+          accent: 0xe07040,
+          subtitle: 'Blessing · E · timed buff',
+          titleColor: '#f0a878',
+          tip: 'touch the altar (E) for a timed damage blessing',
+        };
+      case 'warren':
+        return {
+          accent: 0x8a7a60,
+          subtitle: 'Crawler dens · chest',
+          titleColor: '#c8b898',
+          tip: 'bone crawlers guard a chest',
+        };
+      case 'grove':
+        return {
+          accent: 0x50a060,
+          subtitle: 'Wisp grove · chest',
+          titleColor: '#a8d0a0',
+          tip: 'ember wisps & a grove chest',
+        };
+      case 'watch':
+        return {
+          accent: 0x708090,
+          subtitle: 'Lookout · chest',
+          titleColor: '#b0c0d0',
+          tip: 'watchers on the ridge — loot nearby',
+        };
+      case 'cairn':
+        return {
+          accent: 0x6a6080,
+          subtitle: 'Burial mound · chest',
+          titleColor: '#c0b0d0',
+          tip: 'tough foes around a cairn chest',
+        };
+      case 'ruin':
+      default:
+        return {
+          accent: 0x6a80a0,
+          subtitle: 'Ancient ruin · chest',
+          titleColor: '#b8c8e0',
+          tip: 'stronger foes, veins & a chest',
+        };
+    }
+  }
+
   private makePoiMarker(poi: WildernessPoi): void {
     const p = snapToTile(poi.x, poi.y);
     const { screenX, screenY } = worldToScreen(p.x, p.y);
-    const accent =
-      poi.kind === 'camp'
-        ? 0xc45c3a
-        : poi.kind === 'scout'
-          ? 0xc4a040
-          : 0x6a80a0;
+    const style = this.poiStyle(poi.kind);
     const g = this.add.graphics();
-    g.lineStyle(2, accent, 0.55);
+    g.lineStyle(2, style.accent, 0.55);
     g.strokeEllipse(0, 2, 52, 24);
-    const subtitle =
-      poi.kind === 'camp'
-        ? 'Bandit camp'
-        : poi.kind === 'scout'
-          ? 'Elite scout · magic loot'
-          : 'Ancient ruin';
-    const titleColor =
-      poi.kind === 'camp'
-        ? '#e8b090'
-        : poi.kind === 'scout'
-          ? '#e8d080'
-          : '#b8c8e0';
     const title = this.add
       .text(0, -36, poi.name, {
         fontFamily: 'Georgia, serif',
         fontSize: '13px',
-        color: titleColor,
+        color: style.titleColor,
         stroke: '#0a0c10',
         strokeThickness: 4,
       })
       .setOrigin(0.5);
     const sub = this.add
-      .text(0, -20, subtitle, {
+      .text(0, -20, style.subtitle, {
         fontFamily: 'Segoe UI, sans-serif',
         fontSize: '10px',
         color: '#8a9aaa',
@@ -323,13 +407,10 @@ export class WorldScene extends Phaser.Scene {
       }
       if (this.announcedPois.has(poi.id)) continue;
       this.announcedPois.add(poi.id);
-      const tip =
-        poi.kind === 'camp'
-          ? `${poi.name} — mid-tier bandits ahead`
-          : poi.kind === 'scout'
-            ? `${poi.name} — lone elite, always drops magic gear`
-            : `${poi.name} — stronger foes & richer veins`;
-      gameEvents.emit('ui:toast', { text: tip });
+      const style = this.poiStyle(poi.kind);
+      gameEvents.emit('ui:toast', {
+        text: `${poi.name} — ${style.tip}`,
+      });
     }
   }
 
@@ -409,6 +490,30 @@ export class WorldScene extends Phaser.Scene {
         g.fillRect(-7, -40, 14, 6);
         g.lineStyle(1, 0x2a3038, 0.8);
         g.strokeRect(-5, -36, 10, 38);
+        break;
+      case 'altar':
+        g.fillStyle(0x000000, 0.35);
+        g.fillEllipse(0, 6, 32, 12);
+        g.fillStyle(0x4a3a30, 1);
+        g.fillRect(-14, -6, 28, 12);
+        g.fillStyle(0x6a5040, 1);
+        g.fillRect(-10, -14, 20, 10);
+        g.fillStyle(0xe07040, 0.95);
+        g.fillCircle(0, -20, 5);
+        g.fillStyle(0xffc080, 0.35);
+        g.fillCircle(0, -20, 14);
+        g.lineStyle(1, 0xc4a574, 0.6);
+        g.strokeRect(-14, -6, 28, 12);
+        break;
+      case 'totem':
+        g.fillStyle(0x000000, 0.3);
+        g.fillEllipse(0, 4, 16, 8);
+        g.fillStyle(0x5a4030, 1);
+        g.fillRect(-4, -28, 8, 30);
+        g.fillStyle(0x8a6040, 1);
+        g.fillTriangle(-10, -20, 10, -20, 0, -36);
+        g.fillStyle(0xc45c3a, 0.9);
+        g.fillCircle(0, -24, 3);
         break;
       case 'rubble':
         g.fillStyle(0x4a5058, 1);
@@ -533,6 +638,16 @@ export class WorldScene extends Phaser.Scene {
           base = (x + y) % 2 === 0 ? 0x3a3228 : 0x322a22;
         } else if (poi?.kind === 'scout') {
           base = (x + y) % 2 === 0 ? 0x3a3428 : 0x322e20;
+        } else if (poi?.kind === 'shrine') {
+          base = (x + y) % 2 === 0 ? 0x3a2820 : 0x322018;
+        } else if (poi?.kind === 'warren') {
+          base = (x + y) % 2 === 0 ? 0x322c24 : 0x2a241c;
+        } else if (poi?.kind === 'grove') {
+          base = (x + y) % 2 === 0 ? 0x243828 : 0x1c3020;
+        } else if (poi?.kind === 'watch') {
+          base = (x + y) % 2 === 0 ? 0x303840 : 0x283038;
+        } else if (poi?.kind === 'cairn') {
+          base = (x + y) % 2 === 0 ? 0x2e2838 : 0x262030;
         } else if (poi?.kind === 'ruin') {
           base = (x + y) % 2 === 0 ? 0x2a323c : 0x222830;
         } else if (onPath) {
@@ -548,7 +663,10 @@ export class WorldScene extends Phaser.Scene {
               : 0x1c2620;
         }
         this.drawIsoTile(x, y, base);
-        if (plaza && (x === 14 || x === 21 || y === 14 || y === 21)) {
+        if (
+          plaza &&
+          (x === PLAZA.x0 || x === PLAZA.x1 || y === PLAZA.y0 || y === PLAZA.y1)
+        ) {
           const { screenX, screenY } = worldToScreen(x, y);
           this.tiles.fillStyle(0xc4a574, 0.12);
           this.tiles.fillCircle(screenX, screenY, 4);
@@ -793,11 +911,20 @@ export class WorldScene extends Phaser.Scene {
           (enemy.isBoss ? 1 : 0),
       ),
     ) as 1 | 2 | 3 | 4;
+    const scoutKill = enemy.def.id === 'ash_scout';
     gameState.combat.grantKillRewards(enemy.def.xp, enemy.def.lootTable, {
       elite: enemy.awardsEliteLoot,
       lootTier: tier,
-      guaranteedMinRarity: enemy.def.id === 'ash_scout' ? 'magic' : undefined,
-      onGear: (g) => gameEvents.emit('ui:toast', { text: describeGear(g) }),
+      guaranteedMinRarity: scoutKill ? 'magic' : undefined,
+      onGear: (g) => {
+        if (scoutKill) {
+          gameEvents.emit('ui:toast', {
+            text: `Scout fall — ${g.rarity} ${g.name}`,
+          });
+        } else {
+          gameEvents.emit('ui:toast', { text: describeGear(g) });
+        }
+      },
     });
     gameState.persist();
     this.shakeUntil = this.time.now + 80;
@@ -830,12 +957,19 @@ export class WorldScene extends Phaser.Scene {
       y: this.player.worldY,
     };
     const p = snapToTile(anchor.x, anchor.y);
-    this.enemies.push(
-      new Enemy(this, `enemy_${this.enemySeq++}`, 'rift_lord', p.x, p.y, {
+    const boss = new Enemy(
+      this,
+      `enemy_${this.enemySeq++}`,
+      'rift_lord',
+      p.x,
+      p.y,
+      {
         boss: true,
         levelScale: gameState.progression.level + 2,
-      }),
+      },
     );
+    boss.maxBound = 22;
+    this.enemies.push(boss);
     gameEvents.emit('ui:toast', {
       text: 'The Rift tears open — a Rift Lord emerges!',
     });
@@ -905,11 +1039,104 @@ export class WorldScene extends Phaser.Scene {
         return;
       }
     }
+    if (this.tryShrine()) return;
+    if (this.tryOpenChest()) return;
     if (this.nearBench) {
       gameEvents.emit('ui:openCraft', {});
       return;
     }
     this.tryGather();
+  }
+
+  private tryShrine(): boolean {
+    if (gameState.inRift) return false;
+    const shrine = this.wildernessPois.find((p) => p.kind === 'shrine');
+    if (!shrine) return false;
+    const dist = worldDistance(
+      { x: this.player.worldX, y: this.player.worldY },
+      { x: shrine.x, y: shrine.y },
+    );
+    if (dist > 1.6) return false;
+    const now = this.time.now;
+    if (now < this.shrineReadyAt) {
+      const left = Math.ceil((this.shrineReadyAt - now) / 1000);
+      gameEvents.emit('ui:toast', {
+        text: `Shrine cooling — ${left}s`,
+      });
+      return true;
+    }
+    const bless = gameState.skills.applyShrineBuff(1.4, 45);
+    this.shrineReadyAt = now + 90_000;
+    const heal = Math.floor(gameState.maxHp * 0.15);
+    gameState.hp = Math.min(gameState.maxHp, gameState.hp + heal);
+    this.cameras.main.flash(180, 220, 100, 60, false, undefined, this);
+    gameEvents.emit('ui:toast', {
+      text: `Ember blessing — +${Math.round((bless.mult - 1) * 100)}% damage ${bless.duration}s`,
+    });
+    return true;
+  }
+
+  private tryOpenChest(): boolean {
+    let nearest: LootChest | null = null;
+    let best = 1.5;
+    for (const chest of this.chests) {
+      if (chest.looted) continue;
+      const dist = worldDistance(
+        { x: this.player.worldX, y: this.player.worldY },
+        { x: chest.worldX, y: chest.worldY },
+      );
+      if (dist < best) {
+        best = dist;
+        nearest = chest;
+      }
+    }
+    if (!nearest) return false;
+    this.openChest(nearest);
+    return true;
+  }
+
+  private openChest(chest: LootChest): void {
+    const tier = chest.lootTier as LootTier;
+    const gold =
+      tier === 1
+        ? 4 + Math.floor(Math.random() * 6)
+        : tier === 2
+          ? 8 + Math.floor(Math.random() * 10)
+          : tier === 3
+            ? 14 + Math.floor(Math.random() * 16)
+            : 25 + Math.floor(Math.random() * 30);
+    gameState.inventory.add('gold', gold);
+    const scrap = 1 + Math.floor(Math.random() * (1 + tier));
+    gameState.inventory.add('scrap', scrap);
+    if (tier >= 2 && Math.random() < 0.55) {
+      gameState.inventory.add('ore', 1 + Math.floor(Math.random() * tier));
+    }
+    if (tier >= 3 && Math.random() < 0.4) {
+      gameState.inventory.add('rift_shard', 1);
+    }
+
+    const parts = [`+${gold}g`, `scrap×${scrap}`];
+    const gearOdds = Math.min(0.95, gearDropChance(tier, tier >= 4) + 0.25);
+    if (Math.random() < gearOdds) {
+      const gear = rollGearDrop(gameState.progression.level, {
+        elite: tier >= 4,
+        preferArmor: Math.random() > 0.35,
+        forClass: gameState.progression.classId,
+        lootTier: tier,
+        minRarity: tier >= 3 ? 'magic' : undefined,
+      });
+      if (gameState.inventory.addGear(gear)) {
+        parts.push(`${gear.rarity} ${gear.name}`);
+      }
+    }
+
+    chest.markLooted();
+    audioBus.hit();
+    this.shakeUntil = this.time.now + 60;
+    gameState.persist();
+    gameEvents.emit('ui:toast', {
+      text: `Chest — ${parts.join(' · ')}`,
+    });
   }
 
   private tryGather(): void {

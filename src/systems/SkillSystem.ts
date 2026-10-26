@@ -125,6 +125,23 @@ export class SkillSystem {
     return 1;
   }
 
+  /** Shrine / world blessing — timed damage buff (stacks by refresh). */
+  applyShrineBuff(
+    mult = 1.4,
+    durationSec = 45,
+  ): {
+    mult: number;
+    duration: number;
+  } {
+    this.damageBuffMult = Math.max(this.damageBuffMult, mult);
+    this.damageBuffUntil = this.now + durationSec;
+    return { mult, duration: durationSec };
+  }
+
+  shrineBuffRemaining(): number {
+    return Math.max(0, this.damageBuffUntil - this.now);
+  }
+
   absorbDamage(raw: number): number {
     if (this.barrierHp <= 0 || this.now >= this.barrierUntil) return raw;
     const absorbed = Math.min(this.barrierHp, raw);

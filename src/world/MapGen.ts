@@ -29,11 +29,21 @@ export type HubDecorKind =
   | 'tent'
   | 'campfire'
   | 'pillar'
-  | 'rubble';
+  | 'rubble'
+  | 'altar'
+  | 'totem';
 
 export type HubDecor = SpawnPoint & { kind: HubDecorKind };
 
-export type PoiKind = 'camp' | 'ruin' | 'scout';
+export type PoiKind =
+  | 'camp'
+  | 'ruin'
+  | 'scout'
+  | 'shrine'
+  | 'warren'
+  | 'grove'
+  | 'watch'
+  | 'cairn';
 
 /** Named wilderness landmark with mid-tier packs. */
 export type WildernessPoi = SpawnPoint & {
@@ -42,6 +52,12 @@ export type WildernessPoi = SpawnPoint & {
   name: string;
   /** Approx radius in tiles for clearing / proximity. */
   radius: number;
+};
+
+export type ChestSpawn = SpawnPoint & {
+  id: string;
+  /** 1=fringe, 2=normal, 3=tough POI, 4=elite. */
+  lootTier: 1 | 2 | 3 | 4;
 };
 
 export type ZoneLayout = {
@@ -62,18 +78,36 @@ export type ZoneLayout = {
   decor?: HubDecor[];
   /** Named wilderness points of interest. */
   pois?: WildernessPoi[];
-  /** World size for open hub (default 24). */
+  /** Lootable chests (often next to tough packs). */
+  chests?: ChestSpawn[];
+  /** World size for open hub. */
   size?: number;
 };
 
-/** Safe plaza diamond — no hostile packs. */
+/** Open hub extent (tiles on each axis). */
+export const HUB_SIZE = 64;
+/** Plaza bounds (inclusive tile coords) — safe zone. */
+export const PLAZA = { x0: 28, x1: 36, y0: 28, y1: 36 } as const;
+export const HUB_ROAD_AXIS = 32;
+export const HUB_SPAWN = { x: 32.5, y: 33.5 };
+
+/** Safe plaza — no hostile packs. */
 export function inPlaza(x: number, y: number): boolean {
-  return x >= 14 && x <= 21 && y >= 14 && y <= 21;
+  return x >= PLAZA.x0 && x <= PLAZA.x1 && y >= PLAZA.y0 && y <= PLAZA.y1;
+}
+
+/** Soft buffer around town so wilderness packs don't hug the plaza. */
+export function nearTown(x: number, y: number, margin = 10): boolean {
+  const cx = (PLAZA.x0 + PLAZA.x1) / 2;
+  const cy = (PLAZA.y0 + PLAZA.y1) / 2;
+  const half = (PLAZA.x1 - PLAZA.x0) / 2 + margin;
+  return Math.abs(x - cx) <= half && Math.abs(y - cy) <= half;
 }
 
 function nearRoad(x: number, y: number): boolean {
-  if (Math.abs(x - 17) <= 1 && y >= 4 && y <= 30) return true;
-  if (Math.abs(y - 17) <= 1 && x >= 4 && x <= 30) return true;
+  const a = HUB_ROAD_AXIS;
+  if (Math.abs(x - a) <= 1 && y >= 6 && y <= HUB_SIZE - 6) return true;
+  if (Math.abs(y - a) <= 1 && x >= 6 && x <= HUB_SIZE - 6) return true;
   return false;
 }
 
@@ -100,125 +134,222 @@ function fillClearing(
   }
 }
 
+function spur(
+  paths: SpawnPoint[],
+  fromX: number,
+  fromY: number,
+  toX: number,
+  toY: number,
+): void {
+  const steps = Math.max(
+    Math.abs(Math.round(toX - fromX)),
+    Math.abs(Math.round(toY - fromY)),
+  );
+  for (let i = 0; i <= steps; i++) {
+    const t = steps === 0 ? 0 : i / steps;
+    paths.push({
+      x: Math.round(fromX + (toX - fromX) * t),
+      y: Math.round(fromY + (toY - fromY) * t),
+    });
+  }
+}
+
 /**
- * Hub town + open wilderness fringe + named POIs.
- * Plaza is safe; roads lead out; wild has gathering, starter packs, camp & ruin.
+ * Hub town + wide wilderness + named POIs + chests.
+ * Plaza is safe; long roads lead out; shrine grants a timed damage buff.
  */
 export function generateHub(seed = 1): ZoneLayout {
   const rnd = mulberry32(seed);
-  const size = 36;
+  const size = HUB_SIZE;
+  const axis = HUB_ROAD_AXIS;
   const nodes: ZoneLayout['nodes'] = [];
   const packs: ZoneLayout['packs'] = [];
   const paths: SpawnPoint[] = [];
   const decor: HubDecor[] = [];
+  const chests: ChestSpawn[] = [];
 
   const pois: WildernessPoi[] = [
     {
       id: 'ashbandit_camp',
       kind: 'camp',
       name: 'Ashbandit Camp',
-      x: 6.5,
-      y: 28.5,
-      radius: 2.6,
+      x: 10.5,
+      y: 54.5,
+      radius: 2.8,
     },
     {
       id: 'riftscar_ruin',
       kind: 'ruin',
       name: 'Riftscar Ruin',
-      x: 29.5,
-      y: 7.5,
-      radius: 2.8,
+      x: 54.5,
+      y: 10.5,
+      radius: 3.0,
     },
     {
       id: 'lone_scout_camp',
       kind: 'scout',
       name: 'Lone Scout Camp',
-      x: 30.5,
-      y: 29.5,
-      radius: 2.2,
+      x: 54.5,
+      y: 54.5,
+      radius: 2.4,
+    },
+    {
+      id: 'ember_shrine',
+      kind: 'shrine',
+      name: 'Ember Shrine',
+      x: 10.5,
+      y: 10.5,
+      radius: 2.6,
+    },
+    {
+      id: 'bone_warren',
+      kind: 'warren',
+      name: 'Bone Warren',
+      x: 8.5,
+      y: 32.5,
+      radius: 2.6,
+    },
+    {
+      id: 'ash_grove',
+      kind: 'grove',
+      name: 'Ash Grove',
+      x: 22.5,
+      y: 8.5,
+      radius: 2.5,
+    },
+    {
+      id: 'watch_ridge',
+      kind: 'watch',
+      name: 'Watch Ridge',
+      x: 56.5,
+      y: 32.5,
+      radius: 2.5,
+    },
+    {
+      id: 'hollow_cairn',
+      kind: 'cairn',
+      name: 'Hollow Cairn',
+      x: 40.5,
+      y: 56.5,
+      radius: 2.7,
     },
   ];
 
   // Plaza floor
-  for (let y = 14; y <= 21; y++) {
-    for (let x = 14; x <= 21; x++) {
+  for (let y = PLAZA.y0; y <= PLAZA.y1; y++) {
+    for (let x = PLAZA.x0; x <= PLAZA.x1; x++) {
       paths.push({ x, y });
     }
   }
-  // North road → obelisk
-  for (let y = 5; y <= 14; y++) {
-    paths.push({ x: 17, y });
-    paths.push({ x: 16, y });
-    paths.push({ x: 18, y });
+  // Crossroads through town
+  for (let y = 8; y <= size - 8; y++) {
+    paths.push({ x: axis, y });
+    paths.push({ x: axis - 1, y });
+    paths.push({ x: axis + 1, y });
   }
-  // East / west / south arms into the wild
-  for (let x = 4; x <= 32; x++) {
-    paths.push({ x, y: 17 });
-    if (x % 3 === 0) paths.push({ x, y: 16 });
-  }
-  for (let y = 22; y <= 31; y++) {
-    paths.push({ x: 17, y });
+  for (let x = 8; x <= size - 8; x++) {
+    paths.push({ x, y: axis });
+    if (x % 3 === 0) paths.push({ x, y: axis - 1 });
   }
   // Spur roads toward POIs
-  for (let x = 6; x <= 17; x++) paths.push({ x, y: 28 });
-  for (let y = 7; y <= 17; y++) paths.push({ x: 29, y });
-  for (let x = 17; x <= 30; x++) paths.push({ x, y: 29 });
-  for (let y = 17; y <= 29; y++) paths.push({ x: 30, y });
-
   for (const poi of pois) {
+    spur(paths, axis, axis, Math.floor(poi.x), Math.floor(poi.y));
     fillClearing(paths, Math.floor(poi.x), Math.floor(poi.y), poi.radius);
   }
 
   // Plaza props
-  decor.push({ kind: 'well', x: 17.5, y: 17.5 });
-  decor.push({ kind: 'lantern', x: 14.5, y: 14.5 });
-  decor.push({ kind: 'lantern', x: 21.5, y: 14.5 });
-  decor.push({ kind: 'lantern', x: 14.5, y: 21.5 });
-  decor.push({ kind: 'lantern', x: 21.5, y: 21.5 });
-  decor.push({ kind: 'stall', x: 15.5, y: 15.5 });
-  decor.push({ kind: 'crate', x: 19.5, y: 15.5 });
-  decor.push({ kind: 'crate', x: 20.5, y: 16.5 });
-  decor.push({ kind: 'lantern', x: 17.5, y: 6.5 });
+  decor.push({ kind: 'well', x: 32.5, y: 32.5 });
+  decor.push({ kind: 'lantern', x: 28.5, y: 28.5 });
+  decor.push({ kind: 'lantern', x: 36.5, y: 28.5 });
+  decor.push({ kind: 'lantern', x: 28.5, y: 36.5 });
+  decor.push({ kind: 'lantern', x: 36.5, y: 36.5 });
+  decor.push({ kind: 'stall', x: 30.5, y: 30.5 });
+  decor.push({ kind: 'crate', x: 34.5, y: 30.5 });
+  decor.push({ kind: 'crate', x: 35.5, y: 31.5 });
+  decor.push({ kind: 'lantern', x: 32.5, y: 20.5 });
 
-  // —— Ashbandit Camp props ——
-  decor.push({ kind: 'campfire', x: 6.5, y: 28.5 });
-  decor.push({ kind: 'tent', x: 5.5, y: 27.5 });
-  decor.push({ kind: 'tent', x: 7.5, y: 27.5 });
-  decor.push({ kind: 'tent', x: 5.5, y: 29.5 });
-  decor.push({ kind: 'crate', x: 7.5, y: 29.5 });
-  decor.push({ kind: 'crate', x: 8.5, y: 28.5 });
-  decor.push({ kind: 'lantern', x: 4.5, y: 28.5 });
+  // —— Ashbandit Camp (SW) ——
+  decor.push({ kind: 'campfire', x: 10.5, y: 54.5 });
+  decor.push({ kind: 'tent', x: 9.5, y: 53.5 });
+  decor.push({ kind: 'tent', x: 11.5, y: 53.5 });
+  decor.push({ kind: 'tent', x: 9.5, y: 55.5 });
+  decor.push({ kind: 'crate', x: 11.5, y: 55.5 });
+  decor.push({ kind: 'crate', x: 12.5, y: 54.5 });
+  decor.push({ kind: 'lantern', x: 8.5, y: 54.5 });
 
-  // —— Riftscar Ruin props ——
-  decor.push({ kind: 'pillar', x: 28.5, y: 6.5 });
-  decor.push({ kind: 'pillar', x: 30.5, y: 6.5 });
-  decor.push({ kind: 'pillar', x: 28.5, y: 8.5 });
-  decor.push({ kind: 'pillar', x: 30.5, y: 8.5 });
-  decor.push({ kind: 'rubble', x: 29.5, y: 7.5 });
-  decor.push({ kind: 'rubble', x: 28.5, y: 7.5 });
-  decor.push({ kind: 'rubble', x: 30.5, y: 7.5 });
+  // —— Riftscar Ruin (NE) ——
+  decor.push({ kind: 'pillar', x: 53.5, y: 9.5 });
+  decor.push({ kind: 'pillar', x: 55.5, y: 9.5 });
+  decor.push({ kind: 'pillar', x: 53.5, y: 11.5 });
+  decor.push({ kind: 'pillar', x: 55.5, y: 11.5 });
+  decor.push({ kind: 'rubble', x: 54.5, y: 10.5 });
+  decor.push({ kind: 'rubble', x: 53.5, y: 10.5 });
+  decor.push({ kind: 'rubble', x: 55.5, y: 10.5 });
 
   // —— Lone Scout Camp (SE) ——
-  decor.push({ kind: 'campfire', x: 30.5, y: 29.5 });
-  decor.push({ kind: 'tent', x: 29.5, y: 28.5 });
-  decor.push({ kind: 'crate', x: 31.5, y: 29.5 });
-  decor.push({ kind: 'lantern', x: 31.5, y: 28.5 });
-  decor.push({ kind: 'bush', x: 29.5, y: 30.5 });
+  decor.push({ kind: 'campfire', x: 54.5, y: 54.5 });
+  decor.push({ kind: 'tent', x: 53.5, y: 53.5 });
+  decor.push({ kind: 'crate', x: 55.5, y: 54.5 });
+  decor.push({ kind: 'lantern', x: 55.5, y: 53.5 });
+  decor.push({ kind: 'bush', x: 53.5, y: 55.5 });
 
-  // Gathering fringe (outside plaza, road, POIs)
-  for (let i = 0; i < 20; i++) {
-    let x = 2 + rnd() * (size - 4);
-    let y = 2 + rnd() * (size - 4);
+  // —— Ember Shrine (NW) ——
+  decor.push({ kind: 'altar', x: 10.5, y: 10.5 });
+  decor.push({ kind: 'lantern', x: 9.5, y: 9.5 });
+  decor.push({ kind: 'lantern', x: 11.5, y: 9.5 });
+  decor.push({ kind: 'rock', x: 9.5, y: 11.5 });
+  decor.push({ kind: 'rock', x: 11.5, y: 11.5 });
+
+  // —— Bone Warren (W) ——
+  decor.push({ kind: 'rubble', x: 8.5, y: 32.5 });
+  decor.push({ kind: 'rubble', x: 7.5, y: 31.5 });
+  decor.push({ kind: 'rubble', x: 9.5, y: 33.5 });
+  decor.push({ kind: 'totem', x: 7.5, y: 33.5 });
+  decor.push({ kind: 'bush', x: 9.5, y: 31.5 });
+
+  // —— Ash Grove (N) ——
+  decor.push({ kind: 'bush', x: 22.5, y: 8.5 });
+  decor.push({ kind: 'bush', x: 21.5, y: 7.5 });
+  decor.push({ kind: 'bush', x: 23.5, y: 9.5 });
+  decor.push({ kind: 'rock', x: 23.5, y: 7.5 });
+  decor.push({ kind: 'lantern', x: 21.5, y: 9.5 });
+
+  // —— Watch Ridge (E) ——
+  decor.push({ kind: 'totem', x: 56.5, y: 32.5 });
+  decor.push({ kind: 'campfire', x: 57.5, y: 31.5 });
+  decor.push({ kind: 'crate', x: 55.5, y: 33.5 });
+  decor.push({ kind: 'lantern', x: 57.5, y: 33.5 });
+
+  // —— Hollow Cairn (S) ——
+  decor.push({ kind: 'pillar', x: 40.5, y: 56.5 });
+  decor.push({ kind: 'rubble', x: 39.5, y: 55.5 });
+  decor.push({ kind: 'rubble', x: 41.5, y: 57.5 });
+  decor.push({ kind: 'rock', x: 39.5, y: 57.5 });
+  decor.push({ kind: 'rock', x: 41.5, y: 55.5 });
+
+  // Gathering across the wide fringe
+  for (let i = 0; i < 48; i++) {
+    let x = 3 + rnd() * (size - 6);
+    let y = 3 + rnd() * (size - 6);
     let guard = 0;
     while (
-      (inPlaza(x, y) || nearRoad(x, y) || nearPoi(x, y, pois)) &&
-      guard++ < 16
+      (inPlaza(x, y) ||
+        nearTown(x, y, 6) ||
+        nearRoad(x, y) ||
+        nearPoi(x, y, pois)) &&
+      guard++ < 20
     ) {
-      x = 2 + rnd() * (size - 4);
-      y = 2 + rnd() * (size - 4);
+      x = 3 + rnd() * (size - 6);
+      y = 3 + rnd() * (size - 6);
     }
-    if (inPlaza(x, y) || nearRoad(x, y) || nearPoi(x, y, pois)) continue;
-    if (Math.abs(x - 17) < 2.5 && y < 8) continue;
+    if (
+      inPlaza(x, y) ||
+      nearTown(x, y, 6) ||
+      nearRoad(x, y) ||
+      nearPoi(x, y, pois)
+    ) {
+      continue;
+    }
     const roll = rnd();
     const defId =
       roll > 0.55 ? 'ash_tree' : roll > 0.25 ? 'rift_vein' : 'berry_bush';
@@ -229,17 +360,17 @@ export function generateHub(seed = 1): ZoneLayout {
     });
   }
 
-  // Extra veins at the ruin (loot hook)
-  nodes.push({ defId: 'rift_vein', x: 29.5, y: 6.5 });
-  nodes.push({ defId: 'rift_vein', x: 30.5, y: 9.5 });
-  // Wood near camp
-  nodes.push({ defId: 'ash_tree', x: 4.5, y: 27.5 });
-  nodes.push({ defId: 'berry_bush', x: 8.5, y: 30.5 });
+  nodes.push({ defId: 'rift_vein', x: 54.5, y: 9.5 });
+  nodes.push({ defId: 'rift_vein', x: 55.5, y: 12.5 });
+  nodes.push({ defId: 'ash_tree', x: 8.5, y: 53.5 });
+  nodes.push({ defId: 'berry_bush', x: 12.5, y: 56.5 });
+  nodes.push({ defId: 'ash_tree', x: 21.5, y: 9.5 });
+  nodes.push({ defId: 'berry_bush', x: 23.5, y: 8.5 });
+  nodes.push({ defId: 'rift_vein', x: 39.5, y: 56.5 });
 
-  // Scenic rocks / bushes
-  for (let i = 0; i < 14; i++) {
-    const x = 2 + rnd() * (size - 4);
-    const y = 2 + rnd() * (size - 4);
+  for (let i = 0; i < 36; i++) {
+    const x = 3 + rnd() * (size - 6);
+    const y = 3 + rnd() * (size - 6);
     if (inPlaza(x, y) || nearPoi(x, y, pois)) continue;
     decor.push({
       kind: rnd() > 0.45 ? 'rock' : 'bush',
@@ -248,17 +379,25 @@ export function generateHub(seed = 1): ZoneLayout {
     });
   }
 
-  // Starter packs in quiet fringe (not on POIs)
+  // Quiet fringe packs — outside the town buffer
   const fringeSpots: SpawnPoint[] = [
-    { x: 5, y: 5 },
-    { x: 12, y: 4 },
-    { x: 24, y: 30 },
-    { x: 32, y: 22 },
-    { x: 8, y: 12 },
-    { x: 22, y: 24 },
+    { x: 18, y: 18 },
+    { x: 46, y: 18 },
+    { x: 18, y: 46 },
+    { x: 46, y: 46 },
+    { x: 24, y: 48 },
+    { x: 48, y: 24 },
+    { x: 16, y: 40 },
+    { x: 40, y: 16 },
   ];
   for (const spot of fringeSpots) {
-    if (inPlaza(spot.x, spot.y) || nearPoi(spot.x, spot.y, pois)) continue;
+    if (
+      inPlaza(spot.x, spot.y) ||
+      nearTown(spot.x, spot.y) ||
+      nearPoi(spot.x, spot.y, pois)
+    ) {
+      continue;
+    }
     const weak = rnd() > 0.35;
     packs.push({
       enemyId: weak ? 'ash_scamp' : 'wisp',
@@ -268,50 +407,82 @@ export function generateHub(seed = 1): ZoneLayout {
     });
   }
 
-  // Mid-tier packs at named POIs
-  // Camp: bandits — shades + scamps
+  // —— Packs at POIs ——
   packs.push(
-    { enemyId: 'shade', count: 3, x: 6.5, y: 28.5 },
-    { enemyId: 'ash_scamp', count: 2, x: 5.5, y: 27.5 },
-    { enemyId: 'ash_scamp', count: 2, x: 7.5, y: 29.5 },
+    { enemyId: 'shade', count: 3, x: 10.5, y: 54.5 },
+    { enemyId: 'ash_scamp', count: 2, x: 9.5, y: 53.5 },
+    { enemyId: 'ash_scamp', count: 2, x: 11.5, y: 55.5 },
   );
-  // Ruin: tougher — crawlers + shades + wisp
   packs.push(
-    { enemyId: 'crawler', count: 2, x: 29.5, y: 7.5 },
-    { enemyId: 'shade', count: 3, x: 28.5, y: 8.5 },
-    { enemyId: 'wisp', count: 2, x: 30.5, y: 6.5 },
-    { enemyId: 'crawler', count: 1, x: 30.5, y: 8.5 },
+    { enemyId: 'crawler', count: 2, x: 54.5, y: 10.5 },
+    { enemyId: 'shade', count: 3, x: 53.5, y: 11.5 },
+    { enemyId: 'wisp', count: 2, x: 55.5, y: 9.5 },
+    { enemyId: 'crawler', count: 1, x: 55.5, y: 11.5 },
   );
-  // Lone scout: one elite — always drops magic+ gear
-  packs.push({ enemyId: 'ash_scout', count: 1, x: 30.5, y: 29.5 });
+  packs.push({ enemyId: 'ash_scout', count: 1, x: 54.5, y: 54.5 });
+  packs.push(
+    { enemyId: 'wisp', count: 2, x: 10.5, y: 9.5 },
+    { enemyId: 'ash_scamp', count: 2, x: 11.5, y: 11.5 },
+  );
+  packs.push(
+    { enemyId: 'crawler', count: 3, x: 8.5, y: 32.5 },
+    { enemyId: 'crawler', count: 2, x: 7.5, y: 31.5 },
+    { enemyId: 'shade', count: 2, x: 9.5, y: 33.5 },
+  );
+  packs.push(
+    { enemyId: 'wisp', count: 4, x: 22.5, y: 8.5 },
+    { enemyId: 'wisp', count: 2, x: 23.5, y: 9.5 },
+  );
+  packs.push(
+    { enemyId: 'shade', count: 3, x: 56.5, y: 32.5 },
+    { enemyId: 'ash_scamp', count: 2, x: 57.5, y: 31.5 },
+    { enemyId: 'wisp', count: 2, x: 55.5, y: 33.5 },
+  );
+  packs.push(
+    { enemyId: 'crawler', count: 2, x: 40.5, y: 56.5 },
+    { enemyId: 'shade', count: 3, x: 39.5, y: 55.5 },
+    { enemyId: 'crawler', count: 1, x: 41.5, y: 57.5 },
+  );
+
+  chests.push(
+    { id: 'chest_camp', x: 12.5, y: 53.5, lootTier: 2 },
+    { id: 'chest_ruin', x: 56.5, y: 11.5, lootTier: 3 },
+    { id: 'chest_scout', x: 55.5, y: 55.5, lootTier: 3 },
+    { id: 'chest_warren', x: 9.5, y: 31.5, lootTier: 3 },
+    { id: 'chest_grove', x: 23.5, y: 7.5, lootTier: 2 },
+    { id: 'chest_watch', x: 57.5, y: 33.5, lootTier: 2 },
+    { id: 'chest_cairn', x: 41.5, y: 55.5, lootTier: 3 },
+    { id: 'chest_shrine', x: 9.5, y: 10.5, lootTier: 2 },
+  );
 
   return {
     size,
     nodes,
     packs,
-    portal: { x: 17.5, y: 5.5 },
-    bench: { x: 19.5, y: 16.5 },
+    portal: { x: 32.5, y: 18.5 },
+    bench: { x: 34.5, y: 31.5 },
     elite: null,
-    spawn: { x: 17.5, y: 18.5 },
+    spawn: { ...HUB_SPAWN },
     npcs: [
       {
         id: 'vendor_mira',
         role: 'vendor',
         name: 'Mira',
-        x: 15.5,
-        y: 16.5,
+        x: 30.5,
+        y: 31.5,
       },
       {
         id: 'crafter_bram',
         role: 'crafter',
         name: 'Bram',
-        x: 19.5,
-        y: 16.5,
+        x: 34.5,
+        y: 31.5,
       },
     ],
     paths,
     decor,
     pois,
+    chests,
   };
 }
 
@@ -319,6 +490,7 @@ export function generateRift(seed: number): ZoneLayout {
   const rnd = mulberry32(seed);
   const nodes: ZoneLayout['nodes'] = [];
   const packs: ZoneLayout['packs'] = [];
+  const chests: ChestSpawn[] = [];
 
   for (let i = 0; i < 4; i++) {
     nodes.push({
@@ -331,13 +503,24 @@ export function generateRift(seed: number): ZoneLayout {
   const packTypes = ['shade', 'crawler', 'wisp'] as const;
   for (let wave = 0; wave < 7; wave++) {
     const enemyId = packTypes[Math.floor(rnd() * packTypes.length)];
+    const x = 3 + rnd() * 18;
+    const y = 3 + rnd() * 18;
     packs.push({
       enemyId,
       count: 4 + Math.floor(rnd() * 5),
-      x: 3 + rnd() * 18,
-      y: 3 + rnd() * 18,
+      x,
+      y,
     });
+    if (rnd() > 0.45) {
+      chests.push({
+        id: `rift_chest_${wave}`,
+        x: x + 1.2,
+        y: y - 0.8,
+        lootTier: enemyId === 'crawler' ? 3 : 2,
+      });
+    }
   }
+  chests.push({ id: 'rift_chest_boss', x: 13.5, y: 11.5, lootTier: 4 });
 
   return {
     nodes,
@@ -346,5 +529,6 @@ export function generateRift(seed: number): ZoneLayout {
     bench: { x: 4, y: 20 },
     elite: { x: 12, y: 12 },
     killGoal: 18,
+    chests,
   };
 }

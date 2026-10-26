@@ -28,8 +28,8 @@ export class GameState {
   gender: CharacterGender = 'male';
   hp = 100;
   maxHp = 100;
-  worldX = 8;
-  worldY = 8;
+  worldX = 32.5;
+  worldY = 33.5;
   inRift = false;
   riftSeed: number | null = null;
   playTimeSec = 0;
@@ -59,8 +59,8 @@ export class GameState {
     this.inventory.add('gold', 80);
     this.recalcMaxHp();
     this.hp = this.maxHp;
-    this.worldX = 17.5;
-    this.worldY = 18.5;
+    this.worldX = 32.5;
+    this.worldY = 33.5;
     this.inRift = false;
     this.riftSeed = null;
     this.playTimeSec = 0;
