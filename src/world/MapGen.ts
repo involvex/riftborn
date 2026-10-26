@@ -20,9 +20,29 @@ export type NpcSpawn = SpawnPoint & {
 };
 
 export type HubDecorKind =
-  'lantern' | 'stall' | 'well' | 'crate' | 'rock' | 'bush';
+  | 'lantern'
+  | 'stall'
+  | 'well'
+  | 'crate'
+  | 'rock'
+  | 'bush'
+  | 'tent'
+  | 'campfire'
+  | 'pillar'
+  | 'rubble';
 
 export type HubDecor = SpawnPoint & { kind: HubDecorKind };
+
+export type PoiKind = 'camp' | 'ruin';
+
+/** Named wilderness landmark with mid-tier packs. */
+export type WildernessPoi = SpawnPoint & {
+  id: string;
+  kind: PoiKind;
+  name: string;
+  /** Approx radius in tiles for clearing / proximity. */
+  radius: number;
+};
 
 export type ZoneLayout = {
   nodes: { defId: string; x: number; y: number }[];
@@ -40,6 +60,8 @@ export type ZoneLayout = {
   killGoal?: number;
   /** Atmospheric props (hub). */
   decor?: HubDecor[];
+  /** Named wilderness points of interest. */
+  pois?: WildernessPoi[];
   /** World size for open hub (default 24). */
   size?: number;
 };
@@ -50,15 +72,37 @@ export function inPlaza(x: number, y: number): boolean {
 }
 
 function nearRoad(x: number, y: number): boolean {
-  // Cross roads from plaza
   if (Math.abs(x - 17) <= 1 && y >= 4 && y <= 30) return true;
   if (Math.abs(y - 17) <= 1 && x >= 4 && x <= 30) return true;
   return false;
 }
 
+function nearPoi(x: number, y: number, pois: WildernessPoi[]): boolean {
+  for (const p of pois) {
+    if (Math.hypot(x - p.x, y - p.y) <= p.radius + 0.5) return true;
+  }
+  return false;
+}
+
+function fillClearing(
+  paths: SpawnPoint[],
+  cx: number,
+  cy: number,
+  radius: number,
+): void {
+  const r = Math.ceil(radius);
+  for (let y = cy - r; y <= cy + r; y++) {
+    for (let x = cx - r; x <= cx + r; x++) {
+      if (Math.hypot(x - cx, y - cy) <= radius + 0.2) {
+        paths.push({ x, y });
+      }
+    }
+  }
+}
+
 /**
- * Hub town + open wilderness fringe.
- * Plaza is safe; roads lead out; wild has gathering + starter packs.
+ * Hub town + open wilderness fringe + named POIs.
+ * Plaza is safe; roads lead out; wild has gathering, starter packs, camp & ruin.
  */
 export function generateHub(seed = 1): ZoneLayout {
   const rnd = mulberry32(seed);
@@ -67,6 +111,25 @@ export function generateHub(seed = 1): ZoneLayout {
   const packs: ZoneLayout['packs'] = [];
   const paths: SpawnPoint[] = [];
   const decor: HubDecor[] = [];
+
+  const pois: WildernessPoi[] = [
+    {
+      id: 'ashbandit_camp',
+      kind: 'camp',
+      name: 'Ashbandit Camp',
+      x: 6.5,
+      y: 28.5,
+      radius: 2.6,
+    },
+    {
+      id: 'riftscar_ruin',
+      kind: 'ruin',
+      name: 'Riftscar Ruin',
+      x: 29.5,
+      y: 7.5,
+      radius: 2.8,
+    },
+  ];
 
   // Plaza floor
   for (let y = 14; y <= 21; y++) {
@@ -88,6 +151,13 @@ export function generateHub(seed = 1): ZoneLayout {
   for (let y = 22; y <= 31; y++) {
     paths.push({ x: 17, y });
   }
+  // Spur roads toward POIs
+  for (let x = 6; x <= 17; x++) paths.push({ x, y: 28 });
+  for (let y = 7; y <= 17; y++) paths.push({ x: 29, y });
+
+  for (const poi of pois) {
+    fillClearing(paths, Math.floor(poi.x), Math.floor(poi.y), poi.radius);
+  }
 
   // Plaza props
   decor.push({ kind: 'well', x: 17.5, y: 17.5 });
@@ -100,16 +170,37 @@ export function generateHub(seed = 1): ZoneLayout {
   decor.push({ kind: 'crate', x: 20.5, y: 16.5 });
   decor.push({ kind: 'lantern', x: 17.5, y: 6.5 });
 
-  // Gathering fringe (outside plaza + road)
-  for (let i = 0; i < 22; i++) {
+  // —— Ashbandit Camp props ——
+  decor.push({ kind: 'campfire', x: 6.5, y: 28.5 });
+  decor.push({ kind: 'tent', x: 5.5, y: 27.5 });
+  decor.push({ kind: 'tent', x: 7.5, y: 27.5 });
+  decor.push({ kind: 'tent', x: 5.5, y: 29.5 });
+  decor.push({ kind: 'crate', x: 7.5, y: 29.5 });
+  decor.push({ kind: 'crate', x: 8.5, y: 28.5 });
+  decor.push({ kind: 'lantern', x: 4.5, y: 28.5 });
+
+  // —— Riftscar Ruin props ——
+  decor.push({ kind: 'pillar', x: 28.5, y: 6.5 });
+  decor.push({ kind: 'pillar', x: 30.5, y: 6.5 });
+  decor.push({ kind: 'pillar', x: 28.5, y: 8.5 });
+  decor.push({ kind: 'pillar', x: 30.5, y: 8.5 });
+  decor.push({ kind: 'rubble', x: 29.5, y: 7.5 });
+  decor.push({ kind: 'rubble', x: 28.5, y: 7.5 });
+  decor.push({ kind: 'rubble', x: 30.5, y: 7.5 });
+
+  // Gathering fringe (outside plaza, road, POIs)
+  for (let i = 0; i < 20; i++) {
     let x = 2 + rnd() * (size - 4);
     let y = 2 + rnd() * (size - 4);
     let guard = 0;
-    while ((inPlaza(x, y) || nearRoad(x, y)) && guard++ < 16) {
+    while (
+      (inPlaza(x, y) || nearRoad(x, y) || nearPoi(x, y, pois)) &&
+      guard++ < 16
+    ) {
       x = 2 + rnd() * (size - 4);
       y = 2 + rnd() * (size - 4);
     }
-    if (inPlaza(x, y) || nearRoad(x, y)) continue;
+    if (inPlaza(x, y) || nearRoad(x, y) || nearPoi(x, y, pois)) continue;
     if (Math.abs(x - 17) < 2.5 && y < 8) continue;
     const roll = rnd();
     const defId =
@@ -121,11 +212,18 @@ export function generateHub(seed = 1): ZoneLayout {
     });
   }
 
+  // Extra veins at the ruin (loot hook)
+  nodes.push({ defId: 'rift_vein', x: 29.5, y: 6.5 });
+  nodes.push({ defId: 'rift_vein', x: 30.5, y: 9.5 });
+  // Wood near camp
+  nodes.push({ defId: 'ash_tree', x: 4.5, y: 27.5 });
+  nodes.push({ defId: 'berry_bush', x: 8.5, y: 30.5 });
+
   // Scenic rocks / bushes
-  for (let i = 0; i < 18; i++) {
+  for (let i = 0; i < 14; i++) {
     const x = 2 + rnd() * (size - 4);
     const y = 2 + rnd() * (size - 4);
-    if (inPlaza(x, y)) continue;
+    if (inPlaza(x, y) || nearPoi(x, y, pois)) continue;
     decor.push({
       kind: rnd() > 0.45 ? 'rock' : 'bush',
       x: Math.floor(x) + 0.5,
@@ -133,27 +231,40 @@ export function generateHub(seed = 1): ZoneLayout {
     });
   }
 
-  // Starter packs in the four wild corners (never in plaza)
+  // Starter packs in quiet fringe (not on POIs)
   const fringeSpots: SpawnPoint[] = [
     { x: 5, y: 5 },
-    { x: 30, y: 6 },
-    { x: 6, y: 29 },
-    { x: 29, y: 28 },
+    { x: 12, y: 4 },
+    { x: 24, y: 30 },
+    { x: 32, y: 22 },
     { x: 8, y: 12 },
-    { x: 28, y: 14 },
-    { x: 12, y: 28 },
-    { x: 24, y: 8 },
+    { x: 22, y: 24 },
   ];
   for (const spot of fringeSpots) {
-    if (inPlaza(spot.x, spot.y)) continue;
+    if (inPlaza(spot.x, spot.y) || nearPoi(spot.x, spot.y, pois)) continue;
     const weak = rnd() > 0.35;
     packs.push({
       enemyId: weak ? 'ash_scamp' : 'wisp',
-      count: 2 + Math.floor(rnd() * 3),
+      count: 2 + Math.floor(rnd() * 2),
       x: spot.x + 0.5,
       y: spot.y + 0.5,
     });
   }
+
+  // Mid-tier packs at named POIs
+  // Camp: bandits — shades + scamps
+  packs.push(
+    { enemyId: 'shade', count: 3, x: 6.5, y: 28.5 },
+    { enemyId: 'ash_scamp', count: 2, x: 5.5, y: 27.5 },
+    { enemyId: 'ash_scamp', count: 2, x: 7.5, y: 29.5 },
+  );
+  // Ruin: tougher — crawlers + shades + wisp
+  packs.push(
+    { enemyId: 'crawler', count: 2, x: 29.5, y: 7.5 },
+    { enemyId: 'shade', count: 3, x: 28.5, y: 8.5 },
+    { enemyId: 'wisp', count: 2, x: 30.5, y: 6.5 },
+    { enemyId: 'crawler', count: 1, x: 30.5, y: 8.5 },
+  );
 
   return {
     size,
@@ -181,6 +292,7 @@ export function generateHub(seed = 1): ZoneLayout {
     ],
     paths,
     decor,
+    pois,
   };
 }
 

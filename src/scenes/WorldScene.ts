@@ -16,6 +16,7 @@ import {
   generateHub,
   inPlaza,
   type HubDecor,
+  type WildernessPoi,
   type ZoneLayout,
 } from '../world/MapGen';
 import {
@@ -68,6 +69,8 @@ export class WorldScene extends Phaser.Scene {
   private bossAnchor: { x: number; y: number } | null = null;
   private hubLayout: ZoneLayout | null = null;
   private hubSize = DEFAULT_HUB_SIZE;
+  private wildernessPois: WildernessPoi[] = [];
+  private announcedPois = new Set<string>();
   private enemySeq = 0;
   private nodeSeq = 0;
   private dungeon: DungeonMap | null = null;
@@ -249,9 +252,67 @@ export class WorldScene extends Phaser.Scene {
       this.makeBuilding(19.5, 15.5, 0x2a3a32, 'Forge');
       this.makeBuilding(17.5, 20.5, 0x2a2838, 'Inn');
       for (const d of layout.decor ?? []) this.makeHubDecor(d);
+      this.wildernessPois = layout.pois ?? [];
+      this.announcedPois.clear();
+      for (const poi of this.wildernessPois) this.makePoiMarker(poi);
+    } else {
+      this.wildernessPois = [];
+      this.announcedPois.clear();
     }
 
     this.emitRiftProgress();
+  }
+
+  private makePoiMarker(poi: WildernessPoi): void {
+    const p = snapToTile(poi.x, poi.y);
+    const { screenX, screenY } = worldToScreen(p.x, p.y);
+    const accent = poi.kind === 'camp' ? 0xc45c3a : 0x6a80a0;
+    const g = this.add.graphics();
+    g.lineStyle(2, accent, 0.55);
+    g.strokeEllipse(0, 2, 52, 24);
+    const subtitle = poi.kind === 'camp' ? 'Bandit camp' : 'Ancient ruin';
+    const title = this.add
+      .text(0, -36, poi.name, {
+        fontFamily: 'Georgia, serif',
+        fontSize: '13px',
+        color: poi.kind === 'camp' ? '#e8b090' : '#b8c8e0',
+        stroke: '#0a0c10',
+        strokeThickness: 4,
+      })
+      .setOrigin(0.5);
+    const sub = this.add
+      .text(0, -20, subtitle, {
+        fontFamily: 'Segoe UI, sans-serif',
+        fontSize: '10px',
+        color: '#8a9aaa',
+        stroke: '#0a0c10',
+        strokeThickness: 3,
+      })
+      .setOrigin(0.5);
+    const c = this.add.container(screenX, screenY, [g, title, sub]);
+    c.setDepth(depthFromWorld(p.x, p.y) + 50);
+    this.decor.push(c);
+  }
+
+  private updatePoiProximity(): void {
+    if (gameState.inRift || this.wildernessPois.length === 0) return;
+    for (const poi of this.wildernessPois) {
+      const dist = worldDistance(
+        { x: this.player.worldX, y: this.player.worldY },
+        { x: poi.x, y: poi.y },
+      );
+      if (dist > poi.radius + 1.2) {
+        this.announcedPois.delete(`left_${poi.id}`);
+        continue;
+      }
+      if (this.announcedPois.has(poi.id)) continue;
+      this.announcedPois.add(poi.id);
+      const tip =
+        poi.kind === 'camp'
+          ? `${poi.name} — mid-tier bandits ahead`
+          : `${poi.name} — stronger foes & richer veins`;
+      gameEvents.emit('ui:toast', { text: tip });
+    }
   }
 
   private makeHubDecor(d: HubDecor): void {
@@ -300,6 +361,43 @@ export class WorldScene extends Phaser.Scene {
         g.fillCircle(-4, -2, 7);
         g.fillCircle(4, -2, 7);
         g.fillCircle(0, -6, 6);
+        break;
+      case 'tent':
+        g.fillStyle(0x000000, 0.3);
+        g.fillEllipse(0, 6, 28, 10);
+        g.fillStyle(0x6a4a30, 1);
+        g.fillTriangle(-16, 4, 16, 4, 0, -28);
+        g.fillStyle(0x8a6040, 1);
+        g.fillTriangle(-10, 4, 10, 4, 0, -22);
+        g.lineStyle(1, 0x3a2818, 0.7);
+        g.strokeTriangle(-16, 4, 16, 4, 0, -28);
+        break;
+      case 'campfire':
+        g.fillStyle(0x3a2a18, 1);
+        g.fillEllipse(0, 2, 16, 8);
+        g.fillStyle(0xe07030, 0.95);
+        g.fillCircle(0, -4, 5);
+        g.fillStyle(0xffc060, 0.9);
+        g.fillCircle(0, -8, 3);
+        g.fillStyle(0xfff0a0, 0.2);
+        g.fillCircle(0, -6, 14);
+        break;
+      case 'pillar':
+        g.fillStyle(0x000000, 0.3);
+        g.fillEllipse(0, 4, 14, 6);
+        g.fillStyle(0x5a6570, 1);
+        g.fillRect(-5, -36, 10, 38);
+        g.fillStyle(0x7a8590, 1);
+        g.fillRect(-7, -40, 14, 6);
+        g.lineStyle(1, 0x2a3038, 0.8);
+        g.strokeRect(-5, -36, 10, 38);
+        break;
+      case 'rubble':
+        g.fillStyle(0x4a5058, 1);
+        g.fillEllipse(-4, 0, 12, 7);
+        g.fillEllipse(5, 1, 10, 6);
+        g.fillStyle(0x6a7080, 1);
+        g.fillEllipse(0, -3, 8, 5);
         break;
       default:
         break;
@@ -402,19 +500,24 @@ export class WorldScene extends Phaser.Scene {
     const pathSet = new Set(
       (this.hubLayout?.paths ?? []).map((p) => `${p.x},${p.y}`),
     );
+    const pois = this.hubLayout?.pois ?? [];
     for (let y = 0; y < size; y++) {
       for (let x = 0; x < size; x++) {
         const onPath = pathSet.has(`${x},${y}`);
         const plaza = inPlaza(x, y);
+        const poi = pois.find(
+          (p) => Math.hypot(x + 0.5 - p.x, y + 0.5 - p.y) <= p.radius,
+        );
         let base: number;
         if (plaza) {
-          // Warm stone plaza
           base = (x + y) % 2 === 0 ? 0x4a463c : 0x3e3a32;
+        } else if (poi?.kind === 'camp') {
+          base = (x + y) % 2 === 0 ? 0x3a3228 : 0x322a22;
+        } else if (poi?.kind === 'ruin') {
+          base = (x + y) % 2 === 0 ? 0x2a323c : 0x222830;
         } else if (onPath) {
-          // Packed dirt roads
           base = (x + y) % 2 === 0 ? 0x3a3830 : 0x322e28;
         } else {
-          // Wild grass / ash scrub
           const edge = x < 3 || y < 3 || x > size - 4 || y > size - 4;
           base = edge
             ? (x + y) % 2 === 0
@@ -425,7 +528,6 @@ export class WorldScene extends Phaser.Scene {
               : 0x1c2620;
         }
         this.drawIsoTile(x, y, base);
-        // Soft plaza rim highlight
         if (plaza && (x === 14 || x === 21 || y === 14 || y === 21)) {
           const { screenX, screenY } = worldToScreen(x, y);
           this.tiles.fillStyle(0xc4a574, 0.12);
@@ -506,6 +608,7 @@ export class WorldScene extends Phaser.Scene {
 
     this.updateEnemies(dt);
     this.updateNpcProximity();
+    this.updatePoiProximity();
 
     this.saveTimer += dt;
     if (this.saveTimer > 8) {
