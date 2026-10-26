@@ -45,6 +45,7 @@ export class Enemy {
   readonly isBoss: boolean;
   /** Multiplier from player level / rift depth (HP + damage). */
   private readonly levelMult: number;
+  private readonly modDmgMult: number;
 
   constructor(
     scene: Phaser.Scene,
@@ -52,7 +53,13 @@ export class Enemy {
     defId: string,
     worldX: number,
     worldY: number,
-    opts: { elitePack?: boolean; boss?: boolean; levelScale?: number } = {},
+    opts: {
+      elitePack?: boolean;
+      boss?: boolean;
+      levelScale?: number;
+      hpMult?: number;
+      dmgMult?: number;
+    } = {},
   ) {
     ensureGameSprites(scene);
     this.id = id;
@@ -64,10 +71,11 @@ export class Enemy {
     this.elitePack = !!opts.elitePack && !this.def.isElite;
     this.isBoss = !!opts.boss || this.def.isElite;
     this.levelMult = 1 + Math.max(0, (opts.levelScale ?? 1) - 1) * 0.12;
-    let hpMult = this.levelMult;
+    this.modDmgMult = opts.dmgMult ?? 1;
+    let hpMult = this.levelMult * (opts.hpMult ?? 1);
     if (this.elitePack) hpMult *= 2.1;
     if (opts.boss) hpMult *= 1.35;
-    this.maxHp = Math.floor(this.def.hp * hpMult);
+    this.maxHp = Math.max(1, Math.floor(this.def.hp * hpMult));
     this.hp = this.maxHp;
     this.patrolAngle = Math.random() * Math.PI * 2;
     this.textureKey = enemySpriteKey(this.def.id);
@@ -216,6 +224,7 @@ export class Enemy {
         damage = Math.floor(
           this.def.damage *
             this.levelMult *
+            this.modDmgMult *
             (this.elitePack ? 1.45 : 1) *
             (this.isBoss ? 1.25 : 1),
         );

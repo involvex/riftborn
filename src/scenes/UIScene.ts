@@ -232,6 +232,7 @@ export class UIScene extends Phaser.Scene {
           goal?: number;
           phase?: 'fill' | 'boss' | 'exit';
           depth?: number;
+          modName?: string;
         };
         if (!d.active) {
           this.riftHud.hide();
@@ -243,6 +244,7 @@ export class UIScene extends Phaser.Scene {
           d.goal ?? 1,
           d.phase ?? 'fill',
           d.depth ?? 1,
+          d.modName,
         );
       }),
       gameEvents.on(Events.PLAYER_DIED, () => {

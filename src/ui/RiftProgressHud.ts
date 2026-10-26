@@ -54,21 +54,31 @@ export class RiftProgressHud {
     goal: number,
     phase: 'fill' | 'boss' | 'exit',
     depth = 1,
+    modName?: string,
   ): void {
     const ratio = goal <= 0 ? 1 : Phaser.Math.Clamp(kills / goal, 0, 1);
     this.fill.height = Math.max(2, (this.barH - 2) * ratio);
     const dTag = `D${depth}`;
+    const mod =
+      modName && modName !== 'Calm Rift' ? `\n${shortMod(modName)}` : '';
     if (phase === 'fill') {
       this.fill.setFillStyle(0xc62868, 1);
-      this.label.setText(`${dTag}\n${kills}/${goal}`);
+      this.label.setText(`${dTag}\n${kills}/${goal}${mod}`);
     } else if (phase === 'boss') {
       this.fill.setFillStyle(0xff7043, 1);
       this.fill.height = this.barH - 2;
-      this.label.setText(`${dTag}\nBOSS`);
+      this.label.setText(`${dTag}\nBOSS${mod}`);
     } else {
       this.fill.setFillStyle(0x4db6ff, 1);
       this.fill.height = this.barH - 2;
       this.label.setText(`${dTag}\nEXIT`);
     }
   }
+}
+
+function shortMod(name: string): string {
+  if (name.includes('Dense')) return 'Dense';
+  if (name.includes('Glass')) return 'Glass';
+  if (name.includes('Gilded')) return 'Gold';
+  return name.slice(0, 6);
 }

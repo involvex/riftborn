@@ -48,6 +48,11 @@ import {
   riftLootTierBump,
   riftPackBonus,
 } from '../systems/RiftDepth';
+import {
+  getRiftModifier,
+  rollRiftModifier,
+  type RiftModifier,
+} from '../systems/RiftModifiers';
 
 const DEFAULT_HUB_SIZE = HUB_SIZE;
 const TOWN_SPAWN = { ...HUB_SPAWN };
@@ -87,6 +92,7 @@ export class WorldScene extends Phaser.Scene {
   private riftBossSpawned = false;
   private riftBossDead = false;
   private riftDepth = 1;
+  private riftMod: RiftModifier = getRiftModifier('none');
   private bossAnchor: { x: number; y: number } | null = null;
   private hubLayout: ZoneLayout | null = null;
   private hubSize = DEFAULT_HUB_SIZE;
@@ -205,6 +211,7 @@ export class WorldScene extends Phaser.Scene {
     if (rift) {
       const seed = gameState.riftSeed ?? Date.now();
       this.riftDepth = riftDepthFromLevel(gameState.progression.level);
+      this.riftMod = rollRiftModifier();
       this.dungeon = generateDungeon(seed, this.riftDepth);
       this.player.maxX = this.dungeon.width - 1.5;
       this.player.maxY = this.dungeon.height - 1.5;
@@ -221,6 +228,7 @@ export class WorldScene extends Phaser.Scene {
       this.spawnFromLayout(this.dungeon.layout);
     } else {
       this.dungeon = null;
+      this.riftMod = getRiftModifier('none');
       this.hubLayout = generateHub(42);
       this.hubSize = this.hubLayout.size ?? DEFAULT_HUB_SIZE;
       this.player.maxX = this.hubSize - 0.5;
@@ -282,7 +290,9 @@ export class WorldScene extends Phaser.Scene {
     // Hub fringe + rifts both use packs; plaza never hosts enemies.
     for (const pack of layout.packs) {
       if (!gameState.inRift && inPlaza(pack.x, pack.y)) continue;
-      for (let i = 0; i < pack.count; i++) {
+      const count =
+        pack.count + (gameState.inRift ? this.riftMod.packCountBonus : 0);
+      for (let i = 0; i < count; i++) {
         const ox = (Math.random() - 0.5) * 1.8;
         const oy = (Math.random() - 0.5) * 1.8;
         const p = snapToTile(pack.x + ox, pack.y + oy);
@@ -300,6 +310,8 @@ export class WorldScene extends Phaser.Scene {
           {
             elitePack: gameState.inRift ? elitePack : false,
             levelScale: gameState.progression.level,
+            hpMult: gameState.inRift ? this.riftMod.hpMult : 1,
+            dmgMult: gameState.inRift ? this.riftMod.dmgMult : 1,
           },
         );
         enemy.maxBound = gameState.inRift ? 22 : this.hubSize - 0.5;
@@ -964,13 +976,18 @@ export class WorldScene extends Phaser.Scene {
   }
 
   private onEnemyKilled(enemy: Enemy): void {
-    const depthBump = gameState.inRift ? riftLootTierBump(this.riftDepth) : 0;
+    const depthBump = gameState.inRift
+      ? riftLootTierBump(this.riftDepth) + this.riftMod.lootBump
+      : 0;
     const tier = clampLootTier(
       (enemy.def.lootTier ?? 2) +
         (enemy.elitePack ? 1 : 0) +
         (enemy.isBoss ? 1 : 0) +
         depthBump,
     );
+    if (gameState.inRift && this.riftMod.goldOnKill > 0) {
+      gameState.inventory.add('gold', this.riftMod.goldOnKill);
+    }
     const scoutKill = enemy.def.id === 'ash_scout';
     gameState.combat.grantKillRewards(enemy.def.xp, enemy.def.lootTable, {
       elite: enemy.awardsEliteLoot,
@@ -1107,6 +1124,7 @@ export class WorldScene extends Phaser.Scene {
       goal: this.riftKillGoal,
       phase,
       depth: this.riftDepth,
+      modName: this.riftMod.name,
     });
   }
 
@@ -1351,7 +1369,7 @@ export class WorldScene extends Phaser.Scene {
         depth: this.riftDepth,
       });
       gameEvents.emit('ui:toast', {
-        text: `Rift ${riftDepthLabel(this.riftDepth)} — fill the bar, slay the Lord · B town`,
+        text: `Rift ${riftDepthLabel(this.riftDepth)} · ${this.riftMod.name} — ${this.riftMod.blurb}`,
       });
       this.emitRiftProgress();
     } else if (this.riftBossDead) {
