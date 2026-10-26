@@ -18,6 +18,8 @@ Solo evenings, one shippable slice at a time. Prefer **feel → content → syst
 - **Nix** material / repair trader (supplies, mat buyback, patch-up)
 - **Bounties persist** across reload (active + board cooldown)
 - **Minimap** + **M** map overlay (top-down)
+- **HUD polish** (HotkeyDock) + **touch controls** + Expo WebView shell
+- **Map fog of war** (explore to reveal)
 - Electron portable + self-hosted co-op (basic)
 
 ## Next — content density (pick one per evening)
@@ -26,13 +28,13 @@ Solo evenings, one shippable slice at a time. Prefer **feel → content → syst
 | --- | ------------------------ | --------------------------------- | ------------------------------------ |
 | 1   | **Custom Electron icon** | Looks real when you share a build | `electron/build` icon set            |
 | 2   | **Drag-drop equip**      | QoL for bag                       | Optional; double-click already works |
-| 3   | **Fog of war on map**    | Exploration feel                  | Explored tiles only on minimap       |
+| 3   | **Persist hub fog**      | Keep explored wilderness on load  | Save `explored` with character       |
 
 Skip inventing new frameworks — extend `MapGen` / `WorldScene` / `SaveStore` / NPCs.
 
 ## Later (don’t start yet)
 
-- **Mobile / small screens:** on-screen virtual controls (move stick + attack / interact / skills) — keep AbilityBar touch-ready
+- App Store packaging for Expo shell
 - Authoritative co-op loot / gear sync
 - Seasons, trading, seamless open world
 - Full new painted attack sheets (needs art time; VFX covers the gap for now)

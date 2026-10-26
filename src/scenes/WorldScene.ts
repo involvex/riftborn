@@ -53,11 +53,17 @@ import {
   rollRiftModifier,
   type RiftModifier,
 } from '../systems/RiftModifiers';
-import { buildMapSnapshot } from '../ui/MapModel';
+import {
+  buildMapMarkers,
+  buildMapSnapshot,
+  type MapCellKind,
+  type MapSnapshot,
+} from '../ui/MapModel';
 import { shouldShowTouchControls } from '../ui/TouchControls';
 
 const DEFAULT_HUB_SIZE = HUB_SIZE;
 const TOWN_SPAWN = { ...HUB_SPAWN };
+const FOG_REVEAL_R = 5;
 
 export class WorldScene extends Phaser.Scene {
   private player!: Player;
@@ -86,7 +92,6 @@ export class WorldScene extends Phaser.Scene {
   private decor: Phaser.GameObjects.Container[] = [];
   private nearNpc: Npc | null = null;
   private saveTimer = 0;
-  private shakeUntil = 0;
   private nearBench = false;
   private riftCleared = false;
   private riftKills = 0;
@@ -109,9 +114,17 @@ export class WorldScene extends Phaser.Scene {
   private remoteGhosts = new Map<string, Phaser.GameObjects.Container>();
   private unsubNet: (() => void) | null = null;
   private mapEmitAcc = 0;
+  private proxAcc = 0;
+  private corpseAcc = 0;
   private touchDx = 0;
   private touchDy = 0;
   private inputUnsubs: (() => void)[] = [];
+  /** Cached terrain for minimap — rebuilt only on zone change. */
+  private mapCells: MapCellKind[] | null = null;
+  private mapW = 0;
+  private mapH = 0;
+  private explored: boolean[] = [];
+  private exploredDirty = true;
 
   constructor() {
     super('WorldScene');
@@ -230,6 +243,11 @@ export class WorldScene extends Phaser.Scene {
   }
 
   private loadZone(rift: boolean): void {
+    this.mapCells = null;
+    this.mapW = 0;
+    this.mapH = 0;
+    this.explored = [];
+    this.exploredDirty = true;
     if (rift) {
       const seed = gameState.riftSeed ?? Date.now();
       this.riftDepth = riftDepthFromLevel(gameState.progression.level);
@@ -838,8 +856,19 @@ export class WorldScene extends Phaser.Scene {
     if (Phaser.Input.Keyboard.JustDown(this.keySkill3)) this.tryCastSkill(2);
 
     this.updateEnemies(dt);
-    this.updateNpcProximity();
-    this.updatePoiProximity();
+
+    this.proxAcc += dt;
+    if (this.proxAcc >= 0.12) {
+      this.proxAcc = 0;
+      this.updateNpcProximity();
+      this.updatePoiProximity();
+    }
+
+    this.corpseAcc += dt;
+    if (this.corpseAcc >= 2.5) {
+      this.corpseAcc = 0;
+      this.compactDeadEnemies();
+    }
 
     this.saveTimer += dt;
     if (this.saveTimer > 8) {
@@ -847,25 +876,93 @@ export class WorldScene extends Phaser.Scene {
       gameState.persist();
     }
 
+    this.revealFogAroundPlayer();
     this.mapEmitAcc += dt;
-    if (this.mapEmitAcc >= 0.1) {
+    if (this.mapEmitAcc >= 0.15 || this.exploredDirty) {
       this.mapEmitAcc = 0;
       this.emitMapSnapshot();
     }
-
-    if (this.time.now < this.shakeUntil) {
-      this.cameras.main.shake(40, 0.004);
-    }
   }
 
-  private emitMapSnapshot(): void {
+  private triggerHitShake(ms = 100, intensity = 0.004): void {
+    this.cameras.main.shake(ms, intensity);
+  }
+
+  private compactDeadEnemies(): void {
+    if (!this.enemies.some((e) => !e.alive)) return;
+    const next: Enemy[] = [];
+    for (const e of this.enemies) {
+      if (e.alive) next.push(e);
+      else e.destroy();
+    }
+    this.enemies = next;
+  }
+
+  private ensureMapTerrain(): void {
     const inRift = gameState.inRift;
     const width = inRift ? (this.dungeon?.width ?? 36) : this.hubSize;
     const height = inRift ? (this.dungeon?.height ?? 36) : this.hubSize;
+    if (this.mapCells && this.mapW === width && this.mapH === height) {
+      return;
+    }
     let riftFloor: boolean[][] | undefined;
     if (inRift && this.dungeon) {
       riftFloor = this.dungeon.cells.map((row) => row.map((c) => c === 1));
     }
+    const base = buildMapSnapshot({
+      inRift,
+      width,
+      height,
+      riftFloor,
+      paths: this.hubLayout?.paths,
+      pois: inRift ? [] : this.wildernessPois,
+      player: { x: 0, y: 0, facing: 1 },
+      npcs: [],
+      chests: [],
+      enemies: [],
+      portal: null,
+    });
+    this.mapCells = base.cells;
+    this.mapW = width;
+    this.mapH = height;
+    this.explored = new Array(width * height).fill(false);
+    this.exploredDirty = true;
+    if (!inRift) {
+      // Plaza always known
+      for (let y = PLAZA.y0; y <= PLAZA.y1; y++) {
+        for (let x = PLAZA.x0; x <= PLAZA.x1; x++) {
+          this.explored[y * width + x] = true;
+        }
+      }
+    }
+  }
+
+  private revealFogAroundPlayer(): void {
+    this.ensureMapTerrain();
+    const w = this.mapW;
+    const h = this.mapH;
+    const px = Math.floor(this.player.worldX);
+    const py = Math.floor(this.player.worldY);
+    const r = FOG_REVEAL_R;
+    let changed = false;
+    for (let dy = -r; dy <= r; dy++) {
+      for (let dx = -r; dx <= r; dx++) {
+        if (dx * dx + dy * dy > r * r) continue;
+        const x = px + dx;
+        const y = py + dy;
+        if (x < 0 || y < 0 || x >= w || y >= h) continue;
+        const i = y * w + x;
+        if (!this.explored[i]) {
+          this.explored[i] = true;
+          changed = true;
+        }
+      }
+    }
+    if (changed) this.exploredDirty = true;
+  }
+
+  private emitMapSnapshot(): void {
+    this.ensureMapTerrain();
     let portal: { x: number; y: number } | null = null;
     if (this.portalMarker) {
       portal = {
@@ -873,13 +970,11 @@ export class WorldScene extends Phaser.Scene {
         y: this.portalMarker.getData('wy') as number,
       };
     }
-    const snap = buildMapSnapshot({
-      inRift,
-      width,
-      height,
-      riftFloor,
-      paths: this.hubLayout?.paths,
-      pois: inRift ? [] : this.wildernessPois,
+    const markers = buildMapMarkers({
+      inRift: gameState.inRift,
+      width: this.mapW,
+      height: this.mapH,
+      pois: gameState.inRift ? [] : this.wildernessPois,
       player: {
         x: this.player.worldX,
         y: this.player.worldY,
@@ -904,6 +999,15 @@ export class WorldScene extends Phaser.Scene {
       })),
       portal,
     });
+    const snap: MapSnapshot = {
+      width: this.mapW,
+      height: this.mapH,
+      cells: this.mapCells!,
+      markers,
+      inRift: gameState.inRift,
+      explored: this.explored,
+    };
+    this.exploredDirty = false;
     gameEvents.emit('ui:mapSnapshot', snap);
   }
 
@@ -927,7 +1031,7 @@ export class WorldScene extends Phaser.Scene {
           );
         }
         audioBus.hit();
-        this.shakeUntil = this.time.now + 120;
+        this.triggerHitShake(120, 0.004);
         if (gameState.hp <= 0) this.onPlayerDeath();
       }
     }
@@ -936,8 +1040,7 @@ export class WorldScene extends Phaser.Scene {
   private onPlayerDeath(): void {
     audioBus.death();
     this.cameras.main.flash(280, 120, 20, 30, false, undefined, this);
-    this.cameras.main.shake(320, 0.012);
-    this.shakeUntil = this.time.now + 400;
+    this.triggerHitShake(320, 0.012);
     gameState.hp = Math.floor(gameState.maxHp * 0.5);
     if (gameState.inRift) {
       this.returnToTown(false, true);
@@ -998,32 +1101,12 @@ export class WorldScene extends Phaser.Scene {
     if (this.player.attackCooldown > 0) return;
     this.player.attackCooldown = gameState.progression.attackCooldown();
 
-    // Aim at nearest enemy in range, else toward click in world-ish screen space
     const pointer = this.input.activePointer;
     let aimX = this.player.worldX + 1;
     let aimY = this.player.worldY;
     let best = Infinity;
     const range = gameState.inventory.weaponRange();
-    for (const enemy of this.enemies) {
-      if (!enemy.alive) continue;
-      const dist = worldDistance(
-        { x: this.player.worldX, y: this.player.worldY },
-        { x: enemy.worldX, y: enemy.worldY },
-      );
-      if (dist <= range && dist < best) {
-        best = dist;
-        aimX = enemy.worldX;
-        aimY = enemy.worldY;
-      }
-    }
-    if (best === Infinity) {
-      // Screen click right of player → face SE-ish
-      const { screenX } = worldToScreen(this.player.worldX, this.player.worldY);
-      aimX = this.player.worldX + (pointer.worldX >= screenX ? 1 : -1);
-    }
-    this.player.faceToward(aimX, aimY);
-    this.player.playAttack();
-
+    const inRange: Enemy[] = [];
     const dmg = Math.max(
       1,
       Math.floor(
@@ -1031,7 +1114,7 @@ export class WorldScene extends Phaser.Scene {
           gameState.skills.damageMultiplier(),
       ),
     );
-    let hit = false;
+
     for (const enemy of this.enemies) {
       if (!enemy.alive) continue;
       const dist = worldDistance(
@@ -1039,11 +1122,26 @@ export class WorldScene extends Phaser.Scene {
         { x: enemy.worldX, y: enemy.worldY },
       );
       if (dist > range) continue;
+      inRange.push(enemy);
+      if (dist < best) {
+        best = dist;
+        aimX = enemy.worldX;
+        aimY = enemy.worldY;
+      }
+    }
+    if (best === Infinity) {
+      const { screenX } = worldToScreen(this.player.worldX, this.player.worldY);
+      aimX = this.player.worldX + (pointer.worldX >= screenX ? 1 : -1);
+    }
+    this.player.faceToward(aimX, aimY);
+    this.player.playAttack();
+
+    let hit = false;
+    for (const enemy of inRange) {
       hit = true;
       const { screenX, screenY } = worldToScreen(enemy.worldX, enemy.worldY);
       gameState.combat.emitDamageNumber(screenX, screenY - 18, dmg, 'enemy');
-      const killed = enemy.applyDamage(dmg);
-      if (killed) this.onEnemyKilled(enemy);
+      if (enemy.applyDamage(dmg)) this.onEnemyKilled(enemy);
     }
     if (hit) audioBus.hit();
     if (netClient.connected) {
@@ -1095,7 +1193,7 @@ export class WorldScene extends Phaser.Scene {
       else gameState.bounties.noteWildernessKill();
     }
     gameState.persist();
-    this.shakeUntil = this.time.now + 80;
+    this.triggerHitShake(80, 0.003);
     if (!gameState.inRift) return;
 
     if (enemy.isBoss) {
@@ -1391,7 +1489,7 @@ export class WorldScene extends Phaser.Scene {
     chest.markLooted();
     if (!gameState.inRift) gameState.bounties.noteChestOpen();
     audioBus.hit();
-    this.shakeUntil = this.time.now + 60;
+    this.triggerHitShake(60, 0.003);
     gameState.persist();
     gameEvents.emit('ui:toast', {
       text: `Chest — ${parts.join(' · ')}`,

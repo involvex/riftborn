@@ -50,7 +50,8 @@ export class MiniMap {
 
   apply(snap: MapSnapshot): void {
     this.snap = snap;
-    const key = `${snap.inRift}:${snap.width}x${snap.height}`;
+    const fogKey = snap.explored ? exploredStamp(snap.explored) : 'nofog';
+    const key = `${snap.inRift}:${snap.width}x${snap.height}:${fogKey}`;
     if (key !== this.lastTerrainKey) {
       this.lastTerrainKey = key;
       this.drawTerrain(snap);
@@ -64,9 +65,11 @@ export class MiniMap {
     const th = (SIZE - PAD * 2) / snap.height;
     const ox = -SIZE / 2 + PAD;
     const oy = -SIZE / 2 + PAD;
+    const explored = snap.explored;
     for (let y = 0; y < snap.height; y++) {
       for (let x = 0; x < snap.width; x++) {
-        const kind = snap.cells[y * snap.width + x]!;
+        const i = y * snap.width + x;
+        const kind = explored && !explored[i] ? 'fog' : snap.cells[i]!;
         this.terrain.fillStyle(MAP_CELL_COLOR[kind], 1);
         this.terrain.fillRect(ox + x * tw, oy + y * th, tw + 0.5, th + 0.5);
       }
@@ -79,14 +82,23 @@ export class MiniMap {
     const th = (SIZE - PAD * 2) / snap.height;
     const ox = -SIZE / 2 + PAD;
     const oy = -SIZE / 2 + PAD;
+    const explored = snap.explored;
     const toPx = (wx: number, wy: number) => ({
       px: ox + wx * tw,
       py: oy + wy * th,
     });
+    const isExplored = (wx: number, wy: number) => {
+      if (!explored) return true;
+      const x = Math.floor(wx);
+      const y = Math.floor(wy);
+      if (x < 0 || y < 0 || x >= snap.width || y >= snap.height) return false;
+      return !!explored[y * snap.width + x];
+    };
 
     for (const m of snap.markers) {
       if (m.kind === 'mob' && !showMobs) continue;
       if (m.kind === 'player') continue;
+      if (!isExplored(m.x, m.y)) continue;
       const { px, py } = toPx(m.x, m.y);
       const r =
         m.kind === 'boss'
@@ -115,4 +127,10 @@ export class MiniMap {
   getSnapshot(): MapSnapshot | null {
     return this.snap;
   }
+}
+
+function exploredStamp(explored: boolean[]): string {
+  let n = 0;
+  for (let i = 0; i < explored.length; i++) if (explored[i]) n++;
+  return String(n);
 }

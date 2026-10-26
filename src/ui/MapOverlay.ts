@@ -120,9 +120,11 @@ export class MapOverlay {
     const ox = -this.mapW / 2;
     const oy = -this.mapH / 2 + 8;
 
+    const explored = snap.explored;
     for (let y = 0; y < snap.height; y++) {
       for (let x = 0; x < snap.width; x++) {
-        const kind = snap.cells[y * snap.width + x]!;
+        const i = y * snap.width + x;
+        const kind = explored && !explored[i] ? 'fog' : snap.cells[i]!;
         this.terrain.fillStyle(MAP_CELL_COLOR[kind], 1);
         this.terrain.fillRect(ox + x * tw, oy + y * th, tw + 0.4, th + 0.4);
       }
@@ -133,6 +135,19 @@ export class MapOverlay {
 
     for (const m of snap.markers) {
       if (m.kind === 'player') continue;
+      if (explored) {
+        const mx = Math.floor(m.x);
+        const my = Math.floor(m.y);
+        if (
+          mx < 0 ||
+          my < 0 ||
+          mx >= snap.width ||
+          my >= snap.height ||
+          !explored[my * snap.width + mx]
+        ) {
+          continue;
+        }
+      }
       const px = ox + m.x * tw;
       const py = oy + m.y * th;
       const alpha = m.kind === 'mob' ? 0.4 : 1;

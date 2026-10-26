@@ -1,7 +1,8 @@
 import { inPlaza, type WildernessPoi } from '../world/MapGen';
 
 /** Terrain cell for top-down map (not iso). */
-export type MapCellKind = 'wall' | 'floor' | 'plaza' | 'path' | 'poi' | 'wild';
+export type MapCellKind =
+  'wall' | 'floor' | 'plaza' | 'path' | 'poi' | 'wild' | 'fog';
 
 export type MapMarkerKind =
   'player' | 'npc' | 'poi' | 'chest' | 'elite' | 'boss' | 'portal' | 'mob';
@@ -20,6 +21,8 @@ export type MapSnapshot = {
   cells: MapCellKind[];
   markers: MapMarker[];
   inRift: boolean;
+  /** When set, unexplored tiles render as fog on minimap / overlay. */
+  explored?: boolean[];
 };
 
 export type MapBuildInput = {
@@ -74,11 +77,24 @@ export function buildMapSnapshot(input: MapBuildInput): MapSnapshot {
     }
   }
 
+  const markers = buildMapMarkers(input);
+
+  return {
+    width,
+    height,
+    cells,
+    markers,
+    inRift: input.inRift,
+  };
+}
+
+/** Markers only — cheap enough to rebuild every map tick. */
+export function buildMapMarkers(input: MapBuildInput): MapMarker[] {
   const markers: MapMarker[] = [];
   for (const n of input.npcs) {
     markers.push({ kind: 'npc', x: n.x, y: n.y, label: n.name });
   }
-  for (const p of pois) {
+  for (const p of input.pois ?? []) {
     markers.push({ kind: 'poi', x: p.x, y: p.y, label: p.name });
   }
   for (const c of input.chests) {
@@ -103,14 +119,7 @@ export function buildMapSnapshot(input: MapBuildInput): MapSnapshot {
     x: input.player.x,
     y: input.player.y,
   });
-
-  return {
-    width,
-    height,
-    cells,
-    markers,
-    inRift: input.inRift,
-  };
+  return markers;
 }
 
 export const MAP_CELL_COLOR: Record<MapCellKind, number> = {
@@ -120,6 +129,7 @@ export const MAP_CELL_COLOR: Record<MapCellKind, number> = {
   path: 0x3a3830,
   poi: 0x3a3228,
   wild: 0x1c2620,
+  fog: 0x080a0e,
 };
 
 export const MAP_MARKER_COLOR: Record<MapMarkerKind, number> = {

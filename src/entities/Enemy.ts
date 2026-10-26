@@ -46,6 +46,7 @@ export class Enemy {
   /** Multiplier from player level / rift depth (HP + damage). */
   private readonly levelMult: number;
   private readonly modDmgMult: number;
+  private lodPhase = 0;
 
   constructor(
     scene: Phaser.Scene,
@@ -167,6 +168,25 @@ export class Enemy {
     this.slowTimer = Math.max(0, this.slowTimer - dt);
     this.stunTimer = Math.max(0, this.stunTimer - dt);
     if (this.slowTimer <= 0) this.slowMult = 1;
+
+    const dist = worldDistance(
+      { x: this.worldX, y: this.worldY },
+      { x: playerX, y: playerY },
+    );
+
+    // Far packs: skip most frames (AI + sprite sync)
+    if (dist > 18) {
+      this.body.setVisible(false);
+      return { hitPlayer: false, damage: 0 };
+    }
+    if (!this.body.visible) this.body.setVisible(true);
+    if (dist > 12) {
+      this.lodPhase = (this.lodPhase + 1) & 7;
+      if (this.lodPhase !== 0) {
+        return { hitPlayer: false, damage: 0 };
+      }
+    }
+
     const spd = this.def.speed * this.slowMult;
 
     if (this.stunTimer > 0) {
@@ -175,10 +195,6 @@ export class Enemy {
       return { hitPlayer: false, damage: 0 };
     }
 
-    const dist = worldDistance(
-      { x: this.worldX, y: this.worldY },
-      { x: playerX, y: playerY },
-    );
     const aggro = this.def.isElite ? 7 : 5;
     if (dist < this.def.attackRange) {
       this.state = 'attack';

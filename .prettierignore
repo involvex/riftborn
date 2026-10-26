@@ -4,5 +4,8 @@ node_modules
 mobile/node_modules
 mobile/game-dist
 mobile/.expo
+mobile/android
+mobile/ios
+mobile/.claude
 public/coop-port.json
 *.lock
