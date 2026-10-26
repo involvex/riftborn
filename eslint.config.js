@@ -5,12 +5,7 @@ import prettier from 'eslint-config-prettier';
 
 export default tseslint.config(
   {
-    ignores: [
-      'dist/**',
-      'node_modules/**',
-      'desktop/src-tauri/target/**',
-      'electron/**',
-    ],
+    ignores: ['dist/**', 'node_modules/**', 'electron/**'],
   },
   js.configs.recommended,
   ...tseslint.configs.recommended,

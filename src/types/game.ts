@@ -79,6 +79,8 @@ export type GearStats = {
   intellect: number;
   armor: number;
   damage: number;
+  /** Percent boost to class skill damage (e.g. 8 = +8%). */
+  skillPower: number;
 };
 
 export type GearInstance = {
@@ -87,6 +89,8 @@ export type GearInstance = {
   name: string;
   slot: GearSlot;
   setId: string | null;
+  /** Null = any class; otherwise only that class can equip. */
+  classId: CharacterClassId | null;
   rarity: GearRarity;
   itemLevel: number;
   stats: GearStats;
@@ -97,6 +101,7 @@ export type ArmorSetDef = {
   id: string;
   name: string;
   color: string;
+  classId: CharacterClassId;
   twoPiece: {
     label: string;
     armor?: number;
@@ -105,6 +110,7 @@ export type ArmorSetDef = {
     stamina?: number;
     intellect?: number;
     damage?: number;
+    skillPower?: number;
   };
   fourPiece: {
     label: string;
@@ -115,6 +121,7 @@ export type ArmorSetDef = {
     intellect?: number;
     damage?: number;
     maxHp?: number;
+    skillPower?: number;
   };
 };
 
@@ -127,4 +134,45 @@ export type ClassDef = {
   starterWeaponDamage: number;
   hpPerStamina: number;
   damageStat: keyof PlayerStats;
+};
+
+export type AbilityKind =
+  | 'cleave'
+  | 'strike'
+  | 'buff'
+  | 'dash_strike'
+  | 'blink'
+  | 'slow_nova'
+  | 'bolt'
+  | 'barrier';
+
+export type AbilityDef = {
+  id: string;
+  classId: CharacterClassId;
+  name: string;
+  blurb: string;
+  maxRank: number;
+  cooldown: number;
+  kind: AbilityKind;
+  range?: number;
+  damageMult: number;
+  rankBonus: number;
+  maxTargets?: number;
+  dash?: number;
+  duration?: number;
+  stun?: number;
+  slow?: number;
+  barrierHp?: number;
+  rankBarrier?: number;
+};
+
+export type SkillNodeDef = {
+  id: string;
+  abilityId: string;
+  name: string;
+  blurb: string;
+  col: number;
+  row: number;
+  requires: string[];
+  starter: boolean;
 };

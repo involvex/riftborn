@@ -12,19 +12,22 @@ import {
   DEFAULT_HOTKEYS,
 } from '../core/SettingsStore';
 import { listRecipes } from '../systems/CraftingSystem';
-import { describeGear } from '../systems/ItemGen';
+import { describeGearFull } from '../systems/ItemGen';
 import { getItemDef } from '../systems/InventorySystem';
-import { MAX_LEVEL, xpForLevel } from '../systems/ProgressionSystem';
+import { MAX_LEVEL, STAT_POINTS_PER_LEVEL } from '../systems/ProgressionSystem';
 import { resolveSetBonuses } from '../systems/SetBonus';
 import { gameState } from '../systems/GameState';
+import { AbilityBar } from '../ui/AbilityBar';
+import { HudBars } from '../ui/HudBars';
 import { InventoryPanel } from '../ui/InventoryPanel';
+import { ShopPanel } from '../ui/ShopPanel';
+import { SkillTreePanel } from '../ui/SkillTreePanel';
 import { uiFont } from '../core/UiScale';
 
 type MenuPage = 'root' | 'settings' | 'hotkeys';
 
 export class UIScene extends Phaser.Scene {
-  private hpText!: Phaser.GameObjects.Text;
-  private xpText!: Phaser.GameObjects.Text;
+  private hudBars!: HudBars;
   private hudHint!: Phaser.GameObjects.Text;
   private toastText!: Phaser.GameObjects.Text;
   private craftPanel!: Phaser.GameObjects.Container;
@@ -34,9 +37,14 @@ export class UIScene extends Phaser.Scene {
   private charBody!: Phaser.GameObjects.Text;
   private damageLayer!: Phaser.GameObjects.Container;
   private inventoryPanel!: InventoryPanel;
+  private shopPanel!: ShopPanel;
+  private skillPanel!: SkillTreePanel;
+  private abilityBar!: AbilityBar;
   private unsubs: (() => void)[] = [];
+  private shopOpen = false;
   private keyChar!: Phaser.Input.Keyboard.Key;
   private keyInv!: Phaser.Input.Keyboard.Key;
+  private keySkills!: Phaser.Input.Keyboard.Key;
   private keyTool!: Phaser.Input.Keyboard.Key;
   private keyMenu!: Phaser.Input.Keyboard.Key;
   private gearKeys: Phaser.Input.Keyboard.Key[] = [];
@@ -54,28 +62,12 @@ export class UIScene extends Phaser.Scene {
   create(): void {
     this.bindHotkeys();
 
-    this.hpText = this.add
-      .text(16, 12, '', {
-        fontFamily: 'Segoe UI, sans-serif',
-        fontSize: uiFont(this, 18, 14, 22),
-        color: '#e8e4d8',
-      })
-      .setScrollFactor(0)
-      .setDepth(10_000);
-
-    this.xpText = this.add
-      .text(16, 40, '', {
-        fontFamily: 'Segoe UI, sans-serif',
-        fontSize: uiFont(this, 15, 12, 18),
-        color: '#8ab4d4',
-      })
-      .setScrollFactor(0)
-      .setDepth(10_000);
+    this.hudBars = new HudBars(this);
 
     this.hudHint = this.add
-      .text(16, 68, '', {
+      .text(16, 72, '', {
         fontFamily: 'Segoe UI, sans-serif',
-        fontSize: uiFont(this, 13, 11, 16),
+        fontSize: uiFont(this, 12, 10, 15),
         color: '#6a7a8a',
       })
       .setScrollFactor(0)
@@ -96,6 +88,9 @@ export class UIScene extends Phaser.Scene {
 
     this.damageLayer = this.add.container(0, 0).setDepth(10_002);
     this.inventoryPanel = new InventoryPanel(this);
+    this.shopPanel = new ShopPanel(this);
+    this.skillPanel = new SkillTreePanel(this);
+    this.abilityBar = new AbilityBar(this);
     this.buildCraftPanel();
     this.buildCharPanel();
     this.buildMenuPanel();
@@ -110,7 +105,13 @@ export class UIScene extends Phaser.Scene {
       if (event.code === 'Space') name = 'SPACE';
       if (event.key === 'Escape') name = 'ESC';
       if (event.key === '3') name = 'THREE';
-      if (name.length === 1 || ['SPACE', 'ESC', 'THREE'].includes(name)) {
+      if (event.key === '1') name = 'ONE';
+      if (event.key === '2') name = 'TWO';
+      if (event.key === '3') name = 'THREE';
+      if (
+        name.length === 1 ||
+        ['SPACE', 'ESC', 'ONE', 'TWO', 'THREE'].includes(name)
+      ) {
         settingsStore.setHotkey(action, name);
         gameEvents.emit(Events.SETTINGS_CHANGED);
         this.awaitingRebind = null;
@@ -138,16 +139,34 @@ export class UIScene extends Phaser.Scene {
       }),
       gameEvents.on(Events.XP_GAINED, () => this.refresh()),
       gameEvents.on(Events.LEVEL_UP, (p) => {
-        const payload = p as { level: number; unspent?: number };
+        const payload = p as {
+          level: number;
+          unspent?: number;
+          skillPoint?: number;
+        };
         audioBus.levelUp();
-        this.toast(
-          payload.unspent
-            ? `Level ${payload.level}! +stat points (press ${formatHotkey('character')})`
-            : `Level ${payload.level}!`,
-        );
+        const bits: string[] = [`Level ${payload.level}!`];
+        if (payload.unspent) {
+          bits.push(
+            `+${STAT_POINTS_PER_LEVEL} attrs (${formatHotkey('character')})`,
+          );
+        }
+        if (payload.skillPoint) {
+          bits.push(`+1 skill (${formatHotkey('skills')})`);
+        }
+        this.toast(bits.join(' '));
         gameState.recalcMaxHp();
+        gameState.persist();
         this.refresh();
+        if (this.skillPanel.open) this.skillPanel.refresh();
+        if (this.charOpen) this.refreshCharBody();
       }),
+      gameEvents.on(Events.SKILL_CHANGED, () => {
+        this.refresh();
+        this.abilityBar.refresh();
+        if (this.skillPanel.open) this.skillPanel.refresh();
+      }),
+      gameEvents.on(Events.SKILL_CAST, () => this.abilityBar.refresh()),
       gameEvents.on(Events.PLAYER_DAMAGED, () => this.refresh()),
       gameEvents.on(Events.CRAFT_SUCCESS, () => {
         this.toast('Crafted!');
@@ -168,7 +187,17 @@ export class UIScene extends Phaser.Scene {
         const d = p as { text: string };
         this.toast(d.text);
       }),
-      gameEvents.on('ui:openCraft', () => this.showCraft()),
+      gameEvents.on('ui:openCraft', () => {
+        this.hideShop();
+        this.showCraft();
+      }),
+      gameEvents.on('ui:openShop', () => {
+        this.hideCraft();
+        this.hideChar();
+        this.skillPanel.hide();
+        this.inventoryPanel.hide();
+        this.showShop();
+      }),
       gameEvents.on(Events.RIFT_ENTERED, () =>
         this.toast('Procedural rift dungeon opened'),
       ),
@@ -186,10 +215,12 @@ export class UIScene extends Phaser.Scene {
 
     this.scale.on('resize', () => {
       this.toastText.setX(this.scale.width / 2);
-      this.hpText.setFontSize(uiFont(this, 18, 14, 22));
-      this.xpText.setFontSize(uiFont(this, 15, 12, 18));
-      this.hudHint.setFontSize(uiFont(this, 13, 11, 16));
+      this.hudBars.layout();
+      this.hudHint.setFontSize(uiFont(this, 12, 10, 15));
       if (this.inventoryPanel.open) this.inventoryPanel.layout();
+      if (this.shopPanel.open) this.shopPanel.layout();
+      if (this.skillPanel.open) this.skillPanel.layout();
+      this.abilityBar.layout();
     });
   }
 
@@ -200,6 +231,9 @@ export class UIScene extends Phaser.Scene {
     );
     this.keyInv = this.input.keyboard.addKey(
       keyCodeFromSetting(settingsStore.get().hotkeys.inventory),
+    );
+    this.keySkills = this.input.keyboard.addKey(
+      keyCodeFromSetting(settingsStore.get().hotkeys.skills),
     );
     this.keyTool = this.input.keyboard.addKey(
       keyCodeFromSetting(settingsStore.get().hotkeys.equipTool),
@@ -275,10 +309,10 @@ export class UIScene extends Phaser.Scene {
   }
 
   private buildCharPanel(): void {
-    const bg = this.add.rectangle(0, 0, 520, 420, 0x0e1218, 0.96);
+    const bg = this.add.rectangle(0, 0, 560, 520, 0x0e1218, 0.96);
     bg.setStrokeStyle(1, 0x4db6ff, 0.6);
     const title = this.add
-      .text(0, -185, 'Character', {
+      .text(0, -235, 'Character', {
         fontFamily: 'Georgia, serif',
         fontSize: '22px',
         color: '#e8e4d8',
@@ -286,11 +320,12 @@ export class UIScene extends Phaser.Scene {
       .setOrigin(0.5);
 
     this.charBody = this.add
-      .text(-230, -150, '', {
+      .text(-250, -200, '', {
         fontFamily: 'Consolas, monospace',
-        fontSize: '13px',
+        fontSize: '12px',
         color: '#c8c0b0',
-        lineSpacing: 4,
+        lineSpacing: 3,
+        wordWrap: { width: 340 },
       })
       .setOrigin(0, 0);
 
@@ -298,7 +333,7 @@ export class UIScene extends Phaser.Scene {
     const stats = ['strength', 'dexterity', 'stamina', 'intellect'] as const;
     stats.forEach((stat, i) => {
       const btn = this.add
-        .text(160, -80 + i * 36, `+ ${stat.slice(0, 3).toUpperCase()}`, {
+        .text(200, -120 + i * 36, `+ ${stat.slice(0, 3).toUpperCase()}`, {
           fontFamily: 'Segoe UI, sans-serif',
           fontSize: '14px',
           color: '#0a0c10',
@@ -321,7 +356,7 @@ export class UIScene extends Phaser.Scene {
     });
 
     const close = this.add
-      .text(0, 185, 'Close', {
+      .text(0, 235, `Close (${formatHotkey('character')})`, {
         fontFamily: 'Segoe UI, sans-serif',
         fontSize: '14px',
         color: '#8a9aaa',
@@ -517,6 +552,7 @@ export class UIScene extends Phaser.Scene {
   private showMenu(): void {
     this.hideCraft();
     this.hideChar();
+    this.skillPanel.hide();
     this.inventoryPanel.hide();
     this.menuPage = 'root';
     this.renderMenuPage();
@@ -547,22 +583,24 @@ export class UIScene extends Phaser.Scene {
           : 'Male';
     const lines = [
       `${gameState.name}  ·  ${p.classDef().name}  ·  ${genderLabel}`,
-      `Level ${p.level}/${MAX_LEVEL}   Unspent: ${p.unspentStatPoints}`,
+      `Level ${p.level}/${MAX_LEVEL}   Attr pts: ${p.unspentStatPoints}   Skill pts: ${gameState.skills.unspentSkillPoints}`,
       '',
       `STR ${p.stats.strength} (+${gear.strength} gear)`,
       `DEX ${p.stats.dexterity} (+${gear.dexterity} gear)`,
       `STA ${p.stats.stamina} (+${gear.stamina} gear)`,
       `INT ${p.stats.intellect} (+${gear.intellect} gear)`,
       '',
-      `Armor ${gear.armor}   Weapon DMG ${gameState.inventory.weaponDamage()}`,
-      `Attack power ~ ${gameState.combat.playerAttackDamage()}`,
+      `Weapon DMG ${gameState.inventory.weaponDamage()}   Attack ~ ${gameState.combat.playerAttackDamage()}`,
+      `Skill power +${gear.skillPower}%   (from gear / sets)`,
+      `Armor ${gear.armor}  ·  shown here & on item hover`,
+      `Skills: ${formatHotkey('skills')} tree · ${formatHotkey('skill1')}/${formatHotkey('skill2')}/${formatHotkey('skill3')} cast`,
       '',
       'Equipment:',
-      `  WPN  ${eq.weapon ? describeGear(eq.weapon) : '—'}`,
-      `  HAT  ${eq.hat ? eq.hat.name : '—'}`,
-      `  CHT  ${eq.chest ? eq.chest.name : '—'}`,
-      `  LEG  ${eq.legs ? eq.legs.name : '—'}`,
-      `  FET  ${eq.feet ? eq.feet.name : '—'}`,
+      `  WPN  ${eq.weapon ? describeGearFull(eq.weapon) : '—'}`,
+      `  HAT  ${eq.hat ? describeGearFull(eq.hat) : '—'}`,
+      `  CHT  ${eq.chest ? describeGearFull(eq.chest) : '—'}`,
+      `  LEG  ${eq.legs ? describeGearFull(eq.legs) : '—'}`,
+      `  FET  ${eq.feet ? describeGearFull(eq.feet) : '—'}`,
       `  TOOL ${eq.tool ? (getItemDef(eq.tool)?.name ?? eq.tool) : '—'}`,
       '',
       'Set bonuses:',
@@ -587,6 +625,18 @@ export class UIScene extends Phaser.Scene {
     this.craftOpen = false;
   }
 
+  private showShop(): void {
+    if (this.menuOpen) return;
+    this.shopPanel.show();
+    this.shopOpen = true;
+    this.toast('Mira’s shop — spend gold on gear');
+  }
+
+  private hideShop(): void {
+    this.shopPanel.hide();
+    this.shopOpen = false;
+  }
+
   private showChar(): void {
     if (this.menuOpen) return;
     this.charPanel.setPosition(this.scale.width / 2, this.scale.height / 2);
@@ -601,33 +651,11 @@ export class UIScene extends Phaser.Scene {
   }
 
   private refresh(): void {
-    const need = xpForLevel(gameState.progression.level);
-    const cls = gameState.progression.classDef().name;
-    const armorOn = [
-      gameState.inventory.equipment.hat,
-      gameState.inventory.equipment.chest,
-      gameState.inventory.equipment.legs,
-      gameState.inventory.equipment.feet,
-    ].filter(Boolean).length;
-    this.hpText.setText(
-      `HP ${Math.ceil(gameState.hp)}/${gameState.maxHp}   ${gameState.name} (${cls})`,
-    );
-    const xpLine =
-      gameState.progression.level >= MAX_LEVEL
-        ? `Lv ${MAX_LEVEL} MAX`
-        : `Lv ${gameState.progression.level}/${MAX_LEVEL}  XP ${gameState.progression.xp}/${need}`;
-    this.xpText.setText(
-      `${xpLine}` +
-        (gameState.progression.unspentStatPoints
-          ? `  ★${gameState.progression.unspentStatPoints} pts`
-          : '') +
-        (gameState.inRift ? '   [DUNGEON]' : '') +
-        `   Armor ${armorOn}/4` +
-        `   Bag ${gameState.inventory.slots.length}/${gameState.inventory.capacity}`,
-    );
+    this.hudBars.refresh();
     this.hudHint.setText(
-      `${formatHotkey('inventory')} Inventory · ${formatHotkey('character')} Character · Esc Menu`,
+      `${formatHotkey('inventory')} Inv · ${formatHotkey('character')} Char · ${formatHotkey('skills')} Skills · 1/2/3 Abilities · Esc Menu`,
     );
+    this.abilityBar.refresh();
   }
 
   private toast(text: string): void {
@@ -669,11 +697,20 @@ export class UIScene extends Phaser.Scene {
 
   update(): void {
     if (!this.keyMenu) return;
+    this.abilityBar.refresh();
     if (this.awaitingRebind) return;
 
     if (Phaser.Input.Keyboard.JustDown(this.keyMenu)) {
       if (this.inventoryPanel.open) {
         this.inventoryPanel.hide();
+        return;
+      }
+      if (this.skillPanel.open) {
+        this.skillPanel.hide();
+        return;
+      }
+      if (this.shopOpen) {
+        this.hideShop();
         return;
       }
       if (this.craftOpen) {
@@ -701,13 +738,26 @@ export class UIScene extends Phaser.Scene {
 
     if (Phaser.Input.Keyboard.JustDown(this.keyInv)) {
       this.hideCraft();
+      this.hideShop();
       this.hideChar();
+      this.skillPanel.hide();
       this.inventoryPanel.toggle();
+      return;
+    }
+
+    if (Phaser.Input.Keyboard.JustDown(this.keySkills)) {
+      this.hideCraft();
+      this.hideShop();
+      this.hideChar();
+      this.inventoryPanel.hide();
+      this.skillPanel.toggle();
       return;
     }
 
     if (Phaser.Input.Keyboard.JustDown(this.keyChar)) {
       this.inventoryPanel.hide();
+      this.skillPanel.hide();
+      this.hideShop();
       if (this.charOpen) this.hideChar();
       else this.showChar();
     }
@@ -744,7 +794,21 @@ export class UIScene extends Phaser.Scene {
       this.toast('No gear in that slot');
       return;
     }
-    if (gameState.inventory.equipGear(slot.item.uid)) {
+    if (
+      !gameState.inventory.canEquipGear(
+        slot.item,
+        gameState.progression.classId,
+      )
+    ) {
+      this.toast('Wrong class for that gear');
+      return;
+    }
+    if (
+      gameState.inventory.equipGear(
+        slot.item.uid,
+        gameState.progression.classId,
+      )
+    ) {
       gameState.recalcMaxHp();
       gameState.persist();
       this.refresh();

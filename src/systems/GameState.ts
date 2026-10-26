@@ -12,6 +12,8 @@ import { GatheringSystem } from './GatheringSystem';
 import { emptyEquipment, InventorySystem } from './InventorySystem';
 import { createStarterLoadout } from './ItemGen';
 import { getClassDef, ProgressionSystem } from './ProgressionSystem';
+import { ShopSystem } from './ShopSystem';
+import { SkillSystem } from './SkillSystem';
 
 export class GameState {
   readonly inventory = new InventorySystem();
@@ -19,6 +21,8 @@ export class GameState {
   readonly crafting = new CraftingSystem(this.inventory);
   readonly gathering = new GatheringSystem(this.inventory);
   readonly combat = new CombatSystem(this.inventory, this.progression);
+  readonly shop = new ShopSystem(this.inventory);
+  readonly skills = new SkillSystem();
 
   name = 'Wanderer';
   gender: CharacterGender = 'male';
@@ -39,6 +43,7 @@ export class GameState {
     this.name = name.trim() || 'Wanderer';
     this.gender = gender;
     this.progression.initClass(classId);
+    this.skills.initClass(classId);
     this.inventory.load([], emptyEquipment());
     const def = getClassDef(classId);
     const kit = createStarterLoadout(classId, def.starterWeaponDamage);
@@ -51,10 +56,11 @@ export class GameState {
     this.inventory.add('wood', 3);
     this.inventory.add('ore', 1);
     this.inventory.add('scrap', 2);
+    this.inventory.add('gold', 80);
     this.recalcMaxHp();
     this.hp = this.maxHp;
-    this.worldX = 8;
-    this.worldY = 8;
+    this.worldX = 12;
+    this.worldY = 14;
     this.inRift = false;
     this.riftSeed = null;
     this.playTimeSec = 0;
@@ -79,6 +85,11 @@ export class GameState {
       data.stats,
       data.classId,
     );
+    this.skills.load(
+      data.classId,
+      data.unspentSkillPoints ?? 0,
+      data.skillRanks ?? {},
+    );
     this.inventory.load(data.inventory, data.equipment);
     this.recalcMaxHp();
     this.hp = Math.min(data.hp, this.maxHp);
@@ -91,13 +102,15 @@ export class GameState {
 
   toSave(): CharacterSave {
     return {
-      version: 3,
+      version: 4,
       name: this.name,
       classId: this.progression.classId,
       gender: this.gender,
       level: this.progression.level,
       xp: this.progression.xp,
       unspentStatPoints: this.progression.unspentStatPoints,
+      unspentSkillPoints: this.skills.unspentSkillPoints,
+      skillRanks: { ...this.skills.ranks },
       stats: { ...this.progression.stats },
       hp: this.hp,
       maxHp: this.maxHp,
@@ -144,11 +157,24 @@ export class GameState {
   }
 
   takeDamage(raw: number): number {
-    const dealt = this.combat.mitigateIncoming(raw);
+    const afterBarrier = this.skills.absorbDamage(
+      this.combat.mitigateIncoming(raw),
+    );
+    const dealt = Math.max(0, Math.floor(afterBarrier));
+    if (dealt <= 0) {
+      gameEvents.emit(Events.PLAYER_DAMAGED, { dealt: 0, hp: this.hp });
+      return 0;
+    }
     this.hp = Math.max(0, this.hp - dealt);
     gameEvents.emit(Events.PLAYER_DAMAGED, { dealt, hp: this.hp });
     if (this.hp <= 0) gameEvents.emit(Events.PLAYER_DIED, {});
     return dealt;
+  }
+
+  spendSkill(nodeId: string): boolean {
+    const ok = this.skills.spendOnNode(nodeId);
+    if (ok) this.persist();
+    return ok;
   }
 
   healFull(): void {
@@ -193,3 +219,10 @@ export class GameState {
 }
 
 export const gameState = new GameState();
+
+gameEvents.on(Events.LEVEL_UP, (p) => {
+  const d = p as { skillPoint?: number };
+  if (d.skillPoint && d.skillPoint > 0) {
+    gameState.skills.grantSkillPoint(d.skillPoint);
+  }
+});

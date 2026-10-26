@@ -47,9 +47,13 @@ export class CraftingSystem {
     if (recipe.resultId === 'iron_blade') {
       this.inventory.addGear(createStarterWeapon('warrior', 8 + itemLevel));
     } else if (recipe.resultId === 'leather_vest') {
-      const gear = rollGearDrop(itemLevel, { preferArmor: true });
+      const gear = rollGearDrop(itemLevel, {
+        preferArmor: true,
+        forClass: 'mystic',
+      });
       gear.slot = 'chest';
       gear.setId = 'ashen';
+      gear.classId = 'mystic';
       gear.name = 'Crafted Ashen Vest';
       gear.baseId = 'ashen_chest';
       this.inventory.addGear(gear);

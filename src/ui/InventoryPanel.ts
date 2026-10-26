@@ -1,6 +1,11 @@
 import Phaser from 'phaser';
 import { audioBus } from '../core/AudioBus';
-import { describeGear } from '../systems/ItemGen';
+import {
+  classLabel,
+  describeGear,
+  describeGearFull,
+  resolveGearClass,
+} from '../systems/ItemGen';
 import { getItemDef } from '../systems/InventorySystem';
 import { gameState } from '../systems/GameState';
 import type { EquipmentSlots, InventorySlot } from '../types/save';
@@ -9,7 +14,8 @@ import { uiFont, uiPanelSize } from '../core/UiScale';
 type EqKey = keyof EquipmentSlots;
 
 /**
- * Large bag UI: equipment column + 8×6 bag grid.
+ * Bag UI: equipment strip + grid.
+ * Armor values only on hover / Character tab. Double-click to equip.
  */
 export class InventoryPanel {
   readonly root: Phaser.GameObjects.Container;
@@ -20,6 +26,10 @@ export class InventoryPanel {
   private title!: Phaser.GameObjects.Text;
   private bg!: Phaser.GameObjects.Rectangle;
   private selectedIndex: number | null = null;
+  private lastClickIndex: number | null = null;
+  private lastClickAt = 0;
+  private panelW = 800;
+  private panelH = 560;
   open = false;
 
   constructor(scene: Phaser.Scene) {
@@ -30,16 +40,16 @@ export class InventoryPanel {
     this.title = scene.add
       .text(0, 0, 'Inventory', {
         fontFamily: 'Georgia, serif',
-        fontSize: '24px',
+        fontSize: '22px',
         color: '#e8e4d8',
       })
       .setOrigin(0.5);
     this.detail = scene.add
-      .text(0, 0, 'Click gear to equip · Click equipped to unequip', {
+      .text(0, 0, 'Double-click gear to equip · Hover for full stats', {
         fontFamily: 'Segoe UI, sans-serif',
-        fontSize: '13px',
+        fontSize: '12px',
         color: '#8a9aaa',
-        wordWrap: { width: 520 },
+        align: 'center',
       })
       .setOrigin(0.5, 0);
     this.eqRoot = scene.add.container(0, 0);
@@ -47,7 +57,7 @@ export class InventoryPanel {
     const close = scene.add
       .text(0, 0, 'Close (I / Esc)', {
         fontFamily: 'Segoe UI, sans-serif',
-        fontSize: '14px',
+        fontSize: '13px',
         color: '#8a9aaa',
       })
       .setOrigin(0.5)
@@ -68,16 +78,16 @@ export class InventoryPanel {
   }
 
   layout(): void {
-    const { w, h } = uiPanelSize(this.scene, 0.86, 0.82, 980, 640);
+    const { w, h } = uiPanelSize(this.scene, 0.94, 0.88, 860, 620);
+    this.panelW = w;
+    this.panelH = h;
     this.bg.setSize(w, h);
-    this.title.setPosition(0, -h / 2 + 28);
-    this.title.setStyle({ fontSize: uiFont(this.scene, 26, 18, 32) });
+    this.title.setPosition(0, -h / 2 + 22);
+    this.title.setStyle({ fontSize: uiFont(this.scene, 22, 16, 26) });
     const close = this.root.getData('closeBtn') as Phaser.GameObjects.Text;
-    close.setPosition(0, h / 2 - 22);
-    this.detail.setPosition(0, h / 2 - 56);
-    this.detail.setWordWrapWidth(w - 48);
-    this.eqRoot.setPosition(-w / 2 + 130, -20);
-    this.gridRoot.setPosition(-40, -h / 2 + 70);
+    close.setPosition(0, h / 2 - 18);
+    this.detail.setPosition(0, h / 2 - 48);
+    this.detail.setWordWrapWidth(w - 36);
     this.root.setPosition(
       this.scene.scale.width / 2,
       this.scene.scale.height / 2,
@@ -106,20 +116,33 @@ export class InventoryPanel {
     this.eqRoot.removeAll(true);
     this.gridRoot.removeAll(true);
 
+    const w = this.panelW;
+    const h = this.panelH;
+    const pad = 18;
+    const innerW = w - pad * 2;
+
     const eq = gameState.inventory.equipment;
     const slots: { key: EqKey; label: string }[] = [
-      { key: 'weapon', label: 'Weapon' },
-      { key: 'hat', label: 'Hat' },
-      { key: 'chest', label: 'Chest' },
-      { key: 'legs', label: 'Legs' },
-      { key: 'feet', label: 'Feet' },
-      { key: 'tool', label: 'Tool' },
+      { key: 'weapon', label: 'WPN' },
+      { key: 'hat', label: 'HAT' },
+      { key: 'chest', label: 'CHT' },
+      { key: 'legs', label: 'LEG' },
+      { key: 'feet', label: 'FET' },
+      { key: 'tool', label: 'TOOL' },
     ];
+    const eqCols = 3;
+    const eqGap = 8;
+    const eqCellW = (innerW - eqGap * (eqCols - 1)) / eqCols;
+    const eqCellH = 44;
+    this.eqRoot.setPosition(-innerW / 2, -h / 2 + 48);
 
     slots.forEach((s, i) => {
-      const y = -150 + i * 58;
+      const col = i % eqCols;
+      const row = Math.floor(i / eqCols);
+      const x = col * (eqCellW + eqGap) + eqCellW / 2;
+      const y = row * (eqCellH + eqGap) + eqCellH / 2;
       const cell = this.scene.add
-        .rectangle(0, y, 200, 50, 0x1a2230, 1)
+        .rectangle(x, y, eqCellW, eqCellH, 0x1a2230, 1)
         .setStrokeStyle(1, 0x4a5568)
         .setInteractive({ useHandCursor: true });
       const label =
@@ -128,18 +151,18 @@ export class InventoryPanel {
             ? (getItemDef(eq.tool)?.name ?? eq.tool)
             : '—'
           : (eq[s.key]?.name ?? '—');
+      const short = label.length > 18 ? `${label.slice(0, 16)}…` : label;
       const text = this.scene.add
-        .text(-90, y, `${s.label}\n${label}`, {
+        .text(x - eqCellW / 2 + 8, y, `${s.label}  ${short}`, {
           fontFamily: 'Segoe UI, sans-serif',
-          fontSize: '12px',
+          fontSize: '11px',
           color: '#e8e4d8',
-          lineSpacing: 2,
         })
         .setOrigin(0, 0.5);
       cell.on('pointerup', () => this.onEquipClick(s.key));
       cell.on('pointerover', () => {
         if (s.key !== 'tool' && eq[s.key]) {
-          this.detail.setText(describeGear(eq[s.key]!));
+          this.detail.setText(describeGearFull(eq[s.key]!));
         } else if (s.key === 'tool' && eq.tool) {
           this.detail.setText(getItemDef(eq.tool)?.name ?? eq.tool);
         }
@@ -147,27 +170,44 @@ export class InventoryPanel {
       this.eqRoot.add([cell, text]);
     });
 
+    const eqBlockH = 2 * eqCellH + eqGap;
+    const bagTop = -h / 2 + 48 + eqBlockH + 20;
+    const bagBottom = h / 2 - 72;
+    const bagH = Math.max(120, bagBottom - bagTop);
+
     const cols = gameState.inventory.bagCols;
     const rows = gameState.inventory.bagRows;
-    const cell = 58;
-    const gap = 6;
+    const gap = 4;
+    const cell = Math.max(
+      28,
+      Math.min(
+        52,
+        Math.floor((innerW - gap * (cols - 1)) / cols),
+        Math.floor((bagH - 22 - gap * (rows - 1)) / rows),
+      ),
+    );
+    const gridW = cols * cell + (cols - 1) * gap;
+    this.gridRoot.setPosition(-gridW / 2, bagTop);
+
     const bagLabel = this.scene.add.text(
       0,
-      -28,
-      `Bag  (${gameState.inventory.slots.length}/${gameState.inventory.capacity})`,
+      0,
+      `Bag  ${gameState.inventory.slots.length}/${gameState.inventory.capacity}   ·   Gold ${gameState.inventory.count('gold')}`,
       {
         fontFamily: 'Georgia, serif',
-        fontSize: '16px',
+        fontSize: '14px',
         color: '#c4a574',
       },
     );
     this.gridRoot.add(bagLabel);
 
+    const playerClass = gameState.progression.classId;
+
     for (let i = 0; i < cols * rows; i++) {
       const col = i % cols;
       const row = Math.floor(i / cols);
       const x = col * (cell + gap);
-      const y = row * (cell + gap);
+      const y = 22 + row * (cell + gap);
       const slot = gameState.inventory.slots[i] as InventorySlot | undefined;
       const rect = this.scene.add
         .rectangle(x + cell / 2, y + cell / 2, cell, cell, 0x16202c, 1)
@@ -183,19 +223,21 @@ export class InventoryPanel {
           ).color;
           const gem = this.scene.add.circle(
             x + cell / 2,
-            y + cell / 2 - 4,
-            10,
+            y + cell / 2 - 2,
+            Math.max(5, cell * 0.18),
             color,
           );
           const qty = this.scene.add
-            .text(x + cell - 4, y + cell - 4, `x${slot.qty}`, {
+            .text(x + cell - 3, y + cell - 3, `x${slot.qty}`, {
               fontFamily: 'Consolas, monospace',
-              fontSize: '11px',
+              fontSize: `${Math.max(9, Math.floor(cell * 0.22))}px`,
               color: '#e8e4d8',
             })
             .setOrigin(1, 1);
           contents.push(gem, qty);
         } else {
+          const req = resolveGearClass(slot.item);
+          const usable = !req || req === playerClass;
           const rarityColor =
             slot.item.rarity === 'legendary'
               ? 0xffb74d
@@ -205,17 +247,24 @@ export class InventoryPanel {
                   ? 0x81c784
                   : 0xb0bec5;
           const gem = this.scene.add
-            .rectangle(x + cell / 2, y + cell / 2 - 2, 22, 22, rarityColor, 0.9)
-            .setStrokeStyle(1, 0xffffff, 0.35);
+            .rectangle(
+              x + cell / 2,
+              y + cell / 2 - 2,
+              cell * 0.4,
+              cell * 0.4,
+              rarityColor,
+              usable ? 0.9 : 0.35,
+            )
+            .setStrokeStyle(1, usable ? 0xffffff : 0xaa4444, 0.45);
           const tag = this.scene.add
             .text(
               x + cell / 2,
-              y + cell - 10,
+              y + cell - 4,
               slot.item.slot.slice(0, 3).toUpperCase(),
               {
                 fontFamily: 'Segoe UI, sans-serif',
-                fontSize: '10px',
-                color: '#e8e4d8',
+                fontSize: `${Math.max(8, Math.floor(cell * 0.2))}px`,
+                color: usable ? '#e8e4d8' : '#c07070',
               },
             )
             .setOrigin(0.5, 1);
@@ -233,7 +282,12 @@ export class InventoryPanel {
           const def = getItemDef(slot.itemId);
           this.detail.setText(`${def?.name ?? slot.itemId}  ×${slot.qty}`);
         } else {
-          this.detail.setText(`${describeGear(slot.item)}  — click to equip`);
+          const req = resolveGearClass(slot.item);
+          const usable = !req || req === playerClass;
+          const hint = usable
+            ? 'Double-click to equip'
+            : `${classLabel(req)} only`;
+          this.detail.setText(`${describeGearFull(slot.item)}  — ${hint}`);
         }
       });
 
@@ -245,28 +299,71 @@ export class InventoryPanel {
     const slot = gameState.inventory.slots[index];
     if (!slot) {
       this.selectedIndex = null;
+      this.lastClickIndex = null;
       this.refresh();
       return;
     }
+
+    const now = this.scene.time.now;
+    const isDouble =
+      this.lastClickIndex === index && now - this.lastClickAt < 380;
+    this.lastClickIndex = index;
+    this.lastClickAt = now;
+
     audioBus.uiClick();
+
     if (slot.kind === 'gear') {
-      if (gameState.inventory.equipGear(slot.item.uid)) {
-        gameState.recalcMaxHp();
-        gameState.persist();
-        this.detail.setText(`Equipped ${slot.item.name}`);
-      } else {
-        this.detail.setText('Cannot equip (bag full when swapping?)');
+      this.selectedIndex = index;
+      if (!isDouble) {
+        this.detail.setText(
+          `${describeGear(slot.item)}  — double-click to equip`,
+        );
+        this.refresh();
+        return;
       }
+      this.tryEquipGear(slot.item.uid);
+      return;
+    }
+
+    const def = getItemDef(slot.itemId);
+    if (def?.kind === 'tool' && isDouble) {
+      gameState.inventory.equipTool(slot.itemId);
+      gameState.persist();
+      this.detail.setText(`Equipped ${def.name}`);
+      this.refresh();
+      return;
+    }
+    this.selectedIndex = index;
+    this.detail.setText(
+      `${def?.name ?? slot.itemId} ×${slot.qty}` +
+        (def?.kind === 'tool' ? '  — double-click to equip' : ''),
+    );
+    this.refresh();
+  }
+
+  private tryEquipGear(uid: string): void {
+    const slot = gameState.inventory.slots.find(
+      (s) => s.kind === 'gear' && s.item.uid === uid,
+    );
+    if (!slot || slot.kind !== 'gear') return;
+    if (
+      !gameState.inventory.canEquipGear(
+        slot.item,
+        gameState.progression.classId,
+      )
+    ) {
+      this.detail.setText(
+        `Requires ${classLabel(resolveGearClass(slot.item))} — cannot equip`,
+      );
+      this.refresh();
+      return;
+    }
+    if (gameState.inventory.equipGear(uid, gameState.progression.classId)) {
+      gameState.recalcMaxHp();
+      gameState.persist();
+      this.detail.setText(`Equipped ${slot.item.name}`);
     } else {
-      const def = getItemDef(slot.itemId);
-      if (def?.kind === 'tool') {
-        gameState.inventory.equipTool(slot.itemId);
-        gameState.persist();
-        this.detail.setText(`Equipped ${def.name}`);
-      } else {
-        this.selectedIndex = index;
-        this.detail.setText(`${def?.name ?? slot.itemId} ×${slot.qty}`);
-      }
+      this.detail.setText('Cannot equip (bag full when swapping?)');
     }
     this.refresh();
   }

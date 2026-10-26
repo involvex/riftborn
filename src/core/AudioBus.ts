@@ -52,6 +52,11 @@ class AudioBus {
     this.playTone(180, 0.08, 'square');
   }
 
+  skill(): void {
+    this.playTone(320, 0.07, 'sawtooth');
+    setTimeout(() => this.playTone(480, 0.06, 'triangle'), 40);
+  }
+
   levelUp(): void {
     this.playTone(440, 0.08, 'sine');
     setTimeout(() => this.playTone(660, 0.1, 'sine'), 80);

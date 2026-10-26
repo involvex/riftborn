@@ -51,4 +51,6 @@ export const Events = {
   DAMAGE_NUMBER: 'combat:damageNumber',
   SESSION_REWARDS: 'net:sessionRewards',
   SETTINGS_CHANGED: 'settings:changed',
+  SKILL_CHANGED: 'skill:changed',
+  SKILL_CAST: 'skill:cast',
 } as const;

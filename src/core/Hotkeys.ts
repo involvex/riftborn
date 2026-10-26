@@ -7,6 +7,8 @@ export function keyCodeFromSetting(name: string): number {
   const n = name.toUpperCase();
   if (n === 'SPACE' || n === ' ') return Phaser.Input.Keyboard.KeyCodes.SPACE;
   if (n === 'ESC' || n === 'ESCAPE') return Phaser.Input.Keyboard.KeyCodes.ESC;
+  if (n === 'ONE' || n === '1') return Phaser.Input.Keyboard.KeyCodes.ONE;
+  if (n === 'TWO' || n === '2') return Phaser.Input.Keyboard.KeyCodes.TWO;
   if (n === 'THREE' || n === '3') return Phaser.Input.Keyboard.KeyCodes.THREE;
   if (n === 'FOUR' || n === '4') return Phaser.Input.Keyboard.KeyCodes.FOUR;
   if (n === 'FIVE' || n === '5') return Phaser.Input.Keyboard.KeyCodes.FIVE;
@@ -34,6 +36,8 @@ export function bindAction(
 
 export function formatHotkey(action: HotkeyAction): string {
   const raw = settingsStore.get().hotkeys[action];
+  if (raw === 'ONE') return '1';
+  if (raw === 'TWO') return '2';
   if (raw === 'THREE') return '3';
   if (raw === 'SPACE') return 'Space';
   if (raw === 'ESC') return 'Esc';
@@ -45,6 +49,10 @@ export const HOTKEY_LABELS: Record<HotkeyAction, string> = {
   craft: 'Craft / Bench',
   character: 'Character',
   inventory: 'Inventory',
+  skills: 'Skill tree',
+  skill1: 'Ability 1',
+  skill2: 'Ability 2',
+  skill3: 'Ability 3',
   portal: 'Rift portal',
   dash: 'Dash',
   coop: 'Co-op',

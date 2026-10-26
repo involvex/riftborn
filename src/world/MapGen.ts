@@ -11,6 +11,14 @@ export function mulberry32(seed: number): () => number {
 
 export type SpawnPoint = { x: number; y: number };
 
+export type NpcRole = 'vendor' | 'crafter';
+
+export type NpcSpawn = SpawnPoint & {
+  id: string;
+  role: NpcRole;
+  name: string;
+};
+
 export type ZoneLayout = {
   nodes: { defId: string; x: number; y: number }[];
   packs: { enemyId: string; count: number; x: number; y: number }[];
@@ -18,29 +26,60 @@ export type ZoneLayout = {
   bench: SpawnPoint;
   elite: SpawnPoint | null;
   spawn?: SpawnPoint;
+  npcs?: NpcSpawn[];
+  /** Hub path tiles (lighter plaza). */
+  paths?: SpawnPoint[];
 };
 
+function inPlaza(x: number, y: number): boolean {
+  return x >= 7 && x <= 16 && y >= 7 && y <= 16;
+}
+
+/** Safe hub town: plaza, vendor, crafter; gathering + light packs on the fringe. */
 export function generateHub(seed = 1): ZoneLayout {
   const rnd = mulberry32(seed);
   const nodes: ZoneLayout['nodes'] = [];
   const packs: ZoneLayout['packs'] = [];
+  const paths: SpawnPoint[] = [];
 
-  for (let i = 0; i < 8; i++) {
+  // Plaza diamond path
+  for (let y = 8; y <= 15; y++) {
+    for (let x = 8; x <= 15; x++) {
+      paths.push({ x, y });
+    }
+  }
+  // Road to rift portal
+  for (let y = 4; y <= 8; y++) paths.push({ x: 12, y });
+  for (let x = 12; x <= 20; x++) paths.push({ x, y: 4 });
+
+  // Gathering only outside the plaza
+  for (let i = 0; i < 10; i++) {
+    let x = 2 + rnd() * 20;
+    let y = 2 + rnd() * 20;
+    let guard = 0;
+    while (inPlaza(x, y) && guard++ < 12) {
+      x = 2 + rnd() * 20;
+      y = 2 + rnd() * 20;
+    }
+    if (inPlaza(x, y)) continue;
     nodes.push({
-      defId: rnd() > 0.45 ? 'ash_tree' : 'rift_vein',
-      x: 3 + rnd() * 18,
-      y: 3 + rnd() * 18,
+      defId: rnd() > 0.4 ? 'ash_tree' : 'rift_vein',
+      x,
+      y,
     });
   }
 
+  // Light fringe packs — keep away from town square
   const packTypes = ['shade', 'crawler', 'wisp'] as const;
-  for (let i = 0; i < 5; i++) {
-    const enemyId = packTypes[Math.floor(rnd() * packTypes.length)];
+  for (let i = 0; i < 3; i++) {
+    let x = 2 + rnd() * 6;
+    const y = 2 + rnd() * 20;
+    if (rnd() > 0.5) x = 17 + rnd() * 5;
     packs.push({
-      enemyId,
-      count: 3 + Math.floor(rnd() * 5),
-      x: 4 + rnd() * 16,
-      y: 4 + rnd() * 16,
+      enemyId: packTypes[Math.floor(rnd() * packTypes.length)],
+      count: 2 + Math.floor(rnd() * 3),
+      x,
+      y,
     });
   }
 
@@ -48,8 +87,26 @@ export function generateHub(seed = 1): ZoneLayout {
     nodes,
     packs,
     portal: { x: 20, y: 4 },
-    bench: { x: 6, y: 6 },
+    bench: { x: 14, y: 10 },
     elite: null,
+    spawn: { x: 12, y: 14 },
+    npcs: [
+      {
+        id: 'vendor_mira',
+        role: 'vendor',
+        name: 'Mira',
+        x: 10,
+        y: 10,
+      },
+      {
+        id: 'crafter_bram',
+        role: 'crafter',
+        name: 'Bram',
+        x: 14,
+        y: 10,
+      },
+    ],
+    paths,
   };
 }
 

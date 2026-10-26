@@ -70,6 +70,7 @@ export class CombatSystem {
       const gear = rollGearDrop(this.progression.level, {
         elite: opts.elite,
         preferArmor: true,
+        forClass: this.progression.classId,
       });
       if (this.inventory.addGear(gear)) opts.onGear?.(gear);
     }

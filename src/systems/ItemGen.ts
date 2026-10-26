@@ -1,21 +1,25 @@
 import type {
+  CharacterClassId,
   GearInstance,
   GearRarity,
   GearSlot,
   GearStats,
 } from '../types/game';
 import gearBases from '../data/gearBases.json';
+import setsData from '../data/sets.json';
 
 type GearBase = {
   id: string;
   name: string;
   slot: GearSlot;
   setId: string | null;
+  classId: CharacterClassId | null;
   armorBias: number;
   damageBias?: number;
 };
 
 const bases = gearBases as Record<string, GearBase>;
+const setClass = setsData as Record<string, { classId: CharacterClassId }>;
 
 const ARMOR_SLOTS: GearSlot[] = ['hat', 'chest', 'legs', 'feet'];
 const RARITY_WEIGHTS: { rarity: GearRarity; w: number; affixes: number }[] = [
@@ -24,6 +28,12 @@ const RARITY_WEIGHTS: { rarity: GearRarity; w: number; affixes: number }[] = [
   { rarity: 'rare', w: 15, affixes: 2 },
   { rarity: 'legendary', w: 5, affixes: 3 },
 ];
+
+const CLASS_PRIMARY: Record<CharacterClassId, keyof GearStats> = {
+  warrior: 'strength',
+  mystic: 'dexterity',
+  mage: 'intellect',
+};
 
 function uid(): string {
   return `g_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
@@ -47,7 +57,7 @@ function pickRarity(rnd: () => number, eliteBonus = 0): GearRarity {
   return 'common';
 }
 
-function emptyStats(): GearStats {
+export function emptyGearStats(): GearStats {
   return {
     strength: 0,
     dexterity: 0,
@@ -55,7 +65,20 @@ function emptyStats(): GearStats {
     intellect: 0,
     armor: 0,
     damage: 0,
+    skillPower: 0,
   };
+}
+
+/** Resolve class from explicit field, set membership, or base id. */
+export function resolveGearClass(
+  item: Pick<GearInstance, 'classId' | 'setId' | 'baseId'>,
+): CharacterClassId | null {
+  if (item.classId) return item.classId;
+  if (item.setId && setClass[item.setId]?.classId) {
+    return setClass[item.setId].classId;
+  }
+  const base = bases[item.baseId];
+  return base?.classId ?? null;
 }
 
 /** Migrate legacy vitality/spirit gear rolls into stamina/dexterity. */
@@ -69,15 +92,35 @@ export function normalizeGearStats(
     intellect: raw.intellect ?? 0,
     armor: raw.armor ?? 0,
     damage: raw.damage ?? 0,
+    skillPower: raw.skillPower ?? 0,
+  };
+}
+
+export function migrateGearInstance(item: GearInstance): GearInstance {
+  return {
+    ...item,
+    classId: resolveGearClass(item),
+    stats: normalizeGearStats(item.stats as GearStats & Record<string, number>),
   };
 }
 
 function rollAffix(
   stats: GearStats,
   itemLevel: number,
+  classId: CharacterClassId | null,
   rnd: () => number,
 ): void {
   const amount = 1 + Math.floor(rnd() * (2 + itemLevel / 8));
+  // Class gear heavily prefers its primary stat + skill power
+  if (classId && rnd() < 0.55) {
+    const key = CLASS_PRIMARY[classId];
+    stats[key] += amount;
+    return;
+  }
+  if (classId && rnd() < 0.25) {
+    stats.skillPower += 2 + Math.floor(rnd() * (2 + itemLevel / 10));
+    return;
+  }
   const picks: (keyof GearStats)[] = [
     'strength',
     'dexterity',
@@ -85,19 +128,25 @@ function rollAffix(
     'intellect',
     'armor',
     'damage',
+    'skillPower',
   ];
-  const key = picks[Math.floor(rnd() * picks.length)];
-  stats[key] += amount;
+  const key = picks[Math.floor(rnd() * picks.length)]!;
+  if (key === 'skillPower') {
+    stats.skillPower += 2 + Math.floor(amount / 2);
+  } else {
+    stats[key] += amount;
+  }
 }
 
 export function createStarterWeapon(
   classId: string,
   damage: number,
 ): GearInstance {
+  const cid = classId as CharacterClassId;
   const baseId =
-    classId === 'mage'
+    cid === 'mage'
       ? 'ash_staff'
-      : classId === 'warrior'
+      : cid === 'warrior'
         ? 'iron_blade'
         : 'rift_blade';
   const base = bases[baseId] ?? bases.iron_blade;
@@ -107,10 +156,11 @@ export function createStarterWeapon(
     name: `Recruit's ${base.name}`,
     slot: 'weapon',
     setId: null,
+    classId: base.classId,
     rarity: 'common',
     itemLevel: 1,
-    stats: { ...emptyStats(), damage },
-    attackRange: classId === 'mage' ? 1.6 : 1.15,
+    stats: { ...emptyGearStats(), damage },
+    attackRange: cid === 'mage' ? 1.6 : 1.15,
   };
 }
 
@@ -122,7 +172,7 @@ function makeStarterPiece(
   if (!base) {
     throw new Error(`Unknown gear base ${baseId}`);
   }
-  const stats = emptyStats();
+  const stats = emptyGearStats();
   if (base.slot === 'weapon') {
     stats.damage = Math.max(4, Math.floor(5 * (base.damageBias ?? 1)));
   } else {
@@ -135,6 +185,7 @@ function makeStarterPiece(
     name: `Recruit's ${base.name}`,
     slot: base.slot,
     setId: base.setId,
+    classId: base.classId,
     rarity: 'common',
     itemLevel: 1,
     stats,
@@ -174,25 +225,45 @@ export function createStarterLoadout(
   };
 }
 
-/** Roll a random armor/weapon drop for the given item level. */
+/**
+ * Roll a class-locked armor/weapon drop.
+ * Enemy kills pass the player class so drops match (Warrior Bone, etc.).
+ */
 export function rollGearDrop(
   itemLevel: number,
-  opts: { elite?: boolean; preferArmor?: boolean; rnd?: () => number } = {},
+  opts: {
+    elite?: boolean;
+    preferArmor?: boolean;
+    forClass?: CharacterClassId;
+    /** Allow off-class pieces (shop). Default false for combat drops. */
+    anyClass?: boolean;
+    rnd?: () => number;
+  } = {},
 ): GearInstance {
   const rnd = opts.rnd ?? Math.random;
   const rarity = pickRarity(rnd, opts.elite ? 2 : 0);
   const affixCount =
     RARITY_WEIGHTS.find((r) => r.rarity === rarity)?.affixes ?? 0;
 
-  const armorBases = Object.values(bases).filter((b) =>
-    ARMOR_SLOTS.includes(b.slot),
+  const forClass = opts.forClass;
+  const all = Object.values(bases);
+  let pool = all.filter((b) =>
+    opts.preferArmor !== false && rnd() > 0.22
+      ? ARMOR_SLOTS.includes(b.slot)
+      : b.slot === 'weapon',
   );
-  const weaponBases = Object.values(bases).filter((b) => b.slot === 'weapon');
-  const pool =
-    opts.preferArmor !== false && rnd() > 0.22 ? armorBases : weaponBases;
-  const base = pool[Math.floor(rnd() * pool.length)] ?? armorBases[0];
+  if (forClass && !opts.anyClass) {
+    const classPool = pool.filter((b) => b.classId === forClass);
+    if (classPool.length) pool = classPool;
+  } else if (forClass && opts.anyClass && rnd() < 0.7) {
+    const classPool = pool.filter((b) => b.classId === forClass);
+    if (classPool.length) pool = classPool;
+  }
 
-  const stats = emptyStats();
+  const base = pool[Math.floor(rnd() * pool.length)] ?? all[0]!;
+  const classId = base.classId;
+
+  const stats = emptyGearStats();
   if (base.slot === 'weapon') {
     const bias = base.damageBias ?? 1;
     stats.damage = Math.max(
@@ -206,7 +277,15 @@ export function rollGearDrop(
     );
   }
 
-  for (let i = 0; i < affixCount; i++) rollAffix(stats, itemLevel, rnd);
+  // Guaranteed primary-stat bump on class gear
+  if (classId) {
+    const key = CLASS_PRIMARY[classId];
+    stats[key] += 1 + Math.floor(itemLevel / 6);
+  }
+
+  for (let i = 0; i < affixCount; i++) {
+    rollAffix(stats, itemLevel, classId, rnd);
+  }
 
   const rarityPrefix =
     rarity === 'common'
@@ -223,6 +302,7 @@ export function rollGearDrop(
     name: `${rarityPrefix}${base.name}`,
     slot: base.slot,
     setId: base.setId,
+    classId,
     rarity,
     itemLevel,
     stats,
@@ -230,15 +310,32 @@ export function rollGearDrop(
   };
 }
 
+/** Compact line for toasts / lists (no armor — use describeGearFull for that). */
 export function describeGear(item: GearInstance): string {
   const parts = [`[${item.rarity}] ${item.name} (ilvl ${item.itemLevel})`];
   const s = item.stats;
   if (s.damage) parts.push(`DMG ${s.damage}`);
-  if (s.armor) parts.push(`ARM ${s.armor}`);
   if (s.strength) parts.push(`STR ${s.strength}`);
   if (s.dexterity) parts.push(`DEX ${s.dexterity}`);
   if (s.stamina) parts.push(`STA ${s.stamina}`);
   if (s.intellect) parts.push(`INT ${s.intellect}`);
+  if (s.skillPower) parts.push(`Skill +${s.skillPower}%`);
+  const cls = resolveGearClass(item);
+  if (cls) parts.push(cls.toUpperCase());
+  return parts.join(' · ');
+}
+
+/** Full tooltip including armor / set (Character tab & hover). */
+export function describeGearFull(item: GearInstance): string {
+  const parts = [describeGear(item)];
+  if (item.stats.armor) parts.push(`ARM ${item.stats.armor}`);
   if (item.setId) parts.push(`Set:${item.setId}`);
   return parts.join(' · ');
+}
+
+export function classLabel(id: CharacterClassId | null): string {
+  if (!id) return 'Any';
+  if (id === 'warrior') return 'Warrior';
+  if (id === 'mystic') return 'Mystic';
+  return 'Mage';
 }

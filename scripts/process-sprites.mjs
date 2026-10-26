@@ -1,5 +1,7 @@
 /**
- * Build 14-frame game sheets from idle + optional walk/attack strips.
+ * Build 14-frame game sheets from idle portraits.
+ * Walk/attack strips from AI often mismatch the idle character or are
+ * identical frames — we synthesize motion from idle for a stable look.
  * Layout: idle 0–3, walk 4–9, attack 10–13 (128×128).
  */
 import { access, mkdir, readdir } from 'node:fs/promises';
@@ -13,57 +15,17 @@ const FW = 128;
 const FH = 128;
 const FRAMES = 14;
 
-/** @type {{ idle: string, walk?: string, attack?: string, out: string, cellsWalk?: number, cellsAttack?: number }[]} */
+/** @type {{ idle: string, out: string }[]} */
 const MAP = [
-  {
-    idle: 'hero_warrior_idle.png',
-    walk: 'hero_warrior_walk.png',
-    attack: 'hero_warrior_attack.png',
-    out: 'spr_player_male.png',
-  },
-  {
-    idle: 'hero_female_idle.png',
-    walk: 'hero_female_walk.png',
-    out: 'spr_player_female.png',
-  },
-  {
-    idle: 'hero_mystic_idle.png',
-    walk: 'hero_mystic_walk.png',
-    attack: 'hero_mystic_attack.png',
-    out: 'spr_player_nonbinary.png',
-  },
-  {
-    idle: 'hero_mystic_idle.png',
-    walk: 'hero_mystic_walk.png',
-    attack: 'hero_mystic_attack.png',
-    out: 'spr_player_mystic.png',
-  },
-  {
-    idle: 'hero_mage_idle.png',
-    walk: 'hero_mage_walk.png',
-    attack: 'hero_mage_attack.png',
-    out: 'spr_player_mage.png',
-  },
-  {
-    idle: 'enemy_crawler.png',
-    walk: 'enemy_crawler_walk.png',
-    out: 'spr_crawler.png',
-  },
-  {
-    idle: 'enemy_shade.png',
-    walk: 'enemy_shade_walk.png',
-    out: 'spr_shade.png',
-  },
-  {
-    idle: 'enemy_wisp.png',
-    walk: 'enemy_wisp_walk.png',
-    out: 'spr_wisp.png',
-  },
-  {
-    idle: 'enemy_rift_lord.png',
-    attack: 'enemy_rift_lord_attack.png',
-    out: 'spr_rift_lord.png',
-  },
+  { idle: 'hero_warrior_idle.png', out: 'spr_player_male.png' },
+  { idle: 'hero_female_idle.png', out: 'spr_player_female.png' },
+  { idle: 'hero_mystic_idle.png', out: 'spr_player_nonbinary.png' },
+  { idle: 'hero_mystic_idle.png', out: 'spr_player_mystic.png' },
+  { idle: 'hero_mage_idle.png', out: 'spr_player_mage.png' },
+  { idle: 'enemy_crawler.png', out: 'spr_crawler.png' },
+  { idle: 'enemy_shade.png', out: 'spr_shade.png' },
+  { idle: 'enemy_wisp.png', out: 'spr_wisp.png' },
+  { idle: 'enemy_rift_lord.png', out: 'spr_rift_lord.png' },
 ];
 
 async function exists(p) {
@@ -94,39 +56,36 @@ async function knockBlackToPng(inputPath) {
     .toBuffer();
 }
 
-async function toCell(pngBuf, extraMotion = { x: 0, y: 0, scale: 1 }) {
-  let pipeline = sharp(pngBuf);
+async function toCell(pngBuf, motion = { x: 0, y: 0, scale: 1 }) {
+  let resized;
   try {
-    pipeline = pipeline.trim({ threshold: 8 });
+    const trimmed = sharp(pngBuf).trim({ threshold: 8 });
+    const meta = await trimmed.metadata();
+    const srcW = meta.width || 1;
+    const srcH = meta.height || 1;
+    const maxW = FW - 24;
+    const maxH = FH - 28;
+    const baseScale = Math.min(maxW / srcW, maxH / srcH, 1);
+    const scale = baseScale * motion.scale;
+    const tw = Math.max(1, Math.round(srcW * scale));
+    const th = Math.max(1, Math.round(srcH * scale));
+    resized = await trimmed
+      .resize(tw, th, { kernel: 'nearest', fit: 'fill' })
+      .png()
+      .toBuffer();
   } catch {
-    // keep untrimmed if empty
+    resized = await sharp(pngBuf)
+      .resize(FW - 24, FH - 28, { fit: 'inside', kernel: 'nearest' })
+      .png()
+      .toBuffer();
   }
-  const meta = await pipeline.metadata();
-  const srcW = meta.width || 1;
-  const srcH = meta.height || 1;
-  const maxW = FW - 20;
-  const maxH = FH - 24;
-  const baseScale = Math.min(maxW / srcW, maxH / srcH, 1);
-  const scale = baseScale * extraMotion.scale;
-  const tw = Math.max(1, Math.round(srcW * scale));
-  const th = Math.max(1, Math.round(srcH * scale));
-  const resized = await sharp(pngBuf)
-    .trim({ threshold: 8 })
-    .resize(tw, th, { kernel: 'nearest', fit: 'fill' })
-    .png()
-    .toBuffer()
-    .catch(async () =>
-      sharp(pngBuf)
-        .resize(tw, th, { kernel: 'nearest', fit: 'inside' })
-        .png()
-        .toBuffer(),
-    );
 
   const rMeta = await sharp(resized).metadata();
-  const rw = rMeta.width || tw;
-  const rh = rMeta.height || th;
-  const left = Math.floor((FW - rw) / 2) + extraMotion.x;
-  const top = Math.floor((FH - rh) / 2) + extraMotion.y;
+  const rw = rMeta.width || 1;
+  const rh = rMeta.height || 1;
+  // Anchor near feet so bob/lunge doesn't float the sprite
+  const left = Math.floor((FW - rw) / 2) + motion.x;
+  const top = FH - rh - 8 + motion.y;
 
   return sharp({
     create: {
@@ -147,51 +106,34 @@ async function toCell(pngBuf, extraMotion = { x: 0, y: 0, scale: 1 }) {
     .toBuffer();
 }
 
-async function sliceStrip(stripPath, cellCount) {
-  const png = await knockBlackToPng(stripPath);
-  const meta = await sharp(png).metadata();
-  const w = meta.width || 1;
-  const h = meta.height || 1;
-  const cellW = Math.floor(w / cellCount);
-  const cells = [];
-  for (let i = 0; i < cellCount; i++) {
-    const left = i * cellW;
-    const width = i === cellCount - 1 ? w - left : cellW;
-    if (width < 1) continue;
-    const cell = await sharp(png)
-      .extract({ left, top: 0, width, height: h })
-      .png()
-      .toBuffer();
-    cells.push(cell);
-  }
-  return cells;
-}
-
 function idleMotion(i) {
   return {
     x: 0,
-    y: Math.round(Math.sin((i / 4) * Math.PI * 2) * 2),
+    y: Math.round(Math.sin((i / 4) * Math.PI * 2) * 1.5),
     scale: 1,
   };
 }
 
-function walkBoost(i) {
-  const t = i / 6;
-  const step = Math.sin(t * Math.PI * 2);
+/** Subtle stride bob — keeps the same isometric portrait identity. */
+function walkMotion(i) {
+  const t = (i / 6) * Math.PI * 2;
+  const step = Math.sin(t);
   return {
-    x: Math.round(step * 2),
-    y: Math.round(Math.abs(Math.sin(t * Math.PI * 2)) * -3),
-    scale: 1,
+    x: Math.round(step * 3),
+    y: Math.round(-Math.abs(Math.sin(t)) * 4),
+    scale: 1 + Math.abs(step) * 0.015,
   };
 }
 
-function attackBoost(i) {
-  const t = i / 3;
-  return {
-    x: Math.round(4 + t * 6),
-    y: Math.round(-1 - t),
-    scale: 1 + t * 0.04,
-  };
+/** Wind-up → lunge → recover from the same idle art. */
+function attackMotion(i) {
+  const poses = [
+    { x: -2, y: 1, scale: 0.98 },
+    { x: 4, y: -2, scale: 1.04 },
+    { x: 8, y: -3, scale: 1.06 },
+    { x: 2, y: 0, scale: 1.0 },
+  ];
+  return poses[i] ?? poses[0];
 }
 
 async function buildSheet(row) {
@@ -207,33 +149,11 @@ async function buildSheet(row) {
   for (let i = 0; i < 4; i++) {
     frames.push(await toCell(idlePng, idleMotion(i)));
   }
-
-  const walkPath = row.walk ? path.join(SRC, row.walk) : null;
-  if (walkPath && (await exists(walkPath))) {
-    const cells = await sliceStrip(walkPath, row.cellsWalk ?? 6);
-    for (let i = 0; i < 6; i++) {
-      const src = cells[i] ?? cells[cells.length - 1] ?? idlePng;
-      frames.push(await toCell(src, walkBoost(i)));
-    }
-    console.log(`  + walk ${row.walk}`);
-  } else {
-    for (let i = 0; i < 6; i++) {
-      frames.push(await toCell(idlePng, walkBoost(i)));
-    }
+  for (let i = 0; i < 6; i++) {
+    frames.push(await toCell(idlePng, walkMotion(i)));
   }
-
-  const atkPath = row.attack ? path.join(SRC, row.attack) : null;
-  if (atkPath && (await exists(atkPath))) {
-    const cells = await sliceStrip(atkPath, row.cellsAttack ?? 4);
-    for (let i = 0; i < 4; i++) {
-      const src = cells[i] ?? cells[cells.length - 1] ?? idlePng;
-      frames.push(await toCell(src, attackBoost(i)));
-    }
-    console.log(`  + attack ${row.attack}`);
-  } else {
-    for (let i = 0; i < 4; i++) {
-      frames.push(await toCell(idlePng, attackBoost(i)));
-    }
+  for (let i = 0; i < 4; i++) {
+    frames.push(await toCell(idlePng, attackMotion(i)));
   }
 
   if (frames.length !== FRAMES) {
@@ -254,7 +174,7 @@ async function buildSheet(row) {
     .png()
     .toFile(path.join(OUT, row.out));
 
-  console.log(`wrote ${row.out}`);
+  console.log(`wrote ${row.out} (idle-locked motion)`);
   return true;
 }
 

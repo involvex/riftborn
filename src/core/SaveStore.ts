@@ -1,13 +1,27 @@
 import type { CharacterSave } from '../types/save';
 
-const SAVE_KEY = 'riftborn.character.v3';
-const LEGACY_KEYS = ['riftborn.character.v2', 'riftborn.character.v1'];
+const SAVE_KEY = 'riftborn.character.v4';
+const LEGACY_KEYS = [
+  'riftborn.character.v3',
+  'riftborn.character.v2',
+  'riftborn.character.v1',
+];
 
 export interface SaveStore {
   load(): CharacterSave | null;
   save(data: CharacterSave): void;
   clear(): void;
 }
+
+type LegacySave = Omit<
+  CharacterSave,
+  'version' | 'unspentSkillPoints' | 'skillRanks' | 'gender'
+> & {
+  version: number;
+  gender?: CharacterSave['gender'];
+  unspentSkillPoints?: number;
+  skillRanks?: Record<string, number>;
+};
 
 /** LocalStorage-backed character persistence for solo play. */
 export class LocalSaveStore implements SaveStore {
@@ -16,31 +30,47 @@ export class LocalSaveStore implements SaveStore {
       const raw = localStorage.getItem(SAVE_KEY);
       if (raw) {
         const data = JSON.parse(raw) as CharacterSave;
-        if (data.version === 3) return data;
+        if (data.version === 4) return data;
       }
-      // Migrate v2 → v3
-      const v2 = localStorage.getItem('riftborn.character.v2');
-      if (v2) {
-        const old = JSON.parse(v2) as Omit<
-          CharacterSave,
-          'gender' | 'version'
-        > & {
-          version: 2;
-        };
-        const migrated: CharacterSave = {
-          ...old,
-          version: 3,
-          gender: 'male',
-        };
+      for (const key of LEGACY_KEYS) {
+        const legacy = localStorage.getItem(key);
+        if (!legacy) continue;
+        const old = JSON.parse(legacy) as LegacySave;
+        const migrated = this.migrate(old);
         this.save(migrated);
-        localStorage.removeItem('riftborn.character.v2');
+        localStorage.removeItem(key);
         return migrated;
       }
-      for (const key of LEGACY_KEYS) localStorage.removeItem(key);
       return null;
     } catch {
       return null;
     }
+  }
+
+  private migrate(old: LegacySave): CharacterSave {
+    const level = old.level ?? 1;
+    return {
+      version: 4,
+      name: old.name,
+      classId: old.classId,
+      gender: old.gender ?? 'male',
+      level,
+      xp: old.xp ?? 0,
+      unspentStatPoints: old.unspentStatPoints ?? 0,
+      // Retroactive skill points for existing characters
+      unspentSkillPoints: old.unspentSkillPoints ?? Math.floor(level / 5),
+      skillRanks: old.skillRanks ?? {},
+      stats: old.stats,
+      hp: old.hp,
+      maxHp: old.maxHp,
+      inventory: old.inventory,
+      equipment: old.equipment,
+      worldX: old.worldX,
+      worldY: old.worldY,
+      inRift: old.inRift,
+      riftSeed: old.riftSeed,
+      playTimeSec: old.playTimeSec,
+    };
   }
 
   save(data: CharacterSave): void {

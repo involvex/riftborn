@@ -3,7 +3,10 @@ import type { CharacterClassId, ClassDef, PlayerStats } from '../types/game';
 import classesData from '../data/classes.json';
 
 export const MAX_LEVEL = 50;
-export const STAT_POINTS_PER_LEVEL = 2;
+/** Attribute points granted each level-up (spend on STR/DEX/STA/INT). */
+export const STAT_POINTS_PER_LEVEL = 3;
+/** Skill point every N levels (spend in skill tree). */
+export const SKILL_POINT_EVERY_LEVELS = 5;
 
 const classes = classesData as Record<CharacterClassId, ClassDef>;
 
@@ -76,9 +79,11 @@ export class ProgressionSystem {
       this.xp -= xpForLevel(this.level);
       this.level += 1;
       this.unspentStatPoints += STAT_POINTS_PER_LEVEL;
+      const skillPoint = this.level % SKILL_POINT_EVERY_LEVELS === 0 ? 1 : 0;
       gameEvents.emit(Events.LEVEL_UP, {
         level: this.level,
         unspent: this.unspentStatPoints,
+        skillPoint,
       });
     }
     if (this.level >= MAX_LEVEL) this.xp = 0;

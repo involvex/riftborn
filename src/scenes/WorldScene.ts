@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { depthFromWorld, worldDistance, worldToScreen } from '../core/IsoMath';
 import { Events, gameEvents } from '../core/EventBus';
 import { Enemy } from '../entities/Enemy';
+import { Npc } from '../entities/Npc';
 import { Player } from '../entities/Player';
 import { ResourceNode } from '../entities/ResourceNode';
 import { describeGear } from '../systems/ItemGen';
@@ -35,13 +36,20 @@ export class WorldScene extends Phaser.Scene {
   private keyR!: Phaser.Input.Keyboard.Key;
   private keySpace!: Phaser.Input.Keyboard.Key;
   private keyP!: Phaser.Input.Keyboard.Key;
+  private keySkill1!: Phaser.Input.Keyboard.Key;
+  private keySkill2!: Phaser.Input.Keyboard.Key;
+  private keySkill3!: Phaser.Input.Keyboard.Key;
   private tiles!: Phaser.GameObjects.Graphics;
   private portalMarker: Phaser.GameObjects.Container | null = null;
   private benchMarker: Phaser.GameObjects.Container | null = null;
+  private npcs: Npc[] = [];
+  private decor: Phaser.GameObjects.Container[] = [];
+  private nearNpc: Npc | null = null;
   private saveTimer = 0;
   private shakeUntil = 0;
   private nearBench = false;
   private riftCleared = false;
+  private hubLayout: ZoneLayout | null = null;
   private enemySeq = 0;
   private nodeSeq = 0;
   private dungeon: DungeonMap | null = null;
@@ -93,6 +101,10 @@ export class WorldScene extends Phaser.Scene {
     });
 
     gameEvents.on(Events.SETTINGS_CHANGED, () => this.rebindActionKeys());
+    gameEvents.on('combat:castSkill', (p) => {
+      const d = p as { slot: number };
+      this.tryCastSkill(d.slot);
+    });
   }
 
   /** Re-read hotkeys from settings (after ESC menu changes). */
@@ -103,6 +115,9 @@ export class WorldScene extends Phaser.Scene {
     this.keyR = bindAction(this.input.keyboard, 'portal');
     this.keySpace = bindAction(this.input.keyboard, 'dash');
     this.keyP = bindAction(this.input.keyboard, 'coop');
+    this.keySkill1 = bindAction(this.input.keyboard, 'skill1');
+    this.keySkill2 = bindAction(this.input.keyboard, 'skill2');
+    this.keySkill3 = bindAction(this.input.keyboard, 'skill3');
   }
 
   private loadZone(rift: boolean): void {
@@ -127,8 +142,11 @@ export class WorldScene extends Phaser.Scene {
       this.player.maxX = HUB_SIZE - 0.5;
       this.player.maxY = HUB_SIZE - 0.5;
       this.player.walkCheck = null;
+      this.hubLayout = generateHub(42);
       this.drawHubTiles();
-      this.spawnFromLayout(generateHub(42));
+      this.player.worldX = gameState.worldX;
+      this.player.worldY = gameState.worldY;
+      this.spawnFromLayout(this.hubLayout);
     }
     this.player.syncScreen();
   }
@@ -136,8 +154,13 @@ export class WorldScene extends Phaser.Scene {
   private spawnFromLayout(layout: ZoneLayout): void {
     for (const n of this.nodes) n.destroy();
     for (const e of this.enemies) e.destroy();
+    for (const n of this.npcs) n.destroy();
+    for (const d of this.decor) d.destroy(true);
     this.nodes = [];
     this.enemies = [];
+    this.npcs = [];
+    this.decor = [];
+    this.nearNpc = null;
     this.portalMarker?.destroy(true);
     this.benchMarker?.destroy(true);
     this.riftCleared = false;
@@ -188,8 +211,45 @@ export class WorldScene extends Phaser.Scene {
       layout.bench.x,
       layout.bench.y,
       0xc4a574,
-      'Bench',
+      'Forge',
     );
+
+    for (const n of layout.npcs ?? []) {
+      this.npcs.push(new Npc(this, n.id, n.role, n.name, n.x, n.y));
+    }
+
+    // Town building silhouettes (hub only)
+    if (!gameState.inRift && layout.npcs?.length) {
+      this.makeBuilding(9, 8, 0x3a3028, 'Shop');
+      this.makeBuilding(15, 8, 0x2a3a32, 'Forge');
+      this.makeBuilding(12, 12, 0x2a2830, 'Plaza');
+    }
+  }
+
+  private makeBuilding(
+    wx: number,
+    wy: number,
+    color: number,
+    label: string,
+  ): void {
+    const { screenX, screenY } = worldToScreen(wx, wy);
+    const g = this.add.graphics();
+    g.fillStyle(color, 0.85);
+    g.fillRect(-28, -36, 56, 40);
+    g.fillStyle(0x1a1410, 0.9);
+    g.fillTriangle(-32, -36, 32, -36, 0, -58);
+    g.lineStyle(1, 0xc4a574, 0.35);
+    g.strokeRect(-28, -36, 56, 40);
+    const t = this.add
+      .text(0, -18, label, {
+        fontFamily: 'Segoe UI, sans-serif',
+        fontSize: '10px',
+        color: '#c8c0b0',
+      })
+      .setOrigin(0.5);
+    const c = this.add.container(screenX, screenY, [g, t]);
+    c.setDepth(depthFromWorld(wx, wy) - 2);
+    this.decor.push(c);
   }
 
   private makeMarker(
@@ -220,10 +280,20 @@ export class WorldScene extends Phaser.Scene {
 
   private drawHubTiles(): void {
     this.tiles.clear();
+    const pathSet = new Set(
+      (this.hubLayout?.paths ?? []).map((p) => `${p.x},${p.y}`),
+    );
     for (let y = 0; y < HUB_SIZE; y++) {
       for (let x = 0; x < HUB_SIZE; x++) {
-        // Dark Sanctuary / Diablo hub dirt — low-contrast diamonds
-        this.drawIsoTile(x, y, (x + y) % 2 === 0 ? 0x243028 : 0x1c2620);
+        const onPath = pathSet.has(`${x},${y}`);
+        const base = onPath
+          ? (x + y) % 2 === 0
+            ? 0x3a4038
+            : 0x323830
+          : (x + y) % 2 === 0
+            ? 0x243028
+            : 0x1c2620;
+        this.drawIsoTile(x, y, base);
       }
     }
     this.tiles.setDepth(-1000);
@@ -285,14 +355,19 @@ export class WorldScene extends Phaser.Scene {
       });
     }
 
-    if (Phaser.Input.Keyboard.JustDown(this.keyE)) this.tryGather();
+    gameState.skills.tick(dt);
+
+    if (Phaser.Input.Keyboard.JustDown(this.keyE)) this.tryInteract();
     if (Phaser.Input.Keyboard.JustDown(this.keyF)) this.tryCraftNearby();
     if (Phaser.Input.Keyboard.JustDown(this.keyR)) this.tryPortal();
     if (Phaser.Input.Keyboard.JustDown(this.keySpace)) this.tryDash(dx, dy);
     if (Phaser.Input.Keyboard.JustDown(this.keyP)) this.toggleCoop();
+    if (Phaser.Input.Keyboard.JustDown(this.keySkill1)) this.tryCastSkill(0);
+    if (Phaser.Input.Keyboard.JustDown(this.keySkill2)) this.tryCastSkill(1);
+    if (Phaser.Input.Keyboard.JustDown(this.keySkill3)) this.tryCastSkill(2);
 
     this.updateEnemies(dt);
-    this.updateBenchProximity();
+    this.updateNpcProximity();
     this.checkRiftClear();
 
     this.saveTimer += dt;
@@ -357,9 +432,40 @@ export class WorldScene extends Phaser.Scene {
   private tryAttack(): void {
     if (this.player.attackCooldown > 0) return;
     this.player.attackCooldown = gameState.progression.attackCooldown();
-    this.player.playAttack();
+
+    // Aim at nearest enemy in range, else toward click in world-ish screen space
+    const pointer = this.input.activePointer;
+    let aimX = this.player.worldX + 1;
+    let aimY = this.player.worldY;
+    let best = Infinity;
     const range = gameState.inventory.weaponRange();
-    const dmg = gameState.combat.playerAttackDamage();
+    for (const enemy of this.enemies) {
+      if (!enemy.alive) continue;
+      const dist = worldDistance(
+        { x: this.player.worldX, y: this.player.worldY },
+        { x: enemy.worldX, y: enemy.worldY },
+      );
+      if (dist <= range && dist < best) {
+        best = dist;
+        aimX = enemy.worldX;
+        aimY = enemy.worldY;
+      }
+    }
+    if (best === Infinity) {
+      // Screen click right of player → face SE-ish
+      const { screenX } = worldToScreen(this.player.worldX, this.player.worldY);
+      aimX = this.player.worldX + (pointer.worldX >= screenX ? 1 : -1);
+    }
+    this.player.faceToward(aimX, aimY);
+    this.player.playAttack();
+
+    const dmg = Math.max(
+      1,
+      Math.floor(
+        gameState.combat.playerAttackDamage() *
+          gameState.skills.damageMultiplier(),
+      ),
+    );
     let hit = false;
     for (const enemy of this.enemies) {
       if (!enemy.alive) continue;
@@ -381,7 +487,7 @@ export class WorldScene extends Phaser.Scene {
         this.shakeUntil = this.time.now + 80;
       }
     }
-    if (hit) this.flashSwing();
+    if (hit) audioBus.hit();
     if (netClient.connected) {
       netClient.sendInput({
         dx: 0,
@@ -393,21 +499,56 @@ export class WorldScene extends Phaser.Scene {
     }
   }
 
-  private flashSwing(): void {
-    const g = this.add.graphics();
-    const { screenX, screenY } = worldToScreen(
-      this.player.worldX,
-      this.player.worldY,
-    );
-    g.lineStyle(2, 0xe8e4d8, 0.7);
-    g.strokeCircle(screenX, screenY, 28);
-    g.setDepth(9999);
-    this.tweens.add({
-      targets: g,
-      alpha: 0,
-      duration: 180,
-      onComplete: () => g.destroy(),
+  private tryCastSkill(slot: number): void {
+    const result = gameState.skills.cast(slot, {
+      player: this.player,
+      enemies: this.enemies,
+      combat: gameState.combat,
+      walkCheck: this.player.walkCheck,
+      gearSkillPower: gameState.inventory.totalGearStats().skillPower,
+      onKill: (enemy) => {
+        gameState.combat.grantKillRewards(enemy.def.xp, enemy.def.lootTable, {
+          elite: enemy.def.isElite,
+          onGear: (g) => gameEvents.emit('ui:toast', { text: describeGear(g) }),
+        });
+        gameState.persist();
+        this.shakeUntil = this.time.now + 80;
+      },
     });
+    if (!result.ok) {
+      if (result.reason) gameEvents.emit('ui:toast', { text: result.reason });
+      return;
+    }
+    audioBus.skill();
+    gameState.worldX = this.player.worldX;
+    gameState.worldY = this.player.worldY;
+    if (netClient.connected) {
+      netClient.sendInput({
+        dx: 0,
+        dy: 0,
+        attack: false,
+        gather: false,
+        skill: true,
+      });
+    }
+  }
+
+  private tryInteract(): void {
+    if (this.nearNpc) {
+      if (this.nearNpc.role === 'vendor') {
+        gameEvents.emit('ui:openShop', {});
+        return;
+      }
+      if (this.nearNpc.role === 'crafter') {
+        gameEvents.emit('ui:openCraft', {});
+        return;
+      }
+    }
+    if (this.nearBench) {
+      gameEvents.emit('ui:openCraft', {});
+      return;
+    }
+    this.tryGather();
   }
 
   private tryGather(): void {
@@ -423,14 +564,17 @@ export class WorldScene extends Phaser.Scene {
       if (depleted) gameState.gathering.grantNodeDrops(node.defId);
       return;
     }
+    gameEvents.emit('ui:toast', {
+      text: 'Talk to Mira (shop) or Bram (forge) · E near them',
+    });
   }
 
   private tryCraftNearby(): void {
-    if (!this.nearBench) {
-      gameEvents.emit('ui:toast', { text: 'Move closer to the Bench' });
+    if (this.nearNpc?.role === 'crafter' || this.nearBench) {
+      gameEvents.emit('ui:openCraft', {});
       return;
     }
-    gameEvents.emit('ui:openCraft', {});
+    gameEvents.emit('ui:toast', { text: 'Move closer to Bram or the Forge' });
   }
 
   private tryPortal(): void {
@@ -508,7 +652,21 @@ export class WorldScene extends Phaser.Scene {
     this.cameras.main.flash(80, 110, 160, 200, false, undefined, this);
   }
 
-  private updateBenchProximity(): void {
+  private updateNpcProximity(): void {
+    this.nearNpc = null;
+    let best = 1.9;
+    for (const npc of this.npcs) {
+      const dist = worldDistance(
+        { x: this.player.worldX, y: this.player.worldY },
+        { x: npc.worldX, y: npc.worldY },
+      );
+      const near = dist < 1.9;
+      npc.setNear(near);
+      if (near && dist < best) {
+        best = dist;
+        this.nearNpc = npc;
+      }
+    }
     if (!this.benchMarker) {
       this.nearBench = false;
       return;

@@ -3,6 +3,10 @@ export type HotkeyAction =
   | 'craft'
   | 'character'
   | 'inventory'
+  | 'skills'
+  | 'skill1'
+  | 'skill2'
+  | 'skill3'
   | 'portal'
   | 'dash'
   | 'coop'
@@ -27,11 +31,15 @@ export const DEFAULT_HOTKEYS: HotkeyMap = {
   craft: 'F',
   character: 'C',
   inventory: 'I',
+  skills: 'K',
+  skill1: 'ONE',
+  skill2: 'TWO',
+  skill3: 'THREE',
   portal: 'R',
   dash: 'SPACE',
   coop: 'P',
   menu: 'ESC',
-  equipTool: 'THREE',
+  equipTool: 'T',
 };
 
 export const DEFAULT_SETTINGS: GameSettings = {

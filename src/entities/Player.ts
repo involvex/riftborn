@@ -20,15 +20,20 @@ export class Player {
   maxX = 23.5;
   maxY = 23.5;
   walkCheck: ((x: number, y: number) => boolean) | null = null;
+  private readonly scene: Phaser.Scene;
   private readonly sprite: Phaser.GameObjects.Sprite;
   private readonly label: Phaser.GameObjects.Text;
+  private readonly slash: Phaser.GameObjects.Graphics;
+  /** +1 = facing SE (default iso), -1 = mirrored for westward motion. */
   private facing = 1;
   private animKind: AnimKind = 'idle';
   private moving = false;
   private textureKey: string;
+  private slashUntil = 0;
 
   constructor(scene: Phaser.Scene, worldX: number, worldY: number) {
     ensureGameSprites(scene);
+    this.scene = scene;
     this.worldX = worldX;
     this.worldY = worldY;
     this.textureKey = playerSpriteKey(
@@ -36,10 +41,11 @@ export class Player {
       gameState.progression.classId,
     );
     this.sprite = scene.add.sprite(0, -4, this.textureKey, 0);
-    this.sprite.setOrigin(0.5, 0.82);
+    this.sprite.setOrigin(0.5, 0.88);
     this.applyScale();
+    this.slash = scene.add.graphics();
     this.label = scene.add
-      .text(0, -42, gameState.name, {
+      .text(0, -52, gameState.name, {
         fontFamily: 'Georgia, serif',
         fontSize: '12px',
         color: '#e8e4d8',
@@ -47,7 +53,11 @@ export class Player {
         strokeThickness: 3,
       })
       .setOrigin(0.5);
-    this.body = scene.add.container(0, 0, [this.sprite, this.label]);
+    this.body = scene.add.container(0, 0, [
+      this.sprite,
+      this.slash,
+      this.label,
+    ]);
     this.applyClassTint();
     this.playAnim('idle', true);
     this.syncScreen();
@@ -69,11 +79,11 @@ export class Player {
   }
 
   private applyScale(): void {
-    this.sprite.setScale(isPaintedSprite(this.textureKey) ? 0.52 : 1.35);
+    // Painted idle portraits read small at 0.5 — match enemy presence
+    this.sprite.setScale(isPaintedSprite(this.textureKey) ? 0.78 : 1.35);
   }
 
   private applyClassTint(): void {
-    // Painted class sheets already carry the look — don't wash them out.
     if (isPaintedSprite(this.textureKey)) {
       this.sprite.clearTint();
       return;
@@ -103,9 +113,13 @@ export class Player {
       return;
     }
     this.moving = true;
+    // Painted iso sprites are authored SE-facing; full flipX looks broken.
+    // Only flip procedural placeholders.
     if (dx !== 0) {
       this.facing = dx > 0 ? 1 : -1;
-      this.sprite.setFlipX(this.facing < 0);
+      if (!isPaintedSprite(this.textureKey)) {
+        this.sprite.setFlipX(this.facing < 0);
+      }
     }
     const len = Math.hypot(dx, dy) || 1;
     const nx = this.worldX + (dx / len) * this.speed * dt;
@@ -126,20 +140,52 @@ export class Player {
     this.syncScreen();
   }
 
+  /** +1 SE / -1 SW-ish facing used by dash skills. */
+  getFacing(): number {
+    return this.facing;
+  }
+
+  /** Face toward a world point (used on click-attack). */
+  faceToward(worldX: number, _worldY: number): void {
+    const dx = worldX - this.worldX;
+    if (Math.abs(dx) < 0.05) return;
+    this.facing = dx > 0 ? 1 : -1;
+    if (!isPaintedSprite(this.textureKey)) {
+      this.sprite.setFlipX(this.facing < 0);
+    }
+  }
+
   playAttack(): void {
     this.playAnim('attack', true);
+    this.showSlash();
+  }
+
+  private showSlash(): void {
+    this.slash.clear();
+    const dir = this.facing >= 0 ? 1 : -1;
+    const color = Phaser.Display.Color.HexStringToColor(
+      gameState.progression.classDef().color,
+    ).color;
+    this.slash.lineStyle(3, color, 0.85);
+    this.slash.beginPath();
+    this.slash.arc(dir * 6, -10, 28, -1.1, 0.6, dir < 0);
+    this.slash.strokePath();
+    this.slash.lineStyle(2, 0xe8e4d8, 0.45);
+    this.slash.beginPath();
+    this.slash.arc(dir * 6, -10, 22, -0.9, 0.4, dir < 0);
+    this.slash.strokePath();
+    this.slashUntil = this.scene.time.now + 140;
   }
 
   private playAnim(kind: AnimKind, force = false): void {
     if (!force && this.animKind === kind) return;
-    if (kind !== 'attack' && this.animKind === 'attack') {
-      if (!force) return;
-    }
+    if (kind !== 'attack' && this.animKind === 'attack' && !force) return;
     this.animKind = kind;
     const key = `${this.textureKey}_${kind}`;
     this.sprite.play(key, true);
     if (kind === 'attack') {
       this.sprite.once(Phaser.Animations.Events.ANIMATION_COMPLETE, () => {
+        if (this.animKind !== 'attack') return;
         this.animKind = this.moving ? 'walk' : 'idle';
         this.sprite.play(`${this.textureKey}_${this.animKind}`, true);
       });
@@ -150,6 +196,10 @@ export class Player {
     this.attackCooldown = Math.max(0, this.attackCooldown - dt);
     this.skillCooldown = Math.max(0, this.skillCooldown - dt);
     this.speed = 4.2 * gameState.progression.moveSpeedMult();
+    if (this.slashUntil && this.scene.time.now > this.slashUntil) {
+      this.slash.clear();
+      this.slashUntil = 0;
+    }
   }
 
   destroy(): void {

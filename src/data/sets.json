@@ -3,33 +3,51 @@
     "id": "ashen",
     "name": "Ashen",
     "color": "#8B5A2B",
-    "twoPiece": { "label": "+8 Armor", "armor": 8 },
+    "classId": "mystic",
+    "twoPiece": {
+      "label": "+6 DEX, +5% skill power",
+      "dexterity": 6,
+      "skillPower": 5
+    },
     "fourPiece": {
-      "label": "+20 Stamina, +40 Max HP",
-      "stamina": 20,
-      "maxHp": 40
+      "label": "+12 DEX, +15% Rift skills, +25 Max HP",
+      "dexterity": 12,
+      "skillPower": 15,
+      "maxHp": 25
     }
   },
   "riftbound": {
     "id": "riftbound",
     "name": "Riftbound",
     "color": "#4DB6FF",
-    "twoPiece": { "label": "+6 Damage", "damage": 6 },
+    "classId": "mage",
+    "twoPiece": {
+      "label": "+6 INT, +5% skill power",
+      "intellect": 6,
+      "skillPower": 5
+    },
     "fourPiece": {
-      "label": "+15 Intellect, +10 Dexterity",
-      "intellect": 15,
-      "dexterity": 10
+      "label": "+14 INT, +18% Arc skills, +20 Max HP",
+      "intellect": 14,
+      "skillPower": 18,
+      "maxHp": 20
     }
   },
   "bone": {
     "id": "bone",
     "name": "Bone",
     "color": "#C4B59A",
-    "twoPiece": { "label": "+10 Strength", "strength": 10 },
+    "classId": "warrior",
+    "twoPiece": {
+      "label": "+8 STR, +5% skill power",
+      "strength": 8,
+      "skillPower": 5
+    },
     "fourPiece": {
-      "label": "+18 Armor, +12 Strength",
-      "armor": 18,
-      "strength": 12
+      "label": "+14 STR, +20% Whirlwind skills, +30 Max HP",
+      "strength": 14,
+      "skillPower": 20,
+      "maxHp": 30
     }
   }
 }

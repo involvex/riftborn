@@ -31,6 +31,9 @@ export class Enemy {
   private readonly textureKey: string;
   private animKind: 'idle' | 'walk' | 'attack' = 'idle';
   maxBound = 35;
+  private slowMult = 1;
+  private slowTimer = 0;
+  private stunTimer = 0;
 
   constructor(
     scene: Phaser.Scene,
@@ -55,12 +58,15 @@ export class Enemy {
     const painted = isPaintedSprite(this.textureKey);
     const scale = painted
       ? this.def.isElite
-        ? 0.62
-        : 0.48
+        ? 0.85
+        : 0.7
       : this.def.isElite
         ? 1.55
         : 1.2;
     this.sprite.setScale(scale);
+    this.sprite.setOrigin(0.5, 0.88);
+    // Painted iso art is SE-facing — avoid flipX mirroring artifacts
+    if (painted) this.sprite.setFlipX(false);
     if (this.def.isElite && !painted) this.sprite.setTint(0xa0d8ff);
     this.bar = scene.add.graphics();
     this.body = scene.add.container(0, 0, [this.sprite, this.bar]);
@@ -91,6 +97,16 @@ export class Enemy {
     this.body.setDepth(depthFromWorld(this.worldX, this.worldY));
   }
 
+  applySlow(mult: number, duration: number): void {
+    this.slowMult = Math.min(this.slowMult, Math.max(0.2, mult));
+    this.slowTimer = Math.max(this.slowTimer, duration);
+  }
+
+  applyStun(duration: number): void {
+    this.stunTimer = Math.max(this.stunTimer, duration);
+    this.attackTimer = Math.max(this.attackTimer, duration);
+  }
+
   update(
     dt: number,
     playerX: number,
@@ -98,6 +114,17 @@ export class Enemy {
   ): { hitPlayer: boolean; damage: number } {
     if (!this.alive) return { hitPlayer: false, damage: 0 };
     this.attackTimer = Math.max(0, this.attackTimer - dt);
+    this.slowTimer = Math.max(0, this.slowTimer - dt);
+    this.stunTimer = Math.max(0, this.stunTimer - dt);
+    if (this.slowTimer <= 0) this.slowMult = 1;
+    const spd = this.def.speed * this.slowMult;
+
+    if (this.stunTimer > 0) {
+      this.playAnim('idle');
+      this.syncScreen();
+      return { hitPlayer: false, damage: 0 };
+    }
+
     const dist = worldDistance(
       { x: this.worldX, y: this.worldY },
       { x: playerX, y: playerY },
@@ -117,9 +144,9 @@ export class Enemy {
     if (this.state === 'patrol') {
       this.patrolAngle += dt * 0.6;
       const dx = Math.cos(this.patrolAngle);
-      this.worldX += dx * this.def.speed * 0.35 * dt;
-      this.worldY += Math.sin(this.patrolAngle) * this.def.speed * 0.35 * dt;
-      this.sprite.setFlipX(dx < 0);
+      this.worldX += dx * spd * 0.35 * dt;
+      this.worldY += Math.sin(this.patrolAngle) * spd * 0.35 * dt;
+      if (!isPaintedSprite(this.textureKey)) this.sprite.setFlipX(dx < 0);
       const homeDist = worldDistance(
         { x: this.worldX, y: this.worldY },
         { x: this.homeX, y: this.homeY },
@@ -133,12 +160,14 @@ export class Enemy {
       const dx = playerX - this.worldX;
       const dy = playerY - this.worldY;
       const len = Math.hypot(dx, dy) || 1;
-      this.worldX += (dx / len) * this.def.speed * dt;
-      this.worldY += (dy / len) * this.def.speed * dt;
-      this.sprite.setFlipX(dx < 0);
+      this.worldX += (dx / len) * spd * dt;
+      this.worldY += (dy / len) * spd * dt;
+      if (!isPaintedSprite(this.textureKey)) this.sprite.setFlipX(dx < 0);
       this.playAnim('walk');
     } else if (this.state === 'attack') {
-      this.sprite.setFlipX(playerX < this.worldX);
+      if (!isPaintedSprite(this.textureKey)) {
+        this.sprite.setFlipX(playerX < this.worldX);
+      }
       if (this.attackTimer <= 0) {
         hitPlayer = true;
         damage = this.def.damage;

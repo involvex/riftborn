@@ -1,8 +1,17 @@
 import { Events, gameEvents } from '../core/EventBus';
-import type { GearInstance, GearStats, ItemDef } from '../types/game';
+import type {
+  CharacterClassId,
+  GearInstance,
+  GearStats,
+  ItemDef,
+} from '../types/game';
 import type { EquipmentSlots, InventorySlot } from '../types/save';
 import itemsData from '../data/items.json';
-import { normalizeGearStats } from './ItemGen';
+import {
+  emptyGearStats,
+  migrateGearInstance,
+  resolveGearClass,
+} from './ItemGen';
 import { sumSetStats } from './SetBonus';
 
 const items = itemsData as Record<string, ItemDef>;
@@ -22,22 +31,8 @@ export function emptyEquipment(): EquipmentSlots {
   };
 }
 
-function emptyGearStats(): GearStats {
-  return {
-    strength: 0,
-    dexterity: 0,
-    stamina: 0,
-    intellect: 0,
-    armor: 0,
-    damage: 0,
-  };
-}
-
 function migrateGear(item: GearInstance): GearInstance {
-  return {
-    ...item,
-    stats: normalizeGearStats(item.stats as GearStats & Record<string, number>),
-  };
+  return migrateGearInstance(item);
 }
 
 export class InventorySystem {
@@ -150,9 +145,18 @@ export class InventorySystem {
     return slot.item;
   }
 
-  equipGear(uid: string): boolean {
+  canEquipGear(item: GearInstance, classId: CharacterClassId): boolean {
+    const req = resolveGearClass(item);
+    return !req || req === classId;
+  }
+
+  equipGear(uid: string, classId?: CharacterClassId): boolean {
     const item = this.removeGearUid(uid);
     if (!item) return false;
+    if (classId && !this.canEquipGear(item, classId)) {
+      this.slots.push({ kind: 'gear', item });
+      return false;
+    }
     const slot = item.slot;
     const previous = this.equipment[slot];
     if (previous && !this.canAddGear()) {
@@ -200,6 +204,7 @@ export class InventorySystem {
       total.intellect += g.stats.intellect;
       total.armor += g.stats.armor;
       total.damage += g.stats.damage;
+      total.skillPower += g.stats.skillPower;
     }
     const set = sumSetStats(this.equipment);
     total.strength += set.strength;
@@ -208,6 +213,7 @@ export class InventorySystem {
     total.intellect += set.intellect;
     total.armor += set.armor;
     total.damage += set.damage;
+    total.skillPower += set.skillPower;
     total.maxHp += set.maxHp;
     return total;
   }

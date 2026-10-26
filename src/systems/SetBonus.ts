@@ -1,6 +1,7 @@
 import type { ArmorSetDef, GearStats } from '../types/game';
 import type { EquipmentSlots } from '../types/save';
 import setsData from '../data/sets.json';
+import { emptyGearStats } from './ItemGen';
 
 const sets = setsData as Record<string, ArmorSetDef>;
 
@@ -13,15 +14,7 @@ export type ActiveSetBonus = {
 };
 
 function empty(): GearStats & { maxHp: number } {
-  return {
-    strength: 0,
-    dexterity: 0,
-    stamina: 0,
-    intellect: 0,
-    armor: 0,
-    damage: 0,
-    maxHp: 0,
-  };
+  return { ...emptyGearStats(), maxHp: 0 };
 }
 
 export function countSetPieces(equipment: EquipmentSlots): Map<string, number> {
@@ -71,6 +64,7 @@ function mergeBonus(
     intellect?: number;
     damage?: number;
     maxHp?: number;
+    skillPower?: number;
   },
 ): void {
   stats.armor += bonus.armor ?? 0;
@@ -79,6 +73,7 @@ function mergeBonus(
   stats.stamina += bonus.stamina ?? 0;
   stats.intellect += bonus.intellect ?? 0;
   stats.damage += bonus.damage ?? 0;
+  stats.skillPower += bonus.skillPower ?? 0;
   stats.maxHp += bonus.maxHp ?? 0;
 }
 
@@ -93,6 +88,7 @@ export function sumSetStats(
     total.stamina += bonus.stats.stamina;
     total.intellect += bonus.stats.intellect;
     total.damage += bonus.stats.damage;
+    total.skillPower += bonus.stats.skillPower;
     total.maxHp += bonus.stats.maxHp;
   }
   return total;

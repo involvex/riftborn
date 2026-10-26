@@ -158,9 +158,9 @@ function paletteForPlayer(key: string): Palette {
 function registerAnims(scene: Phaser.Scene): void {
   for (const key of SHEET_KEYS) {
     if (!scene.textures.exists(key)) continue;
-    addAnim(scene, `${key}_idle`, key, 0, 3, 5, true);
-    addAnim(scene, `${key}_walk`, key, 4, 9, 12, true);
-    addAnim(scene, `${key}_attack`, key, 10, 13, 16, false);
+    addAnim(scene, `${key}_idle`, key, 0, 3, 4, true);
+    addAnim(scene, `${key}_walk`, key, 4, 9, 9, true);
+    addAnim(scene, `${key}_attack`, key, 10, 13, 11, false);
   }
 }
 

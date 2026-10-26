@@ -1,0 +1,108 @@
+import Phaser from 'phaser';
+import { uiFont } from '../core/UiScale';
+import { gameState } from '../systems/GameState';
+import { MAX_LEVEL, xpForLevel } from '../systems/ProgressionSystem';
+
+/** Classic top-left HP (red) + XP bars with compact labels. */
+export class HudBars {
+  readonly root: Phaser.GameObjects.Container;
+  private readonly scene: Phaser.Scene;
+  private readonly hpBg: Phaser.GameObjects.Rectangle;
+  private readonly hpFill: Phaser.GameObjects.Rectangle;
+  private readonly hpText: Phaser.GameObjects.Text;
+  private readonly xpBg: Phaser.GameObjects.Rectangle;
+  private readonly xpFill: Phaser.GameObjects.Rectangle;
+  private readonly xpText: Phaser.GameObjects.Text;
+  private readonly meta: Phaser.GameObjects.Text;
+  private readonly barW = 220;
+  private readonly barH = 16;
+
+  constructor(scene: Phaser.Scene) {
+    this.scene = scene;
+    this.root = scene.add.container(16, 12).setScrollFactor(0).setDepth(10_000);
+
+    this.meta = scene.add.text(0, 0, '', {
+      fontFamily: 'Georgia, serif',
+      fontSize: uiFont(scene, 15, 12, 18),
+      color: '#e8e4d8',
+    });
+
+    this.hpBg = scene.add
+      .rectangle(0, 28, this.barW, this.barH, 0x2a1212, 0.95)
+      .setOrigin(0, 0.5);
+    this.hpBg.setStrokeStyle(1, 0x5a3030, 0.9);
+    this.hpFill = scene.add
+      .rectangle(1, 28, this.barW - 2, this.barH - 2, 0xc62828, 1)
+      .setOrigin(0, 0.5);
+    this.hpText = scene.add
+      .text(this.barW / 2, 28, '', {
+        fontFamily: 'Segoe UI, sans-serif',
+        fontSize: '11px',
+        color: '#ffe8e8',
+      })
+      .setOrigin(0.5);
+
+    this.xpBg = scene.add
+      .rectangle(0, 50, this.barW, 12, 0x121a24, 0.95)
+      .setOrigin(0, 0.5);
+    this.xpBg.setStrokeStyle(1, 0x3a5068, 0.9);
+    this.xpFill = scene.add
+      .rectangle(1, 50, this.barW - 2, 10, 0x2e7d9a, 1)
+      .setOrigin(0, 0.5);
+    this.xpText = scene.add
+      .text(this.barW / 2, 50, '', {
+        fontFamily: 'Segoe UI, sans-serif',
+        fontSize: '10px',
+        color: '#c8e4f0',
+      })
+      .setOrigin(0.5);
+
+    this.root.add([
+      this.meta,
+      this.hpBg,
+      this.hpFill,
+      this.hpText,
+      this.xpBg,
+      this.xpFill,
+      this.xpText,
+    ]);
+    this.refresh();
+  }
+
+  layout(): void {
+    this.root.setPosition(16, 12);
+    this.meta.setFontSize(uiFont(this.scene, 15, 12, 18));
+  }
+
+  refresh(): void {
+    const cls = gameState.progression.classDef().name;
+    const need = xpForLevel(gameState.progression.level);
+    const lv = gameState.progression.level;
+    const bits = [`${gameState.name} · ${cls} · Lv ${lv}`];
+    if (gameState.progression.unspentStatPoints) {
+      bits.push(`★${gameState.progression.unspentStatPoints}`);
+    }
+    if (gameState.skills.unspentSkillPoints) {
+      bits.push(`◆${gameState.skills.unspentSkillPoints}`);
+    }
+    if (gameState.inRift) bits.push('[Rift]');
+    this.meta.setText(bits.join('  '));
+
+    const hpRatio = Phaser.Math.Clamp(
+      gameState.hp / Math.max(1, gameState.maxHp),
+      0,
+      1,
+    );
+    this.hpFill.width = Math.max(0, (this.barW - 2) * hpRatio);
+    this.hpText.setText(`HP  ${Math.ceil(gameState.hp)} / ${gameState.maxHp}`);
+
+    const xpRatio =
+      lv >= MAX_LEVEL
+        ? 1
+        : Phaser.Math.Clamp(gameState.progression.xp / Math.max(1, need), 0, 1);
+    this.xpFill.width = Math.max(0, (this.barW - 2) * xpRatio);
+    this.xpText.setText(
+      lv >= MAX_LEVEL ? 'XP  MAX' : `XP  ${gameState.progression.xp} / ${need}`,
+    );
+  }
+}

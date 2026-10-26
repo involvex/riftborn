@@ -28,13 +28,16 @@ export type EquipmentSlots = {
 };
 
 export type CharacterSave = {
-  version: 3;
+  version: 4;
   name: string;
   classId: CharacterClassId;
   gender: CharacterGender;
   level: number;
   xp: number;
   unspentStatPoints: number;
+  unspentSkillPoints: number;
+  /** Ability id → rank (0 = locked). */
+  skillRanks: Record<string, number>;
   stats: PlayerStats;
   hp: number;
   maxHp: number;
