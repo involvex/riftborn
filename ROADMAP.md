@@ -14,17 +14,17 @@ Solo evenings, one shippable slice at a time. Prefer **feel → content → syst
 - **Rift depth 1–10** from level (packs / HP / dmg / loot); Rift Lord + boss chest
 - Death flash/shake + rarity loot sting; **3 character slots** on boot
 - Plaza **Bounty Board** (scout / chests / cull)
+- **Rift modifiers** (Dense / Glass / Gilded)
 - Electron portable + self-hosted co-op (basic)
 
 ## Next — content density (pick one per evening)
 
-| #   | Slice                        | Why it matters                    | Done when                                   |
-| --- | ---------------------------- | --------------------------------- | ------------------------------------------- |
-| 1   | **Plaza bounty board**       | Gives a short “go do this” goal   | Done — scout / chests / cull → gold+XP      |
-| 2   | **Rift modifiers**           | Variety between runs              | 1–2 random affixes on enter (dense / glass) |
-| 3   | **Repair / material vendor** | Gold sink + hub life              | Second NPC or Mira tab                      |
-| 4   | **Custom Electron icon**     | Looks real when you share a build | `electron/build` icon set                   |
-| 5   | **Drag-drop equip**          | QoL for bag                       | Optional; double-click already works        |
+| #   | Slice                        | Why it matters                    | Done when                            |
+| --- | ---------------------------- | --------------------------------- | ------------------------------------ |
+| 1   | **Repair / material vendor** | Gold sink + hub life              | Second NPC or Mira tab               |
+| 2   | **Custom Electron icon**     | Looks real when you share a build | `electron/build` icon set            |
+| 3   | **Drag-drop equip**          | QoL for bag                       | Optional; double-click already works |
+| 4   | **Persist bounties**         | Survive reload                    | Save active bounty on character      |
 
 Skip inventing new frameworks — extend `MapGen` / `WorldScene` / `SaveStore` / NPCs.
 
