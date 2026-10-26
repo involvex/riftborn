@@ -15,6 +15,7 @@ import { getClassDef, ProgressionSystem } from './ProgressionSystem';
 import { BountySystem } from './BountySystem';
 import { ShopSystem } from './ShopSystem';
 import { SkillSystem } from './SkillSystem';
+import { TraderSystem } from './TraderSystem';
 
 export class GameState {
   readonly inventory = new InventorySystem();
@@ -23,6 +24,7 @@ export class GameState {
   readonly gathering = new GatheringSystem(this.inventory);
   readonly combat = new CombatSystem(this.inventory, this.progression);
   readonly shop = new ShopSystem(this.inventory);
+  readonly trader = new TraderSystem(this.inventory);
   readonly skills = new SkillSystem();
   readonly bounties = new BountySystem();
 

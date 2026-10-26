@@ -11,7 +11,7 @@ export function mulberry32(seed: number): () => number {
 
 export type SpawnPoint = { x: number; y: number };
 
-export type NpcRole = 'vendor' | 'crafter' | 'board';
+export type NpcRole = 'vendor' | 'crafter' | 'board' | 'trader';
 
 export type NpcSpawn = SpawnPoint & {
   id: string;
@@ -484,6 +484,13 @@ export function generateHub(seed = 1): ZoneLayout {
         name: 'Bounty Board',
         x: 32.5,
         y: 35.5,
+      },
+      {
+        id: 'trader_nix',
+        role: 'trader',
+        name: 'Nix',
+        x: 28.5,
+        y: 34.5,
       },
     ],
     paths,

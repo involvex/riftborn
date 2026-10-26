@@ -15,23 +15,25 @@ Solo evenings, one shippable slice at a time. Prefer **feel → content → syst
 - Death flash/shake + rarity loot sting; **3 character slots** on boot
 - Plaza **Bounty Board** (scout / chests / cull)
 - **Rift modifiers** (Dense / Glass / Gilded)
+- **Nix** material / repair trader (supplies, mat buyback, patch-up)
 - Electron portable + self-hosted co-op (basic)
 
 ## Next — content density (pick one per evening)
 
-| #   | Slice                        | Why it matters                    | Done when                            |
-| --- | ---------------------------- | --------------------------------- | ------------------------------------ |
-| 1   | **Repair / material vendor** | Gold sink + hub life              | Second NPC or Mira tab               |
-| 2   | **Custom Electron icon**     | Looks real when you share a build | `electron/build` icon set            |
-| 3   | **Drag-drop equip**          | QoL for bag                       | Optional; double-click already works |
-| 4   | **Persist bounties**         | Survive reload                    | Save active bounty on character      |
+| #   | Slice                        | Why it matters                    | Done when                             |
+| --- | ---------------------------- | --------------------------------- | ------------------------------------- |
+| 1   | **Repair / material vendor** | Gold sink + hub life              | Done — Nix supplies / mats / patch-up |
+| 2   | **Custom Electron icon**     | Looks real when you share a build | `electron/build` icon set             |
+| 3   | **Drag-drop equip**          | QoL for bag                       | Optional; double-click already works  |
+| 4   | **Persist bounties**         | Survive reload                    | Save active bounty on character       |
 
 Skip inventing new frameworks — extend `MapGen` / `WorldScene` / `SaveStore` / NPCs.
 
 ## Later (don’t start yet)
 
+- **Mobile / small screens:** on-screen virtual controls (move stick + attack / interact / skills) — keep AbilityBar touch-ready
 - Authoritative co-op loot / gear sync
-- Mobile, seasons, trading, seamless open world
+- Seasons, trading, seamless open world
 - Full new painted attack sheets (needs art time; VFX covers the gap for now)
 
 ## Pace guide (solo)

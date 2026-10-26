@@ -6,6 +6,7 @@ const ROLE_COLOR: Record<NpcRole, number> = {
   vendor: 0xc4a574,
   crafter: 0x6ec6a0,
   board: 0xd4a020,
+  trader: 0x8ab4d4,
 };
 
 /** Hub townsperson — talk with E when close. */
@@ -59,7 +60,9 @@ export class Npc {
         ? 'Armorer · E to trade'
         : role === 'crafter'
           ? 'Crafter · E to craft'
-          : 'Bounties · E to accept';
+          : role === 'board'
+            ? 'Bounties · E to accept'
+            : 'Scrapper · E for mats / repair';
     this.prompt = scene.add
       .text(0, 18, job, {
         fontFamily: 'Segoe UI, sans-serif',

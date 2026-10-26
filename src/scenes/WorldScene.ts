@@ -1177,6 +1177,10 @@ export class WorldScene extends Phaser.Scene {
         gameEvents.emit('ui:openShop', {});
         return;
       }
+      if (this.nearNpc.role === 'trader') {
+        gameEvents.emit('ui:openTrader', {});
+        return;
+      }
       if (this.nearNpc.role === 'crafter') {
         gameEvents.emit('ui:openCraft', {});
         return;
@@ -1325,7 +1329,7 @@ export class WorldScene extends Phaser.Scene {
       return;
     }
     gameEvents.emit('ui:toast', {
-      text: 'Talk to Mira (shop) or Bram (forge) · E near them',
+      text: 'Mira · Nix · Bram · Board — E near them',
     });
   }
 

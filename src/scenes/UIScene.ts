@@ -22,6 +22,7 @@ import { HudBars } from '../ui/HudBars';
 import { InventoryPanel } from '../ui/InventoryPanel';
 import { RiftProgressHud } from '../ui/RiftProgressHud';
 import { ShopPanel } from '../ui/ShopPanel';
+import { TraderPanel } from '../ui/TraderPanel';
 import { SkillTreePanel } from '../ui/SkillTreePanel';
 import { uiFont } from '../core/UiScale';
 
@@ -39,11 +40,13 @@ export class UIScene extends Phaser.Scene {
   private damageLayer!: Phaser.GameObjects.Container;
   private inventoryPanel!: InventoryPanel;
   private shopPanel!: ShopPanel;
+  private traderPanel!: TraderPanel;
   private skillPanel!: SkillTreePanel;
   private abilityBar!: AbilityBar;
   private riftHud!: RiftProgressHud;
   private unsubs: (() => void)[] = [];
   private shopOpen = false;
+  private traderOpen = false;
   private keyChar!: Phaser.Input.Keyboard.Key;
   private keyInv!: Phaser.Input.Keyboard.Key;
   private keySkills!: Phaser.Input.Keyboard.Key;
@@ -91,6 +94,7 @@ export class UIScene extends Phaser.Scene {
     this.damageLayer = this.add.container(0, 0).setDepth(10_002);
     this.inventoryPanel = new InventoryPanel(this);
     this.shopPanel = new ShopPanel(this);
+    this.traderPanel = new TraderPanel(this);
     this.skillPanel = new SkillTreePanel(this);
     this.abilityBar = new AbilityBar(this);
     this.riftHud = new RiftProgressHud(this);
@@ -206,14 +210,24 @@ export class UIScene extends Phaser.Scene {
       }),
       gameEvents.on('ui:openCraft', () => {
         this.hideShop();
+        this.hideTrader();
         this.showCraft();
       }),
       gameEvents.on('ui:openShop', () => {
         this.hideCraft();
+        this.hideTrader();
         this.hideChar();
         this.skillPanel.hide();
         this.inventoryPanel.hide();
         this.showShop();
+      }),
+      gameEvents.on('ui:openTrader', () => {
+        this.hideCraft();
+        this.hideShop();
+        this.hideChar();
+        this.skillPanel.hide();
+        this.inventoryPanel.hide();
+        this.showTrader();
       }),
       gameEvents.on(Events.RIFT_ENTERED, () => {
         this.toast('Procedural rift dungeon opened');
@@ -274,6 +288,7 @@ export class UIScene extends Phaser.Scene {
       this.hudHint.setFontSize(uiFont(this, 12, 10, 15));
       if (this.inventoryPanel.open) this.inventoryPanel.layout();
       if (this.shopPanel.open) this.shopPanel.layout();
+      if (this.traderPanel.open) this.traderPanel.layout();
       if (this.skillPanel.open) this.skillPanel.layout();
       this.abilityBar.layout();
       this.riftHud.layout();
@@ -702,6 +717,18 @@ export class UIScene extends Phaser.Scene {
     this.shopOpen = false;
   }
 
+  private showTrader(): void {
+    if (this.menuOpen) return;
+    this.traderPanel.show();
+    this.traderOpen = true;
+    this.toast('Nix — mats, tonics, patch-up');
+  }
+
+  private hideTrader(): void {
+    this.traderPanel.hide();
+    this.traderOpen = false;
+  }
+
   private showChar(): void {
     if (this.menuOpen) return;
     this.charPanel.setPosition(this.scale.width / 2, this.scale.height / 2);
@@ -778,6 +805,10 @@ export class UIScene extends Phaser.Scene {
         this.hideShop();
         return;
       }
+      if (this.traderOpen) {
+        this.hideTrader();
+        return;
+      }
       if (this.craftOpen) {
         this.hideCraft();
         return;
@@ -804,6 +835,7 @@ export class UIScene extends Phaser.Scene {
     if (Phaser.Input.Keyboard.JustDown(this.keyInv)) {
       this.hideCraft();
       this.hideShop();
+      this.hideTrader();
       this.hideChar();
       this.skillPanel.hide();
       this.inventoryPanel.toggle();
