@@ -42,16 +42,17 @@ function carveCorridor(
   cells[y2][x2] = 1;
 }
 
-/** Room-and-corridor procedural rift dungeon. */
-export function generateDungeon(seed: number): DungeonMap {
+/** Room-and-corridor procedural rift dungeon. Depth 1–10 scales packs. */
+export function generateDungeon(seed: number, depth = 1): DungeonMap {
   const rnd = mulberry32(seed);
-  const width = 36;
-  const height = 36;
+  const d = Math.max(1, Math.min(10, depth));
+  const width = 36 + Math.min(8, (d - 1) * 1);
+  const height = 36 + Math.min(8, (d - 1) * 1);
   const cells: DungeonCell[][] = Array.from({ length: height }, () =>
     Array.from({ length: width }, () => 0 as DungeonCell),
   );
 
-  const roomCount = 6 + Math.floor(rnd() * 4);
+  const roomCount = 6 + Math.floor(rnd() * 4) + Math.floor((d - 1) / 2);
   const rooms: { x: number; y: number; w: number; h: number }[] = [];
 
   for (let i = 0; i < roomCount; i++) {
@@ -100,11 +101,12 @@ export function generateDungeon(seed: number): DungeonMap {
   const nodes: ZoneLayout['nodes'] = [];
   let expectedKills = 0;
 
+  const countBonus = Math.floor((d - 1) / 3);
   for (let i = 1; i < rooms.length; i++) {
     const r = rooms[i];
     const cx = Math.floor(r.x + r.w / 2) + 0.5;
     const cy = Math.floor(r.y + r.h / 2) + 0.5;
-    const count = 3 + Math.floor(rnd() * 4);
+    const count = 3 + Math.floor(rnd() * 4) + countBonus;
     expectedKills += count;
     packs.push({
       enemyId: packTypes[Math.floor(rnd() * packTypes.length)],
@@ -112,7 +114,7 @@ export function generateDungeon(seed: number): DungeonMap {
       x: cx,
       y: cy,
     });
-    if (rnd() > 0.5) {
+    if (rnd() > 0.45 - d * 0.02) {
       nodes.push({
         defId: 'rift_vein',
         x: Math.floor(r.x + 1 + rnd() * (r.w - 2)) + 0.5,
@@ -123,8 +125,9 @@ export function generateDungeon(seed: number): DungeonMap {
 
   const start = rooms[0];
   const bossRoom = rooms[rooms.length - 1];
-  // Progress bar fills before boss — slightly under full pack count
-  const killGoal = Math.max(12, Math.floor(expectedKills * 0.72));
+  // Progress bar fills before boss — scales with depth
+  const fillRatio = Math.min(0.85, 0.68 + d * 0.015);
+  const killGoal = Math.max(12 + d, Math.floor(expectedKills * fillRatio));
 
   const layout: ZoneLayout = {
     nodes,

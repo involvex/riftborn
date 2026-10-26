@@ -70,6 +70,8 @@ Do not rely on paste-a-screenshot alone after map/POI edits — prefer smoke + `
 - **Vendor:** Mira shop Buy/Sell tabs; item `sellValue` + `gearSellValue()`; **Sort** in bag; Esc → Settings → Auto-sell junk (common gear → gold on loot).
 - **Attack feel:** sprite attack frames (sheet 10–13) + class-colored slash VFX in `Player.showSlash`. New swing art needs new frames in `public/assets/sprites/game/`.
 - **Class skills (1/2/3):** all three unlocked at create — Warrior Leap/Cleave/Bash, Mystic Pulse/Slash/Seal, Mage Bolt/Nova/Barrier. Cast VFX in `SkillVfx.ts`; ranks via skill points (`K`).
+- **Rifts:** depth 1–10 from player level (`RiftDepth.ts`); packs/HP/dmg/loot scale; Rift Lord + boss chest; HUD shows `D#`.
+- **Saves:** 3 character slots on boot (`SaveStore`); legacy single save migrates to slot 1.
 
 ## Controls (player)
 

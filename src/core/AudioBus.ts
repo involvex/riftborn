@@ -63,7 +63,25 @@ class AudioBus {
   }
 
   death(): void {
-    this.playTone(110, 0.25, 'sawtooth');
+    this.playTone(110, 0.28, 'sawtooth');
+    setTimeout(() => this.playTone(70, 0.35, 'triangle'), 90);
+  }
+
+  /** Gear / chest drop sting — pitch rises with rarity weight. */
+  loot(rarity: 'common' | 'magic' | 'rare' | 'legendary' = 'common'): void {
+    const base =
+      rarity === 'legendary'
+        ? 620
+        : rarity === 'rare'
+          ? 520
+          : rarity === 'magic'
+            ? 440
+            : 360;
+    this.playTone(base, 0.06, 'sine');
+    setTimeout(() => this.playTone(base * 1.35, 0.09, 'triangle'), 45);
+    if (rarity === 'rare' || rarity === 'legendary') {
+      setTimeout(() => this.playTone(base * 1.7, 0.1, 'sine'), 100);
+    }
   }
 }
 

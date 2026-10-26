@@ -53,20 +53,22 @@ export class RiftProgressHud {
     kills: number,
     goal: number,
     phase: 'fill' | 'boss' | 'exit',
+    depth = 1,
   ): void {
     const ratio = goal <= 0 ? 1 : Phaser.Math.Clamp(kills / goal, 0, 1);
     this.fill.height = Math.max(2, (this.barH - 2) * ratio);
+    const dTag = `D${depth}`;
     if (phase === 'fill') {
       this.fill.setFillStyle(0xc62868, 1);
-      this.label.setText(`Rift\n${kills}/${goal}`);
+      this.label.setText(`${dTag}\n${kills}/${goal}`);
     } else if (phase === 'boss') {
       this.fill.setFillStyle(0xff7043, 1);
       this.fill.height = this.barH - 2;
-      this.label.setText('BOSS');
+      this.label.setText(`${dTag}\nBOSS`);
     } else {
       this.fill.setFillStyle(0x4db6ff, 1);
       this.fill.height = this.barH - 2;
-      this.label.setText('EXIT\n(R / B)');
+      this.label.setText(`${dTag}\nEXIT`);
     }
   }
 }

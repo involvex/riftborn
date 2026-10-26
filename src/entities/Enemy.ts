@@ -43,6 +43,8 @@ export class Enemy {
   readonly elitePack: boolean;
   /** Boss flag for rift progress / exit portal. */
   readonly isBoss: boolean;
+  /** Multiplier from player level / rift depth (HP + damage). */
+  private readonly levelMult: number;
 
   constructor(
     scene: Phaser.Scene,
@@ -61,8 +63,8 @@ export class Enemy {
     this.homeY = worldY;
     this.elitePack = !!opts.elitePack && !this.def.isElite;
     this.isBoss = !!opts.boss || this.def.isElite;
-    const levelMult = 1 + Math.max(0, (opts.levelScale ?? 1) - 1) * 0.12;
-    let hpMult = levelMult;
+    this.levelMult = 1 + Math.max(0, (opts.levelScale ?? 1) - 1) * 0.12;
+    let hpMult = this.levelMult;
     if (this.elitePack) hpMult *= 2.1;
     if (opts.boss) hpMult *= 1.35;
     this.maxHp = Math.floor(this.def.hp * hpMult);
@@ -213,6 +215,7 @@ export class Enemy {
         hitPlayer = true;
         damage = Math.floor(
           this.def.damage *
+            this.levelMult *
             (this.elitePack ? 1.45 : 1) *
             (this.isBoss ? 1.25 : 1),
         );

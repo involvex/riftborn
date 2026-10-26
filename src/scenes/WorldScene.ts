@@ -40,7 +40,14 @@ import { audioBus } from '../core/AudioBus';
 import { settingsStore } from '../core/SettingsStore';
 import { playSkillVfx } from '../render/SkillVfx';
 import classesData from '../data/classes.json';
-import type { CharacterClassId } from '../types/game';
+import type { CharacterClassId, GearRarity } from '../types/game';
+import {
+  clampLootTier,
+  riftDepthFromLevel,
+  riftDepthLabel,
+  riftLootTierBump,
+  riftPackBonus,
+} from '../systems/RiftDepth';
 
 const DEFAULT_HUB_SIZE = HUB_SIZE;
 const TOWN_SPAWN = { ...HUB_SPAWN };
@@ -79,6 +86,7 @@ export class WorldScene extends Phaser.Scene {
   private riftKillGoal = 18;
   private riftBossSpawned = false;
   private riftBossDead = false;
+  private riftDepth = 1;
   private bossAnchor: { x: number; y: number } | null = null;
   private hubLayout: ZoneLayout | null = null;
   private hubSize = DEFAULT_HUB_SIZE;
@@ -196,7 +204,8 @@ export class WorldScene extends Phaser.Scene {
   private loadZone(rift: boolean): void {
     if (rift) {
       const seed = gameState.riftSeed ?? Date.now();
-      this.dungeon = generateDungeon(seed);
+      this.riftDepth = riftDepthFromLevel(gameState.progression.level);
+      this.dungeon = generateDungeon(seed, this.riftDepth);
       this.player.maxX = this.dungeon.width - 1.5;
       this.player.maxY = this.dungeon.height - 1.5;
       this.player.walkCheck = (x, y) =>
@@ -278,7 +287,10 @@ export class WorldScene extends Phaser.Scene {
         const oy = (Math.random() - 0.5) * 1.8;
         const p = snapToTile(pack.x + ox, pack.y + oy);
         if (!gameState.inRift && inPlaza(p.x, p.y)) continue;
-        const elitePack = gameState.inRift && Math.random() < 0.14;
+        const eliteChance = gameState.inRift
+          ? riftPackBonus(this.riftDepth).eliteChance
+          : 0.14;
+        const elitePack = Math.random() < eliteChance;
         const enemy = new Enemy(
           this,
           `enemy_${this.enemySeq++}`,
@@ -286,7 +298,7 @@ export class WorldScene extends Phaser.Scene {
           p.x,
           p.y,
           {
-            elitePack,
+            elitePack: gameState.inRift ? elitePack : false,
             levelScale: gameState.progression.level,
           },
         );
@@ -828,10 +840,15 @@ export class WorldScene extends Phaser.Scene {
 
   private onPlayerDeath(): void {
     audioBus.death();
+    this.cameras.main.flash(280, 120, 20, 30, false, undefined, this);
+    this.cameras.main.shake(320, 0.012);
+    this.shakeUntil = this.time.now + 400;
     gameState.hp = Math.floor(gameState.maxHp * 0.5);
     if (gameState.inRift) {
       this.returnToTown(false, true);
-      gameEvents.emit('ui:toast', { text: 'You fall… waking in town.' });
+      gameEvents.emit('ui:toast', {
+        text: 'You fall in the rift… waking in town at half health.',
+      });
     } else {
       this.player.worldX = TOWN_SPAWN.x;
       this.player.worldY = TOWN_SPAWN.y;
@@ -839,6 +856,9 @@ export class WorldScene extends Phaser.Scene {
       gameState.worldY = TOWN_SPAWN.y;
       this.player.syncScreen();
       gameState.persist();
+      gameEvents.emit('ui:toast', {
+        text: 'You fall… Mira drags you back to the plaza.',
+      });
     }
     gameEvents.emit(Events.PLAYER_DIED, {});
   }
@@ -943,21 +963,24 @@ export class WorldScene extends Phaser.Scene {
   }
 
   private onEnemyKilled(enemy: Enemy): void {
-    const tier = Math.min(
-      4,
-      Math.max(
-        1,
-        (enemy.def.lootTier ?? 2) +
-          (enemy.elitePack ? 1 : 0) +
-          (enemy.isBoss ? 1 : 0),
-      ),
-    ) as 1 | 2 | 3 | 4;
+    const depthBump = gameState.inRift ? riftLootTierBump(this.riftDepth) : 0;
+    const tier = clampLootTier(
+      (enemy.def.lootTier ?? 2) +
+        (enemy.elitePack ? 1 : 0) +
+        (enemy.isBoss ? 1 : 0) +
+        depthBump,
+    );
     const scoutKill = enemy.def.id === 'ash_scout';
     gameState.combat.grantKillRewards(enemy.def.xp, enemy.def.lootTable, {
       elite: enemy.awardsEliteLoot,
       lootTier: tier,
-      guaranteedMinRarity: scoutKill ? 'magic' : undefined,
+      guaranteedMinRarity: scoutKill
+        ? 'magic'
+        : enemy.isBoss
+          ? 'rare'
+          : undefined,
       onGear: (g) => {
+        this.playLootJuice(g.rarity);
         if (scoutKill) {
           gameEvents.emit('ui:toast', {
             text: `Scout fall — ${g.rarity} ${g.name}`,
@@ -974,9 +997,10 @@ export class WorldScene extends Phaser.Scene {
     if (enemy.isBoss) {
       this.riftBossDead = true;
       this.riftCleared = true;
+      this.spawnBossChest(enemy.worldX, enemy.worldY);
       this.openExitPortal();
       gameEvents.emit('ui:toast', {
-        text: 'Boss slain! Exit portal opened · R to leave · B town',
+        text: 'Boss slain! Loot the chest · Exit portal · R / B town',
       });
       this.cameras.main.flash(220, 80, 160, 220, false, undefined, this);
       this.emitRiftProgress();
@@ -1006,16 +1030,54 @@ export class WorldScene extends Phaser.Scene {
       p.y,
       {
         boss: true,
-        levelScale: gameState.progression.level + 2,
+        levelScale: gameState.progression.level + 2 + this.riftDepth,
       },
     );
     boss.maxBound = 22;
     this.enemies.push(boss);
     gameEvents.emit('ui:toast', {
-      text: 'The Rift tears open — a Rift Lord emerges!',
+      text: `Rift Lord emerges! (${riftDepthLabel(this.riftDepth)})`,
     });
     this.cameras.main.flash(160, 120, 40, 80, false, undefined, this);
     this.emitRiftProgress();
+  }
+
+  private spawnBossChest(wx: number, wy: number): void {
+    const p = snapToTile(wx + 0.8, wy - 0.6);
+    const tier = clampLootTier(4 + riftLootTierBump(this.riftDepth));
+    this.chests.push(
+      new LootChest(this, `chest_boss_${this.chestSeq++}`, p.x, p.y, tier),
+    );
+    this.playLootJuice('rare');
+  }
+
+  private playLootJuice(rarity: GearRarity): void {
+    const tone =
+      rarity === 'legendary'
+        ? 'legendary'
+        : rarity === 'rare'
+          ? 'rare'
+          : rarity === 'magic'
+            ? 'magic'
+            : 'common';
+    audioBus.loot(tone);
+    const flash =
+      rarity === 'legendary'
+        ? [255, 180, 60]
+        : rarity === 'rare'
+          ? [120, 160, 255]
+          : rarity === 'magic'
+            ? [80, 200, 140]
+            : [200, 200, 200];
+    this.cameras.main.flash(
+      rarity === 'common' ? 60 : 140,
+      flash[0],
+      flash[1],
+      flash[2],
+      false,
+      undefined,
+      this,
+    );
   }
 
   private openExitPortal(): void {
@@ -1039,6 +1101,7 @@ export class WorldScene extends Phaser.Scene {
       kills: this.riftKills,
       goal: this.riftKillGoal,
       phase,
+      depth: this.riftDepth,
     });
   }
 
@@ -1249,9 +1312,12 @@ export class WorldScene extends Phaser.Scene {
       gameState.inRift = true;
       gameState.riftSeed = (Date.now() ^ (Math.random() * 1e9)) >>> 0;
       this.loadZone(true);
-      gameEvents.emit(Events.RIFT_ENTERED, { seed: gameState.riftSeed });
+      gameEvents.emit(Events.RIFT_ENTERED, {
+        seed: gameState.riftSeed,
+        depth: this.riftDepth,
+      });
       gameEvents.emit('ui:toast', {
-        text: 'Rift opened — kill foes to fill the bar · B returns to town',
+        text: `Rift ${riftDepthLabel(this.riftDepth)} — fill the bar, slay the Lord · B town`,
       });
       this.emitRiftProgress();
     } else if (this.riftBossDead) {

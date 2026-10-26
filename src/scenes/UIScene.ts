@@ -231,16 +231,21 @@ export class UIScene extends Phaser.Scene {
           kills?: number;
           goal?: number;
           phase?: 'fill' | 'boss' | 'exit';
+          depth?: number;
         };
         if (!d.active) {
           this.riftHud.hide();
           return;
         }
         this.riftHud.show();
-        this.riftHud.setProgress(d.kills ?? 0, d.goal ?? 1, d.phase ?? 'fill');
+        this.riftHud.setProgress(
+          d.kills ?? 0,
+          d.goal ?? 1,
+          d.phase ?? 'fill',
+          d.depth ?? 1,
+        );
       }),
       gameEvents.on(Events.PLAYER_DIED, () => {
-        this.toast('You fall… waking in town.');
         this.refresh();
       }),
       gameEvents.on(Events.SETTINGS_CHANGED, () => this.bindHotkeys()),
