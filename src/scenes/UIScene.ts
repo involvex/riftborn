@@ -845,6 +845,7 @@ export class UIScene extends Phaser.Scene {
     if (Phaser.Input.Keyboard.JustDown(this.keySkills)) {
       this.hideCraft();
       this.hideShop();
+      this.hideTrader();
       this.hideChar();
       this.inventoryPanel.hide();
       this.skillPanel.toggle();
@@ -855,6 +856,7 @@ export class UIScene extends Phaser.Scene {
       this.inventoryPanel.hide();
       this.skillPanel.hide();
       this.hideShop();
+      this.hideTrader();
       if (this.charOpen) this.hideChar();
       else this.showChar();
     }
