@@ -30,10 +30,14 @@ export class Enemy {
   private readonly homeY: number;
   private readonly textureKey: string;
   private animKind: 'idle' | 'walk' | 'attack' = 'idle';
-  maxBound = 35;
+  maxBound = 48;
   private slowMult = 1;
   private slowTimer = 0;
   private stunTimer = 0;
+  /** Runtime elite (random pack upgrade), distinct from boss defs. */
+  readonly elitePack: boolean;
+  /** Boss flag for rift progress / exit portal. */
+  readonly isBoss: boolean;
 
   constructor(
     scene: Phaser.Scene,
@@ -41,6 +45,7 @@ export class Enemy {
     defId: string,
     worldX: number,
     worldY: number,
+    opts: { elitePack?: boolean; boss?: boolean; levelScale?: number } = {},
   ) {
     ensureGameSprites(scene);
     this.id = id;
@@ -49,30 +54,53 @@ export class Enemy {
     this.worldY = worldY;
     this.homeX = worldX;
     this.homeY = worldY;
-    this.maxHp = this.def.hp;
+    this.elitePack = !!opts.elitePack && !this.def.isElite;
+    this.isBoss = !!opts.boss || this.def.isElite;
+    const levelMult = 1 + Math.max(0, (opts.levelScale ?? 1) - 1) * 0.12;
+    let hpMult = levelMult;
+    if (this.elitePack) hpMult *= 2.1;
+    if (opts.boss) hpMult *= 1.35;
+    this.maxHp = Math.floor(this.def.hp * hpMult);
     this.hp = this.maxHp;
     this.patrolAngle = Math.random() * Math.PI * 2;
     this.textureKey = enemySpriteKey(this.def.id);
     this.sprite = scene.add.sprite(0, -2, this.textureKey, 0);
     this.sprite.setOrigin(0.5, 0.82);
     const painted = isPaintedSprite(this.textureKey);
-    const scale = painted
-      ? this.def.isElite
+    const drawScale = painted
+      ? this.isBoss || this.def.isElite
         ? 0.85
-        : 0.7
-      : this.def.isElite
+        : this.elitePack
+          ? 0.78
+          : 0.7
+      : this.isBoss || this.def.isElite
         ? 1.55
-        : 1.2;
-    this.sprite.setScale(scale);
+        : this.elitePack
+          ? 1.35
+          : 1.2;
+    this.sprite.setScale(drawScale);
     this.sprite.setOrigin(0.5, 0.88);
     // Painted iso art is SE-facing — avoid flipX mirroring artifacts
     if (painted) this.sprite.setFlipX(false);
-    if (this.def.isElite && !painted) this.sprite.setTint(0xa0d8ff);
+    if (defId === 'ash_scamp') {
+      this.sprite.setTint(0xb08a60);
+    } else if (
+      (this.def.isElite || this.elitePack || this.isBoss) &&
+      !painted
+    ) {
+      this.sprite.setTint(this.isBoss ? 0x80c8ff : 0xa0d8ff);
+    } else if (this.elitePack && painted) {
+      this.sprite.setTint(0xa8d0ff);
+    }
     this.bar = scene.add.graphics();
     this.body = scene.add.container(0, 0, [this.sprite, this.bar]);
     this.playAnim('idle');
     this.redrawBar();
     this.syncScreen();
+  }
+
+  get awardsEliteLoot(): boolean {
+    return this.def.isElite || this.elitePack || this.isBoss;
   }
 
   redraw(): void {
@@ -170,7 +198,11 @@ export class Enemy {
       }
       if (this.attackTimer <= 0) {
         hitPlayer = true;
-        damage = this.def.damage;
+        damage = Math.floor(
+          this.def.damage *
+            (this.elitePack ? 1.45 : 1) *
+            (this.isBoss ? 1.25 : 1),
+        );
         this.attackTimer = this.def.attackCooldown;
         this.playAnim('attack', true);
       } else if (this.animKind !== 'attack') {

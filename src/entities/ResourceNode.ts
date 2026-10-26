@@ -30,10 +30,18 @@ export class ResourceNode {
     const def = getNodeDef(defId);
     this.maxHp = def?.hp ?? 30;
     this.hp = this.maxHp;
-    const tex = defId.includes('tree') ? 'spr_tree' : 'spr_vein';
+    const tex = defId.includes('tree')
+      ? 'spr_tree'
+      : defId.includes('bush')
+        ? 'spr_tree'
+        : 'spr_vein';
     this.sprite = scene.add.sprite(0, -4, tex);
     this.sprite.setOrigin(0.5, 0.85);
-    this.sprite.setScale(isPaintedSprite(tex) ? 0.7 : 1.25);
+    const bush = defId.includes('bush');
+    this.sprite.setScale(
+      isPaintedSprite(tex) ? (bush ? 0.42 : 0.7) : bush ? 0.7 : 1.25,
+    );
+    if (bush) this.sprite.setTint(0x6a9a4a);
     this.bar = scene.add.graphics();
     this.body = scene.add.container(0, 0, [this.sprite, this.bar]);
     this.redraw();

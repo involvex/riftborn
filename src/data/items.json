@@ -77,5 +77,33 @@
     "stack": 999,
     "kind": "currency",
     "color": "#E6C35C"
+  },
+  "hide": {
+    "id": "hide",
+    "name": "Ash Hide",
+    "stack": 50,
+    "kind": "material",
+    "color": "#A08060"
+  },
+  "ember_dust": {
+    "id": "ember_dust",
+    "name": "Ember Dust",
+    "stack": 50,
+    "kind": "material",
+    "color": "#E07040"
+  },
+  "bone_chip": {
+    "id": "bone_chip",
+    "name": "Bone Chip",
+    "stack": 50,
+    "kind": "material",
+    "color": "#D8C8A8"
+  },
+  "berries": {
+    "id": "berries",
+    "name": "Ashberries",
+    "stack": 30,
+    "kind": "material",
+    "color": "#C04060"
   }
 }

@@ -8,6 +8,7 @@ export type HotkeyAction =
   | 'skill2'
   | 'skill3'
   | 'portal'
+  | 'town'
   | 'dash'
   | 'coop'
   | 'menu'
@@ -36,6 +37,7 @@ export const DEFAULT_HOTKEYS: HotkeyMap = {
   skill2: 'TWO',
   skill3: 'THREE',
   portal: 'R',
+  town: 'B',
   dash: 'SPACE',
   coop: 'P',
   menu: 'ESC',

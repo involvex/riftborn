@@ -98,49 +98,52 @@ export function generateDungeon(seed: number): DungeonMap {
   const packTypes = ['shade', 'crawler', 'wisp'] as const;
   const packs: ZoneLayout['packs'] = [];
   const nodes: ZoneLayout['nodes'] = [];
+  let expectedKills = 0;
 
-  for (let i = 1; i < rooms.length - 1; i++) {
+  for (let i = 1; i < rooms.length; i++) {
     const r = rooms[i];
-    const cx = r.x + r.w / 2;
-    const cy = r.y + r.h / 2;
+    const cx = Math.floor(r.x + r.w / 2) + 0.5;
+    const cy = Math.floor(r.y + r.h / 2) + 0.5;
+    const count = 3 + Math.floor(rnd() * 4);
+    expectedKills += count;
     packs.push({
       enemyId: packTypes[Math.floor(rnd() * packTypes.length)],
-      count: 4 + Math.floor(rnd() * 5),
+      count,
       x: cx,
       y: cy,
     });
-    if (rnd() > 0.45) {
+    if (rnd() > 0.5) {
       nodes.push({
         defId: 'rift_vein',
-        x: r.x + 1 + rnd() * (r.w - 2),
-        y: r.y + 1 + rnd() * (r.h - 2),
+        x: Math.floor(r.x + 1 + rnd() * (r.w - 2)) + 0.5,
+        y: Math.floor(r.y + 1 + rnd() * (r.h - 2)) + 0.5,
       });
     }
   }
 
   const start = rooms[0];
-  const end = rooms[rooms.length - 1];
-  const eliteRoom = rooms[Math.floor(rooms.length / 2)];
+  const bossRoom = rooms[rooms.length - 1];
+  // Progress bar fills before boss — slightly under full pack count
+  const killGoal = Math.max(12, Math.floor(expectedKills * 0.72));
 
   const layout: ZoneLayout = {
     nodes,
     packs,
-    portal: {
-      x: end.x + end.w / 2,
-      y: end.y + end.h / 2,
-    },
+    // Exit appears only after boss kill
+    portal: null,
     bench: {
       x: start.x + 1.5,
       y: start.y + 1.5,
     },
     elite: {
-      x: eliteRoom.x + eliteRoom.w / 2,
-      y: eliteRoom.y + eliteRoom.h / 2,
+      x: Math.floor(bossRoom.x + bossRoom.w / 2) + 0.5,
+      y: Math.floor(bossRoom.y + bossRoom.h / 2) + 0.5,
     },
     spawn: {
-      x: start.x + start.w / 2,
-      y: start.y + start.h / 2,
+      x: Math.floor(start.x + start.w / 2) + 0.5,
+      y: Math.floor(start.y + start.h / 2) + 0.5,
     },
+    killGoal,
   };
 
   return { width, height, cells, layout, rooms };

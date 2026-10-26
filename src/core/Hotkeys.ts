@@ -54,6 +54,7 @@ export const HOTKEY_LABELS: Record<HotkeyAction, string> = {
   skill2: 'Ability 2',
   skill3: 'Ability 3',
   portal: 'Rift portal',
+  town: 'Return to town',
   dash: 'Dash',
   coop: 'Co-op',
   menu: 'Pause menu',

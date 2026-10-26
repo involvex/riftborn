@@ -20,6 +20,7 @@ import { gameState } from '../systems/GameState';
 import { AbilityBar } from '../ui/AbilityBar';
 import { HudBars } from '../ui/HudBars';
 import { InventoryPanel } from '../ui/InventoryPanel';
+import { RiftProgressHud } from '../ui/RiftProgressHud';
 import { ShopPanel } from '../ui/ShopPanel';
 import { SkillTreePanel } from '../ui/SkillTreePanel';
 import { uiFont } from '../core/UiScale';
@@ -40,6 +41,7 @@ export class UIScene extends Phaser.Scene {
   private shopPanel!: ShopPanel;
   private skillPanel!: SkillTreePanel;
   private abilityBar!: AbilityBar;
+  private riftHud!: RiftProgressHud;
   private unsubs: (() => void)[] = [];
   private shopOpen = false;
   private keyChar!: Phaser.Input.Keyboard.Key;
@@ -91,6 +93,7 @@ export class UIScene extends Phaser.Scene {
     this.shopPanel = new ShopPanel(this);
     this.skillPanel = new SkillTreePanel(this);
     this.abilityBar = new AbilityBar(this);
+    this.riftHud = new RiftProgressHud(this);
     this.buildCraftPanel();
     this.buildCharPanel();
     this.buildMenuPanel();
@@ -198,16 +201,32 @@ export class UIScene extends Phaser.Scene {
         this.inventoryPanel.hide();
         this.showShop();
       }),
-      gameEvents.on(Events.RIFT_ENTERED, () =>
-        this.toast('Procedural rift dungeon opened'),
-      ),
+      gameEvents.on(Events.RIFT_ENTERED, () => {
+        this.toast('Procedural rift dungeon opened');
+        this.riftHud.show();
+      }),
       gameEvents.on(Events.RIFT_CLEARED, (p) => {
         const d = p as { cleared: boolean };
         this.toast(d.cleared ? 'Rift rewards claimed' : 'Left the Rift');
+        this.riftHud.hide();
         this.refresh();
       }),
+      gameEvents.on(Events.RIFT_PROGRESS, (p) => {
+        const d = p as {
+          active?: boolean;
+          kills?: number;
+          goal?: number;
+          phase?: 'fill' | 'boss' | 'exit';
+        };
+        if (!d.active) {
+          this.riftHud.hide();
+          return;
+        }
+        this.riftHud.show();
+        this.riftHud.setProgress(d.kills ?? 0, d.goal ?? 1, d.phase ?? 'fill');
+      }),
       gameEvents.on(Events.PLAYER_DIED, () => {
-        this.toast('You fall… waking at camp.');
+        this.toast('You fall… waking in town.');
         this.refresh();
       }),
       gameEvents.on(Events.SETTINGS_CHANGED, () => this.bindHotkeys()),
@@ -221,6 +240,7 @@ export class UIScene extends Phaser.Scene {
       if (this.shopPanel.open) this.shopPanel.layout();
       if (this.skillPanel.open) this.skillPanel.layout();
       this.abilityBar.layout();
+      this.riftHud.layout();
     });
   }
 
@@ -653,7 +673,7 @@ export class UIScene extends Phaser.Scene {
   private refresh(): void {
     this.hudBars.refresh();
     this.hudHint.setText(
-      `${formatHotkey('inventory')} Inv · ${formatHotkey('character')} Char · ${formatHotkey('skills')} Skills · 1/2/3 Abilities · Esc Menu`,
+      `${formatHotkey('inventory')} Inv · ${formatHotkey('character')} Char · ${formatHotkey('skills')} Skills · ${formatHotkey('portal')} Rift · ${formatHotkey('town')} Town · Esc`,
     );
     this.abilityBar.refresh();
   }

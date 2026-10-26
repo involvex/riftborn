@@ -102,6 +102,7 @@ export function playerSpriteKey(
 }
 
 export function enemySpriteKey(defId: string): string {
+  if (defId === 'ash_scamp') return 'spr_shade';
   if (defId === 'crawler') return 'spr_crawler';
   if (defId === 'wisp') return 'spr_wisp';
   if (defId === 'rift_lord') return 'spr_rift_lord';

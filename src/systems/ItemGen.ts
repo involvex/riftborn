@@ -4,6 +4,7 @@ import type {
   GearRarity,
   GearSlot,
   GearStats,
+  LootTier,
 } from '../types/game';
 import gearBases from '../data/gearBases.json';
 import setsData from '../data/sets.json';
@@ -225,9 +226,15 @@ export function createStarterLoadout(
   };
 }
 
+/** Gear drop chance by enemy loot tier (before elite bump). */
+export function gearDropChance(tier: LootTier, elite = false): number {
+  const base = tier === 1 ? 0.12 : tier === 2 ? 0.28 : tier === 3 ? 0.42 : 0.9;
+  return elite ? Math.min(0.95, base + 0.35) : base;
+}
+
 /**
  * Roll a class-locked armor/weapon drop.
- * Enemy kills pass the player class so drops match (Warrior Bone, etc.).
+ * Higher loot tiers → higher item level, better rarity, different name bands.
  */
 export function rollGearDrop(
   itemLevel: number,
@@ -237,21 +244,46 @@ export function rollGearDrop(
     forClass?: CharacterClassId;
     /** Allow off-class pieces (shop). Default false for combat drops. */
     anyClass?: boolean;
+    /** Enemy difficulty band — shifts power & naming. */
+    lootTier?: LootTier;
     rnd?: () => number;
   } = {},
 ): GearInstance {
   const rnd = opts.rnd ?? Math.random;
-  const rarity = pickRarity(rnd, opts.elite ? 2 : 0);
+  const tier: LootTier = opts.lootTier ?? (opts.elite ? 4 : 2);
+  const ilvlBump = tier === 1 ? -1 : tier === 3 ? 2 : tier === 4 ? 4 : 0;
+  const effectiveLevel = Math.max(1, itemLevel + ilvlBump);
+  const rarityBump =
+    (opts.elite ? 2 : 0) +
+    (tier === 1 ? -1 : tier === 3 ? 1 : tier === 4 ? 3 : 0);
+  const rarity = pickRarity(rnd, Math.max(0, rarityBump));
   const affixCount =
-    RARITY_WEIGHTS.find((r) => r.rarity === rarity)?.affixes ?? 0;
+    (RARITY_WEIGHTS.find((r) => r.rarity === rarity)?.affixes ?? 0) +
+    (tier >= 3 ? 1 : 0);
 
   const forClass = opts.forClass;
   const all = Object.values(bases);
+  const preferArmor =
+    opts.preferArmor !== undefined
+      ? opts.preferArmor
+      : rnd() > (tier === 1 ? 0.35 : 0.22);
   let pool = all.filter((b) =>
-    opts.preferArmor !== false && rnd() > 0.22
-      ? ARMOR_SLOTS.includes(b.slot)
-      : b.slot === 'weapon',
+    preferArmor ? ARMOR_SLOTS.includes(b.slot) : b.slot === 'weapon',
   );
+  if (tier === 1) {
+    const light = pool.filter(
+      (b) => b.slot === 'weapon' || b.armorBias <= 1.35,
+    );
+    if (light.length) pool = light;
+  } else if (tier >= 3) {
+    const heavy = pool.filter((b) => b.setId || (b.damageBias ?? 0) >= 1.15);
+    if (heavy.length && rnd() < 0.65) pool = heavy;
+  }
+  if (!pool.length) {
+    pool = all.filter((b) =>
+      preferArmor ? ARMOR_SLOTS.includes(b.slot) : b.slot === 'weapon',
+    );
+  }
   if (forClass && !opts.anyClass) {
     const classPool = pool.filter((b) => b.classId === forClass);
     if (classPool.length) pool = classPool;
@@ -262,29 +294,35 @@ export function rollGearDrop(
 
   const base = pool[Math.floor(rnd() * pool.length)] ?? all[0]!;
   const classId = base.classId;
+  const tierMult = tier === 1 ? 0.75 : tier === 2 ? 1 : tier === 3 ? 1.2 : 1.45;
 
   const stats = emptyGearStats();
   if (base.slot === 'weapon') {
     const bias = base.damageBias ?? 1;
     stats.damage = Math.max(
-      3,
-      Math.floor((4 + itemLevel * 1.4) * bias + rnd() * 3),
+      2,
+      Math.floor((4 + effectiveLevel * 1.4) * bias * tierMult + rnd() * 3),
     );
   } else {
     stats.armor = Math.max(
       1,
-      Math.floor((2 + itemLevel * 0.9) * base.armorBias + rnd() * 2),
+      Math.floor(
+        (2 + effectiveLevel * 0.9) * base.armorBias * tierMult + rnd() * 2,
+      ),
     );
   }
 
-  // Guaranteed primary-stat bump on class gear
   if (classId) {
     const key = CLASS_PRIMARY[classId];
-    stats[key] += 1 + Math.floor(itemLevel / 6);
+    stats[key] += 1 + Math.floor(effectiveLevel / 6) + (tier >= 3 ? 1 : 0);
   }
 
   for (let i = 0; i < affixCount; i++) {
-    rollAffix(stats, itemLevel, classId, rnd);
+    rollAffix(stats, effectiveLevel, classId, rnd);
+  }
+
+  if (tier >= 3 && rnd() < 0.4) {
+    stats.skillPower += 2 + Math.floor(rnd() * tier);
   }
 
   const rarityPrefix =
@@ -295,16 +333,26 @@ export function rollGearDrop(
         : rarity === 'rare'
           ? 'Rift-Touched '
           : 'Ascendant ';
+  const tierPrefix =
+    rarity !== 'common'
+      ? ''
+      : tier === 1
+        ? 'Worn '
+        : tier === 3
+          ? 'Hardened '
+          : tier === 4
+            ? 'Warlord '
+            : '';
 
   return {
     uid: uid(),
     baseId: base.id,
-    name: `${rarityPrefix}${base.name}`,
+    name: `${rarityPrefix || tierPrefix}${base.name}`,
     slot: base.slot,
     setId: base.setId,
     classId,
     rarity,
-    itemLevel,
+    itemLevel: effectiveLevel,
     stats,
     attackRange: base.slot === 'weapon' ? 1.2 + rnd() * 0.3 : undefined,
   };

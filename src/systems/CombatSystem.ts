@@ -1,8 +1,8 @@
 import { Events, gameEvents } from '../core/EventBus';
-import type { GearInstance, LootTableDef } from '../types/game';
+import type { GearInstance, LootTableDef, LootTier } from '../types/game';
 import loottables from '../data/loottables.json';
 import type { InventorySystem } from './InventorySystem';
-import { rollGearDrop } from './ItemGen';
+import { gearDropChance, rollGearDrop } from './ItemGen';
 import type { ProgressionSystem } from './ProgressionSystem';
 
 const tables = loottables as Record<string, LootTableDef>;
@@ -57,23 +57,38 @@ export class CombatSystem {
   grantKillRewards(
     xp: number,
     lootTableId: string,
-    opts: { elite?: boolean; onGear?: (g: GearInstance) => void } = {},
+    opts: {
+      elite?: boolean;
+      lootTier?: LootTier;
+      onGear?: (g: GearInstance) => void;
+    } = {},
   ): void {
     this.progression.addXp(xp);
     const drops = rollLoot(lootTableId);
     for (const drop of drops) {
       this.inventory.add(drop.itemId, drop.qty);
     }
-    // Armor/weapon proc chance
-    const gearChance = opts.elite ? 0.85 : 0.28;
+    const tier: LootTier = opts.lootTier ?? (opts.elite ? 4 : 2);
+    const gearChance = gearDropChance(tier, opts.elite);
     if (Math.random() < gearChance) {
       const gear = rollGearDrop(this.progression.level, {
-        elite: opts.elite,
-        preferArmor: true,
+        elite: opts.elite || tier >= 4,
+        preferArmor: Math.random() > (tier === 1 ? 0.4 : 0.28),
         forClass: this.progression.classId,
+        lootTier: tier,
       });
       if (this.inventory.addGear(gear)) opts.onGear?.(gear);
     }
-    gameEvents.emit(Events.ENEMY_DIED, { xp, drops });
+    // Boss / high tier: chance at a second piece
+    if (tier >= 4 && Math.random() < 0.45) {
+      const gear = rollGearDrop(this.progression.level, {
+        elite: true,
+        preferArmor: Math.random() > 0.5,
+        forClass: this.progression.classId,
+        lootTier: 4,
+      });
+      if (this.inventory.addGear(gear)) opts.onGear?.(gear);
+    }
+    gameEvents.emit(Events.ENEMY_DIED, { xp, drops, lootTier: tier });
   }
 }

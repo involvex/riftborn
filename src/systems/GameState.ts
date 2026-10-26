@@ -59,8 +59,8 @@ export class GameState {
     this.inventory.add('gold', 80);
     this.recalcMaxHp();
     this.hp = this.maxHp;
-    this.worldX = 12;
-    this.worldY = 14;
+    this.worldX = 17.5;
+    this.worldY = 18.5;
     this.inRift = false;
     this.riftSeed = null;
     this.playTimeSec = 0;

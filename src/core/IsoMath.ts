@@ -33,3 +33,8 @@ export function worldDistance(
   const dy = a.y - b.y;
   return Math.hypot(dx, dy);
 }
+
+/** Snap to tile center so sprites sit on the iso diamond (fixes float/desync). */
+export function snapToTile(x: number, y: number): { x: number; y: number } {
+  return { x: Math.floor(x) + 0.5, y: Math.floor(y) + 0.5 };
+}

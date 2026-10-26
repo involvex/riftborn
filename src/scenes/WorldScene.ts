@@ -1,5 +1,10 @@
 import Phaser from 'phaser';
-import { depthFromWorld, worldDistance, worldToScreen } from '../core/IsoMath';
+import {
+  depthFromWorld,
+  snapToTile,
+  worldDistance,
+  worldToScreen,
+} from '../core/IsoMath';
 import { Events, gameEvents } from '../core/EventBus';
 import { Enemy } from '../entities/Enemy';
 import { Npc } from '../entities/Npc';
@@ -7,7 +12,12 @@ import { Player } from '../entities/Player';
 import { ResourceNode } from '../entities/ResourceNode';
 import { describeGear } from '../systems/ItemGen';
 import { gameState } from '../systems/GameState';
-import { generateHub, type ZoneLayout } from '../world/MapGen';
+import {
+  generateHub,
+  inPlaza,
+  type HubDecor,
+  type ZoneLayout,
+} from '../world/MapGen';
 import {
   generateDungeon,
   isWalkable,
@@ -18,7 +28,8 @@ import { bindAction } from '../core/Hotkeys';
 import { audioBus } from '../core/AudioBus';
 import { settingsStore } from '../core/SettingsStore';
 
-const HUB_SIZE = 24;
+const DEFAULT_HUB_SIZE = 36;
+const TOWN_SPAWN = { x: 17.5, y: 18.5 };
 
 export class WorldScene extends Phaser.Scene {
   private player!: Player;
@@ -34,6 +45,7 @@ export class WorldScene extends Phaser.Scene {
   private keyE!: Phaser.Input.Keyboard.Key;
   private keyF!: Phaser.Input.Keyboard.Key;
   private keyR!: Phaser.Input.Keyboard.Key;
+  private keyTown!: Phaser.Input.Keyboard.Key;
   private keySpace!: Phaser.Input.Keyboard.Key;
   private keyP!: Phaser.Input.Keyboard.Key;
   private keySkill1!: Phaser.Input.Keyboard.Key;
@@ -49,7 +61,13 @@ export class WorldScene extends Phaser.Scene {
   private shakeUntil = 0;
   private nearBench = false;
   private riftCleared = false;
+  private riftKills = 0;
+  private riftKillGoal = 18;
+  private riftBossSpawned = false;
+  private riftBossDead = false;
+  private bossAnchor: { x: number; y: number } | null = null;
   private hubLayout: ZoneLayout | null = null;
+  private hubSize = DEFAULT_HUB_SIZE;
   private enemySeq = 0;
   private nodeSeq = 0;
   private dungeon: DungeonMap | null = null;
@@ -113,6 +131,7 @@ export class WorldScene extends Phaser.Scene {
     this.keyE = bindAction(this.input.keyboard, 'gather');
     this.keyF = bindAction(this.input.keyboard, 'craft');
     this.keyR = bindAction(this.input.keyboard, 'portal');
+    this.keyTown = bindAction(this.input.keyboard, 'town');
     this.keySpace = bindAction(this.input.keyboard, 'dash');
     this.keyP = bindAction(this.input.keyboard, 'coop');
     this.keySkill1 = bindAction(this.input.keyboard, 'skill1');
@@ -139,13 +158,28 @@ export class WorldScene extends Phaser.Scene {
       this.spawnFromLayout(this.dungeon.layout);
     } else {
       this.dungeon = null;
-      this.player.maxX = HUB_SIZE - 0.5;
-      this.player.maxY = HUB_SIZE - 0.5;
-      this.player.walkCheck = null;
       this.hubLayout = generateHub(42);
+      this.hubSize = this.hubLayout.size ?? DEFAULT_HUB_SIZE;
+      this.player.maxX = this.hubSize - 0.5;
+      this.player.maxY = this.hubSize - 0.5;
+      this.player.walkCheck = null;
       this.drawHubTiles();
-      this.player.worldX = gameState.worldX;
-      this.player.worldY = gameState.worldY;
+      const hubSpawn = this.hubLayout.spawn ?? TOWN_SPAWN;
+      const inBounds =
+        gameState.worldX > 1 &&
+        gameState.worldX < this.hubSize - 1 &&
+        gameState.worldY > 1 &&
+        gameState.worldY < this.hubSize - 1;
+      // Old saves may sit outside the new plaza — pull them home
+      const useSaved = inBounds && inPlaza(gameState.worldX, gameState.worldY);
+      const snapped = snapToTile(
+        useSaved ? gameState.worldX : hubSpawn.x,
+        useSaved ? gameState.worldY : hubSpawn.y,
+      );
+      this.player.worldX = snapped.x;
+      this.player.worldY = snapped.y;
+      gameState.worldX = snapped.x;
+      gameState.worldY = snapped.y;
       this.spawnFromLayout(this.hubLayout);
     }
     this.player.syncScreen();
@@ -162,68 +196,117 @@ export class WorldScene extends Phaser.Scene {
     this.decor = [];
     this.nearNpc = null;
     this.portalMarker?.destroy(true);
+    this.portalMarker = null;
     this.benchMarker?.destroy(true);
+    this.benchMarker = null;
     this.riftCleared = false;
+    this.riftKills = 0;
+    this.riftBossSpawned = false;
+    this.riftBossDead = false;
+    this.riftKillGoal = layout.killGoal ?? 18;
+    this.bossAnchor = layout.elite ? { ...layout.elite } : null;
 
     for (const n of layout.nodes) {
+      const p = snapToTile(n.x, n.y);
       this.nodes.push(
-        new ResourceNode(this, `node_${this.nodeSeq++}`, n.defId, n.x, n.y),
+        new ResourceNode(this, `node_${this.nodeSeq++}`, n.defId, p.x, p.y),
       );
     }
 
+    // Hub fringe + rifts both use packs; plaza never hosts enemies.
     for (const pack of layout.packs) {
+      if (!gameState.inRift && inPlaza(pack.x, pack.y)) continue;
       for (let i = 0; i < pack.count; i++) {
-        const ox = (Math.random() - 0.5) * 2.2;
-        const oy = (Math.random() - 0.5) * 2.2;
+        const ox = (Math.random() - 0.5) * 1.8;
+        const oy = (Math.random() - 0.5) * 1.8;
+        const p = snapToTile(pack.x + ox, pack.y + oy);
+        if (!gameState.inRift && inPlaza(p.x, p.y)) continue;
+        const elitePack = gameState.inRift && Math.random() < 0.14;
         this.enemies.push(
-          new Enemy(
-            this,
-            `enemy_${this.enemySeq++}`,
-            pack.enemyId,
-            pack.x + ox,
-            pack.y + oy,
-          ),
+          new Enemy(this, `enemy_${this.enemySeq++}`, pack.enemyId, p.x, p.y, {
+            elitePack,
+            levelScale: gameState.progression.level,
+          }),
         );
       }
     }
 
-    if (layout.elite) {
-      this.enemies.push(
-        new Enemy(
-          this,
-          `enemy_${this.enemySeq++}`,
-          'rift_lord',
-          layout.elite.x,
-          layout.elite.y,
-        ),
-      );
-    }
-
     if (layout.portal) {
-      this.portalMarker = this.makeMarker(
-        layout.portal.x,
-        layout.portal.y,
-        0x4db6ff,
-        gameState.inRift ? 'Exit' : 'Rift',
-      );
-    }
-    this.benchMarker = this.makeMarker(
-      layout.bench.x,
-      layout.bench.y,
-      0xc4a574,
-      'Forge',
-    );
-
-    for (const n of layout.npcs ?? []) {
-      this.npcs.push(new Npc(this, n.id, n.role, n.name, n.x, n.y));
+      const p = snapToTile(layout.portal.x, layout.portal.y);
+      this.portalMarker = gameState.inRift
+        ? this.makeMarker(p.x, p.y, 0x4db6ff, 'Exit · R')
+        : this.makeObelisk(p.x, p.y);
     }
 
-    // Town building silhouettes (hub only)
-    if (!gameState.inRift && layout.npcs?.length) {
-      this.makeBuilding(9, 8, 0x3a3028, 'Shop');
-      this.makeBuilding(15, 8, 0x2a3a32, 'Forge');
-      this.makeBuilding(12, 12, 0x2a2830, 'Plaza');
+    if (!gameState.inRift) {
+      const b = snapToTile(layout.bench.x, layout.bench.y);
+      this.benchMarker = this.makeMarker(b.x, b.y, 0xc4a574, 'Forge');
+      for (const n of layout.npcs ?? []) {
+        const p = snapToTile(n.x, n.y);
+        this.npcs.push(new Npc(this, n.id, n.role, n.name, p.x, p.y));
+      }
+      this.makeBuilding(15.5, 15.5, 0x3a3028, 'Shop');
+      this.makeBuilding(19.5, 15.5, 0x2a3a32, 'Forge');
+      this.makeBuilding(17.5, 20.5, 0x2a2838, 'Inn');
+      for (const d of layout.decor ?? []) this.makeHubDecor(d);
     }
+
+    this.emitRiftProgress();
+  }
+
+  private makeHubDecor(d: HubDecor): void {
+    const p = snapToTile(d.x, d.y);
+    const { screenX, screenY } = worldToScreen(p.x, p.y);
+    const g = this.add.graphics();
+    switch (d.kind) {
+      case 'lantern':
+        g.fillStyle(0x1a1410, 0.9);
+        g.fillRect(-2, -18, 4, 16);
+        g.fillStyle(0xe6c35c, 0.95);
+        g.fillCircle(0, -22, 5);
+        g.fillStyle(0xfff0c0, 0.25);
+        g.fillCircle(0, -22, 12);
+        break;
+      case 'well':
+        g.fillStyle(0x000000, 0.3);
+        g.fillEllipse(0, 4, 36, 14);
+        g.fillStyle(0x4a5058, 1);
+        g.fillEllipse(0, 0, 30, 12);
+        g.fillStyle(0x2a4058, 1);
+        g.fillEllipse(0, -2, 18, 8);
+        g.lineStyle(2, 0xc4a574, 0.5);
+        g.strokeEllipse(0, 0, 30, 12);
+        break;
+      case 'stall':
+        g.fillStyle(0x5a4030, 0.95);
+        g.fillRect(-16, -8, 32, 12);
+        g.fillStyle(0xa05040, 0.9);
+        g.fillTriangle(-18, -8, 18, -8, 0, -22);
+        break;
+      case 'crate':
+        g.fillStyle(0x6a5038, 1);
+        g.fillRect(-8, -10, 16, 12);
+        g.lineStyle(1, 0x3a2818, 0.8);
+        g.strokeRect(-8, -10, 16, 12);
+        break;
+      case 'rock':
+        g.fillStyle(0x4a4e52, 1);
+        g.fillEllipse(0, 0, 18, 10);
+        g.fillStyle(0x5a6064, 1);
+        g.fillEllipse(-2, -3, 10, 7);
+        break;
+      case 'bush':
+        g.fillStyle(0x2a4a28, 1);
+        g.fillCircle(-4, -2, 7);
+        g.fillCircle(4, -2, 7);
+        g.fillCircle(0, -6, 6);
+        break;
+      default:
+        break;
+    }
+    const c = this.add.container(screenX, screenY, [g]);
+    c.setDepth(depthFromWorld(p.x, p.y) - 20);
+    this.decor.push(c);
   }
 
   private makeBuilding(
@@ -232,24 +315,56 @@ export class WorldScene extends Phaser.Scene {
     color: number,
     label: string,
   ): void {
-    const { screenX, screenY } = worldToScreen(wx, wy);
+    const p = snapToTile(wx, wy);
+    const { screenX, screenY } = worldToScreen(p.x, p.y);
     const g = this.add.graphics();
-    g.fillStyle(color, 0.85);
-    g.fillRect(-28, -36, 56, 40);
-    g.fillStyle(0x1a1410, 0.9);
-    g.fillTriangle(-32, -36, 32, -36, 0, -58);
-    g.lineStyle(1, 0xc4a574, 0.35);
-    g.strokeRect(-28, -36, 56, 40);
+    g.fillStyle(color, 0.88);
+    g.fillRect(-22, -40, 44, 36);
+    g.fillStyle(0x1a1410, 0.92);
+    g.fillTriangle(-26, -40, 26, -40, 0, -58);
+    g.lineStyle(1, 0xc4a574, 0.4);
+    g.strokeRect(-22, -40, 44, 36);
     const t = this.add
-      .text(0, -18, label, {
+      .text(0, -48, label, {
         fontFamily: 'Segoe UI, sans-serif',
         fontSize: '10px',
         color: '#c8c0b0',
+        stroke: '#0a0c10',
+        strokeThickness: 3,
       })
       .setOrigin(0.5);
     const c = this.add.container(screenX, screenY, [g, t]);
-    c.setDepth(depthFromWorld(wx, wy) - 2);
+    // Slightly behind foot depth so player/NPC draw in front when overlapping
+    c.setDepth(depthFromWorld(p.x, p.y) - 40);
     this.decor.push(c);
+  }
+
+  /** Town rift opener — tall obelisk players use with R. */
+  private makeObelisk(wx: number, wy: number): Phaser.GameObjects.Container {
+    const { screenX, screenY } = worldToScreen(wx, wy);
+    const g = this.add.graphics();
+    g.fillStyle(0x000000, 0.35);
+    g.fillEllipse(0, 4, 28, 12);
+    g.fillStyle(0x2a4060, 1);
+    g.fillRect(-8, -52, 16, 54);
+    g.fillStyle(0x4db6ff, 0.95);
+    g.fillTriangle(-10, -52, 10, -52, 0, -72);
+    g.lineStyle(2, 0x8ec8ff, 0.9);
+    g.strokeRect(-8, -52, 16, 54);
+    const t = this.add
+      .text(0, -82, 'Rift Obelisk · R', {
+        fontFamily: 'Segoe UI, sans-serif',
+        fontSize: '11px',
+        color: '#b8d8ff',
+        stroke: '#0a0c10',
+        strokeThickness: 3,
+      })
+      .setOrigin(0.5);
+    const c = this.add.container(screenX, screenY, [g, t]);
+    c.setDepth(depthFromWorld(wx, wy));
+    c.setData('wx', wx);
+    c.setData('wy', wy);
+    return c;
   }
 
   private makeMarker(
@@ -258,7 +373,8 @@ export class WorldScene extends Phaser.Scene {
     color: number,
     label: string,
   ): Phaser.GameObjects.Container {
-    const { screenX, screenY } = worldToScreen(wx, wy);
+    const p = snapToTile(wx, wy);
+    const { screenX, screenY } = worldToScreen(p.x, p.y);
     const g = this.add.graphics();
     g.fillStyle(color, 0.35);
     g.fillEllipse(0, 0, 40, 20);
@@ -269,31 +385,52 @@ export class WorldScene extends Phaser.Scene {
         fontFamily: 'Segoe UI, sans-serif',
         fontSize: '11px',
         color: '#e8e4d8',
+        stroke: '#0a0c10',
+        strokeThickness: 3,
       })
       .setOrigin(0.5);
     const c = this.add.container(screenX, screenY, [g, t]);
-    c.setDepth(depthFromWorld(wx, wy) - 1);
-    c.setData('wx', wx);
-    c.setData('wy', wy);
+    c.setDepth(depthFromWorld(p.x, p.y));
+    c.setData('wx', p.x);
+    c.setData('wy', p.y);
     return c;
   }
 
   private drawHubTiles(): void {
     this.tiles.clear();
+    const size = this.hubSize;
     const pathSet = new Set(
       (this.hubLayout?.paths ?? []).map((p) => `${p.x},${p.y}`),
     );
-    for (let y = 0; y < HUB_SIZE; y++) {
-      for (let x = 0; x < HUB_SIZE; x++) {
+    for (let y = 0; y < size; y++) {
+      for (let x = 0; x < size; x++) {
         const onPath = pathSet.has(`${x},${y}`);
-        const base = onPath
-          ? (x + y) % 2 === 0
-            ? 0x3a4038
-            : 0x323830
-          : (x + y) % 2 === 0
-            ? 0x243028
-            : 0x1c2620;
+        const plaza = inPlaza(x, y);
+        let base: number;
+        if (plaza) {
+          // Warm stone plaza
+          base = (x + y) % 2 === 0 ? 0x4a463c : 0x3e3a32;
+        } else if (onPath) {
+          // Packed dirt roads
+          base = (x + y) % 2 === 0 ? 0x3a3830 : 0x322e28;
+        } else {
+          // Wild grass / ash scrub
+          const edge = x < 3 || y < 3 || x > size - 4 || y > size - 4;
+          base = edge
+            ? (x + y) % 2 === 0
+              ? 0x1a2218
+              : 0x141c14
+            : (x + y) % 2 === 0
+              ? 0x243028
+              : 0x1c2620;
+        }
         this.drawIsoTile(x, y, base);
+        // Soft plaza rim highlight
+        if (plaza && (x === 14 || x === 21 || y === 14 || y === 21)) {
+          const { screenX, screenY } = worldToScreen(x, y);
+          this.tiles.fillStyle(0xc4a574, 0.12);
+          this.tiles.fillCircle(screenX, screenY, 4);
+        }
       }
     }
     this.tiles.setDepth(-1000);
@@ -360,6 +497,7 @@ export class WorldScene extends Phaser.Scene {
     if (Phaser.Input.Keyboard.JustDown(this.keyE)) this.tryInteract();
     if (Phaser.Input.Keyboard.JustDown(this.keyF)) this.tryCraftNearby();
     if (Phaser.Input.Keyboard.JustDown(this.keyR)) this.tryPortal();
+    if (Phaser.Input.Keyboard.JustDown(this.keyTown)) this.returnToTown();
     if (Phaser.Input.Keyboard.JustDown(this.keySpace)) this.tryDash(dx, dy);
     if (Phaser.Input.Keyboard.JustDown(this.keyP)) this.toggleCoop();
     if (Phaser.Input.Keyboard.JustDown(this.keySkill1)) this.tryCastSkill(0);
@@ -368,7 +506,6 @@ export class WorldScene extends Phaser.Scene {
 
     this.updateEnemies(dt);
     this.updateNpcProximity();
-    this.checkRiftClear();
 
     this.saveTimer += dt;
     if (this.saveTimer > 8) {
@@ -411,22 +548,53 @@ export class WorldScene extends Phaser.Scene {
     audioBus.death();
     gameState.hp = Math.floor(gameState.maxHp * 0.5);
     if (gameState.inRift) {
-      gameState.inRift = false;
-      gameState.riftSeed = null;
-      gameState.worldX = 8;
-      gameState.worldY = 8;
-      this.player.worldX = 8;
-      this.player.worldY = 8;
-      this.loadZone(false);
+      this.returnToTown(false, true);
+      gameEvents.emit('ui:toast', { text: 'You fall… waking in town.' });
     } else {
-      gameState.worldX = 8;
-      gameState.worldY = 8;
-      this.player.worldX = 8;
-      this.player.worldY = 8;
+      this.player.worldX = TOWN_SPAWN.x;
+      this.player.worldY = TOWN_SPAWN.y;
+      gameState.worldX = TOWN_SPAWN.x;
+      gameState.worldY = TOWN_SPAWN.y;
       this.player.syncScreen();
+      gameState.persist();
     }
-    gameState.persist();
     gameEvents.emit(Events.PLAYER_DIED, {});
+  }
+
+  /** Always available (B): leave rift / reset to plaza. */
+  private returnToTown(reward = false, silent = false): void {
+    const wasRift = gameState.inRift;
+    if (wasRift && reward && this.riftCleared) {
+      gameState.progression.addXp(50);
+      gameState.inventory.add('rift_shard', 1);
+      gameState.inventory.add('gold', 20);
+    } else if (wasRift && !silent) {
+      gameState.progression.addXp(8);
+    }
+    gameState.inRift = false;
+    gameState.riftSeed = null;
+    gameState.worldX = TOWN_SPAWN.x;
+    gameState.worldY = TOWN_SPAWN.y;
+    this.player.worldX = TOWN_SPAWN.x;
+    this.player.worldY = TOWN_SPAWN.y;
+    this.loadZone(false);
+    gameState.persist();
+    if (wasRift) {
+      gameEvents.emit(Events.RIFT_CLEARED, {
+        cleared: reward && this.riftCleared,
+      });
+      if (!silent) {
+        gameEvents.emit('ui:toast', {
+          text:
+            reward && this.riftCleared
+              ? 'Rift cleared — back in town'
+              : 'Returned to town',
+        });
+      }
+    } else if (!silent) {
+      gameEvents.emit('ui:toast', { text: 'Already in town' });
+    }
+    this.emitRiftProgress();
   }
 
   private tryAttack(): void {
@@ -478,14 +646,7 @@ export class WorldScene extends Phaser.Scene {
       const { screenX, screenY } = worldToScreen(enemy.worldX, enemy.worldY);
       gameState.combat.emitDamageNumber(screenX, screenY - 18, dmg, 'enemy');
       const killed = enemy.applyDamage(dmg);
-      if (killed) {
-        gameState.combat.grantKillRewards(enemy.def.xp, enemy.def.lootTable, {
-          elite: enemy.def.isElite,
-          onGear: (g) => gameEvents.emit('ui:toast', { text: describeGear(g) }),
-        });
-        gameState.persist();
-        this.shakeUntil = this.time.now + 80;
-      }
+      if (killed) this.onEnemyKilled(enemy);
     }
     if (hit) audioBus.hit();
     if (netClient.connected) {
@@ -499,6 +660,89 @@ export class WorldScene extends Phaser.Scene {
     }
   }
 
+  private onEnemyKilled(enemy: Enemy): void {
+    const tier = Math.min(
+      4,
+      Math.max(
+        1,
+        (enemy.def.lootTier ?? 2) +
+          (enemy.elitePack ? 1 : 0) +
+          (enemy.isBoss ? 1 : 0),
+      ),
+    ) as 1 | 2 | 3 | 4;
+    gameState.combat.grantKillRewards(enemy.def.xp, enemy.def.lootTable, {
+      elite: enemy.awardsEliteLoot,
+      lootTier: tier,
+      onGear: (g) => gameEvents.emit('ui:toast', { text: describeGear(g) }),
+    });
+    gameState.persist();
+    this.shakeUntil = this.time.now + 80;
+    if (!gameState.inRift) return;
+
+    if (enemy.isBoss) {
+      this.riftBossDead = true;
+      this.riftCleared = true;
+      this.openExitPortal();
+      gameEvents.emit('ui:toast', {
+        text: 'Boss slain! Exit portal opened · R to leave · B town',
+      });
+      this.cameras.main.flash(220, 80, 160, 220, false, undefined, this);
+      this.emitRiftProgress();
+      return;
+    }
+
+    this.riftKills += 1;
+    this.emitRiftProgress();
+    if (!this.riftBossSpawned && this.riftKills >= this.riftKillGoal) {
+      this.spawnRiftBoss();
+    }
+  }
+
+  private spawnRiftBoss(): void {
+    if (this.riftBossSpawned || !gameState.inRift) return;
+    this.riftBossSpawned = true;
+    const anchor = this.bossAnchor ?? {
+      x: this.player.worldX + 2,
+      y: this.player.worldY,
+    };
+    const p = snapToTile(anchor.x, anchor.y);
+    this.enemies.push(
+      new Enemy(this, `enemy_${this.enemySeq++}`, 'rift_lord', p.x, p.y, {
+        boss: true,
+        levelScale: gameState.progression.level + 2,
+      }),
+    );
+    gameEvents.emit('ui:toast', {
+      text: 'The Rift tears open — a Rift Lord emerges!',
+    });
+    this.cameras.main.flash(160, 120, 40, 80, false, undefined, this);
+    this.emitRiftProgress();
+  }
+
+  private openExitPortal(): void {
+    this.portalMarker?.destroy(true);
+    const p = snapToTile(this.player.worldX, this.player.worldY - 1.5);
+    this.portalMarker = this.makeMarker(p.x, p.y, 0x4db6ff, 'Exit · R');
+  }
+
+  private emitRiftProgress(): void {
+    if (!gameState.inRift) {
+      gameEvents.emit(Events.RIFT_PROGRESS, { active: false });
+      return;
+    }
+    const phase = this.riftBossDead
+      ? 'exit'
+      : this.riftBossSpawned
+        ? 'boss'
+        : 'fill';
+    gameEvents.emit(Events.RIFT_PROGRESS, {
+      active: true,
+      kills: this.riftKills,
+      goal: this.riftKillGoal,
+      phase,
+    });
+  }
+
   private tryCastSkill(slot: number): void {
     const result = gameState.skills.cast(slot, {
       player: this.player,
@@ -506,14 +750,7 @@ export class WorldScene extends Phaser.Scene {
       combat: gameState.combat,
       walkCheck: this.player.walkCheck,
       gearSkillPower: gameState.inventory.totalGearStats().skillPower,
-      onKill: (enemy) => {
-        gameState.combat.grantKillRewards(enemy.def.xp, enemy.def.lootTable, {
-          elite: enemy.def.isElite,
-          onGear: (g) => gameEvents.emit('ui:toast', { text: describeGear(g) }),
-        });
-        gameState.persist();
-        this.shakeUntil = this.time.now + 80;
-      },
+      onKill: (enemy) => this.onEnemyKilled(enemy),
     });
     if (!result.ok) {
       if (result.reason) gameEvents.emit('ui:toast', { text: result.reason });
@@ -578,15 +815,26 @@ export class WorldScene extends Phaser.Scene {
   }
 
   private tryPortal(): void {
-    if (!this.portalMarker) return;
+    if (!this.portalMarker) {
+      if (gameState.inRift && !this.riftBossDead) {
+        gameEvents.emit('ui:toast', {
+          text: 'Fill the rift bar, slay the boss — then an Exit opens (or press B)',
+        });
+      }
+      return;
+    }
     const wx = this.portalMarker.getData('wx') as number;
     const wy = this.portalMarker.getData('wy') as number;
     const dist = worldDistance(
       { x: this.player.worldX, y: this.player.worldY },
       { x: wx, y: wy },
     );
-    if (dist > 1.8) {
-      gameEvents.emit('ui:toast', { text: 'Get closer to the Rift portal' });
+    if (dist > 2.0) {
+      gameEvents.emit('ui:toast', {
+        text: gameState.inRift
+          ? 'Get closer to the Exit portal'
+          : 'Get closer to the Rift Obelisk',
+      });
       return;
     }
     if (!gameState.inRift) {
@@ -594,21 +842,16 @@ export class WorldScene extends Phaser.Scene {
       gameState.riftSeed = (Date.now() ^ (Math.random() * 1e9)) >>> 0;
       this.loadZone(true);
       gameEvents.emit(Events.RIFT_ENTERED, { seed: gameState.riftSeed });
+      gameEvents.emit('ui:toast', {
+        text: 'Rift opened — kill foes to fill the bar · B returns to town',
+      });
+      this.emitRiftProgress();
+    } else if (this.riftBossDead) {
+      this.returnToTown(true);
     } else {
-      const bonusXp = this.riftCleared ? 50 : 12;
-      gameState.progression.addXp(bonusXp);
-      if (this.riftCleared) {
-        gameState.inventory.add('rift_shard', 1);
-        gameState.inventory.add('gold', 20);
-      }
-      gameState.inRift = false;
-      gameState.riftSeed = null;
-      gameState.worldX = 18;
-      gameState.worldY = 6;
-      this.player.worldX = 18;
-      this.player.worldY = 6;
-      this.loadZone(false);
-      gameEvents.emit(Events.RIFT_CLEARED, { cleared: this.riftCleared });
+      gameEvents.emit('ui:toast', {
+        text: 'Defeat the boss to open the Exit (B abandons)',
+      });
     }
     gameState.persist();
   }
@@ -641,13 +884,7 @@ export class WorldScene extends Phaser.Scene {
       if (dist > 1.6) continue;
       const { screenX, screenY } = worldToScreen(enemy.worldX, enemy.worldY);
       gameState.combat.emitDamageNumber(screenX, screenY - 18, dmg, 'enemy');
-      if (enemy.applyDamage(dmg)) {
-        gameState.combat.grantKillRewards(enemy.def.xp, enemy.def.lootTable, {
-          elite: enemy.def.isElite,
-          onGear: (g) => gameEvents.emit('ui:toast', { text: describeGear(g) }),
-        });
-        gameState.persist();
-      }
+      if (enemy.applyDamage(dmg)) this.onEnemyKilled(enemy);
     }
     this.cameras.main.flash(80, 110, 160, 200, false, undefined, this);
   }
@@ -678,18 +915,6 @@ export class WorldScene extends Phaser.Scene {
         { x: this.player.worldX, y: this.player.worldY },
         { x: wx, y: wy },
       ) < 1.8;
-  }
-
-  private checkRiftClear(): void {
-    if (!gameState.inRift || this.riftCleared) return;
-    const anyAlive = this.enemies.some((e) => e.alive);
-    if (!anyAlive && this.enemies.length > 0) {
-      this.riftCleared = true;
-      gameEvents.emit('ui:toast', {
-        text: 'Dungeon cleared! Find the Exit portal.',
-      });
-      this.cameras.main.flash(200, 80, 160, 220, false, undefined, this);
-    }
   }
 
   private toggleCoop(): void {

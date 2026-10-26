@@ -1,4 +1,19 @@
 {
+  "ash_scamp": {
+    "id": "ash_scamp",
+    "name": "Ash Scamp",
+    "hp": 16,
+    "damage": 2,
+    "speed": 1.8,
+    "attackRange": 0.85,
+    "attackCooldown": 1.1,
+    "xp": 6,
+    "color": "#6A5A48",
+    "radius": 8,
+    "lootTable": "scamp_loot",
+    "isElite": false,
+    "lootTier": 1
+  },
   "shade": {
     "id": "shade",
     "name": "Rift Shade",
@@ -11,7 +26,8 @@
     "color": "#5A3A6A",
     "radius": 10,
     "lootTable": "shade_loot",
-    "isElite": false
+    "isElite": false,
+    "lootTier": 2
   },
   "crawler": {
     "id": "crawler",
@@ -25,7 +41,8 @@
     "color": "#8A7A60",
     "radius": 12,
     "lootTable": "crawler_loot",
-    "isElite": false
+    "isElite": false,
+    "lootTier": 3
   },
   "wisp": {
     "id": "wisp",
@@ -39,7 +56,8 @@
     "color": "#E07040",
     "radius": 8,
     "lootTable": "wisp_loot",
-    "isElite": false
+    "isElite": false,
+    "lootTier": 2
   },
   "rift_lord": {
     "id": "rift_lord",
@@ -53,6 +71,7 @@
     "color": "#2A80C0",
     "radius": 16,
     "lootTable": "elite_loot",
-    "isElite": true
+    "isElite": true,
+    "lootTier": 4
   }
 }

@@ -17,5 +17,15 @@
       { "itemId": "rift_shard", "qtyMin": 0, "qtyMax": 1 }
     ],
     "toolBonusItem": "hatchet"
+  },
+  "berry_bush": {
+    "id": "berry_bush",
+    "name": "Ashberry Bush",
+    "hp": 12,
+    "color": "#4A6A3A",
+    "drops": [
+      { "itemId": "berries", "qtyMin": 2, "qtyMax": 5 },
+      { "itemId": "hide", "qtyMin": 0, "qtyMax": 1 }
+    ]
   }
 }

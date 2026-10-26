@@ -30,6 +30,9 @@ export type RecipeDef = {
   ingredients: { itemId: string; qty: number }[];
 };
 
+/** 1=starter wild, 2=normal rift, 3=tough, 4=boss/elite. */
+export type LootTier = 1 | 2 | 3 | 4;
+
 export type EnemyDef = {
   id: string;
   name: string;
@@ -43,6 +46,7 @@ export type EnemyDef = {
   radius: number;
   lootTable: string;
   isElite: boolean;
+  lootTier: LootTier;
 };
 
 export type LootRoll = {

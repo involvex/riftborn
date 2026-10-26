@@ -53,4 +53,5 @@ export const Events = {
   SETTINGS_CHANGED: 'settings:changed',
   SKILL_CHANGED: 'skill:changed',
   SKILL_CAST: 'skill:cast',
+  RIFT_PROGRESS: 'rift:progress',
 } as const;
