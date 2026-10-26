@@ -18,6 +18,16 @@ export class BootScene extends Phaser.Scene {
 
   create(): void {
     ensureGameSprites(this);
+
+    // Agent / Playwright: /?smoke=1 skips menus and loads a fresh hub character.
+    if (this.isSmokeBoot()) {
+      saveStore.clear();
+      gameState.createNew('Smoke', 'warrior', 'male');
+      this.scene.start('WorldScene');
+      this.scene.launch('UIScene');
+      return;
+    }
+
     const { width, height } = this.scale;
     this.cameras.main.setBackgroundColor('#0a0c10');
 
@@ -68,6 +78,14 @@ export class BootScene extends Phaser.Scene {
         },
       )
       .setOrigin(0.5);
+  }
+
+  private isSmokeBoot(): boolean {
+    try {
+      return new URLSearchParams(window.location.search).has('smoke');
+    } catch {
+      return false;
+    }
   }
 
   private makeButton(

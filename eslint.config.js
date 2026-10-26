@@ -5,7 +5,15 @@ import prettier from 'eslint-config-prettier';
 
 export default tseslint.config(
   {
-    ignores: ['dist/**', 'node_modules/**', 'electron/**'],
+    ignores: [
+      'dist/**',
+      'node_modules/**',
+      'electron/**',
+      'release/**',
+      'artifacts/**',
+      'test-results/**',
+      'playwright-report/**',
+    ],
   },
   js.configs.recommended,
   ...tseslint.configs.recommended,

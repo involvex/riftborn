@@ -20,7 +20,9 @@
     "lint": "eslint .",
     "format": "prettier . --write",
     "format:check": "prettier . --check",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test:smoke": "playwright test e2e/hub.smoke.spec.ts",
+    "test:smoke:headed": "playwright test e2e/hub.smoke.spec.ts --headed"
   },
   "build": {
     "appId": "dev.riftborn.game",
@@ -55,6 +57,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
+    "@playwright/test": "^1.64.1",
     "@types/node": "^26.6.5",
     "concurrently": "^10.0.6",
     "electron": "^45.0.0",

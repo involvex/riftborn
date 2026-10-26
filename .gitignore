@@ -28,3 +28,11 @@ release
 
 # Intermediate AI downloads (PNG sources + game/ sheets are enough)
 public/assets/sprites/*.webp
+
+# Playwright / agent smoke artifacts (keep folder via .gitkeep)
+artifacts/*
+!artifacts/.gitkeep
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/

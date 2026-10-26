@@ -6,6 +6,10 @@ import {
   worldToScreen,
 } from '../core/IsoMath';
 import { Events, gameEvents } from '../core/EventBus';
+import {
+  clearRiftbornDebug,
+  installRiftbornDebug,
+} from '../debug/RiftbornDebug';
 import { Enemy } from '../entities/Enemy';
 import { LootChest } from '../entities/LootChest';
 import { Npc } from '../entities/Npc';
@@ -104,11 +108,44 @@ export class WorldScene extends Phaser.Scene {
     this.setupInput();
     this.cameras.main.startFollow(this.player.body, true, 0.12, 0.12);
     this.cameras.main.setZoom(1.1);
+    this.publishDebugApi();
 
     this.events.on(Phaser.Scenes.Events.SHUTDOWN, () => this.cleanup());
   }
 
+  /** Live snapshots for Cursor agents & Playwright (`window.__RIFTBORN`). */
+  private publishDebugApi(): void {
+    installRiftbornDebug(() => ({
+      hubSize: this.hubSize,
+      inRift: gameState.inRift,
+      player: { x: this.player.worldX, y: this.player.worldY },
+      enemies: this.enemies.map((e) => ({
+        id: e.id,
+        defId: e.def.id,
+        x: e.worldX,
+        y: e.worldY,
+        alive: e.alive,
+      })),
+      pois: this.wildernessPois.map((p) => ({
+        id: p.id,
+        kind: p.kind,
+        name: p.name,
+        x: p.x,
+        y: p.y,
+        radius: p.radius,
+      })),
+      chests: this.chests.map((c) => ({
+        id: c.id,
+        x: c.worldX,
+        y: c.worldY,
+        looted: c.looted,
+        lootTier: c.lootTier,
+      })),
+    }));
+  }
+
   private cleanup(): void {
+    clearRiftbornDebug();
     this.unsubNet?.();
     this.unsubNet = null;
     this.player?.destroy();
