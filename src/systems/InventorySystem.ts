@@ -1,18 +1,28 @@
 import { Events, gameEvents } from '../core/EventBus';
+import { settingsStore } from '../core/SettingsStore';
 import type {
   CharacterClassId,
   GearInstance,
+  GearRarity,
   GearStats,
   ItemDef,
 } from '../types/game';
 import type { EquipmentSlots, InventorySlot } from '../types/save';
 import itemsData from '../data/items.json';
+import { gearSellValue, isJunkGear } from './Economy';
 import {
   emptyGearStats,
   migrateGearInstance,
   resolveGearClass,
 } from './ItemGen';
 import { sumSetStats } from './SetBonus';
+
+const RARITY_RANK: Record<GearRarity, number> = {
+  common: 0,
+  magic: 1,
+  rare: 2,
+  legendary: 3,
+};
 
 const items = itemsData as Record<string, ItemDef>;
 
@@ -112,11 +122,50 @@ export class InventorySystem {
     return true;
   }
 
-  addGear(item: GearInstance): boolean {
+  /**
+   * Add gear to the bag. When `allowAutosell` (default true) and settings
+   * auto-sell junk, common pieces convert to gold instead.
+   */
+  addGear(item: GearInstance, opts: { allowAutosell?: boolean } = {}): boolean {
+    const allowAutosell = opts.allowAutosell !== false;
+    if (allowAutosell && settingsStore.get().autoSellJunk && isJunkGear(item)) {
+      const gold = gearSellValue(item);
+      this.add('gold', gold);
+      gameEvents.emit(Events.JUNK_SOLD, { item, gold, auto: true });
+      return true;
+    }
     if (!this.canAddGear()) return false;
     this.slots.push({ kind: 'gear', item });
     gameEvents.emit(Events.ITEM_ADDED, { gear: item });
     return true;
+  }
+
+  /** Sort bag: gear (rarity↓, slot, name) then stacks (name). */
+  sortBag(): void {
+    const gear = this.slots.filter(
+      (s): s is Extract<InventorySlot, { kind: 'gear' }> => s.kind === 'gear',
+    );
+    const stacks = this.slots.filter(
+      (s): s is Extract<InventorySlot, { kind: 'stack' }> => s.kind === 'stack',
+    );
+    gear.sort((a, b) => {
+      const rd = RARITY_RANK[b.item.rarity] - RARITY_RANK[a.item.rarity];
+      if (rd !== 0) return rd;
+      const sd = a.item.slot.localeCompare(b.item.slot);
+      if (sd !== 0) return sd;
+      return a.item.name.localeCompare(b.item.name);
+    });
+    stacks.sort((a, b) => {
+      const na = items[a.itemId]?.name ?? a.itemId;
+      const nb = items[b.itemId]?.name ?? b.itemId;
+      const kd = (items[a.itemId]?.kind ?? '').localeCompare(
+        items[b.itemId]?.kind ?? '',
+      );
+      if (kd !== 0) return kd;
+      return na.localeCompare(nb);
+    });
+    this.slots = [...gear, ...stacks];
+    gameEvents.emit(Events.ITEM_ADDED, { sorted: true });
   }
 
   remove(itemId: string, qty: number): boolean {

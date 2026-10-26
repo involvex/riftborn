@@ -191,6 +191,19 @@ export class UIScene extends Phaser.Scene {
         const d = p as { text: string };
         this.toast(d.text);
       }),
+      gameEvents.on(Events.JUNK_SOLD, (p) => {
+        const d = p as {
+          item: { name: string; rarity: string };
+          gold: number;
+          auto?: boolean;
+        };
+        if (d.auto) {
+          this.toast(`Auto-sold junk ${d.item.name} · +${d.gold}g`);
+        }
+        this.refresh();
+        if (this.inventoryPanel.open) this.inventoryPanel.refresh();
+        if (this.shopOpen) this.shopPanel.refresh();
+      }),
       gameEvents.on('ui:openCraft', () => {
         this.hideShop();
         this.showCraft();
@@ -537,11 +550,20 @@ export class UIScene extends Phaser.Scene {
           this.renderMenuPage();
         },
       );
-      this.menuButton(110, 'Hotkeys…', () => {
+      this.menuButton(
+        110,
+        `Auto-sell junk: ${s.autoSellJunk ? 'ON' : 'OFF'}`,
+        () => {
+          settingsStore.save({ autoSellJunk: !s.autoSellJunk });
+          gameEvents.emit(Events.SETTINGS_CHANGED);
+          this.renderMenuPage();
+        },
+      );
+      this.menuButton(160, 'Hotkeys…', () => {
         this.menuPage = 'hotkeys';
         this.renderMenuPage();
       });
-      this.menuButton(160, 'Back', () => {
+      this.menuButton(210, 'Back', () => {
         this.menuPage = 'root';
         this.renderMenuPage();
       });

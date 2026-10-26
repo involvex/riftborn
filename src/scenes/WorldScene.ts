@@ -38,6 +38,9 @@ import { netClient } from '../net/NetClient';
 import { bindAction } from '../core/Hotkeys';
 import { audioBus } from '../core/AudioBus';
 import { settingsStore } from '../core/SettingsStore';
+import { playSkillVfx } from '../render/SkillVfx';
+import classesData from '../data/classes.json';
+import type { CharacterClassId } from '../types/game';
 
 const DEFAULT_HUB_SIZE = HUB_SIZE;
 const TOWN_SPAWN = { ...HUB_SPAWN };
@@ -1053,6 +1056,22 @@ export class WorldScene extends Phaser.Scene {
       return;
     }
     audioBus.skill();
+    if (result.vfx && result.origin) {
+      const classId = gameState.progression.classId as CharacterClassId;
+      const hex =
+        (classesData as Record<string, { color?: string }>)[classId]?.color ??
+        '#c4a574';
+      const color = Phaser.Display.Color.HexStringToColor(hex).color;
+      playSkillVfx(this, {
+        kind: result.vfx,
+        worldX: result.origin.x,
+        worldY: result.origin.y,
+        targetX: result.target?.x,
+        targetY: result.target?.y,
+        facing: this.player.getFacing() < 0 ? -1 : 1,
+        color,
+      });
+    }
     gameState.worldX = this.player.worldX;
     gameState.worldY = this.player.worldY;
     if (netClient.connected) {

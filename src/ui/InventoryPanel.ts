@@ -6,11 +6,13 @@ import {
   describeGearFull,
   resolveGearClass,
 } from '../systems/ItemGen';
+import { stackSellValue } from '../systems/Economy';
 import { getItemDef } from '../systems/InventorySystem';
 import { gameState } from '../systems/GameState';
 import { addSlotIcon } from '../render/ItemIcons';
 import type { EquipmentSlots, InventorySlot } from '../types/save';
 import { uiFont, uiPanelSize } from '../core/UiScale';
+import { settingsStore } from '../core/SettingsStore';
 
 type EqKey = keyof EquipmentSlots;
 
@@ -219,7 +221,32 @@ export class InventoryPanel {
         color: '#c4a574',
       },
     );
-    this.gridRoot.add(bagLabel);
+    const sortBtn = this.scene.add
+      .text(gridW, 2, 'Sort', {
+        fontFamily: 'Segoe UI, sans-serif',
+        fontSize: '12px',
+        color: '#0a0c10',
+        backgroundColor: '#c4a574',
+        padding: { x: 8, y: 3 },
+      })
+      .setOrigin(1, 0)
+      .setInteractive({ useHandCursor: true });
+    sortBtn.on('pointerup', () => {
+      audioBus.uiClick();
+      gameState.inventory.sortBag();
+      gameState.persist();
+      this.detail.setText('Bag sorted · gear by rarity, then materials');
+      this.refresh();
+    });
+    const junkHint = settingsStore.get().autoSellJunk
+      ? '  ·  Auto-sell junk ON'
+      : '';
+    const hint = this.scene.add.text(0, 16, junkHint, {
+      fontFamily: 'Segoe UI, sans-serif',
+      fontSize: '10px',
+      color: '#6a8090',
+    });
+    this.gridRoot.add([bagLabel, sortBtn, hint]);
 
     const playerClass = gameState.progression.classId;
 
@@ -227,7 +254,7 @@ export class InventoryPanel {
       const col = i % cols;
       const row = Math.floor(i / cols);
       const x = col * (cell + gap);
-      const y = 22 + row * (cell + gap);
+      const y = 28 + row * (cell + gap);
       const slot = gameState.inventory.slots[i] as InventorySlot | undefined;
       const rect = this.scene.add
         .rectangle(x + cell / 2, y + cell / 2, cell, cell, 0x16202c, 1)
@@ -274,7 +301,12 @@ export class InventoryPanel {
         }
         if (slot.kind === 'stack') {
           const def = getItemDef(slot.itemId);
-          this.detail.setText(`${def?.name ?? slot.itemId}  ×${slot.qty}`);
+          const unit = stackSellValue(slot.itemId);
+          const sell =
+            unit > 0 ? `  ·  sell ${unit * slot.qty}g` : '  ·  not sellable';
+          this.detail.setText(
+            `${def?.name ?? slot.itemId}  ×${slot.qty}${sell}`,
+          );
         } else {
           const req = resolveGearClass(slot.item);
           const usable = !req || req === playerClass;

@@ -161,23 +161,62 @@ export class Player {
   playAttack(): void {
     this.playAnim('attack', true);
     this.showSlash();
+    // Punch the sprite forward slightly so the swing reads in-world.
+    const dir = this.facing;
+    this.sprite.setScale(
+      (isPaintedSprite(this.textureKey) ? 0.78 : 1.35) * 1.06,
+    );
+    this.sprite.x = dir * 5;
+    this.scene.time.delayedCall(90, () => {
+      this.applyScale();
+      this.sprite.x = 0;
+    });
   }
 
   private showSlash(): void {
     this.slash.clear();
     const dir = this.facing;
+    const cls = gameState.progression.classId;
     const color = Phaser.Display.Color.HexStringToColor(
       gameState.progression.classDef().color,
     ).color;
-    this.slash.lineStyle(3, color, 0.85);
-    this.slash.beginPath();
-    this.slash.arc(dir * 6, -10, 28, -1.1, 0.6, dir < 0);
-    this.slash.strokePath();
-    this.slash.lineStyle(2, 0xe8e4d8, 0.45);
-    this.slash.beginPath();
-    this.slash.arc(dir * 6, -10, 22, -0.9, 0.4, dir < 0);
-    this.slash.strokePath();
-    this.slashUntil = this.scene.time.now + 140;
+    const ox = dir * 8;
+    const oy = -12;
+    if (cls === 'mage') {
+      // Bolt-style radial burst
+      this.slash.lineStyle(3, color, 0.9);
+      this.slash.strokeCircle(ox + dir * 18, oy, 10);
+      this.slash.lineStyle(2, 0xe8f0ff, 0.7);
+      this.slash.beginPath();
+      this.slash.moveTo(ox, oy);
+      this.slash.lineTo(ox + dir * 34, oy - 4);
+      this.slash.strokePath();
+      this.slash.fillStyle(color, 0.35);
+      this.slash.fillCircle(ox + dir * 30, oy - 2, 5);
+    } else if (cls === 'mystic') {
+      // Twin crescent
+      this.slash.lineStyle(3, color, 0.85);
+      this.slash.beginPath();
+      this.slash.arc(ox, oy, 30, -1.2, 0.7, dir < 0);
+      this.slash.strokePath();
+      this.slash.lineStyle(2, 0xd0ffe0, 0.55);
+      this.slash.beginPath();
+      this.slash.arc(ox, oy + 2, 22, -1.0, 0.5, dir < 0);
+      this.slash.strokePath();
+    } else {
+      // Warrior sword arc + tip flare
+      this.slash.lineStyle(5, color, 0.55);
+      this.slash.beginPath();
+      this.slash.arc(ox, oy, 34, -1.25, 0.75, dir < 0);
+      this.slash.strokePath();
+      this.slash.lineStyle(3, 0xfff0d0, 0.9);
+      this.slash.beginPath();
+      this.slash.arc(ox, oy, 28, -1.1, 0.6, dir < 0);
+      this.slash.strokePath();
+      this.slash.fillStyle(0xffffff, 0.75);
+      this.slash.fillCircle(ox + dir * 26, oy + 8, 3);
+    }
+    this.slashUntil = this.scene.time.now + 200;
   }
 
   private playAnim(kind: AnimKind, force = false): void {

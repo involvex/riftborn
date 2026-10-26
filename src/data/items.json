@@ -4,28 +4,32 @@
     "name": "Ash Wood",
     "stack": 50,
     "kind": "material",
-    "color": "#8B5A2B"
+    "color": "#8B5A2B",
+    "sellValue": 2
   },
   "ore": {
     "id": "ore",
     "name": "Rift Ore",
     "stack": 50,
     "kind": "material",
-    "color": "#7A8B99"
+    "color": "#7A8B99",
+    "sellValue": 4
   },
   "scrap": {
     "id": "scrap",
     "name": "Bone Scrap",
     "stack": 50,
     "kind": "material",
-    "color": "#C4B59A"
+    "color": "#C4B59A",
+    "sellValue": 1
   },
   "rift_shard": {
     "id": "rift_shard",
     "name": "Rift Shard",
     "stack": 20,
     "kind": "material",
-    "color": "#6EC6FF"
+    "color": "#6EC6FF",
+    "sellValue": 12
   },
   "hatchet": {
     "id": "hatchet",
@@ -33,7 +37,8 @@
     "stack": 1,
     "kind": "tool",
     "color": "#A67C52",
-    "gatherBonus": 1.5
+    "gatherBonus": 1.5,
+    "sellValue": 8
   },
   "iron_blade": {
     "id": "iron_blade",
@@ -42,7 +47,8 @@
     "kind": "weapon",
     "color": "#B0B8C0",
     "damage": 8,
-    "attackRange": 1.2
+    "attackRange": 1.2,
+    "sellValue": 15
   },
   "rift_blade": {
     "id": "rift_blade",
@@ -51,7 +57,8 @@
     "kind": "weapon",
     "color": "#4DB6FF",
     "damage": 14,
-    "attackRange": 1.4
+    "attackRange": 1.4,
+    "sellValue": 40
   },
   "leather_vest": {
     "id": "leather_vest",
@@ -60,7 +67,8 @@
     "kind": "armor",
     "color": "#6B4F3A",
     "armor": 4,
-    "maxHpBonus": 20
+    "maxHpBonus": 20,
+    "sellValue": 12
   },
   "rift_mail": {
     "id": "rift_mail",
@@ -69,41 +77,47 @@
     "kind": "armor",
     "color": "#3A5A7A",
     "armor": 10,
-    "maxHpBonus": 40
+    "maxHpBonus": 40,
+    "sellValue": 35
   },
   "gold": {
     "id": "gold",
     "name": "Gold",
     "stack": 999,
     "kind": "currency",
-    "color": "#E6C35C"
+    "color": "#E6C35C",
+    "sellValue": 0
   },
   "hide": {
     "id": "hide",
     "name": "Ash Hide",
     "stack": 50,
     "kind": "material",
-    "color": "#A08060"
+    "color": "#A08060",
+    "sellValue": 3
   },
   "ember_dust": {
     "id": "ember_dust",
     "name": "Ember Dust",
     "stack": 50,
     "kind": "material",
-    "color": "#E07040"
+    "color": "#E07040",
+    "sellValue": 5
   },
   "bone_chip": {
     "id": "bone_chip",
     "name": "Bone Chip",
     "stack": 50,
     "kind": "material",
-    "color": "#D8C8A8"
+    "color": "#D8C8A8",
+    "sellValue": 1
   },
   "berries": {
     "id": "berries",
     "name": "Ashberries",
     "stack": 30,
     "kind": "material",
-    "color": "#C04060"
+    "color": "#C04060",
+    "sellValue": 2
   }
 }

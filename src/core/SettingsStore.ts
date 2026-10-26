@@ -22,6 +22,8 @@ export type GameSettings = {
   musicVolume: number;
   mute: boolean;
   showDamageNumbers: boolean;
+  /** Auto-convert common gear drops to gold. */
+  autoSellJunk: boolean;
   hotkeys: HotkeyMap;
 };
 
@@ -50,6 +52,7 @@ export const DEFAULT_SETTINGS: GameSettings = {
   musicVolume: 0.5,
   mute: false,
   showDamageNumbers: true,
+  autoSellJunk: false,
   hotkeys: { ...DEFAULT_HOTKEYS },
 };
 

@@ -44,6 +44,8 @@ export type SkillCastResult = {
   reason?: string;
   abilityName?: string;
   vfx?: AbilityDef['kind'];
+  origin?: { x: number; y: number };
+  target?: { x: number; y: number };
 };
 
 /**
@@ -271,13 +273,20 @@ export class SkillSystem {
       ctx.player.syncScreen();
     };
 
+    let targetPos: { x: number; y: number } | undefined;
+
     switch (def.kind) {
       case 'cleave':
-      case 'slow_nova': {
+      case 'slow_nova':
+      case 'pulse': {
         const targets = enemiesInRange(range, def.maxTargets ?? 6);
         for (const e of targets) {
           hitEnemy(e, base);
-          if (def.kind === 'slow_nova' && def.slow && def.duration) {
+          if (
+            (def.kind === 'slow_nova' || def.kind === 'pulse') &&
+            def.slow &&
+            def.duration
+          ) {
             e.applySlow(def.slow, def.duration + (rank - 1) * 0.4);
           }
         }
@@ -289,6 +298,7 @@ export class SkillSystem {
         hitEnemy(target, base);
         if (def.stun) target.applyStun(def.stun + (rank - 1) * 0.25);
         ctx.player.faceToward(target.worldX, target.worldY);
+        targetPos = { x: target.worldX, y: target.worldY };
         break;
       }
       case 'bolt': {
@@ -296,6 +306,13 @@ export class SkillSystem {
         if (!target) return { ok: false, reason: 'No target in range' };
         hitEnemy(target, base);
         ctx.player.faceToward(target.worldX, target.worldY);
+        targetPos = { x: target.worldX, y: target.worldY };
+        break;
+      }
+      case 'leap': {
+        moveBy(def.dash ?? 3.4);
+        const after = enemiesInRange(range, def.maxTargets ?? 5);
+        for (const e of after) hitEnemy(e, Math.floor(base * 1.05));
         break;
       }
       case 'dash_strike':
@@ -303,7 +320,6 @@ export class SkillSystem {
         moveBy(def.dash ?? 2);
         const after = enemiesInRange(range, def.maxTargets ?? 3);
         for (const e of after) hitEnemy(e, base);
-        ctx.player.playAttack();
         break;
       }
       case 'buff': {
@@ -325,6 +341,12 @@ export class SkillSystem {
     this.cooldownLeft[slot] = cd;
     ctx.player.playAttack();
     gameEvents.emit(Events.SKILL_CAST, { slot, abilityId, name: def.name });
-    return { ok: true, abilityName: def.name, vfx: def.kind };
+    return {
+      ok: true,
+      abilityName: def.name,
+      vfx: def.kind,
+      origin: { x: ctx.player.worldX, y: ctx.player.worldY },
+      target: targetPos,
+    };
   }
 }

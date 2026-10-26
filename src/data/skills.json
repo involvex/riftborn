@@ -1,5 +1,19 @@
 {
   "abilities": {
+    "war_leap": {
+      "id": "war_leap",
+      "classId": "warrior",
+      "name": "War Leap",
+      "blurb": "Leap forward and slam the ground — signature warrior opener.",
+      "maxRank": 3,
+      "cooldown": 5.5,
+      "kind": "leap",
+      "range": 2.6,
+      "dash": 3.4,
+      "damageMult": 1.55,
+      "rankBonus": 0.22,
+      "maxTargets": 5
+    },
     "war_cleave": {
       "id": "war_cleave",
       "classId": "warrior",
@@ -13,18 +27,6 @@
       "rankBonus": 0.2,
       "maxTargets": 4
     },
-    "war_cry": {
-      "id": "war_cry",
-      "classId": "warrior",
-      "name": "War Cry",
-      "blurb": "Brief fury — your strikes hit harder.",
-      "maxRank": 3,
-      "cooldown": 12,
-      "kind": "buff",
-      "damageMult": 1.35,
-      "rankBonus": 0.15,
-      "duration": 6
-    },
     "war_bash": {
       "id": "war_bash",
       "classId": "warrior",
@@ -37,6 +39,21 @@
       "damageMult": 1.8,
       "rankBonus": 0.25,
       "stun": 1.6
+    },
+    "mys_pulse": {
+      "id": "mys_pulse",
+      "classId": "mystic",
+      "name": "Rift Pulse",
+      "blurb": "Emit a rift pulse — damage and slow all nearby foes.",
+      "maxRank": 3,
+      "cooldown": 6,
+      "kind": "pulse",
+      "range": 3.4,
+      "damageMult": 0.95,
+      "rankBonus": 0.18,
+      "slow": 0.4,
+      "duration": 3.5,
+      "maxTargets": 8
     },
     "mys_rift": {
       "id": "mys_rift",
@@ -52,33 +69,20 @@
       "rankBonus": 0.2,
       "maxTargets": 3
     },
-    "mys_echo": {
-      "id": "mys_echo",
-      "classId": "mystic",
-      "name": "Echo Step",
-      "blurb": "Blink a short distance and leave a damaging echo.",
-      "maxRank": 3,
-      "cooldown": 7,
-      "kind": "blink",
-      "dash": 3.2,
-      "range": 1.6,
-      "damageMult": 1.1,
-      "rankBonus": 0.15,
-      "maxTargets": 3
-    },
     "mys_seal": {
       "id": "mys_seal",
       "classId": "mystic",
       "name": "Binding Seal",
-      "blurb": "Slow enemies in a radius around you.",
+      "blurb": "Heavy slow nova — longer duration than Pulse.",
       "maxRank": 3,
       "cooldown": 10,
       "kind": "slow_nova",
       "range": 3.2,
       "damageMult": 0.7,
       "rankBonus": 0.15,
-      "slow": 0.45,
-      "duration": 4
+      "slow": 0.5,
+      "duration": 4.5,
+      "maxTargets": 8
     },
     "mag_bolt": {
       "id": "mag_bolt",
@@ -104,7 +108,8 @@
       "damageMult": 1.25,
       "rankBonus": 0.2,
       "slow": 0.5,
-      "duration": 3.5
+      "duration": 3.5,
+      "maxTargets": 6
     },
     "mag_barrier": {
       "id": "mag_barrier",
@@ -124,66 +129,66 @@
   "trees": {
     "warrior": [
       {
-        "id": "w_cleave",
-        "abilityId": "war_cleave",
-        "name": "Cleaving Strike",
-        "blurb": "Starter. Spend points to raise rank (max 3).",
+        "id": "w_leap",
+        "abilityId": "war_leap",
+        "name": "War Leap",
+        "blurb": "Starter. Leap slam — rank up for more damage.",
         "col": 0,
         "row": 0,
         "requires": [],
         "starter": true
       },
       {
-        "id": "w_cry",
-        "abilityId": "war_cry",
-        "name": "War Cry",
-        "blurb": "Unlock, then rank up for a stronger fury buff.",
+        "id": "w_cleave",
+        "abilityId": "war_cleave",
+        "name": "Cleaving Strike",
+        "blurb": "Starter AoE sweep. Rank up for more targets punch.",
         "col": -1,
         "row": 1,
-        "requires": ["w_cleave"],
-        "starter": false
+        "requires": [],
+        "starter": true
       },
       {
         "id": "w_bash",
         "abilityId": "war_bash",
         "name": "Shield Bash",
-        "blurb": "Unlock, then rank up for harder stuns.",
+        "blurb": "Starter stun strike. Rank up for longer stuns.",
         "col": 1,
         "row": 1,
-        "requires": ["w_cleave"],
-        "starter": false
+        "requires": [],
+        "starter": true
       }
     ],
     "mystic": [
       {
-        "id": "m_rift",
-        "abilityId": "mys_rift",
-        "name": "Rift Slash",
-        "blurb": "Starter. Spend points to raise rank (max 3).",
+        "id": "m_pulse",
+        "abilityId": "mys_pulse",
+        "name": "Rift Pulse",
+        "blurb": "Starter pulse. Rank up for stronger slow.",
         "col": 0,
         "row": 0,
         "requires": [],
         "starter": true
       },
       {
-        "id": "m_echo",
-        "abilityId": "mys_echo",
-        "name": "Echo Step",
-        "blurb": "Unlock a longer blink with an echo hit.",
+        "id": "m_rift",
+        "abilityId": "mys_rift",
+        "name": "Rift Slash",
+        "blurb": "Starter dash cut. Rank up for more damage.",
         "col": -1,
         "row": 1,
-        "requires": ["m_rift"],
-        "starter": false
+        "requires": [],
+        "starter": true
       },
       {
         "id": "m_seal",
         "abilityId": "mys_seal",
         "name": "Binding Seal",
-        "blurb": "Unlock a slowing seal nova.",
+        "blurb": "Starter heavy slow. Rank up for duration.",
         "col": 1,
         "row": 1,
-        "requires": ["m_rift"],
-        "starter": false
+        "requires": [],
+        "starter": true
       }
     ],
     "mage": [
@@ -191,7 +196,7 @@
         "id": "g_bolt",
         "abilityId": "mag_bolt",
         "name": "Arc Bolt",
-        "blurb": "Starter. Spend points to raise rank (max 3).",
+        "blurb": "Starter bolt. Rank up for harder hits.",
         "col": 0,
         "row": 0,
         "requires": [],
@@ -201,21 +206,21 @@
         "id": "g_nova",
         "abilityId": "mag_nova",
         "name": "Frost Nova",
-        "blurb": "Unlock a freezing AoE.",
+        "blurb": "Starter freeze AoE. Rank up for damage.",
         "col": -1,
         "row": 1,
-        "requires": ["g_bolt"],
-        "starter": false
+        "requires": [],
+        "starter": true
       },
       {
         "id": "g_barrier",
         "abilityId": "mag_barrier",
         "name": "Rift Barrier",
-        "blurb": "Unlock a damage-absorbing shield.",
+        "blurb": "Starter shield. Rank up for more absorb HP.",
         "col": 1,
         "row": 1,
-        "requires": ["g_bolt"],
-        "starter": false
+        "requires": [],
+        "starter": true
       }
     ]
   }

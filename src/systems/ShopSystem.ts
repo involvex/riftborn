@@ -1,6 +1,9 @@
 import type { CharacterClassId, GearInstance, GearSlot } from '../types/game';
+import type { InventorySlot } from '../types/save';
+import { gearSellValue, isJunkGear, stackSellValue } from './Economy';
 import { rollGearDrop } from './ItemGen';
 import type { InventorySystem } from './InventorySystem';
+import { Events, gameEvents } from '../core/EventBus';
 
 export type ShopOffer = {
   id: string;
@@ -83,11 +86,57 @@ export class ShopSystem {
       forClass,
       anyClass: true,
     });
-    if (!this.inventory.addGear(gear)) {
+    if (!this.inventory.addGear(gear, { allowAutosell: false })) {
       this.inventory.add('gold', offer.price);
       return { ok: false, reason: 'Bag full' };
     }
     return { ok: true, gear };
+  }
+
+  sellBagIndex(
+    index: number,
+  ): { ok: true; gold: number; label: string } | { ok: false; reason: string } {
+    const slot = this.inventory.slots[index] as InventorySlot | undefined;
+    if (!slot) return { ok: false, reason: 'Empty slot' };
+    if (slot.kind === 'stack') {
+      const unit = stackSellValue(slot.itemId);
+      if (unit <= 0) return { ok: false, reason: 'Cannot sell that' };
+      const gold = unit * slot.qty;
+      const label = `${slot.itemId} ×${slot.qty}`;
+      if (!this.inventory.remove(slot.itemId, slot.qty)) {
+        return { ok: false, reason: 'Sell failed' };
+      }
+      this.inventory.add('gold', gold);
+      return { ok: true, gold, label };
+    }
+    const gold = gearSellValue(slot.item);
+    const label = slot.item.name;
+    const removed = this.inventory.removeGearUid(slot.item.uid);
+    if (!removed) return { ok: false, reason: 'Sell failed' };
+    this.inventory.add('gold', gold);
+    return { ok: true, gold, label };
+  }
+
+  /** Sell every common gear piece in the bag. */
+  sellAllJunk(): { count: number; gold: number } {
+    let gold = 0;
+    let count = 0;
+    const junkUids = this.inventory.slots
+      .filter(
+        (s): s is Extract<InventorySlot, { kind: 'gear' }> =>
+          s.kind === 'gear' && isJunkGear(s.item),
+      )
+      .map((s) => s.item.uid);
+    for (const uid of junkUids) {
+      const item = this.inventory.removeGearUid(uid);
+      if (!item) continue;
+      const price = gearSellValue(item);
+      this.inventory.add('gold', price);
+      gold += price;
+      count += 1;
+      gameEvents.emit(Events.JUNK_SOLD, { item, gold: price, auto: false });
+    }
+    return { count, gold };
   }
 
   /** Hint for HUD — which slots shop can fill. */

@@ -6,6 +6,8 @@ export type ItemDef = {
   stack: number;
   kind: ItemKind;
   color: string;
+  /** Vendor gold per unit (0 / omit = not sellable). */
+  sellValue?: number;
   gatherBonus?: number;
   damage?: number;
   attackRange?: number;
@@ -147,6 +149,8 @@ export type AbilityKind =
   | 'dash_strike'
   | 'blink'
   | 'slow_nova'
+  | 'pulse'
+  | 'leap'
   | 'bolt'
   | 'barrier';
 

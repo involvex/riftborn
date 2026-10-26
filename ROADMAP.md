@@ -1,31 +1,50 @@
 # Riftborn — Living roadmap
 
+Solo evenings, one shippable slice at a time. Prefer **feel → content → systems → polish → share**.
+
 ## Shipped
 
-- Phaser 4 isometric hub + **procedural rift dungeons** (rooms/corridors)
-- Classes: **Warrior / Mystic / Mage** character creation
-- Level **1–50**, **2 stat points/level** (STR/VIT/INT/SPI), character menu (`C`)
-- Gear instances: **hat / chest / legs / feet / weapon** with random affixes + rarity
-- **Set bonuses** (Ashen, Riftbound, Bone) at 2pc / 4pc
-- Enemy material loot + **armor/weapon drops**
-- Crafting bench, gathering, dash skill, local save v2
-- Self-hosted co-op (max 4) with port fallback + `public/coop-port.json`
-- **Electron** desktop shell (`bun run desktop` / `desktop:prod`)
-- **Portable Windows exe** (`bun run build:portable` → `release/Riftborn-*-portable.exe`)
+- Phaser 4 isometric hub + **procedural rift dungeons**
+- Classes: **Warrior / Mystic / Mage**; level **1–50**, stat points, character menu
+- Gear (5 slots), affixes/rarity, **set bonuses**; crafting, gathering, dash, local save
+- Hub **64×64**, plaza soft buffer, **POIs** (camp / ruin / scout / shrine / warren / grove / watch / cairn)
+- **Loot chests**, Ember Shrine timed buff, Ash Scout elite + rarity toast
+- Inventory **painted icons**, **Sort**, vendor **Buy/Sell**, **auto-sell junk**, sell values
+- Passive **OOC HP regen** (stronger in town)
+- Attack facing + class slash VFX; agent **smoke** (`/?smoke=1`, `__RIFTBORN`, Playwright)
+- Electron portable + self-hosted co-op (basic)
 
-## Next (good solo evenings)
+## Now — keep the loop fun (next ~4–6 evenings)
 
-1. Class skills that differ (warrior leap, mystic pulse, mage bolt)
-2. Inventory UI grid (drag equip) instead of hotkeys only
-3. Dungeon depth / difficulty scaling with player level
-4. Persist multiple characters (slot select)
-5. Custom app icon for Electron (replace default)
-6. Sound + juicier death/loot feedback
-7. Harden co-op: sync gear drops authoritatively
+Each item should be playable the same night you finish it.
 
-## Explicitly later
+| #   | Slice                         | Why it matters                         | Done when                                          |
+| --- | ----------------------------- | -------------------------------------- | -------------------------------------------------- |
+| 1   | **Distinct class skills**     | Classes feel same after create         | ~~Done:~~ Leap / Pulse / Bolt + full 1–3 kit + VFX |
+| 2   | **Rift depth ↔ level**        | Rifts get boring / too easy            | Deeper floors scale HP/dmg + slightly better loot  |
+| 3   | **Death / loot juice**        | Wins feel flat                         | Death sting + loot ping + rarity flash             |
+| 4   | **Character slots (2–3)**     | Replays / class tryouts without wipe   | Title → pick slot → create or load                 |
+| 5   | **One “boss” per rift**       | Clear goal inside the dungeon          | End room elite + guaranteed rare+ chest            |
+| 6   | **Commit shop/sort/autosell** | Economy slice is ready; get it on main | Playtested → commit → push                         |
 
-- Mobile
-- Trading / economy
-- Seasons / battle pass
-- Huge seamless open world
+Skip inventing new frameworks — extend `SkillSystem`, `DungeonGen` / `MapGen`, `UIScene`, `SaveStore`.
+
+## Next wave — content density
+
+- 2–3 more hub vendor NPCs (repair? one material buyer?)
+- Mini quests / bounties on plaza board (“clear scout camp”) → gold + XP
+- Rift modifiers (1–2: denser packs, glass cannon, double mats)
+- Drag-drop equip in inventory (optional; click/double-click already works)
+- Custom Electron icon (cheap win before sharing builds)
+
+## Later (don’t start yet)
+
+- Authoritative co-op loot / gear sync
+- Mobile, seasons, trading, seamless open world
+- Full new painted attack sheets (needs art time; VFX covers the gap for now)
+
+## Pace guide (solo)
+
+- **1 slice / session** when tired; **2** if hot
+- Always leave a green `typecheck` + `lint` + `build`; map/POI → also `test:smoke`
+- Share a portable build with one friend only after class skills + rift depth feel good

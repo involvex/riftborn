@@ -8,6 +8,7 @@ import type {
 } from '../types/game';
 import gearBases from '../data/gearBases.json';
 import setsData from '../data/sets.json';
+import { gearSellValue } from './Economy';
 
 type GearBase = {
   id: string;
@@ -394,11 +395,12 @@ export function describeGear(item: GearInstance): string {
   return parts.join(' · ');
 }
 
-/** Full tooltip including armor / set (Character tab & hover). */
+/** Full tooltip including armor / set / vendor value. */
 export function describeGearFull(item: GearInstance): string {
   const parts = [describeGear(item)];
   if (item.stats.armor) parts.push(`ARM ${item.stats.armor}`);
   if (item.setId) parts.push(`Set:${item.setId}`);
+  parts.push(`Sell ${gearSellValue(item)}g`);
   return parts.join(' · ');
 }
 

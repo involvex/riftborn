@@ -84,6 +84,7 @@ export class AbilityBar {
   }
 
   refresh(): void {
+    const accent = classAccent(gameState.progression.classId);
     for (let i = 0; i < ACTIVE_SLOTS; i++) {
       const id = gameState.skills.slotAbilityId(i);
       const def = id ? getAbilityDef(id) : undefined;
@@ -97,10 +98,23 @@ export class AbilityBar {
         slot.bg.setStrokeStyle(1, 0x3a4a5a, 0.7);
         continue;
       }
-      slot.name.setText(def.name);
+      slot.name.setText(shortAbilityName(def.name));
       slot.name.setColor('#e8e4d8');
       slot.cd.setText(cd > 0 ? `${cd.toFixed(1)}s` : `R${rank}`);
-      slot.bg.setStrokeStyle(1, cd > 0 ? 0x5a7080 : 0x6ec6a0, 0.95);
+      slot.bg.setStrokeStyle(1, cd > 0 ? 0x5a7080 : accent, 0.95);
     }
   }
+}
+
+function shortAbilityName(name: string): string {
+  // Fit bottom bar: "War Leap" → keep; longer names trim last word if needed
+  if (name.length <= 12) return name;
+  const parts = name.split(' ');
+  return parts[parts.length - 1] ?? name;
+}
+
+function classAccent(classId: string): number {
+  if (classId === 'warrior') return 0xc45c3a;
+  if (classId === 'mystic') return 0x6ec6a0;
+  return 0x5a8fd4;
 }
