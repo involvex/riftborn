@@ -5,6 +5,17 @@ import type {
   PlayerStats,
 } from './game';
 
+export type BountyKind = 'scout' | 'chests' | 'cull';
+
+export type ActiveBounty = {
+  kind: BountyKind;
+  label: string;
+  target: number;
+  progress: number;
+  rewardGold: number;
+  rewardXp: number;
+};
+
 export type StackSlot = {
   kind: 'stack';
   itemId: string;
@@ -48,4 +59,9 @@ export type CharacterSave = {
   inRift: boolean;
   riftSeed: number | null;
   playTimeSec: number;
+  /** Active plaza bounty (optional for older saves). */
+  bounty?: ActiveBounty | null;
+  bountyLastKind?: BountyKind | null;
+  /** Seconds left before the board accepts a new bounty. */
+  bountyCooldownLeft?: number;
 };

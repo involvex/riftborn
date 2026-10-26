@@ -72,6 +72,7 @@ export class GameState {
     this.riftSeed = null;
     this.playTimeSec = 0;
     this.pendingSessionToken = null;
+    this.bounties.load(null);
     this.persist();
   }
 
@@ -105,9 +106,15 @@ export class GameState {
     this.inRift = data.inRift;
     this.riftSeed = data.riftSeed;
     this.playTimeSec = data.playTimeSec;
+    this.bounties.load({
+      bounty: data.bounty ?? null,
+      lastKind: data.bountyLastKind ?? null,
+      cooldownLeft: data.bountyCooldownLeft ?? 0,
+    });
   }
 
   toSave(): CharacterSave {
+    const bountySlice = this.bounties.toSave();
     return {
       version: 4,
       name: this.name,
@@ -149,6 +156,9 @@ export class GameState {
       inRift: this.inRift,
       riftSeed: this.riftSeed,
       playTimeSec: this.playTimeSec,
+      bounty: bountySlice.bounty,
+      bountyLastKind: bountySlice.lastKind,
+      bountyCooldownLeft: bountySlice.cooldownLeft,
     };
   }
 

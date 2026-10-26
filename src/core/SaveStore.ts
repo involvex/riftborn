@@ -72,6 +72,9 @@ function migrateLegacy(old: LegacySave): CharacterSave {
     inRift: old.inRift,
     riftSeed: old.riftSeed,
     playTimeSec: old.playTimeSec,
+    bounty: null,
+    bountyLastKind: null,
+    bountyCooldownLeft: 0,
   };
 }
 

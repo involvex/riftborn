@@ -73,7 +73,7 @@ Do not rely on paste-a-screenshot alone after map/POI edits — prefer smoke + `
 - **Class skills (1/2/3):** all three unlocked at create — Warrior Leap/Cleave/Bash, Mystic Pulse/Slash/Seal, Mage Bolt/Nova/Barrier. Cast VFX in `SkillVfx.ts`; ranks via skill points (`K`).
 - **Rifts:** depth 1–10 from player level (`RiftDepth.ts`); packs/HP/dmg/loot scale; Rift Lord + boss chest; HUD shows `D#`. Random run mods (`RiftModifiers.ts`: Dense / Glass / Gilded).
 - **Saves:** 3 character slots on boot (`SaveStore`); legacy single save migrates to slot 1.
-- **Bounty Board:** plaza NPC south of spawn — **E** accept (scout / chests / cull); HUD ★ line; session-only.
+- **Bounty Board:** plaza NPC south of spawn — **E** accept (scout / chests / cull); HUD ★ line; progress + cooldown persist on character save.
 
 ## Controls (player)
 

@@ -1,14 +1,12 @@
 import { Events, gameEvents } from '../core/EventBus';
+import type { ActiveBounty, BountyKind } from '../types/save';
 
-export type BountyKind = 'scout' | 'chests' | 'cull';
+export type { ActiveBounty, BountyKind };
 
-export type ActiveBounty = {
-  kind: BountyKind;
-  label: string;
-  target: number;
-  progress: number;
-  rewardGold: number;
-  rewardXp: number;
+export type BountySaveSlice = {
+  bounty: ActiveBounty | null;
+  lastKind: BountyKind | null;
+  cooldownLeft: number;
 };
 
 const POOL: Array<Omit<ActiveBounty, 'progress'>> = [
@@ -35,9 +33,39 @@ const POOL: Array<Omit<ActiveBounty, 'progress'>> = [
   },
 ];
 
+const KINDS: BountyKind[] = ['scout', 'chests', 'cull'];
+
+function isBountyKind(v: unknown): v is BountyKind {
+  return typeof v === 'string' && (KINDS as string[]).includes(v);
+}
+
+function sanitizeBounty(raw: unknown): ActiveBounty | null {
+  if (!raw || typeof raw !== 'object') return null;
+  const b = raw as Partial<ActiveBounty>;
+  if (!isBountyKind(b.kind)) return null;
+  const template = POOL.find((p) => p.kind === b.kind);
+  if (!template) return null;
+  const target = Math.max(1, Math.floor(Number(b.target) || template.target));
+  const progress = Math.max(
+    0,
+    Math.min(target, Math.floor(Number(b.progress) || 0)),
+  );
+  return {
+    kind: b.kind,
+    label: typeof b.label === 'string' && b.label ? b.label : template.label,
+    target,
+    progress,
+    rewardGold: Math.max(
+      0,
+      Math.floor(Number(b.rewardGold) || template.rewardGold),
+    ),
+    rewardXp: Math.max(0, Math.floor(Number(b.rewardXp) || template.rewardXp)),
+  };
+}
+
 /**
- * Session bounties from the plaza board (not persisted).
- * Accept via E at the board; progress from hub kills / chests.
+ * Plaza bounties — accept via E at the board; progress from hub kills / chests.
+ * Active bounty + cooldown persist across reload.
  */
 export class BountySystem {
   active: ActiveBounty | null = null;
@@ -47,6 +75,37 @@ export class BountySystem {
 
   tick(dt: number): void {
     this.now += dt;
+  }
+
+  load(slice: BountySaveSlice | null | undefined): void {
+    this.now = 0;
+    if (!slice) {
+      this.active = null;
+      this.lastKind = null;
+      this.cooldownUntil = 0;
+      return;
+    }
+    this.active = sanitizeBounty(slice.bounty);
+    this.lastKind = isBountyKind(slice.lastKind) ? slice.lastKind : null;
+    const left = Math.max(0, Number(slice.cooldownLeft) || 0);
+    this.cooldownUntil = left;
+  }
+
+  toSave(): BountySaveSlice {
+    return {
+      bounty: this.active
+        ? {
+            kind: this.active.kind,
+            label: this.active.label,
+            target: this.active.target,
+            progress: this.active.progress,
+            rewardGold: this.active.rewardGold,
+            rewardXp: this.active.rewardXp,
+          }
+        : null,
+      lastKind: this.lastKind,
+      cooldownLeft: Math.max(0, this.cooldownUntil - this.now),
+    };
   }
 
   statusLine(): string | null {

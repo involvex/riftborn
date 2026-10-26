@@ -1218,6 +1218,7 @@ export class WorldScene extends Phaser.Scene {
     const b = gameState.bounties.accept();
     if (!b) return;
     audioBus.uiClick();
+    gameState.persist();
     gameEvents.emit('ui:toast', {
       text: `Bounty: ${b.label} · reward ${b.rewardGold}g + ${b.rewardXp} XP`,
     });
