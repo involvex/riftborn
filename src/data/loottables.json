@@ -32,6 +32,15 @@
       { "itemId": "gold", "chance": 0.4, "qtyMin": 1, "qtyMax": 3 }
     ]
   },
+  "scout_loot": {
+    "id": "scout_loot",
+    "rolls": [
+      { "itemId": "scrap", "chance": 0.8, "qtyMin": 2, "qtyMax": 4 },
+      { "itemId": "hide", "chance": 0.55, "qtyMin": 1, "qtyMax": 3 },
+      { "itemId": "ore", "chance": 0.4, "qtyMin": 1, "qtyMax": 2 },
+      { "itemId": "gold", "chance": 1, "qtyMin": 6, "qtyMax": 14 }
+    ]
+  },
   "elite_loot": {
     "id": "elite_loot",
     "rolls": [

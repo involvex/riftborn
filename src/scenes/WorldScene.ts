@@ -266,16 +266,32 @@ export class WorldScene extends Phaser.Scene {
   private makePoiMarker(poi: WildernessPoi): void {
     const p = snapToTile(poi.x, poi.y);
     const { screenX, screenY } = worldToScreen(p.x, p.y);
-    const accent = poi.kind === 'camp' ? 0xc45c3a : 0x6a80a0;
+    const accent =
+      poi.kind === 'camp'
+        ? 0xc45c3a
+        : poi.kind === 'scout'
+          ? 0xc4a040
+          : 0x6a80a0;
     const g = this.add.graphics();
     g.lineStyle(2, accent, 0.55);
     g.strokeEllipse(0, 2, 52, 24);
-    const subtitle = poi.kind === 'camp' ? 'Bandit camp' : 'Ancient ruin';
+    const subtitle =
+      poi.kind === 'camp'
+        ? 'Bandit camp'
+        : poi.kind === 'scout'
+          ? 'Elite scout · magic loot'
+          : 'Ancient ruin';
+    const titleColor =
+      poi.kind === 'camp'
+        ? '#e8b090'
+        : poi.kind === 'scout'
+          ? '#e8d080'
+          : '#b8c8e0';
     const title = this.add
       .text(0, -36, poi.name, {
         fontFamily: 'Georgia, serif',
         fontSize: '13px',
-        color: poi.kind === 'camp' ? '#e8b090' : '#b8c8e0',
+        color: titleColor,
         stroke: '#0a0c10',
         strokeThickness: 4,
       })
@@ -310,7 +326,9 @@ export class WorldScene extends Phaser.Scene {
       const tip =
         poi.kind === 'camp'
           ? `${poi.name} — mid-tier bandits ahead`
-          : `${poi.name} — stronger foes & richer veins`;
+          : poi.kind === 'scout'
+            ? `${poi.name} — lone elite, always drops magic gear`
+            : `${poi.name} — stronger foes & richer veins`;
       gameEvents.emit('ui:toast', { text: tip });
     }
   }
@@ -513,6 +531,8 @@ export class WorldScene extends Phaser.Scene {
           base = (x + y) % 2 === 0 ? 0x4a463c : 0x3e3a32;
         } else if (poi?.kind === 'camp') {
           base = (x + y) % 2 === 0 ? 0x3a3228 : 0x322a22;
+        } else if (poi?.kind === 'scout') {
+          base = (x + y) % 2 === 0 ? 0x3a3428 : 0x322e20;
         } else if (poi?.kind === 'ruin') {
           base = (x + y) % 2 === 0 ? 0x2a323c : 0x222830;
         } else if (onPath) {
@@ -776,6 +796,7 @@ export class WorldScene extends Phaser.Scene {
     gameState.combat.grantKillRewards(enemy.def.xp, enemy.def.lootTable, {
       elite: enemy.awardsEliteLoot,
       lootTier: tier,
+      guaranteedMinRarity: enemy.def.id === 'ash_scout' ? 'magic' : undefined,
       onGear: (g) => gameEvents.emit('ui:toast', { text: describeGear(g) }),
     });
     gameState.persist();

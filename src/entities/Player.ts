@@ -1,5 +1,9 @@
 import Phaser from 'phaser';
-import { depthFromWorld, worldToScreen } from '../core/IsoMath';
+import {
+  depthFromWorld,
+  facingFromDelta,
+  worldToScreen,
+} from '../core/IsoMath';
 import {
   ensureGameSprites,
   isPaintedSprite,
@@ -24,8 +28,8 @@ export class Player {
   private readonly sprite: Phaser.GameObjects.Sprite;
   private readonly label: Phaser.GameObjects.Text;
   private readonly slash: Phaser.GameObjects.Graphics;
-  /** +1 = facing SE (default iso), -1 = mirrored for westward motion. */
-  private facing = 1;
+  /** +1 = screen-right (SE), -1 = screen-left (mirrored). */
+  private facing: 1 | -1 = 1;
   private animKind: AnimKind = 'idle';
   private moving = false;
   private textureKey: string;
@@ -59,6 +63,7 @@ export class Player {
       this.label,
     ]);
     this.applyClassTint();
+    this.applyFacing();
     this.playAnim('idle', true);
     this.syncScreen();
   }
@@ -76,11 +81,15 @@ export class Player {
     }
     this.label.setText(gameState.name);
     this.applyClassTint();
+    this.applyFacing();
   }
 
   private applyScale(): void {
-    // Painted idle portraits read small at 0.5 — match enemy presence
     this.sprite.setScale(isPaintedSprite(this.textureKey) ? 0.78 : 1.35);
+  }
+
+  private applyFacing(): void {
+    this.sprite.setFlipX(this.facing < 0);
   }
 
   private applyClassTint(): void {
@@ -113,14 +122,9 @@ export class Player {
       return;
     }
     this.moving = true;
-    // Painted iso sprites are authored SE-facing; full flipX looks broken.
-    // Only flip procedural placeholders.
-    if (dx !== 0) {
-      this.facing = dx > 0 ? 1 : -1;
-      if (!isPaintedSprite(this.textureKey)) {
-        this.sprite.setFlipX(this.facing < 0);
-      }
-    }
+    this.facing = facingFromDelta(dx, dy);
+    this.applyFacing();
+
     const len = Math.hypot(dx, dy) || 1;
     const nx = this.worldX + (dx / len) * this.speed * dt;
     const ny = this.worldY + (dy / len) * this.speed * dt;
@@ -140,19 +144,18 @@ export class Player {
     this.syncScreen();
   }
 
-  /** +1 SE / -1 SW-ish facing used by dash skills. */
+  /** +1 screen-right / -1 screen-left (dash skills). */
   getFacing(): number {
     return this.facing;
   }
 
-  /** Face toward a world point (used on click-attack). */
-  faceToward(worldX: number, _worldY: number): void {
+  /** Face toward a world point (click-attack / skills). */
+  faceToward(worldX: number, worldY: number): void {
     const dx = worldX - this.worldX;
-    if (Math.abs(dx) < 0.05) return;
-    this.facing = dx > 0 ? 1 : -1;
-    if (!isPaintedSprite(this.textureKey)) {
-      this.sprite.setFlipX(this.facing < 0);
-    }
+    const dy = worldY - this.worldY;
+    if (Math.abs(dx) + Math.abs(dy) < 0.05) return;
+    this.facing = facingFromDelta(dx, dy);
+    this.applyFacing();
   }
 
   playAttack(): void {
@@ -162,7 +165,7 @@ export class Player {
 
   private showSlash(): void {
     this.slash.clear();
-    const dir = this.facing >= 0 ? 1 : -1;
+    const dir = this.facing;
     const color = Phaser.Display.Color.HexStringToColor(
       gameState.progression.classDef().color,
     ).color;

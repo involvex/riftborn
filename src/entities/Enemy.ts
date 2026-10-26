@@ -1,5 +1,10 @@
 import Phaser from 'phaser';
-import { depthFromWorld, worldDistance, worldToScreen } from '../core/IsoMath';
+import {
+  depthFromWorld,
+  facingFromDelta,
+  worldDistance,
+  worldToScreen,
+} from '../core/IsoMath';
 import {
   enemySpriteKey,
   ensureGameSprites,
@@ -80,18 +85,7 @@ export class Enemy {
           : 1.2;
     this.sprite.setScale(drawScale);
     this.sprite.setOrigin(0.5, 0.88);
-    // Painted iso art is SE-facing — avoid flipX mirroring artifacts
-    if (painted) this.sprite.setFlipX(false);
-    if (defId === 'ash_scamp') {
-      this.sprite.setTint(0xb08a60);
-    } else if (
-      (this.def.isElite || this.elitePack || this.isBoss) &&
-      !painted
-    ) {
-      this.sprite.setTint(this.isBoss ? 0x80c8ff : 0xa0d8ff);
-    } else if (this.elitePack && painted) {
-      this.sprite.setTint(0xa8d0ff);
-    }
+    this.applyBaseTint();
     this.bar = scene.add.graphics();
     this.body = scene.add.container(0, 0, [this.sprite, this.bar]);
     this.playAnim('idle');
@@ -101,6 +95,24 @@ export class Enemy {
 
   get awardsEliteLoot(): boolean {
     return this.def.isElite || this.elitePack || this.isBoss;
+  }
+
+  private applyBaseTint(): void {
+    const painted = isPaintedSprite(this.textureKey);
+    if (this.def.id === 'ash_scamp') {
+      this.sprite.setTint(0xb08a60);
+    } else if (this.def.id === 'ash_scout') {
+      this.sprite.setTint(0xd4a060);
+    } else if (
+      (this.def.isElite || this.elitePack || this.isBoss) &&
+      !painted
+    ) {
+      this.sprite.setTint(this.isBoss ? 0x80c8ff : 0xa0d8ff);
+    } else if (this.elitePack && painted) {
+      this.sprite.setTint(0xa8d0ff);
+    } else {
+      this.sprite.clearTint();
+    }
   }
 
   redraw(): void {
@@ -172,9 +184,10 @@ export class Enemy {
     if (this.state === 'patrol') {
       this.patrolAngle += dt * 0.6;
       const dx = Math.cos(this.patrolAngle);
+      const dy = Math.sin(this.patrolAngle);
       this.worldX += dx * spd * 0.35 * dt;
-      this.worldY += Math.sin(this.patrolAngle) * spd * 0.35 * dt;
-      if (!isPaintedSprite(this.textureKey)) this.sprite.setFlipX(dx < 0);
+      this.worldY += dy * spd * 0.35 * dt;
+      this.sprite.setFlipX(facingFromDelta(dx, dy) < 0);
       const homeDist = worldDistance(
         { x: this.worldX, y: this.worldY },
         { x: this.homeX, y: this.homeY },
@@ -190,12 +203,12 @@ export class Enemy {
       const len = Math.hypot(dx, dy) || 1;
       this.worldX += (dx / len) * spd * dt;
       this.worldY += (dy / len) * spd * dt;
-      if (!isPaintedSprite(this.textureKey)) this.sprite.setFlipX(dx < 0);
+      this.sprite.setFlipX(facingFromDelta(dx, dy) < 0);
       this.playAnim('walk');
     } else if (this.state === 'attack') {
-      if (!isPaintedSprite(this.textureKey)) {
-        this.sprite.setFlipX(playerX < this.worldX);
-      }
+      this.sprite.setFlipX(
+        facingFromDelta(playerX - this.worldX, playerY - this.worldY) < 0,
+      );
       if (this.attackTimer <= 0) {
         hitPlayer = true;
         damage = Math.floor(
@@ -237,10 +250,7 @@ export class Enemy {
     this.sprite.setTint(0xffffff);
     this.sprite.scene.time.delayedCall(60, () => {
       if (!this.alive) return;
-      this.sprite.clearTint();
-      if (this.def.isElite && !isPaintedSprite(this.textureKey)) {
-        this.sprite.setTint(0xa0d8ff);
-      }
+      this.applyBaseTint();
     });
     if (this.hp <= 0) {
       this.alive = false;

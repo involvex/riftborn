@@ -40,22 +40,37 @@ function uid(): string {
   return `g_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
 }
 
-function pickRarity(rnd: () => number, eliteBonus = 0): GearRarity {
+const RARITY_RANK: Record<GearRarity, number> = {
+  common: 0,
+  magic: 1,
+  rare: 2,
+  legendary: 3,
+};
+
+function pickRarity(
+  rnd: () => number,
+  eliteBonus = 0,
+  minRarity: GearRarity = 'common',
+): GearRarity {
   const bump = eliteBonus;
+  const minRank = RARITY_RANK[minRarity];
   const pool = RARITY_WEIGHTS.map((r) => ({
     ...r,
     w:
       r.rarity === 'common'
-        ? Math.max(5, r.w - bump * 10)
+        ? Math.max(0, r.w - bump * 10)
         : r.w + bump * (r.rarity === 'legendary' ? 8 : 4),
-  }));
-  const total = pool.reduce((n, r) => n + r.w, 0);
+  })).filter((r) => RARITY_RANK[r.rarity] >= minRank);
+  const usable = pool.length
+    ? pool
+    : RARITY_WEIGHTS.filter((r) => RARITY_RANK[r.rarity] >= minRank);
+  const total = usable.reduce((n, r) => n + r.w, 0);
   let roll = rnd() * total;
-  for (const r of pool) {
+  for (const r of usable) {
     roll -= r.w;
     if (roll <= 0) return r.rarity;
   }
-  return 'common';
+  return minRarity;
 }
 
 export function emptyGearStats(): GearStats {
@@ -246,6 +261,8 @@ export function rollGearDrop(
     anyClass?: boolean;
     /** Enemy difficulty band — shifts power & naming. */
     lootTier?: LootTier;
+    /** Floor rarity (e.g. scout always magic+). */
+    minRarity?: GearRarity;
     rnd?: () => number;
   } = {},
 ): GearInstance {
@@ -256,7 +273,11 @@ export function rollGearDrop(
   const rarityBump =
     (opts.elite ? 2 : 0) +
     (tier === 1 ? -1 : tier === 3 ? 1 : tier === 4 ? 3 : 0);
-  const rarity = pickRarity(rnd, Math.max(0, rarityBump));
+  const rarity = pickRarity(
+    rnd,
+    Math.max(0, rarityBump),
+    opts.minRarity ?? 'common',
+  );
   const affixCount =
     (RARITY_WEIGHTS.find((r) => r.rarity === rarity)?.affixes ?? 0) +
     (tier >= 3 ? 1 : 0);

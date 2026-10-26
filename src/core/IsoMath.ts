@@ -38,3 +38,16 @@ export function worldDistance(
 export function snapToTile(x: number, y: number): { x: number; y: number } {
   return { x: Math.floor(x) + 0.5, y: Math.floor(y) + 0.5 };
 }
+
+/**
+ * Iso facing for SE-authored sprites: +1 faces screen-right, -1 screen-left.
+ * Uses world Δ projected onto screen X (x − y).
+ */
+export function facingFromDelta(dx: number, dy: number): 1 | -1 {
+  const screenDx = dx - dy;
+  if (Math.abs(screenDx) < 0.08) {
+    if (Math.abs(dx) + Math.abs(dy) < 0.01) return 1;
+    return dy >= 0 ? 1 : -1;
+  }
+  return screenDx >= 0 ? 1 : -1;
+}

@@ -33,7 +33,7 @@ export type HubDecorKind =
 
 export type HubDecor = SpawnPoint & { kind: HubDecorKind };
 
-export type PoiKind = 'camp' | 'ruin';
+export type PoiKind = 'camp' | 'ruin' | 'scout';
 
 /** Named wilderness landmark with mid-tier packs. */
 export type WildernessPoi = SpawnPoint & {
@@ -129,6 +129,14 @@ export function generateHub(seed = 1): ZoneLayout {
       y: 7.5,
       radius: 2.8,
     },
+    {
+      id: 'lone_scout_camp',
+      kind: 'scout',
+      name: 'Lone Scout Camp',
+      x: 30.5,
+      y: 29.5,
+      radius: 2.2,
+    },
   ];
 
   // Plaza floor
@@ -154,6 +162,8 @@ export function generateHub(seed = 1): ZoneLayout {
   // Spur roads toward POIs
   for (let x = 6; x <= 17; x++) paths.push({ x, y: 28 });
   for (let y = 7; y <= 17; y++) paths.push({ x: 29, y });
+  for (let x = 17; x <= 30; x++) paths.push({ x, y: 29 });
+  for (let y = 17; y <= 29; y++) paths.push({ x: 30, y });
 
   for (const poi of pois) {
     fillClearing(paths, Math.floor(poi.x), Math.floor(poi.y), poi.radius);
@@ -187,6 +197,13 @@ export function generateHub(seed = 1): ZoneLayout {
   decor.push({ kind: 'rubble', x: 29.5, y: 7.5 });
   decor.push({ kind: 'rubble', x: 28.5, y: 7.5 });
   decor.push({ kind: 'rubble', x: 30.5, y: 7.5 });
+
+  // —— Lone Scout Camp (SE) ——
+  decor.push({ kind: 'campfire', x: 30.5, y: 29.5 });
+  decor.push({ kind: 'tent', x: 29.5, y: 28.5 });
+  decor.push({ kind: 'crate', x: 31.5, y: 29.5 });
+  decor.push({ kind: 'lantern', x: 31.5, y: 28.5 });
+  decor.push({ kind: 'bush', x: 29.5, y: 30.5 });
 
   // Gathering fringe (outside plaza, road, POIs)
   for (let i = 0; i < 20; i++) {
@@ -265,6 +282,8 @@ export function generateHub(seed = 1): ZoneLayout {
     { enemyId: 'wisp', count: 2, x: 30.5, y: 6.5 },
     { enemyId: 'crawler', count: 1, x: 30.5, y: 8.5 },
   );
+  // Lone scout: one elite — always drops magic+ gear
+  packs.push({ enemyId: 'ash_scout', count: 1, x: 30.5, y: 29.5 });
 
   return {
     size,

@@ -14,6 +14,21 @@
     "isElite": false,
     "lootTier": 1
   },
+  "ash_scout": {
+    "id": "ash_scout",
+    "name": "Ash Scout",
+    "hp": 95,
+    "damage": 9,
+    "speed": 2.6,
+    "attackRange": 1.15,
+    "attackCooldown": 0.85,
+    "xp": 55,
+    "color": "#D4A060",
+    "radius": 12,
+    "lootTable": "scout_loot",
+    "isElite": true,
+    "lootTier": 3
+  },
   "shade": {
     "id": "shade",
     "name": "Rift Shade",

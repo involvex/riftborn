@@ -1,5 +1,10 @@
 import { Events, gameEvents } from '../core/EventBus';
-import type { GearInstance, LootTableDef, LootTier } from '../types/game';
+import type {
+  GearInstance,
+  GearRarity,
+  LootTableDef,
+  LootTier,
+} from '../types/game';
 import loottables from '../data/loottables.json';
 import type { InventorySystem } from './InventorySystem';
 import { gearDropChance, rollGearDrop } from './ItemGen';
@@ -60,6 +65,8 @@ export class CombatSystem {
     opts: {
       elite?: boolean;
       lootTier?: LootTier;
+      /** Always drop at least one piece at this rarity+. */
+      guaranteedMinRarity?: GearRarity;
       onGear?: (g: GearInstance) => void;
     } = {},
   ): void {
@@ -69,13 +76,16 @@ export class CombatSystem {
       this.inventory.add(drop.itemId, drop.qty);
     }
     const tier: LootTier = opts.lootTier ?? (opts.elite ? 4 : 2);
-    const gearChance = gearDropChance(tier, opts.elite);
+    const gearChance = opts.guaranteedMinRarity
+      ? 1
+      : gearDropChance(tier, opts.elite);
     if (Math.random() < gearChance) {
       const gear = rollGearDrop(this.progression.level, {
         elite: opts.elite || tier >= 4,
         preferArmor: Math.random() > (tier === 1 ? 0.4 : 0.28),
         forClass: this.progression.classId,
         lootTier: tier,
+        minRarity: opts.guaranteedMinRarity,
       });
       if (this.inventory.addGear(gear)) opts.onGear?.(gear);
     }
