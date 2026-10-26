@@ -20,7 +20,12 @@ Release APK path (typical):
 
 ## Layout (touch)
 
-Stick bottom-left · ATK / E / DASH bottom-right · skills raised center · INV/MAP/MENU under minimap.
+Shared metrics in `src/ui/TouchLayout.ts`:
+
+- **Left thumb:** move stick
+- **Right thumb:** skill column + E + ATK + DASH
+- **Top-left:** BAG / MAP / ☰ under HP
+- **Top-right:** compact minimap only
 
 ## App icon
 

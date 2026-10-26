@@ -36,7 +36,7 @@ export class RiftProgressHud {
 
   layout(): void {
     // Sit below the top-right minimap so frames don't overlap
-    const mapClearance = MiniMap.displaySize() + 28;
+    const mapClearance = MiniMap.displaySize(this.scene) + 24;
     this.root.setPosition(
       this.scene.scale.width - 28,
       Math.max(mapClearance + this.barH / 2, this.scene.scale.height / 2 + 40),

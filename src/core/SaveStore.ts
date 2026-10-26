@@ -75,6 +75,7 @@ function migrateLegacy(old: LegacySave): CharacterSave {
     bounty: null,
     bountyLastKind: null,
     bountyCooldownLeft: 0,
+    hubExplored: null,
   };
 }
 

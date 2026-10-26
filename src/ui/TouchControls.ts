@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { gameEvents } from '../core/EventBus';
 import { audioBus } from '../core/AudioBus';
+import { computeTouchLayout, type TouchLayout } from './TouchLayout';
 
 /** Detect whether on-screen controls should show. */
 export function shouldShowTouchControls(): boolean {
@@ -28,7 +29,8 @@ type Btn = {
 };
 
 /**
- * Landscape phone pad: stick BL · ATK/E/DASH BR · INV/MAP/MENU top-right.
+ * Phone pads — left stick, right combat cluster.
+ * Skills live in AbilityBar using the same TouchLayout metrics.
  */
 export class TouchControls {
   readonly root: Phaser.GameObjects.Container;
@@ -40,12 +42,11 @@ export class TouchControls {
   private stickCx = 0;
   private stickCy = 0;
   private stickR = 58;
-  private actions!: Phaser.GameObjects.Container;
-  private quick!: Phaser.GameObjects.Container;
   private atk!: Btn;
   private interact!: Btn;
   private dash!: Btn;
   private quickBtns: Btn[] = [];
+  private metrics: TouchLayout | null = null;
   dx = 0;
   dy = 0;
   private active = false;
@@ -54,10 +55,37 @@ export class TouchControls {
     this.scene = scene;
     this.root = scene.add.container(0, 0).setScrollFactor(0).setDepth(10_006);
     this.buildStick();
-    this.buildActions();
-    this.buildQuick();
+    this.atk = this.makeBtn('ATK', 0xc45c3a, () =>
+      gameEvents.emit('combat:attack', {}),
+    );
+    this.interact = this.makeBtn('E', 0x6ec6a0, () =>
+      gameEvents.emit('ui:interact', {}),
+    );
+    this.dash = this.makeBtn('DASH', 0x5a8fd4, () =>
+      gameEvents.emit('combat:dash', {}),
+    );
+    this.root.add([this.atk.root, this.interact.root, this.dash.root]);
+
+    const entries: [string, string][] = [
+      ['BAG', 'ui:openInventory'],
+      ['MAP', 'ui:toggleMap'],
+      ['☰', 'ui:toggleMenu'],
+    ];
+    this.quickBtns = entries.map(([label, ev]) =>
+      this.makeBtn(label, 0x4a6070, () => {
+        audioBus.uiClick();
+        gameEvents.emit(ev, {});
+      }),
+    );
+    this.root.add(this.quickBtns.map((b) => b.root));
+
     this.layout();
     this.root.setVisible(false);
+  }
+
+  /** Latest layout — AbilityBar / MiniMap read this after layout(). */
+  getMetrics(): TouchLayout | null {
+    return this.active ? this.metrics : null;
   }
 
   get enabled(): boolean {
@@ -71,58 +99,73 @@ export class TouchControls {
       this.dx = 0;
       this.dy = 0;
       this.resetKnob();
+      this.metrics = null;
+    } else {
+      this.layout();
     }
   }
 
   layout(): void {
-    const w = this.scene.scale.width;
-    const h = this.scene.scale.height;
-    const short = Math.min(w, h);
-    const pad = Math.max(16, Math.round(short * 0.03));
-    const landscape = w >= h;
+    if (!this.active && !shouldShowTouchControls()) return;
+    const m = computeTouchLayout(
+      this.scene.scale.width,
+      this.scene.scale.height,
+    );
+    this.metrics = m;
 
-    this.stickR = landscape ? 56 : 48;
-    this.stickBase.setRadius(this.stickR);
-    this.stickKnob.setRadius(Math.round(this.stickR * 0.42));
-    this.stickHit.setSize(this.stickR * 2.4, this.stickR * 2.4);
-
-    this.stickCx = pad + this.stickR + 8;
-    this.stickCy = h - pad - this.stickR - (landscape ? 12 : 28);
+    this.stickR = m.stick.r;
+    this.stickCx = m.stick.x;
+    this.stickCy = m.stick.y;
+    this.stickBase.setRadius(m.stick.r);
+    this.stickKnob.setRadius(Math.round(m.stick.r * 0.4));
+    this.stickHit.setSize(m.stick.r * 2.8, m.stick.r * 2.8);
     this.stickBase.setPosition(this.stickCx, this.stickCy);
     this.stickHit.setPosition(this.stickCx, this.stickCy);
     this.resetKnob();
 
-    const ax = w - pad - 72;
-    const ay = h - pad - (landscape ? 88 : 120);
-    this.actions.setPosition(ax, ay);
-    this.styleBtn(this.atk, 38, '14px');
-    this.styleBtn(this.interact, 28, '13px');
-    this.styleBtn(this.dash, 28, '11px');
-    this.atk.root.setPosition(0, 0);
-    this.interact.root.setPosition(-68, -8);
-    this.dash.root.setPosition(8, -72);
+    this.placeBtn(this.atk, m.atk.x, m.atk.y, m.atk.r, '15px');
+    this.placeBtn(
+      this.interact,
+      m.interact.x,
+      m.interact.y,
+      m.interact.r,
+      '14px',
+    );
+    this.placeBtn(this.dash, m.dash.x, m.dash.y, m.dash.r, '11px');
 
-    this.quick.setPosition(w - pad, landscape ? 148 : 120);
     this.quickBtns.forEach((b, i) => {
-      this.styleBtn(b, 22, '10px');
-      b.root.setPosition(-28, i * 46);
+      this.placeBtn(
+        b,
+        m.quick.x0 + i * m.quick.gap,
+        m.quick.y,
+        m.quick.r,
+        '10px',
+      );
     });
   }
 
-  private styleBtn(b: Btn, r: number, fontSize: string): void {
+  private placeBtn(
+    b: Btn,
+    x: number,
+    y: number,
+    r: number,
+    fontSize: string,
+  ): void {
+    b.root.setPosition(x, y);
     b.bg.setRadius(r);
     b.label.setFontSize(fontSize);
   }
 
   private buildStick(): void {
     this.stickBase = this.scene.add
-      .circle(0, 0, this.stickR, 0x121820, 0.5)
-      .setStrokeStyle(2, 0x4a6070, 0.8);
+      .circle(0, 0, this.stickR, 0x121820, 0.45)
+      .setStrokeStyle(2, 0x4a6070, 0.75);
     this.stickKnob = this.scene.add
-      .circle(0, 0, 24, 0xc4a574, 0.9)
+      .circle(0, 0, 24, 0xc4a574, 0.92)
       .setStrokeStyle(2, 0xe8e4d8, 0.55);
     this.stickHit = this.scene.add
-      .zone(0, 0, this.stickR * 2.4, this.stickR * 2.4)
+      .zone(0, 0, this.stickR * 2.8, this.stickR * 2.8)
+      .setOrigin(0.5)
       .setInteractive();
 
     this.stickHit.on('pointerdown', (p: Phaser.Input.Pointer) => {
@@ -159,14 +202,9 @@ export class TouchControls {
     this.stickKnob.setPosition(this.stickCx + dx, this.stickCy + dy);
     const nx = dx / max;
     const ny = dy / max;
-    this.dx =
-      Math.abs(nx) < 0.22 ? 0 : Math.sign(nx) * (Math.abs(nx) > 0.5 ? 1 : 0.5);
-    this.dy =
-      Math.abs(ny) < 0.22 ? 0 : Math.sign(ny) * (Math.abs(ny) > 0.5 ? 1 : 0.5);
-    if (this.dx !== 0 || this.dy !== 0) {
-      this.dx = Math.sign(this.dx);
-      this.dy = Math.sign(this.dy);
-    }
+    const dead = 0.16;
+    this.dx = Math.abs(nx) < dead ? 0 : Math.sign(nx);
+    this.dy = Math.abs(ny) < dead ? 0 : Math.sign(ny);
     gameEvents.emit('input:move', { dx: this.dx, dy: this.dy });
   }
 
@@ -174,49 +212,24 @@ export class TouchControls {
     this.stickKnob.setPosition(this.stickCx, this.stickCy);
   }
 
-  private buildActions(): void {
-    this.actions = this.scene.add.container(0, 0);
-    this.atk = this.makeBtn(0, 0, 'ATK', () =>
-      gameEvents.emit('combat:attack', {}),
-    );
-    this.interact = this.makeBtn(0, 0, 'E', () =>
-      gameEvents.emit('ui:interact', {}),
-    );
-    this.dash = this.makeBtn(0, 0, 'DASH', () =>
-      gameEvents.emit('combat:dash', {}),
-    );
-    this.actions.add([this.atk.root, this.interact.root, this.dash.root]);
-    this.root.add(this.actions);
-  }
-
-  private buildQuick(): void {
-    this.quick = this.scene.add.container(0, 0);
-    const entries: [string, string][] = [
-      ['INV', 'ui:openInventory'],
-      ['MAP', 'ui:toggleMap'],
-      ['MENU', 'ui:toggleMenu'],
-    ];
-    this.quickBtns = entries.map(([label, ev]) =>
-      this.makeBtn(0, 0, label, () => {
-        audioBus.uiClick();
-        gameEvents.emit(ev, {});
-      }),
-    );
-    this.quick.add(this.quickBtns.map((b) => b.root));
-    this.root.add(this.quick);
-  }
-
-  private makeBtn(
-    x: number,
-    y: number,
-    label: string,
-    onClick: () => void,
-  ): Btn {
+  private makeBtn(label: string, stroke: number, onClick: () => void): Btn {
     const bg = this.scene.add
-      .circle(0, 0, 28, 0x1a2230, 0.82)
-      .setStrokeStyle(2, 0x6ec6a0, 0.9)
+      .circle(0, 0, 28, 0x1a2230, 0.88)
+      .setStrokeStyle(2.5, stroke, 0.95)
       .setInteractive({ useHandCursor: true });
-    bg.on('pointerup', onClick);
+    bg.on('pointerdown', () => {
+      bg.setScale(0.92);
+      bg.setFillStyle(0x243040, 0.95);
+    });
+    const release = () => {
+      bg.setScale(1);
+      bg.setFillStyle(0x1a2230, 0.88);
+    };
+    bg.on('pointerup', () => {
+      release();
+      onClick();
+    });
+    bg.on('pointerout', release);
     const t = this.scene.add
       .text(0, 0, label, {
         fontFamily: 'Segoe UI, sans-serif',
@@ -225,7 +238,7 @@ export class TouchControls {
         fontStyle: 'bold',
       })
       .setOrigin(0.5);
-    const root = this.scene.add.container(x, y, [bg, t]);
+    const root = this.scene.add.container(0, 0, [bg, t]);
     return { root, bg, label: t };
   }
 }

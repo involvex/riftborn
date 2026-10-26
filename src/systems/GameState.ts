@@ -37,6 +37,8 @@ export class GameState {
   inRift = false;
   riftSeed: number | null = null;
   playTimeSec = 0;
+  /** Base64 hub fog; null until first explore persist. */
+  hubExplored: string | null = null;
   pendingSessionToken: string | null = null;
   /** Seconds before passive regen resumes after a hit. */
   private regenDelay = 0;
@@ -71,6 +73,7 @@ export class GameState {
     this.inRift = false;
     this.riftSeed = null;
     this.playTimeSec = 0;
+    this.hubExplored = null;
     this.pendingSessionToken = null;
     this.bounties.load(null);
     this.persist();
@@ -106,6 +109,7 @@ export class GameState {
     this.inRift = data.inRift;
     this.riftSeed = data.riftSeed;
     this.playTimeSec = data.playTimeSec;
+    this.hubExplored = data.hubExplored ?? null;
     this.bounties.load({
       bounty: data.bounty ?? null,
       lastKind: data.bountyLastKind ?? null,
@@ -159,6 +163,7 @@ export class GameState {
       bounty: bountySlice.bounty,
       bountyLastKind: bountySlice.lastKind,
       bountyCooldownLeft: bountySlice.cooldownLeft,
+      hubExplored: this.hubExplored,
     };
   }
 

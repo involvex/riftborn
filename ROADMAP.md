@@ -19,16 +19,16 @@ Solo evenings, one shippable slice at a time. Prefer **feel → content → syst
 - **Bounties persist** across reload (active + board cooldown)
 - **Minimap** + **M** map overlay (top-down)
 - **HUD polish** (HotkeyDock) + **touch controls** + Expo WebView shell
-- **Map fog of war** (explore to reveal)
+- **Map fog of war** (explore to reveal); **hub fog persists** on save
 - **Custom app icon** (Electron + Expo via `bun run icons`)
-- Electron portable + self-hosted co-op (basic)
+- Electron portable + self-hosted co-op (basic); share kit in `SHARE.md`
 
 ## Next — content density (pick one per evening)
 
-| #   | Slice               | Why it matters                   | Done when                            |
-| --- | ------------------- | -------------------------------- | ------------------------------------ |
-| 1   | **Drag-drop equip** | QoL for bag                      | Optional; double-click already works |
-| 2   | **Persist hub fog** | Keep explored wilderness on load | Save `explored` with character       |
+| #   | Slice               | Why it matters                  | Done when                            |
+| --- | ------------------- | ------------------------------- | ------------------------------------ |
+| 1   | **Drag-drop equip** | QoL for bag                     | Optional; double-click already works |
+| 2   | **Friend feedback** | One external playtest complaint | Next evening fixes that one item     |
 
 Skip inventing new frameworks — extend `MapGen` / `WorldScene` / `SaveStore` / NPCs.
 

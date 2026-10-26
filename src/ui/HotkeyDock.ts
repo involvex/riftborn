@@ -18,13 +18,18 @@ const ENTRIES: DockEntry[] = [
   { action: 'menu', symbol: '☰', label: 'menu' },
 ];
 
+/** Space reserved at bottom for the desktop ability strip. */
+export const ABILITY_BAR_CLEARANCE = 78;
+
 /**
- * Bottom-left hotkey reminder chips with clear symbols.
+ * Bottom-left hotkey reminder chips. Stays clear of the ability bar
+ * and packs tighter on narrow windows.
  */
 export class HotkeyDock {
   readonly root: Phaser.GameObjects.Container;
   private readonly scene: Phaser.Scene;
   private readonly chips: Phaser.GameObjects.Container;
+  private rows = 1;
 
   constructor(scene: Phaser.Scene) {
     this.scene = scene;
@@ -41,29 +46,43 @@ export class HotkeyDock {
 
   layout(): void {
     const h = this.scene.scale.height;
-    this.root.setPosition(16, h - 52);
+    const rowH = 20;
+    const y =
+      h - ABILITY_BAR_CLEARANCE - 8 - (this.rows > 1 ? rowH * (this.rows - 1) : 0);
+    this.root.setPosition(10, y);
   }
 
   refresh(): void {
     this.chips.removeAll(true);
-    const narrow = this.scene.scale.width < 720;
-    const gap = narrow ? 4 : 6;
+    const w = this.scene.scale.width;
+    const narrow = w < 900;
+    const tiny = w < 700;
+    // Keep chips in the left band so they never sit under center skills
+    const maxBand = Math.max(160, Math.floor(w * (tiny ? 0.42 : 0.36)));
+    const gap = tiny ? 3 : narrow ? 4 : 6;
+    const perRow = tiny ? 3 : narrow ? 4 : 99;
+
     let x = 0;
     let y = 0;
-    const rowBreak = narrow ? 4 : 99;
+    let row = 0;
+    let col = 0;
 
-    ENTRIES.forEach((e, i) => {
-      if (i === rowBreak) {
+    ENTRIES.forEach((e) => {
+      if (col >= perRow || (col > 0 && x > maxBand - 40)) {
         x = 0;
-        y = 22;
+        y += 20;
+        row += 1;
+        col = 0;
       }
       const key =
         e.action === 'menu' ? formatHotkey('menu') : formatHotkey(e.action);
-      const chip = this.makeChip(x, y, key, e.symbol, e.label);
+      const chip = this.makeChip(x, y, key, e.symbol, e.label, tiny);
       this.chips.add(chip);
-      x += chip.getData('w') as number;
-      x += gap;
+      x += (chip.getData('w') as number) + gap;
+      col += 1;
     });
+    this.rows = row + 1;
+    this.layout();
   }
 
   private makeChip(
@@ -72,19 +91,22 @@ export class HotkeyDock {
     key: string,
     symbol: string,
     label: string,
+    tiny: boolean,
   ): Phaser.GameObjects.Container {
+    const body = tiny
+      ? `${symbol}${key}`
+      : `${symbol} [${key}] ${label}`;
     const text = this.scene.add
-      .text(0, 0, `${symbol} [${key}] ${label}`, {
+      .text(0, 0, body, {
         fontFamily: 'Segoe UI, Consolas, monospace',
-        fontSize: '11px',
+        fontSize: tiny ? '10px' : '11px',
         color: '#c8d0d8',
         backgroundColor: '#121820cc',
-        padding: { x: 6, y: 3 },
+        padding: { x: tiny ? 4 : 6, y: tiny ? 2 : 3 },
       })
       .setOrigin(0, 0.5);
-    const w = text.width + 2;
     const c = this.scene.add.container(x, y, [text]);
-    c.setData('w', w);
+    c.setData('w', text.width + 2);
     return c;
   }
 }

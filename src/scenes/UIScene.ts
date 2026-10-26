@@ -319,15 +319,16 @@ export class UIScene extends Phaser.Scene {
       this.hudBars.layout();
       this.hotkeyDock.layout();
       this.hotkeyDock.refresh();
+      // Touch pads first so AbilityBar / MiniMap share metrics
       this.touchControls.layout();
+      this.abilityBar.layout();
+      this.miniMap.layout();
+      this.riftHud.layout();
       if (this.inventoryPanel.open) this.inventoryPanel.layout();
       if (this.shopPanel.open) this.shopPanel.layout();
       if (this.traderPanel.open) this.traderPanel.layout();
       if (this.skillPanel.open) this.skillPanel.layout();
       if (this.mapOverlay.open) this.mapOverlay.layout();
-      this.miniMap.layout();
-      this.abilityBar.layout();
-      this.riftHud.layout();
     });
   }
 

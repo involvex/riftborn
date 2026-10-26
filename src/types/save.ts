@@ -64,4 +64,9 @@ export type CharacterSave = {
   bountyLastKind?: BountyKind | null;
   /** Seconds left before the board accepts a new bounty. */
   bountyCooldownLeft?: number;
+  /**
+   * Hub fog of war — base64 bit-pack of explored tiles (hub size²).
+   * Rift fog is per-run and not saved.
+   */
+  hubExplored?: string | null;
 };

@@ -59,6 +59,7 @@ import {
   type MapCellKind,
   type MapSnapshot,
 } from '../ui/MapModel';
+import { mergeExplored, packExplored, unpackExplored } from '../ui/MapFog';
 import { shouldShowTouchControls } from '../ui/TouchControls';
 
 const DEFAULT_HUB_SIZE = HUB_SIZE;
@@ -651,14 +652,15 @@ export class WorldScene extends Phaser.Scene {
     g.lineStyle(1, 0xc4a574, 0.4);
     g.strokeRect(-22, -40, 44, 36);
     const t = this.add
-      .text(0, -48, label, {
+      .text(0, -62, label, {
         fontFamily: 'Segoe UI, sans-serif',
-        fontSize: '10px',
-        color: '#c8c0b0',
+        fontSize: '9px',
+        color: '#9a9080',
         stroke: '#0a0c10',
         strokeThickness: 3,
       })
-      .setOrigin(0.5);
+      .setOrigin(0.5)
+      .setAlpha(0.75);
     const c = this.add.container(screenX, screenY, [g, t]);
     // Slightly behind foot depth so player/NPC draw in front when overlapping
     c.setDepth(depthFromWorld(p.x, p.y) - 40);
@@ -934,6 +936,12 @@ export class WorldScene extends Phaser.Scene {
           this.explored[y * width + x] = true;
         }
       }
+      if (gameState.hubExplored) {
+        mergeExplored(
+          this.explored,
+          unpackExplored(gameState.hubExplored, width * height),
+        );
+      }
     }
   }
 
@@ -958,7 +966,12 @@ export class WorldScene extends Phaser.Scene {
         }
       }
     }
-    if (changed) this.exploredDirty = true;
+    if (changed) {
+      this.exploredDirty = true;
+      if (!gameState.inRift) {
+        gameState.hubExplored = packExplored(this.explored);
+      }
+    }
   }
 
   private emitMapSnapshot(): void {

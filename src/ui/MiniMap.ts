@@ -1,9 +1,9 @@
 import Phaser from 'phaser';
 import { MAP_CELL_COLOR, MAP_MARKER_COLOR, type MapSnapshot } from './MapModel';
 import { shouldShowTouchControls } from './TouchControls';
+import { computeTouchLayout } from './TouchLayout';
 
 const SIZE = 140;
-const SIZE_TOUCH = 108;
 const PAD = 3;
 
 /**
@@ -41,20 +41,40 @@ export class MiniMap {
   }
 
   layout(): void {
-    const size = shouldShowTouchControls() ? SIZE_TOUCH : SIZE;
+    const sw = this.scene.scale.width;
+    const touch = shouldShowTouchControls();
+    const size = touch
+      ? computeTouchLayout(sw, this.scene.scale.height).mapSize
+      : sw < 900
+        ? 100
+        : sw < 1100
+          ? 120
+          : SIZE;
     const scale = size / SIZE;
     this.root.setScale(scale);
-    // Flush top-right corner (10–12px inset)
-    const x = this.scene.scale.width - size / 2 - 10;
-    const y = size / 2 + 10;
+    this.title.setText(touch || sw < 900 ? 'Map' : 'Map · M');
+    // Flush top-right — keep clear of right combat cluster
+    const x = sw - size / 2 - 8;
+    const y = size / 2 + 8;
     this.root.setPosition(x, y);
   }
 
   /** Pixel size — used to offset rift progress HUD. */
   static readonly SIZE = SIZE;
 
-  static displaySize(): number {
-    return shouldShowTouchControls() ? SIZE_TOUCH : SIZE;
+  static displaySize(scene?: {
+    scale: { width: number; height: number };
+  }): number {
+    if (!scene) {
+      return shouldShowTouchControls() ? 96 : SIZE;
+    }
+    const sw = scene.scale.width;
+    if (shouldShowTouchControls()) {
+      return computeTouchLayout(sw, scene.scale.height).mapSize;
+    }
+    if (sw < 900) return 100;
+    if (sw < 1100) return 120;
+    return SIZE;
   }
 
   apply(snap: MapSnapshot): void {

@@ -16,12 +16,13 @@ export class HudBars {
   private readonly xpText: Phaser.GameObjects.Text;
   private readonly meta: Phaser.GameObjects.Text;
   private readonly bounty: Phaser.GameObjects.Text;
-  private readonly barW = 220;
+  private barW = 220;
   private readonly barH = 16;
 
   constructor(scene: Phaser.Scene) {
     this.scene = scene;
     this.root = scene.add.container(16, 12).setScrollFactor(0).setDepth(10_000);
+    this.barW = this.computeBarW();
 
     this.meta = scene.add.text(0, 0, '', {
       fontFamily: 'Georgia, serif',
@@ -78,10 +79,23 @@ export class HudBars {
     this.refresh();
   }
 
+  private computeBarW(): number {
+    const sw = this.scene.scale.width;
+    return Math.round(Math.min(220, Math.max(130, sw * 0.26)));
+  }
+
   layout(): void {
     const touch = shouldShowTouchControls();
-    this.root.setPosition(touch ? 12 : 16, touch ? 8 : 12);
-    this.meta.setFontSize(uiFont(this.scene, touch ? 13 : 15, 11, 18));
+    this.barW = this.computeBarW();
+    this.hpBg.width = this.barW;
+    this.xpBg.width = this.barW;
+    this.hpText.setX(this.barW / 2);
+    this.xpText.setX(this.barW / 2);
+    // Leave a row under meta for BAG/MAP/MENU on phones
+    this.root.setPosition(touch ? 10 : 12, touch ? 6 : 10);
+    this.meta.setFontSize(uiFont(this.scene, touch ? 12 : 15, 11, 18));
+    this.meta.setWordWrapWidth(Math.min(this.barW + 40, this.scene.scale.width * 0.5));
+    this.refresh();
   }
 
   refresh(): void {

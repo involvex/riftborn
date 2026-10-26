@@ -57,28 +57,30 @@ export class Npc {
 
     const job =
       role === 'vendor'
-        ? 'Armorer · E to trade'
+        ? 'E · shop'
         : role === 'crafter'
-          ? 'Crafter · E to craft'
+          ? 'E · craft'
           : role === 'board'
-            ? 'Bounties · E to accept'
-            : 'Scrapper · E for mats / repair';
+            ? 'E · bounties'
+            : 'E · trade / repair';
     this.prompt = scene.add
-      .text(0, 18, job, {
+      .text(0, 16, job, {
         fontFamily: 'Segoe UI, sans-serif',
         fontSize: '10px',
-        color: '#8a9aaa',
+        color: '#ffe08a',
+        backgroundColor: '#0a0c10aa',
+        padding: { x: 4, y: 2 },
       })
       .setOrigin(0.5)
-      .setAlpha(0.35);
+      .setVisible(false);
 
     this.body = scene.add.container(0, 0, [g, label, this.prompt]);
     this.syncScreen();
   }
 
   setNear(near: boolean): void {
-    this.prompt.setAlpha(near ? 1 : 0.35);
-    this.prompt.setColor(near ? '#ffe08a' : '#8a9aaa');
+    // Hide hints unless in range — stops plaza label pile-up on small screens
+    this.prompt.setVisible(near);
   }
 
   syncScreen(): void {
