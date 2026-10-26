@@ -59,4 +59,5 @@ export const HOTKEY_LABELS: Record<HotkeyAction, string> = {
   coop: 'Co-op',
   menu: 'Pause menu',
   equipTool: 'Equip tool',
+  map: 'Map',
 };

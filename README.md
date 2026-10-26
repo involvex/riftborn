@@ -39,6 +39,7 @@ bun run build:portable   # → release/Riftborn-*-portable.exe
 | F     | Craft (at bench)          |
 | C     | Character / spend stats   |
 | I     | Inventory (big bag)       |
+| M     | Map overlay               |
 | 3     | Equip tool                |
 | Space | Dash                      |
 | R     | Enter / exit rift dungeon |

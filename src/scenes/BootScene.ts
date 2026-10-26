@@ -64,7 +64,7 @@ export class BootScene extends Phaser.Scene {
       .text(
         width / 2,
         height * 0.9,
-        'WASD · LMB · 1/2/3 skills · R rift · B town · K tree · C attrs · I inv',
+        'WASD · LMB · 1/2/3 · M map · R rift · B town · K tree · C attrs · I inv',
         {
           fontFamily: 'Segoe UI, sans-serif',
           fontSize: '13px',

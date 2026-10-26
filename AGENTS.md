@@ -74,10 +74,11 @@ Do not rely on paste-a-screenshot alone after map/POI edits — prefer smoke + `
 - **Rifts:** depth 1–10 from player level (`RiftDepth.ts`); packs/HP/dmg/loot scale; Rift Lord + boss chest; HUD shows `D#`. Random run mods (`RiftModifiers.ts`: Dense / Glass / Gilded).
 - **Saves:** 3 character slots on boot (`SaveStore`); legacy single save migrates to slot 1.
 - **Bounty Board:** plaza NPC south of spawn — **E** accept (scout / chests / cull); HUD ★ line; progress + cooldown persist on character save.
+- **Map:** corner minimap + **M** full overlay (`MapModel` / `MiniMap` / `MapOverlay`); top-down from layout data, not iso screenshot.
 
 ## Controls (player)
 
-WASD move · LMB attack · E interact/gather/chest/shrine · F craft · 1/2/3 skills · R rift · B town · I inventory · C character · K skill tree · Esc settings.
+WASD move · LMB attack · E interact/gather/chest/shrine · F craft · 1/2/3 skills · M map · R rift · B town · I inventory · C character · K skill tree · Esc settings.
 
 ## Coding conventions
 

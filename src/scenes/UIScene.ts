@@ -24,6 +24,9 @@ import { RiftProgressHud } from '../ui/RiftProgressHud';
 import { ShopPanel } from '../ui/ShopPanel';
 import { TraderPanel } from '../ui/TraderPanel';
 import { SkillTreePanel } from '../ui/SkillTreePanel';
+import { MiniMap } from '../ui/MiniMap';
+import { MapOverlay } from '../ui/MapOverlay';
+import type { MapSnapshot } from '../ui/MapModel';
 import { uiFont } from '../core/UiScale';
 
 type MenuPage = 'root' | 'settings' | 'hotkeys';
@@ -44,12 +47,16 @@ export class UIScene extends Phaser.Scene {
   private skillPanel!: SkillTreePanel;
   private abilityBar!: AbilityBar;
   private riftHud!: RiftProgressHud;
+  private miniMap!: MiniMap;
+  private mapOverlay!: MapOverlay;
+  private lastMapSnap: MapSnapshot | null = null;
   private unsubs: (() => void)[] = [];
   private shopOpen = false;
   private traderOpen = false;
   private keyChar!: Phaser.Input.Keyboard.Key;
   private keyInv!: Phaser.Input.Keyboard.Key;
   private keySkills!: Phaser.Input.Keyboard.Key;
+  private keyMap!: Phaser.Input.Keyboard.Key;
   private keyTool!: Phaser.Input.Keyboard.Key;
   private keyMenu!: Phaser.Input.Keyboard.Key;
   private gearKeys: Phaser.Input.Keyboard.Key[] = [];
@@ -98,6 +105,8 @@ export class UIScene extends Phaser.Scene {
     this.skillPanel = new SkillTreePanel(this);
     this.abilityBar = new AbilityBar(this);
     this.riftHud = new RiftProgressHud(this);
+    this.miniMap = new MiniMap(this);
+    this.mapOverlay = new MapOverlay(this);
     this.buildCraftPanel();
     this.buildCharPanel();
     this.buildMenuPanel();
@@ -280,6 +289,12 @@ export class UIScene extends Phaser.Scene {
         this.refresh();
       }),
       gameEvents.on(Events.SETTINGS_CHANGED, () => this.bindHotkeys()),
+      gameEvents.on('ui:mapSnapshot', (p) => {
+        const snap = p as MapSnapshot;
+        this.lastMapSnap = snap;
+        this.miniMap.apply(snap);
+        this.mapOverlay.apply(snap);
+      }),
     );
 
     this.scale.on('resize', () => {
@@ -290,6 +305,8 @@ export class UIScene extends Phaser.Scene {
       if (this.shopPanel.open) this.shopPanel.layout();
       if (this.traderPanel.open) this.traderPanel.layout();
       if (this.skillPanel.open) this.skillPanel.layout();
+      if (this.mapOverlay.open) this.mapOverlay.layout();
+      this.miniMap.layout();
       this.abilityBar.layout();
       this.riftHud.layout();
     });
@@ -311,6 +328,9 @@ export class UIScene extends Phaser.Scene {
     );
     this.keyMenu = this.input.keyboard.addKey(
       keyCodeFromSetting(settingsStore.get().hotkeys.menu),
+    );
+    this.keyMap = this.input.keyboard.addKey(
+      keyCodeFromSetting(settingsStore.get().hotkeys.map),
     );
     this.gearKeys = [
       this.input.keyboard.addKey('FOUR'),
@@ -707,6 +727,7 @@ export class UIScene extends Phaser.Scene {
 
   private showShop(): void {
     if (this.menuOpen) return;
+    this.mapOverlay.hide();
     this.shopPanel.show();
     this.shopOpen = true;
     this.toast('Mira’s shop — spend gold on gear');
@@ -719,6 +740,7 @@ export class UIScene extends Phaser.Scene {
 
   private showTrader(): void {
     if (this.menuOpen) return;
+    this.mapOverlay.hide();
     this.traderPanel.show();
     this.traderOpen = true;
     this.toast('Nix — mats, tonics, patch-up');
@@ -745,7 +767,7 @@ export class UIScene extends Phaser.Scene {
   private refresh(): void {
     this.hudBars.refresh();
     this.hudHint.setText(
-      `${formatHotkey('inventory')} Inv · ${formatHotkey('character')} Char · ${formatHotkey('skills')} Skills · ${formatHotkey('portal')} Rift · ${formatHotkey('town')} Town · Esc`,
+      `${formatHotkey('inventory')} Inv · ${formatHotkey('character')} Char · ${formatHotkey('skills')} Skills · ${formatHotkey('map')} Map · ${formatHotkey('portal')} Rift · ${formatHotkey('town')} Town · Esc`,
     );
     this.abilityBar.refresh();
   }
@@ -793,6 +815,10 @@ export class UIScene extends Phaser.Scene {
     if (this.awaitingRebind) return;
 
     if (Phaser.Input.Keyboard.JustDown(this.keyMenu)) {
+      if (this.mapOverlay.open) {
+        this.mapOverlay.hide();
+        return;
+      }
       if (this.inventoryPanel.open) {
         this.inventoryPanel.hide();
         return;
@@ -832,12 +858,18 @@ export class UIScene extends Phaser.Scene {
 
     if (this.menuOpen) return;
 
+    if (Phaser.Input.Keyboard.JustDown(this.keyMap)) {
+      this.mapOverlay.toggle(this.lastMapSnap);
+      return;
+    }
+
     if (Phaser.Input.Keyboard.JustDown(this.keyInv)) {
       this.hideCraft();
       this.hideShop();
       this.hideTrader();
       this.hideChar();
       this.skillPanel.hide();
+      this.mapOverlay.hide();
       this.inventoryPanel.toggle();
       return;
     }
@@ -848,6 +880,7 @@ export class UIScene extends Phaser.Scene {
       this.hideTrader();
       this.hideChar();
       this.inventoryPanel.hide();
+      this.mapOverlay.hide();
       this.skillPanel.toggle();
       return;
     }
@@ -857,6 +890,7 @@ export class UIScene extends Phaser.Scene {
       this.skillPanel.hide();
       this.hideShop();
       this.hideTrader();
+      this.mapOverlay.hide();
       if (this.charOpen) this.hideChar();
       else this.showChar();
     }

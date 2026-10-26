@@ -53,6 +53,7 @@ import {
   rollRiftModifier,
   type RiftModifier,
 } from '../systems/RiftModifiers';
+import { buildMapSnapshot } from '../ui/MapModel';
 
 const DEFAULT_HUB_SIZE = HUB_SIZE;
 const TOWN_SPAWN = { ...HUB_SPAWN };
@@ -106,6 +107,7 @@ export class WorldScene extends Phaser.Scene {
   private dungeon: DungeonMap | null = null;
   private remoteGhosts = new Map<string, Phaser.GameObjects.Container>();
   private unsubNet: (() => void) | null = null;
+  private mapEmitAcc = 0;
 
   constructor() {
     super('WorldScene');
@@ -254,6 +256,7 @@ export class WorldScene extends Phaser.Scene {
       this.spawnFromLayout(this.hubLayout);
     }
     this.player.syncScreen();
+    this.emitMapSnapshot();
   }
 
   private spawnFromLayout(layout: ZoneLayout): void {
@@ -820,9 +823,64 @@ export class WorldScene extends Phaser.Scene {
       gameState.persist();
     }
 
+    this.mapEmitAcc += dt;
+    if (this.mapEmitAcc >= 0.1) {
+      this.mapEmitAcc = 0;
+      this.emitMapSnapshot();
+    }
+
     if (this.time.now < this.shakeUntil) {
       this.cameras.main.shake(40, 0.004);
     }
+  }
+
+  private emitMapSnapshot(): void {
+    const inRift = gameState.inRift;
+    const width = inRift ? (this.dungeon?.width ?? 36) : this.hubSize;
+    const height = inRift ? (this.dungeon?.height ?? 36) : this.hubSize;
+    let riftFloor: boolean[][] | undefined;
+    if (inRift && this.dungeon) {
+      riftFloor = this.dungeon.cells.map((row) => row.map((c) => c === 1));
+    }
+    let portal: { x: number; y: number } | null = null;
+    if (this.portalMarker) {
+      portal = {
+        x: this.portalMarker.getData('wx') as number,
+        y: this.portalMarker.getData('wy') as number,
+      };
+    }
+    const snap = buildMapSnapshot({
+      inRift,
+      width,
+      height,
+      riftFloor,
+      paths: this.hubLayout?.paths,
+      pois: inRift ? [] : this.wildernessPois,
+      player: {
+        x: this.player.worldX,
+        y: this.player.worldY,
+        facing: this.player.getFacing(),
+      },
+      npcs: this.npcs.map((n) => ({
+        x: n.worldX,
+        y: n.worldY,
+        name: n.name,
+      })),
+      chests: this.chests.map((c) => ({
+        x: c.worldX,
+        y: c.worldY,
+        looted: c.looted,
+      })),
+      enemies: this.enemies.map((e) => ({
+        x: e.worldX,
+        y: e.worldY,
+        alive: e.alive,
+        elite: e.elitePack || e.def.isElite,
+        boss: e.isBoss,
+      })),
+      portal,
+    });
+    gameEvents.emit('ui:mapSnapshot', snap);
   }
 
   private updateEnemies(dt: number): void {

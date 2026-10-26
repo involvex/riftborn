@@ -12,7 +12,8 @@ export type HotkeyAction =
   | 'dash'
   | 'coop'
   | 'menu'
-  | 'equipTool';
+  | 'equipTool'
+  | 'map';
 
 export type HotkeyMap = Record<HotkeyAction, string>;
 
@@ -44,6 +45,7 @@ export const DEFAULT_HOTKEYS: HotkeyMap = {
   coop: 'P',
   menu: 'ESC',
   equipTool: 'T',
+  map: 'M',
 };
 
 export const DEFAULT_SETTINGS: GameSettings = {
