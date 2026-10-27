@@ -24,6 +24,8 @@ export class AbilityBar {
 
   constructor(scene: Phaser.Scene) {
     this.scene = scene;
+    // Below TouchControls ATK/E (10006) so primary buttons win on overlap;
+    // above world / minimap chrome for skill taps.
     this.root = scene.add.container(0, 0).setScrollFactor(0).setDepth(10_005);
     this.touchMode = shouldShowTouchControls();
     const keys: Array<'skill1' | 'skill2' | 'skill3'> = [
@@ -111,7 +113,9 @@ export class AbilityBar {
     const sh = this.scene.scale.height;
     const compact = sw < 900;
     const gap = compact ? 5 : 8;
-    const w = compact ? Math.min(78, Math.floor((sw * 0.55) / ACTIVE_SLOTS)) : 96;
+    const w = compact
+      ? Math.min(78, Math.floor((sw * 0.55) / ACTIVE_SLOTS))
+      : 96;
     const slotH = compact ? 42 : 52;
     const total = ACTIVE_SLOTS * w + (ACTIVE_SLOTS - 1) * gap;
     // Bias right of hotkey dock on narrow screens
@@ -143,18 +147,18 @@ export class AbilityBar {
       this.scene.scale.width,
       this.scene.scale.height,
     );
-    // Root at origin — absolute positions from layout metrics
     this.root.setPosition(0, 0);
     this.slots.forEach((s, i) => {
-      const x = m.skills.x;
-      const y = m.skills.y0 + i * m.skills.gap;
+      const slot = m.skillSlots[i];
+      if (!slot) return;
+      const { x, y, r } = slot;
       if (s.ring) {
-        s.ring.setRadius(m.skills.r);
+        s.ring.setRadius(r);
         s.ring.setPosition(x, y);
       }
       s.name.setPosition(x, y - 4);
-      s.name.setFontSize(m.skills.r > 28 ? '11px' : '10px');
-      s.cd.setPosition(x, y + Math.round(m.skills.r * 0.42));
+      s.name.setFontSize(r > 26 ? '11px' : '9px');
+      s.cd.setPosition(x, y + Math.round(r * 0.42));
       s.key.setVisible(false);
     });
   }
@@ -201,9 +205,22 @@ function shortAbilityName(name: string): string {
 
 /** Compact labels for round touch buttons. */
 function shortTouchName(name: string): string {
+  const known: Record<string, string> = {
+    'War Leap': 'LEAP',
+    Strike: 'STRIKE',
+    'Shield Bash': 'BASH',
+    'Spirit Pulse': 'PULSE',
+    'Rift Slash': 'SLASH',
+    'Ward Seal': 'SEAL',
+    'Arc Bolt': 'BOLT',
+    Nova: 'NOVA',
+    Barrier: 'WARD',
+    'Arc Barrier': 'WARD',
+  };
+  if (known[name]) return known[name]!;
   const parts = name.split(' ');
   const last = parts[parts.length - 1] ?? name;
-  return last.slice(0, 4).toUpperCase();
+  return last.slice(0, 5).toUpperCase();
 }
 
 function classAccent(classId: string): number {

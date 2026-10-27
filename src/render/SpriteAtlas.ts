@@ -159,9 +159,9 @@ function paletteForPlayer(key: string): Palette {
 function registerAnims(scene: Phaser.Scene): void {
   for (const key of SHEET_KEYS) {
     if (!scene.textures.exists(key)) continue;
-    addAnim(scene, `${key}_idle`, key, 0, 3, 4, true);
-    addAnim(scene, `${key}_walk`, key, 4, 9, 9, true);
-    addAnim(scene, `${key}_attack`, key, 10, 13, 14, false);
+    addAnim(scene, `${key}_idle`, key, 0, 3, 6, true);
+    addAnim(scene, `${key}_walk`, key, 4, 9, 14, true);
+    addAnim(scene, `${key}_attack`, key, 10, 13, 18, false);
   }
 }
 
@@ -194,7 +194,7 @@ function generatePlayer(scene: Phaser.Scene, key: string, pal: Palette): void {
 
   for (let f = 0; f < FRAMES; f++) {
     const ox = f * FW;
-    const bob = f < 4 ? Math.sin((f / 4) * Math.PI * 2) * 1.5 : 0;
+    const bob = f < 4 ? Math.sin((f / 4) * Math.PI * 2) * 2.8 : 0;
     const walkPhase = f >= 4 && f < 10 ? (f - 4) / 6 : 0;
     const atk = f >= 10 ? (f - 10) / 3 : 0;
     drawPlayerFrame(ctx, ox, bob, walkPhase, atk, pal, f);
@@ -215,52 +215,54 @@ function drawPlayerFrame(
   pal: Palette,
   frame: number,
 ): void {
+  const lean =
+    frame >= 4 && frame < 10 ? Math.sin(walk * Math.PI * 2) * 2.5 : 0;
   const cy = 28 + bob;
   const legSwing =
-    frame >= 4 && frame < 10 ? Math.sin(walk * Math.PI * 2) * 4 : 0;
+    frame >= 4 && frame < 10 ? Math.sin(walk * Math.PI * 2) * 7 : 0;
   const armSwing =
     frame >= 10
-      ? -8 - atk * 14
+      ? -10 - atk * 18
       : frame >= 4 && frame < 10
-        ? Math.sin(walk * Math.PI * 2 + Math.PI) * 3
+        ? Math.sin(walk * Math.PI * 2 + Math.PI) * 5
         : 0;
+  const bodyX = ox + lean;
 
-  ctx.fillStyle = 'rgba(0,0,0,0.35)';
-  ellipse(ctx, ox + 24, 42, 14, 5);
+  // Foot disc removed — real ground tiles carry that look now
 
   ctx.fillStyle = pal.boot;
   fillRect(ctx, ox + 18 + legSwing * 0.3, cy + 6, 5, 8);
   fillRect(ctx, ox + 25 - legSwing * 0.3, cy + 6, 5, 8);
 
   ctx.fillStyle = pal.cloth;
-  fillRect(ctx, ox + 16, cy - 8, 16, 16);
+  fillRect(ctx, bodyX + 16, cy - 8, 16, 16);
   ctx.fillStyle = pal.accent;
-  fillRect(ctx, ox + 18, cy - 4, 12, 6);
+  fillRect(ctx, bodyX + 18, cy - 4, 12, 6);
 
   ctx.fillStyle = pal.skin;
-  fillRect(ctx, ox + 12, cy - 6 + armSwing * 0.15, 5, 10);
-  fillRect(ctx, ox + 31, cy - 6 - armSwing * 0.1, 5, 10);
+  fillRect(ctx, bodyX + 12, cy - 6 + armSwing * 0.15, 5, 10);
+  fillRect(ctx, bodyX + 31, cy - 6 - armSwing * 0.1, 5, 10);
 
   if (frame >= 10) {
     ctx.strokeStyle = '#c4a574';
     ctx.lineWidth = 3;
     ctx.beginPath();
-    ctx.moveTo(ox + 34, cy - 2);
-    ctx.lineTo(ox + 34 + atk * 16, cy - 10 - atk * 8);
+    ctx.moveTo(bodyX + 34, cy - 2);
+    ctx.lineTo(bodyX + 34 + atk * 20, cy - 12 - atk * 10);
     ctx.stroke();
   } else {
     ctx.fillStyle = '#a09070';
-    fillRect(ctx, ox + 33, cy - 4, 3, 12);
+    fillRect(ctx, bodyX + 33, cy - 4, 3, 12);
   }
 
   ctx.fillStyle = pal.skin;
-  circle(ctx, ox + 24, cy - 14, 7);
+  circle(ctx, bodyX + 24, cy - 14, 7);
   ctx.fillStyle = pal.hair;
-  ellipse(ctx, ox + 24, cy - 18, 9, 5);
+  ellipse(ctx, bodyX + 24, cy - 18, 9, 5);
 
   ctx.strokeStyle = pal.outline;
   ctx.lineWidth = 1;
-  ctx.strokeRect(ox + 16.5, cy - 7.5, 15, 15);
+  ctx.strokeRect(bodyX + 16.5, cy - 7.5, 15, 15);
 }
 
 function generateEnemy(
@@ -303,8 +305,7 @@ function drawEnemyFrame(
 ): void {
   const cx = ox + 24;
   const cy = 28 + bob;
-  ctx.fillStyle = 'rgba(0,0,0,0.3)';
-  ellipse(ctx, cx, 42, kind === 'lord' ? 16 : 11, 4);
+  // Foot disc removed — real ground tiles carry that look now
 
   if (kind === 'wisp') {
     const pulse = 1 + Math.sin((frame / FRAMES) * Math.PI * 2) * 0.15;
@@ -393,8 +394,7 @@ function generateNode(scene: Phaser.Scene, key: string, isTree: boolean): void {
   if (!tex) return;
   const ctx = tex.getContext();
   ctx.imageSmoothingEnabled = false;
-  ctx.fillStyle = 'rgba(0,0,0,0.3)';
-  ellipse(ctx, 24, 42, 12, 4);
+  // Foot disc removed — real ground tiles carry that look now
 
   if (isTree) {
     ctx.fillStyle = '#4a3020';

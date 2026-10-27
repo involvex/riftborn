@@ -320,6 +320,40 @@ export function generateHub(seed = 1): ZoneLayout {
   decor.push({ kind: 'rock', x: 39.5, y: 57.5 });
   decor.push({ kind: 'rock', x: 41.5, y: 55.5 });
 
+  // Extra POI clutter so clearings read as places, not empty circles
+  decor.push({ kind: 'crate', x: 10.5, y: 52.5 });
+  decor.push({ kind: 'bush', x: 12.5, y: 53.5 });
+  decor.push({ kind: 'lantern', x: 54.5, y: 11.5 });
+  decor.push({ kind: 'rock', x: 52.5, y: 10.5 });
+  decor.push({ kind: 'bush', x: 55.5, y: 55.5 });
+  decor.push({ kind: 'crate', x: 52.5, y: 54.5 });
+  decor.push({ kind: 'rock', x: 10.5, y: 12.5 });
+  decor.push({ kind: 'bush', x: 8.5, y: 10.5 });
+  decor.push({ kind: 'rock', x: 8.5, y: 34.5 });
+  decor.push({ kind: 'lantern', x: 9.5, y: 32.5 });
+  decor.push({ kind: 'bush', x: 24.5, y: 8.5 });
+  decor.push({ kind: 'rock', x: 20.5, y: 8.5 });
+  decor.push({ kind: 'crate', x: 56.5, y: 30.5 });
+  decor.push({ kind: 'bush', x: 55.5, y: 31.5 });
+  decor.push({ kind: 'lantern', x: 40.5, y: 55.5 });
+  decor.push({ kind: 'bush', x: 41.5, y: 56.5 });
+
+  // Path-edge props — roads feel lined, not barren
+  for (const p of paths) {
+    if (inPlaza(p.x, p.y) || nearTown(p.x, p.y, 4)) continue;
+    if (rnd() > 0.12) continue;
+    const ox = rnd() > 0.5 ? 1 : -1;
+    const oy = rnd() > 0.5 ? 1 : -1;
+    const dx = p.x + (rnd() > 0.5 ? ox : 0);
+    const dy = p.y + (rnd() > 0.5 ? oy : 0);
+    if (inPlaza(dx, dy) || nearPoi(dx, dy, pois)) continue;
+    decor.push({
+      kind: rnd() > 0.55 ? 'bush' : rnd() > 0.4 ? 'rock' : 'lantern',
+      x: dx + 0.5,
+      y: dy + 0.5,
+    });
+  }
+
   // Gathering across the wide fringe
   for (let i = 0; i < 48; i++) {
     let x = 3 + rnd() * (size - 6);
@@ -361,12 +395,12 @@ export function generateHub(seed = 1): ZoneLayout {
   nodes.push({ defId: 'berry_bush', x: 23.5, y: 8.5 });
   nodes.push({ defId: 'rift_vein', x: 39.5, y: 56.5 });
 
-  for (let i = 0; i < 36; i++) {
+  for (let i = 0; i < 72; i++) {
     const x = 3 + rnd() * (size - 6);
     const y = 3 + rnd() * (size - 6);
     if (inPlaza(x, y) || nearPoi(x, y, pois)) continue;
     decor.push({
-      kind: rnd() > 0.45 ? 'rock' : 'bush',
+      kind: rnd() > 0.5 ? 'rock' : rnd() > 0.25 ? 'bush' : 'lantern',
       x: Math.floor(x) + 0.5,
       y: Math.floor(y) + 0.5,
     });

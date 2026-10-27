@@ -86,15 +86,22 @@ export class HudBars {
 
   layout(): void {
     const touch = shouldShowTouchControls();
-    this.barW = this.computeBarW();
+    // Narrower on phone so BAG/MAP/MENU can sit under bars without covering them
+    this.barW = touch
+      ? Math.round(Math.min(160, Math.max(120, this.scene.scale.width * 0.22)))
+      : this.computeBarW();
     this.hpBg.width = this.barW;
     this.xpBg.width = this.barW;
     this.hpText.setX(this.barW / 2);
     this.xpText.setX(this.barW / 2);
-    // Leave a row under meta for BAG/MAP/MENU on phones
-    this.root.setPosition(touch ? 10 : 12, touch ? 6 : 10);
-    this.meta.setFontSize(uiFont(this.scene, touch ? 12 : 15, 11, 18));
-    this.meta.setWordWrapWidth(Math.min(this.barW + 40, this.scene.scale.width * 0.5));
+    this.root.setPosition(touch ? 8 : 12, touch ? 4 : 10);
+    this.meta.setFontSize(uiFont(this.scene, touch ? 11 : 15, 10, 18));
+    this.meta.setWordWrapWidth(
+      Math.min(this.barW + 24, this.scene.scale.width * 0.4),
+    );
+    // Bounty tucked tighter on touch so quick buttons clear it
+    this.bounty.setY(touch ? 62 : 66);
+    this.bounty.setFontSize(touch ? 10 : 11);
     this.refresh();
   }
 

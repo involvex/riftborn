@@ -1,7 +1,11 @@
 import Phaser from 'phaser';
 import { gameEvents } from '../core/EventBus';
 import { audioBus } from '../core/AudioBus';
-import { computeTouchLayout, type TouchLayout } from './TouchLayout';
+import {
+  computeTouchLayout,
+  TOUCH_CHROME_COUNT,
+  type TouchLayout,
+} from './TouchLayout';
 
 /** Detect whether on-screen controls should show. */
 export function shouldShowTouchControls(): boolean {
@@ -28,9 +32,19 @@ type Btn = {
   label: Phaser.GameObjects.Text;
 };
 
+type ChromeEntry = { label: string; event: string; stroke: number };
+
+const CHROME: ChromeEntry[] = [
+  { label: 'BAG', event: 'ui:openInventory', stroke: 0x4a6070 },
+  { label: 'CHAR', event: 'ui:openCharacter', stroke: 0xc4a574 },
+  { label: 'SKILL', event: 'ui:openSkills', stroke: 0x6ec6a0 },
+  { label: 'MAP', event: 'ui:toggleMap', stroke: 0x5a8fd4 },
+  { label: '☰', event: 'ui:toggleMenu', stroke: 0x8a9aaa },
+];
+
 /**
- * Phone pads — left stick, right combat cluster.
- * Skills live in AbilityBar using the same TouchLayout metrics.
+ * Phone pads — stick+DASH left, ATK+skills+E right.
+ * Top chrome tray toggled by tapping the minimap (☰).
  */
 export class TouchControls {
   readonly root: Phaser.GameObjects.Container;
@@ -45,7 +59,8 @@ export class TouchControls {
   private atk!: Btn;
   private interact!: Btn;
   private dash!: Btn;
-  private quickBtns: Btn[] = [];
+  private chromeBtns: Btn[] = [];
+  private chromeOpen = false;
   private metrics: TouchLayout | null = null;
   dx = 0;
   dy = 0;
@@ -66,30 +81,35 @@ export class TouchControls {
     );
     this.root.add([this.atk.root, this.interact.root, this.dash.root]);
 
-    const entries: [string, string][] = [
-      ['BAG', 'ui:openInventory'],
-      ['MAP', 'ui:toggleMap'],
-      ['☰', 'ui:toggleMenu'],
-    ];
-    this.quickBtns = entries.map(([label, ev]) =>
-      this.makeBtn(label, 0x4a6070, () => {
+    this.chromeBtns = CHROME.slice(0, TOUCH_CHROME_COUNT).map((e) =>
+      this.makeBtn(e.label, e.stroke, () => {
         audioBus.uiClick();
-        gameEvents.emit(ev, {});
+        gameEvents.emit(e.event, {});
+        this.setChromeOpen(false);
       }),
     );
-    this.root.add(this.quickBtns.map((b) => b.root));
+    this.root.add(this.chromeBtns.map((b) => b.root));
+    this.setChromeOpen(false);
+
+    gameEvents.on('ui:toggleTouchChrome', () => {
+      if (!this.active) return;
+      this.setChromeOpen(!this.chromeOpen);
+    });
 
     this.layout();
     this.root.setVisible(false);
   }
 
-  /** Latest layout — AbilityBar / MiniMap read this after layout(). */
   getMetrics(): TouchLayout | null {
     return this.active ? this.metrics : null;
   }
 
   get enabled(): boolean {
     return this.active;
+  }
+
+  isChromeOpen(): boolean {
+    return this.chromeOpen;
   }
 
   setEnabled(on: boolean): void {
@@ -100,9 +120,16 @@ export class TouchControls {
       this.dy = 0;
       this.resetKnob();
       this.metrics = null;
+      this.setChromeOpen(false);
     } else {
       this.layout();
     }
+  }
+
+  setChromeOpen(open: boolean): void {
+    this.chromeOpen = open;
+    this.chromeBtns.forEach((b) => b.root.setVisible(open && this.active));
+    gameEvents.emit('ui:touchChrome', { open });
   }
 
   layout(): void {
@@ -123,6 +150,7 @@ export class TouchControls {
     this.stickHit.setPosition(this.stickCx, this.stickCy);
     this.resetKnob();
 
+    this.placeBtn(this.dash, m.dash.x, m.dash.y, m.dash.r, '11px');
     this.placeBtn(this.atk, m.atk.x, m.atk.y, m.atk.r, '15px');
     this.placeBtn(
       this.interact,
@@ -131,16 +159,18 @@ export class TouchControls {
       m.interact.r,
       '14px',
     );
-    this.placeBtn(this.dash, m.dash.x, m.dash.y, m.dash.r, '11px');
 
-    this.quickBtns.forEach((b, i) => {
+    const totalW = (m.chrome.count - 1) * m.chrome.gap;
+    const startX = this.scene.scale.width / 2 - totalW / 2;
+    this.chromeBtns.forEach((b, i) => {
       this.placeBtn(
         b,
-        m.quick.x0 + i * m.quick.gap,
-        m.quick.y,
-        m.quick.r,
-        '10px',
+        startX + i * m.chrome.gap,
+        m.chrome.y,
+        m.chrome.r,
+        m.chrome.r > 20 ? '10px' : '9px',
       );
+      b.root.setVisible(this.chromeOpen && this.active);
     });
   }
 
@@ -194,7 +224,7 @@ export class TouchControls {
     let dx = px - this.stickCx;
     let dy = py - this.stickCy;
     const len = Math.hypot(dx, dy) || 1;
-    const max = this.stickR - 8;
+    const max = this.stickR - 6;
     if (len > max) {
       dx = (dx / len) * max;
       dy = (dy / len) * max;
@@ -202,9 +232,16 @@ export class TouchControls {
     this.stickKnob.setPosition(this.stickCx + dx, this.stickCy + dy);
     const nx = dx / max;
     const ny = dy / max;
-    const dead = 0.16;
-    this.dx = Math.abs(nx) < dead ? 0 : Math.sign(nx);
-    this.dy = Math.abs(ny) < dead ? 0 : Math.sign(ny);
+    const mag = Math.hypot(nx, ny);
+    const dead = 0.1;
+    if (mag < dead) {
+      this.dx = 0;
+      this.dy = 0;
+    } else {
+      const t = Math.min(1, (mag - dead) / (1 - dead));
+      this.dx = (nx / mag) * t;
+      this.dy = (ny / mag) * t;
+    }
     gameEvents.emit('input:move', { dx: this.dx, dy: this.dy });
   }
 

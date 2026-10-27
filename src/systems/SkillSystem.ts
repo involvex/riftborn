@@ -46,6 +46,8 @@ export type SkillCastResult = {
   vfx?: AbilityDef['kind'];
   origin?: { x: number; y: number };
   target?: { x: number; y: number };
+  /** World-tile range for VFX scaling (bolt / nova rings). */
+  range?: number;
 };
 
 /**
@@ -347,6 +349,7 @@ export class SkillSystem {
       vfx: def.kind,
       origin: { x: ctx.player.worldX, y: ctx.player.worldY },
       target: targetPos,
+      range: def.range,
     };
   }
 }

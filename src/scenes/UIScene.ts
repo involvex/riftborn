@@ -28,6 +28,7 @@ import { MiniMap } from '../ui/MiniMap';
 import { MapOverlay } from '../ui/MapOverlay';
 import type { MapSnapshot } from '../ui/MapModel';
 import { HotkeyDock } from '../ui/HotkeyDock';
+import { FpsHud } from '../ui/FpsHud';
 import { shouldShowTouchControls, TouchControls } from '../ui/TouchControls';
 
 type MenuPage = 'root' | 'settings' | 'hotkeys';
@@ -35,6 +36,7 @@ type MenuPage = 'root' | 'settings' | 'hotkeys';
 export class UIScene extends Phaser.Scene {
   private hudBars!: HudBars;
   private hotkeyDock!: HotkeyDock;
+  private fpsHud!: FpsHud;
   private touchControls!: TouchControls;
   private toastText!: Phaser.GameObjects.Text;
   private craftPanel!: Phaser.GameObjects.Container;
@@ -78,6 +80,7 @@ export class UIScene extends Phaser.Scene {
 
     this.hudBars = new HudBars(this);
     this.hotkeyDock = new HotkeyDock(this);
+    this.fpsHud = new FpsHud(this);
     this.touchControls = new TouchControls(this);
     const touchOn = shouldShowTouchControls();
     this.touchControls.setEnabled(touchOn);
@@ -305,6 +308,25 @@ export class UIScene extends Phaser.Scene {
         this.mapOverlay.hide();
         this.inventoryPanel.toggle();
       }),
+      gameEvents.on('ui:openCharacter', () => {
+        this.hideCraft();
+        this.hideShop();
+        this.hideTrader();
+        this.inventoryPanel.hide();
+        this.skillPanel.hide();
+        this.mapOverlay.hide();
+        if (this.charOpen) this.hideChar();
+        else this.showChar();
+      }),
+      gameEvents.on('ui:openSkills', () => {
+        this.hideCraft();
+        this.hideShop();
+        this.hideTrader();
+        this.hideChar();
+        this.inventoryPanel.hide();
+        this.mapOverlay.hide();
+        this.skillPanel.toggle();
+      }),
       gameEvents.on('ui:toggleMap', () => {
         this.mapOverlay.toggle(this.lastMapSnap);
       }),
@@ -324,6 +346,7 @@ export class UIScene extends Phaser.Scene {
       this.abilityBar.layout();
       this.miniMap.layout();
       this.riftHud.layout();
+      this.fpsHud.layout();
       if (this.inventoryPanel.open) this.inventoryPanel.layout();
       if (this.shopPanel.open) this.shopPanel.layout();
       if (this.traderPanel.open) this.traderPanel.layout();
@@ -827,7 +850,8 @@ export class UIScene extends Phaser.Scene {
     });
   }
 
-  update(): void {
+  update(_time: number, delta: number): void {
+    this.fpsHud.tick(delta);
     if (!this.keyMenu) return;
     this.abilityBar.refresh();
     if (this.awaitingRebind) return;

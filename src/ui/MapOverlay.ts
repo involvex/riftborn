@@ -3,6 +3,7 @@ import { audioBus } from '../core/AudioBus';
 import { formatHotkey } from '../core/Hotkeys';
 import { uiFont, uiPanelSize } from '../core/UiScale';
 import { MAP_CELL_COLOR, MAP_MARKER_COLOR, type MapSnapshot } from './MapModel';
+import { shouldShowTouchControls } from './TouchControls';
 
 const LEGEND: { kind: keyof typeof MAP_MARKER_COLOR; label: string }[] = [
   { kind: 'player', label: 'You' },
@@ -73,15 +74,35 @@ export class MapOverlay {
   }
 
   layout(): void {
-    const { w, h } = uiPanelSize(this.scene, 0.88, 0.88, 560, 620);
+    const touch = shouldShowTouchControls();
+    const { w, h } = uiPanelSize(
+      this.scene,
+      touch ? 0.96 : 0.88,
+      touch ? 0.94 : 0.88,
+      touch ? 720 : 560,
+      touch ? 640 : 620,
+    );
     this.bg.setSize(w, h);
-    this.title.setPosition(0, -h / 2 + 26);
-    this.title.setStyle({ fontSize: uiFont(this.scene, 22, 16, 26) });
-    this.mapW = Math.min(w - 48, h - 140);
+    this.title.setPosition(0, -h / 2 + (touch ? 22 : 26));
+    this.title.setStyle({
+      fontSize: uiFont(this.scene, touch ? 18 : 22, 14, 26),
+    });
+    const chrome = touch ? 110 : 140;
+    this.mapW = Math.min(w - (touch ? 28 : 48), h - chrome);
     this.mapH = this.mapW;
-    this.legend.setPosition(0, h / 2 - 72);
-    this.hint.setPosition(0, h / 2 - 28);
-    this.hint.setText(`Close (${formatHotkey('map')} / Esc)`);
+    this.legend.setPosition(0, h / 2 - (touch ? 56 : 72));
+    this.legend.setFontSize(touch ? 11 : 12);
+    this.hint.setPosition(0, h / 2 - (touch ? 22 : 28));
+    this.hint.setStyle({
+      fontFamily: 'Segoe UI, sans-serif',
+      fontSize: touch ? '15px' : '13px',
+      color: '#8a9aaa',
+      backgroundColor: touch ? '#1a2838' : '',
+      padding: touch ? { x: 12, y: 8 } : { x: 0, y: 0 },
+    });
+    this.hint.setText(
+      touch ? 'Tap here to close' : `Close (${formatHotkey('map')} / Esc)`,
+    );
     this.root.setPosition(
       this.scene.scale.width / 2,
       this.scene.scale.height / 2,

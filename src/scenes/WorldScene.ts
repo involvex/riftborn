@@ -143,8 +143,10 @@ export class WorldScene extends Phaser.Scene {
 
     this.loadZone(gameState.inRift);
     this.setupInput();
-    this.cameras.main.startFollow(this.player.body, true, 0.12, 0.12);
-    this.cameras.main.setZoom(1.1);
+    // Tighter follow on touch — soft lerp reads as input lag
+    const camLerp = shouldShowTouchControls() ? 0.38 : 0.14;
+    this.cameras.main.startFollow(this.player.body, true, camLerp, camLerp);
+    this.cameras.main.setZoom(shouldShowTouchControls() ? 1.05 : 1.1);
     this.publishDebugApi();
 
     this.events.on(Phaser.Scenes.Events.SHUTDOWN, () => this.cleanup());
@@ -802,6 +804,7 @@ export class WorldScene extends Phaser.Scene {
 
   private drawIsoTile(x: number, y: number, color: number): void {
     const { screenX, screenY } = worldToScreen(x, y);
+    // Iso diamond base (walk grid)
     this.tiles.fillStyle(color, 1);
     this.tiles.beginPath();
     this.tiles.moveTo(screenX, screenY - 16);
@@ -810,8 +813,28 @@ export class WorldScene extends Phaser.Scene {
     this.tiles.lineTo(screenX - 32, screenY);
     this.tiles.closePath();
     this.tiles.fillPath();
-    // Soft edge so the grid reads like a Sanctuary floor, not flat UI
-    this.tiles.lineStyle(1, 0x000000, 0.22);
+
+    // Soft foot-pad (was baked under enemy sprites) — fixed ground, not sliding
+    const r = (color >> 16) & 0xff;
+    const g = (color >> 8) & 0xff;
+    const b = color & 0xff;
+    const face = Phaser.Display.Color.GetColor(
+      Math.min(255, r + 22),
+      Math.min(255, g + 18),
+      Math.min(255, b + 12),
+    );
+    this.tiles.fillStyle(face, 0.42);
+    this.tiles.fillEllipse(screenX, screenY + 1, 46, 20);
+    this.tiles.fillStyle(0x000000, 0.3);
+    this.tiles.fillEllipse(screenX, screenY + 3, 34, 13);
+
+    this.tiles.lineStyle(1, 0x000000, 0.16);
+    this.tiles.beginPath();
+    this.tiles.moveTo(screenX, screenY - 16);
+    this.tiles.lineTo(screenX + 32, screenY);
+    this.tiles.lineTo(screenX, screenY + 16);
+    this.tiles.lineTo(screenX - 32, screenY);
+    this.tiles.closePath();
     this.tiles.strokePath();
   }
 
@@ -1349,6 +1372,7 @@ export class WorldScene extends Phaser.Scene {
         targetY: result.target?.y,
         facing: this.player.getFacing() < 0 ? -1 : 1,
         color,
+        range: result.range,
       });
     }
     gameState.worldX = this.player.worldX;

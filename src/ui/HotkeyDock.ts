@@ -48,7 +48,10 @@ export class HotkeyDock {
     const h = this.scene.scale.height;
     const rowH = 20;
     const y =
-      h - ABILITY_BAR_CLEARANCE - 8 - (this.rows > 1 ? rowH * (this.rows - 1) : 0);
+      h -
+      ABILITY_BAR_CLEARANCE -
+      8 -
+      (this.rows > 1 ? rowH * (this.rows - 1) : 0);
     this.root.setPosition(10, y);
   }
 
@@ -93,9 +96,7 @@ export class HotkeyDock {
     label: string,
     tiny: boolean,
   ): Phaser.GameObjects.Container {
-    const body = tiny
-      ? `${symbol}${key}`
-      : `${symbol} [${key}] ${label}`;
+    const body = tiny ? `${symbol}${key}` : `${symbol} [${key}] ${label}`;
     const text = this.scene.add
       .text(0, 0, body, {
         fontFamily: 'Segoe UI, Consolas, monospace',

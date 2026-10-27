@@ -34,6 +34,8 @@ export class Player {
   private moving = false;
   private textureKey: string;
   private slashUntil = 0;
+  private bobPhase = 0;
+  private walkPhase = 0;
 
   constructor(scene: Phaser.Scene, worldX: number, worldY: number) {
     ensureGameSprites(scene);
@@ -141,6 +143,10 @@ export class Player {
     gameState.worldX = this.worldX;
     gameState.worldY = this.worldY;
     if (this.animKind !== 'attack') this.playAnim('walk');
+    // Stride bob + slight lean so painted sheets still feel alive
+    this.walkPhase += dt * 16;
+    this.sprite.y = -4 + Math.abs(Math.sin(this.walkPhase)) * 2.4;
+    this.sprite.setRotation(Math.sin(this.walkPhase) * 0.05 * this.facing);
     this.syncScreen();
   }
 
@@ -163,13 +169,14 @@ export class Player {
     this.showSlash();
     // Punch the sprite forward slightly so the swing reads in-world.
     const dir = this.facing;
-    this.sprite.setScale(
-      (isPaintedSprite(this.textureKey) ? 0.78 : 1.35) * 1.06,
-    );
-    this.sprite.x = dir * 5;
-    this.scene.time.delayedCall(90, () => {
+    const base = isPaintedSprite(this.textureKey) ? 0.78 : 1.35;
+    this.sprite.setScale(base * 1.12);
+    this.sprite.x = dir * 7;
+    this.sprite.y = -6;
+    this.scene.time.delayedCall(110, () => {
       this.applyScale();
       this.sprite.x = 0;
+      this.sprite.y = -4;
     });
   }
 
@@ -241,6 +248,15 @@ export class Player {
     if (this.slashUntil && this.scene.time.now > this.slashUntil) {
       this.slash.clear();
       this.slashUntil = 0;
+    }
+    // Soft idle breathe so standing isn't a freeze-frame
+    if (this.animKind === 'idle' && !this.moving) {
+      this.bobPhase += dt * 3.8;
+      this.sprite.y = -4 + Math.sin(this.bobPhase) * 2.5;
+      this.sprite.setRotation(Math.sin(this.bobPhase * 0.5) * 0.02);
+    } else if (this.animKind !== 'attack' && !this.moving) {
+      this.sprite.y = -4;
+      this.sprite.setRotation(0);
     }
   }
 

@@ -129,7 +129,7 @@ export const MAP_CELL_COLOR: Record<MapCellKind, number> = {
   path: 0x3a3830,
   poi: 0x3a3228,
   wild: 0x1c2620,
-  fog: 0x080a0e,
+  fog: 0x050608,
 };
 
 export const MAP_MARKER_COLOR: Record<MapMarkerKind, number> = {
