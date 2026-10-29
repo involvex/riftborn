@@ -30,6 +30,8 @@ import type { MapSnapshot } from '../ui/MapModel';
 import { HotkeyDock } from '../ui/HotkeyDock';
 import { FpsHud } from '../ui/FpsHud';
 import { shouldShowTouchControls, TouchControls } from '../ui/TouchControls';
+import { TutorialOverlay } from '../ui/TutorialOverlay';
+import { uiPanelSize } from '../core/UiScale';
 
 type MenuPage = 'root' | 'settings' | 'hotkeys';
 
@@ -41,7 +43,12 @@ export class UIScene extends Phaser.Scene {
   private toastText!: Phaser.GameObjects.Text;
   private craftPanel!: Phaser.GameObjects.Container;
   private charPanel!: Phaser.GameObjects.Container;
+  private charBg!: Phaser.GameObjects.Rectangle;
+  private charTitle!: Phaser.GameObjects.Text;
+  private charClose!: Phaser.GameObjects.Text;
+  private charStatBtns: Phaser.GameObjects.Text[] = [];
   private menuPanel!: Phaser.GameObjects.Container;
+  private menuBg!: Phaser.GameObjects.Rectangle;
   private menuBody!: Phaser.GameObjects.Container;
   private charBody!: Phaser.GameObjects.Text;
   private damageLayer!: Phaser.GameObjects.Container;
@@ -53,6 +60,7 @@ export class UIScene extends Phaser.Scene {
   private riftHud!: RiftProgressHud;
   private miniMap!: MiniMap;
   private mapOverlay!: MapOverlay;
+  private tutorial!: TutorialOverlay;
   private lastMapSnap: MapSnapshot | null = null;
   private unsubs: (() => void)[] = [];
   private shopOpen = false;
@@ -108,10 +116,13 @@ export class UIScene extends Phaser.Scene {
     this.riftHud = new RiftProgressHud(this);
     this.miniMap = new MiniMap(this);
     this.mapOverlay = new MapOverlay(this);
+    this.tutorial = new TutorialOverlay(this);
     this.buildCraftPanel();
     this.buildCharPanel();
     this.buildMenuPanel();
     this.refresh();
+    // Defer so HUD layout settles before the modal dim.
+    this.time.delayedCall(350, () => this.tutorial.maybeShow());
 
     this.input.keyboard?.on('keydown', (event: KeyboardEvent) => {
       if (!this.awaitingRebind) return;
@@ -347,6 +358,8 @@ export class UIScene extends Phaser.Scene {
       this.miniMap.layout();
       this.riftHud.layout();
       this.fpsHud.layout();
+      this.layoutCharPanel();
+      this.layoutMenuPanel();
       if (this.inventoryPanel.open) this.inventoryPanel.layout();
       if (this.shopPanel.open) this.shopPanel.layout();
       if (this.traderPanel.open) this.traderPanel.layout();
@@ -443,9 +456,9 @@ export class UIScene extends Phaser.Scene {
   }
 
   private buildCharPanel(): void {
-    const bg = this.add.rectangle(0, 0, 560, 520, 0x0e1218, 0.96);
-    bg.setStrokeStyle(1, 0x4db6ff, 0.6);
-    const title = this.add
+    this.charBg = this.add.rectangle(0, 0, 560, 520, 0x0e1218, 0.96);
+    this.charBg.setStrokeStyle(1, 0x4db6ff, 0.6);
+    this.charTitle = this.add
       .text(0, -235, 'Character', {
         fontFamily: 'Georgia, serif',
         fontSize: '22px',
@@ -463,7 +476,7 @@ export class UIScene extends Phaser.Scene {
       })
       .setOrigin(0, 0);
 
-    const statBtns: Phaser.GameObjects.GameObject[] = [];
+    this.charStatBtns = [];
     const stats = ['strength', 'dexterity', 'stamina', 'intellect'] as const;
     stats.forEach((stat, i) => {
       const btn = this.add
@@ -486,10 +499,10 @@ export class UIScene extends Phaser.Scene {
           this.refresh();
         }
       });
-      statBtns.push(btn);
+      this.charStatBtns.push(btn);
     });
 
-    const close = this.add
+    this.charClose = this.add
       .text(0, 235, `Close (${formatHotkey('character')})`, {
         fontFamily: 'Segoe UI, sans-serif',
         fontSize: '14px',
@@ -497,24 +510,58 @@ export class UIScene extends Phaser.Scene {
       })
       .setOrigin(0.5)
       .setInteractive({ useHandCursor: true });
-    close.on('pointerup', () => this.hideChar());
+    this.charClose.on('pointerup', () => this.hideChar());
 
     this.charPanel = this.add
       .container(this.scale.width / 2, this.scale.height / 2, [
-        bg,
-        title,
+        this.charBg,
+        this.charTitle,
         this.charBody,
-        ...statBtns,
-        close,
+        ...this.charStatBtns,
+        this.charClose,
       ])
       .setScrollFactor(0)
       .setDepth(10_020)
       .setVisible(false);
+    this.layoutCharPanel();
+  }
+
+  private layoutCharPanel(): void {
+    const touch = shouldShowTouchControls();
+    const { w, h } = uiPanelSize(
+      this,
+      touch ? 0.94 : 0.7,
+      touch ? 0.9 : 0.75,
+      touch ? 520 : 560,
+      touch ? 480 : 520,
+    );
+    this.charBg.setSize(w, h);
+    this.charTitle.setPosition(0, -h / 2 + (touch ? 22 : 28));
+    this.charTitle.setFontSize(touch ? '18px' : '22px');
+    const bodyW = touch ? w * 0.55 : 340;
+    this.charBody.setPosition(-w / 2 + 16, -h / 2 + (touch ? 44 : 55));
+    this.charBody.setStyle({
+      fontFamily: 'Consolas, monospace',
+      fontSize: touch ? '11px' : '12px',
+      color: '#c8c0b0',
+      lineSpacing: touch ? 2 : 3,
+      wordWrap: { width: bodyW },
+    });
+    const btnX = w / 2 - (touch ? 56 : 80);
+    this.charStatBtns.forEach((btn, i) => {
+      btn.setPosition(btnX, -h / 2 + (touch ? 70 : 90) + i * (touch ? 40 : 36));
+      btn.setFontSize(touch ? '13px' : '14px');
+    });
+    this.charClose.setPosition(0, h / 2 - (touch ? 22 : 28));
+    this.charClose.setFontSize(touch ? '15px' : '14px');
+    if (this.charOpen) {
+      this.charPanel.setPosition(this.scale.width / 2, this.scale.height / 2);
+    }
   }
 
   private buildMenuPanel(): void {
-    const bg = this.add.rectangle(0, 0, 420, 460, 0x0e1218, 0.97);
-    bg.setStrokeStyle(1, 0xc4a574, 0.75);
+    this.menuBg = this.add.rectangle(0, 0, 420, 460, 0x0e1218, 0.97);
+    this.menuBg.setStrokeStyle(1, 0xc4a574, 0.75);
     const title = this.add
       .text(0, -200, 'Paused', {
         fontFamily: 'Georgia, serif',
@@ -534,7 +581,7 @@ export class UIScene extends Phaser.Scene {
 
     this.menuPanel = this.add
       .container(this.scale.width / 2, this.scale.height / 2, [
-        bg,
+        this.menuBg,
         title,
         this.menuBody,
         this.rebindHint,
@@ -543,7 +590,27 @@ export class UIScene extends Phaser.Scene {
       .setDepth(10_030)
       .setVisible(false);
 
+    this.layoutMenuPanel();
     this.renderMenuPage();
+  }
+
+  private layoutMenuPanel(): void {
+    const touch = shouldShowTouchControls();
+    const { w, h } = uiPanelSize(
+      this,
+      touch ? 0.72 : 0.55,
+      touch ? 0.78 : 0.7,
+      touch ? 380 : 420,
+      touch ? 420 : 460,
+    );
+    this.menuBg.setSize(w, h);
+    const title = this.menuPanel.list[1] as Phaser.GameObjects.Text;
+    title.setPosition(0, -h / 2 + (touch ? 28 : 36));
+    title.setFontSize(touch ? '22px' : '26px');
+    this.rebindHint.setPosition(0, h / 2 - (touch ? 28 : 32));
+    if (this.menuOpen) {
+      this.menuPanel.setPosition(this.scale.width / 2, this.scale.height / 2);
+    }
   }
 
   private clearMenuBody(): void {
@@ -697,11 +764,14 @@ export class UIScene extends Phaser.Scene {
     this.hideChar();
     this.skillPanel.hide();
     this.inventoryPanel.hide();
+    this.mapOverlay.hide();
     this.menuPage = 'root';
+    this.layoutMenuPanel();
     this.renderMenuPage();
     this.menuPanel.setPosition(this.scale.width / 2, this.scale.height / 2);
     this.menuPanel.setVisible(true);
     this.menuOpen = true;
+    this.setModalChrome(true);
     this.scene.pause('WorldScene');
   }
 
@@ -710,7 +780,19 @@ export class UIScene extends Phaser.Scene {
     this.menuOpen = false;
     this.awaitingRebind = null;
     this.rebindHint.setText('');
+    this.setModalChrome(false);
     this.scene.resume('WorldScene');
+  }
+
+  /** Hide stick/fps under modals so they don't fight the panel (and burn FPS). */
+  private setModalChrome(modal: boolean): void {
+    const touch = shouldShowTouchControls();
+    if (touch) {
+      this.touchControls.setEnabled(!modal);
+      this.abilityBar.root.setVisible(!modal);
+    }
+    this.fpsHud.root.setVisible(!modal);
+    this.miniMap.root.setVisible(!modal);
   }
 
   private refreshCharBody(): void {
@@ -796,15 +878,20 @@ export class UIScene extends Phaser.Scene {
 
   private showChar(): void {
     if (this.menuOpen) return;
+    this.layoutCharPanel();
     this.charPanel.setPosition(this.scale.width / 2, this.scale.height / 2);
     this.refreshCharBody();
     this.charPanel.setVisible(true);
     this.charOpen = true;
+    this.setModalChrome(true);
+    this.scene.pause('WorldScene');
   }
 
   private hideChar(): void {
     this.charPanel.setVisible(false);
     this.charOpen = false;
+    this.setModalChrome(false);
+    this.scene.resume('WorldScene');
   }
 
   private refresh(): void {
@@ -831,21 +918,30 @@ export class UIScene extends Phaser.Scene {
     amount: number,
     kind: string,
   ): void {
-    const color = kind === 'player' ? '#ff6b6b' : '#ffe08a';
+    const toPlayer = kind === 'player';
+    const color = toPlayer ? '#ff6b6b' : '#ffe08a';
+    const size = toPlayer ? '15px' : amount >= 40 ? '20px' : '16px';
+    const drift = (Math.random() - 0.5) * 18;
     const t = this.add
-      .text(x, y, String(amount), {
+      .text(x + drift, y, String(amount), {
         fontFamily: 'Segoe UI, sans-serif',
-        fontSize: '16px',
+        fontSize: size,
         color,
         fontStyle: 'bold',
+        stroke: '#0a0c10',
+        strokeThickness: 3,
       })
-      .setOrigin(0.5);
+      .setOrigin(0.5)
+      .setScale(toPlayer ? 1 : 1.15);
     this.damageLayer.add(t);
     this.tweens.add({
       targets: t,
-      y: y - 28,
+      y: y - (toPlayer ? 36 : 42),
+      x: x + drift * 1.4,
       alpha: 0,
-      duration: 600,
+      scale: toPlayer ? 0.85 : 0.95,
+      duration: toPlayer ? 700 : 650,
+      ease: 'Cubic.easeOut',
       onComplete: () => t.destroy(),
     });
   }
@@ -857,6 +953,10 @@ export class UIScene extends Phaser.Scene {
     if (this.awaitingRebind) return;
 
     if (Phaser.Input.Keyboard.JustDown(this.keyMenu)) {
+      if (this.tutorial.open) {
+        this.tutorial.dismiss();
+        return;
+      }
       if (this.mapOverlay.open) {
         this.mapOverlay.hide();
         return;
@@ -997,5 +1097,6 @@ export class UIScene extends Phaser.Scene {
   shutdown(): void {
     for (const u of this.unsubs) u();
     this.unsubs = [];
+    this.tutorial?.destroy();
   }
 }

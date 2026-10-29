@@ -1,7 +1,9 @@
 import Phaser from 'phaser';
 import { saveStore, SLOT_COUNT } from '../core/SaveStore';
+import { preloadAudio } from '../core/AudioAssets';
 import { preloadItemIcons } from '../render/ItemIcons';
 import { ensureGameSprites, preloadGameSprites } from '../render/SpriteAtlas';
+import { preloadCombatVfx } from '../render/CombatVfx';
 import { gameState } from '../systems/GameState';
 import { uiFont } from '../core/UiScale';
 import type { CharacterSave } from '../types/save';
@@ -14,14 +16,18 @@ export class BootScene extends Phaser.Scene {
 
   preload(): void {
     this.load.on('loaderror', (file: Phaser.Loader.File) => {
-      console.warn('[sprites] missing asset, will use fallback:', file.key);
+      console.warn('[assets] missing, will use fallback:', file.key);
     });
     preloadGameSprites(this);
+    preloadCombatVfx(this);
     preloadItemIcons(this);
+    preloadAudio(this);
   }
 
   create(): void {
     ensureGameSprites(this);
+    audioBus.bind(this);
+    audioBus.playMusic('hub');
 
     if (this.isSmokeBoot()) {
       saveStore.clearAll();

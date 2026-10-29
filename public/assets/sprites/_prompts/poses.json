@@ -1,0 +1,95 @@
+{
+  "style": "isometric 2.5D ARPG game sprite, single character, full body, facing southeast, solid black background, no text, no UI, clean silhouette, painted pixel-art friendly, consistent outfit",
+  "heroes": [
+    {
+      "id": "hero_warrior",
+      "look": "male warrior in olive leather armor with bronze accents, short dark hair, sword at side",
+      "poses": {
+        "idle": "standing idle, relaxed stance, feet planted",
+        "walk_0": "walk cycle left foot forward, right arm forward",
+        "walk_1": "walk mid-stride, legs apart, clear motion",
+        "walk_2": "walk cycle right foot forward, left arm forward",
+        "attack": "sword raised mid-swing, body lunging forward"
+      }
+    },
+    {
+      "id": "hero_female",
+      "look": "female warrior in mauve leather armor, long dark hair, sword at side",
+      "poses": {
+        "idle": "standing idle, relaxed stance, feet planted",
+        "walk_0": "walk cycle left foot forward, right arm forward",
+        "walk_1": "walk mid-stride, legs apart, clear motion",
+        "walk_2": "walk cycle right foot forward, left arm forward",
+        "attack": "sword raised mid-swing, body lunging forward"
+      }
+    },
+    {
+      "id": "hero_mage",
+      "look": "mage in blue robe with silver trim, short dark hair, staff in hand",
+      "poses": {
+        "idle": "standing idle holding staff upright",
+        "walk_0": "walk cycle left foot forward, staff swinging",
+        "walk_1": "walk mid-stride, robe flowing, clear motion",
+        "walk_2": "walk cycle right foot forward, staff opposite",
+        "attack": "staff thrusting forward casting a spark"
+      }
+    },
+    {
+      "id": "hero_mystic",
+      "look": "mystic in teal-gray robes, short ash hair, twin crescent blades",
+      "poses": {
+        "idle": "standing idle, blades at rest",
+        "walk_0": "walk cycle left foot forward, arms swinging",
+        "walk_1": "walk mid-stride, legs apart, clear motion",
+        "walk_2": "walk cycle right foot forward, arms opposite",
+        "attack": "twin blades in crescent slash pose"
+      }
+    }
+  ],
+  "enemies": [
+    {
+      "id": "enemy_shade",
+      "look": "ashen hooded shade creature, purple-gray cloak, glowing eyes, humanoid",
+      "poses": {
+        "idle": "hovering idle, cloak still",
+        "walk_0": "lurching forward left, cloak trailing",
+        "walk_1": "mid-lurch, body twisted, clear motion",
+        "walk_2": "lurching forward right",
+        "attack": "claws reaching forward to strike"
+      }
+    },
+    {
+      "id": "enemy_crawler",
+      "look": "low sand-colored crawler beast, four legs, armored back, animal",
+      "poses": {
+        "idle": "crouched idle on all fours",
+        "walk_0": "crawl left legs extended",
+        "walk_1": "crawl mid-stride, body stretched",
+        "walk_2": "crawl right legs extended",
+        "attack": "lunging bite with jaws open"
+      }
+    },
+    {
+      "id": "enemy_wisp",
+      "look": "ember wisp, floating orange flame spirit, small body, glowing core",
+      "poses": {
+        "idle": "floating idle flame upright",
+        "walk_0": "drifting left, flame tilted",
+        "walk_1": "drifting forward, flame stretched",
+        "walk_2": "drifting right, flame tilted opposite",
+        "attack": "flame surging forward as a spike"
+      }
+    },
+    {
+      "id": "enemy_rift_lord",
+      "look": "rift lord elite boss, tall blue-crystal armor, glowing cyan core, imposing",
+      "poses": {
+        "idle": "standing idle, arms at sides",
+        "walk_0": "heavy step left foot forward",
+        "walk_1": "heavy mid-stride, clear motion",
+        "walk_2": "heavy step right foot forward",
+        "attack": "both arms raised slamming downward"
+      }
+    }
+  ]
+}

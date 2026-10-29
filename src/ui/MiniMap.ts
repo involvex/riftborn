@@ -143,25 +143,56 @@ export class MiniMap {
 
   apply(snap: MapSnapshot): void {
     this.snap = snap;
+    const view = this.viewWindow(snap);
     const fogKey = snap.explored ? exploredStamp(snap.explored) : 'nofog';
-    const key = `${snap.inRift}:${snap.width}x${snap.height}:${fogKey}`;
+    const key = `${snap.inRift}:${snap.width}x${snap.height}:${view.x0},${view.y0},${view.span}:${fogKey}`;
+    // Redraw terrain when the zoom window moves a tile (touch) or map changes
     if (key !== this.lastTerrainKey) {
       this.lastTerrainKey = key;
-      this.drawTerrain(snap);
+      this.drawTerrain(snap, view);
     }
-    this.drawMarkers(snap, false);
+    this.drawMarkers(snap, view, false);
   }
 
-  private drawTerrain(snap: MapSnapshot): void {
+  /** Full map on desktop; player-centered zoom on touch phones. */
+  private viewWindow(snap: MapSnapshot): {
+    x0: number;
+    y0: number;
+    span: number;
+  } {
+    const touch = shouldShowTouchControls();
+    if (!touch) {
+      return { x0: 0, y0: 0, span: Math.max(snap.width, snap.height) };
+    }
+    const player = snap.markers.find((m) => m.kind === 'player');
+    const span = Math.min(
+      Math.max(snap.width, snap.height),
+      snap.inRift ? 22 : 20,
+    );
+    const cx = player?.x ?? snap.width / 2;
+    const cy = player?.y ?? snap.height / 2;
+    let x0 = Math.floor(cx - span / 2);
+    let y0 = Math.floor(cy - span / 2);
+    x0 = Math.max(0, Math.min(snap.width - span, x0));
+    y0 = Math.max(0, Math.min(snap.height - span, y0));
+    return { x0, y0, span };
+  }
+
+  private drawTerrain(
+    snap: MapSnapshot,
+    view: { x0: number; y0: number; span: number },
+  ): void {
     this.terrain.clear();
-    const tw = (SIZE - PAD * 2) / snap.width;
-    const th = (SIZE - PAD * 2) / snap.height;
+    const tw = (SIZE - PAD * 2) / view.span;
+    const th = (SIZE - PAD * 2) / view.span;
     const ox = -SIZE / 2 + PAD;
     const oy = -SIZE / 2 + PAD;
     const explored = snap.explored;
     const touch = shouldShowTouchControls();
-    for (let y = 0; y < snap.height; y++) {
-      for (let x = 0; x < snap.width; x++) {
+    const x1 = Math.min(snap.width, view.x0 + view.span);
+    const y1 = Math.min(snap.height, view.y0 + view.span);
+    for (let y = view.y0; y < y1; y++) {
+      for (let x = view.x0; x < x1; x++) {
         const i = y * snap.width + x;
         const fogged = !!(explored && !explored[i]);
         const kind = fogged ? 'fog' : snap.cells[i]!;
@@ -169,22 +200,36 @@ export class MiniMap {
           MAP_CELL_COLOR[kind],
           fogged && touch ? 0.55 : 1,
         );
-        this.terrain.fillRect(ox + x * tw, oy + y * th, tw + 0.5, th + 0.5);
+        this.terrain.fillRect(
+          ox + (x - view.x0) * tw,
+          oy + (y - view.y0) * th,
+          tw + 0.5,
+          th + 0.5,
+        );
       }
     }
   }
 
-  private drawMarkers(snap: MapSnapshot, showMobs: boolean): void {
+  private drawMarkers(
+    snap: MapSnapshot,
+    view: { x0: number; y0: number; span: number },
+    showMobs: boolean,
+  ): void {
     this.marks.clear();
-    const tw = (SIZE - PAD * 2) / snap.width;
-    const th = (SIZE - PAD * 2) / snap.height;
+    const tw = (SIZE - PAD * 2) / view.span;
+    const th = (SIZE - PAD * 2) / view.span;
     const ox = -SIZE / 2 + PAD;
     const oy = -SIZE / 2 + PAD;
     const explored = snap.explored;
     const toPx = (wx: number, wy: number) => ({
-      px: ox + wx * tw,
-      py: oy + wy * th,
+      px: ox + (wx - view.x0) * tw,
+      py: oy + (wy - view.y0) * th,
     });
+    const inView = (wx: number, wy: number) =>
+      wx >= view.x0 - 1 &&
+      wy >= view.y0 - 1 &&
+      wx <= view.x0 + view.span + 1 &&
+      wy <= view.y0 + view.span + 1;
     const isExplored = (wx: number, wy: number) => {
       if (!explored) return true;
       const x = Math.floor(wx);
@@ -196,16 +241,17 @@ export class MiniMap {
     for (const m of snap.markers) {
       if (m.kind === 'mob' && !showMobs) continue;
       if (m.kind === 'player') continue;
+      if (!inView(m.x, m.y)) continue;
       if (!isExplored(m.x, m.y)) continue;
       const { px, py } = toPx(m.x, m.y);
       const r =
         m.kind === 'boss'
-          ? 3.5
+          ? 4
           : m.kind === 'portal'
-            ? 3
+            ? 3.5
             : m.kind === 'npc'
-              ? 2.5
-              : 2;
+              ? 3
+              : 2.5;
       this.marks.fillStyle(
         MAP_MARKER_COLOR[m.kind],
         m.kind === 'mob' ? 0.45 : 0.95,
@@ -217,9 +263,9 @@ export class MiniMap {
     if (player) {
       const { px, py } = toPx(player.x, player.y);
       const big = shouldShowTouchControls();
-      const s = big ? 6 : 4;
+      const s = big ? 7 : 4;
       this.marks.fillStyle(0x000000, 0.55);
-      this.marks.fillCircle(px, py, big ? 5 : 3.5);
+      this.marks.fillCircle(px, py, big ? 6 : 3.5);
       this.marks.fillStyle(MAP_MARKER_COLOR.player, 1);
       this.marks.fillTriangle(
         px,

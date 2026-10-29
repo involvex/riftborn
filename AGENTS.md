@@ -93,6 +93,43 @@ WASD move · LMB attack · E interact/gather/chest/shrine · F craft · 1/2/3 sk
 
 Touch (`/?touch=1` or coarse/small): virtual stick · ATK · E · DASH · INV/MAP/MENU · ability bar 1/2/3.
 
+## Audio
+
+- Placeholders live in `public/assets/audio/sfx/` and `…/music/` (WAV).
+- Regenerate: `bun run scripts/gen-placeholder-sfx.mjs`
+- Load via `preloadAudio` in BootScene; playback through `AudioBus`
+  (Phaser files first, WebAudio beeps as fallback).
+- Hub vs combat music swaps in `WorldScene.loadZone`.
+- Replace placeholders with ChipTone / sfxr / BeepBox exports (prefer `.ogg`)
+  before jam submit — keep the same Phaser keys in `AudioBus.ts`.
+
+## Jam asset strategy (Game Off / free tools)
+
+- **Reuse first:** recolor existing sprites in `public/assets/sprites/game/`
+  and icons in `public/assets/icons/` (Libresprite).
+- **Character poses:** put sources in `public/assets/sprites/` as
+  `{base}_idle.png`, `{base}_walk_0..n.png`, `{base}_attack_0..n.png`
+  (prompts in `_prompts/poses.json`). Run `bun run sprites:process` →
+  14-frame sheets in `game/spr_*.png`. Numbered walks beat idle-only bob.
+- **Gen tools:** HF Qwen MCP, `D:\repos\involvex\image-worker`
+  (`bun run src/index.ts generate …`), `D:\repos\image-wizard-cli` (Bing).
+  Fill gaps: `bun run scripts/synth-extra-walk-poses.mjs`.
+- **SFX:** [sfxr.me](https://sfxr.me/) / ChipTone → drop into
+  `public/assets/audio/sfx/`.
+- **Music:** [BeepBox](https://www.beepbox.co/) / JummBox loops →
+  `public/assets/audio/music/`.
+- Prefer **CC0** packs (Kenney, OpenGameArt). No paid assets for jam builds.
+- **LPC enemies** (Charles Sanchez): `sprites/lpc/` → `spr_shade` /
+  `spr_crawler` / `spr_wisp` / `spr_bat` (Nightwing elite) via
+  `process-lpc-enemies.mjs` (**CC-BY-SA 3.0** — see
+  `public/assets/ATTRIBUTION.md`).
+- **Ash Scout / Nightwing:** named elites; kill toast + gear floor magic+.
+- **Particles** (hackcraft.de CC-BY): `vfx/particles/` → combat bursts in
+  `CombatVfx.ts` (`process-particles.mjs`).
+- `bun run sprites:process` runs AI sheets, then LPC enemies, then particles.
+- First-run tutorial: `TutorialOverlay` (`localStorage` key
+  `riftborn.tutorial.v1`); skipped on `/?smoke=1`.
+
 ## Coding conventions
 
 - Keep changes scoped; no drive-by refactors or unsolicited markdown.

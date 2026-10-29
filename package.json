@@ -18,7 +18,7 @@
     "desktop": "bun run scripts/desktop.mjs",
     "desktop:prod": "bun run build && bunx electron . --dist",
     "icons": "bun run scripts/make-icons.mjs",
-    "sprites:process": "bun run scripts/process-sprites.mjs",
+    "sprites:process": "bun run scripts/process-sprites.mjs && bun run scripts/process-lpc-enemies.mjs && bun run scripts/process-particles.mjs",
     "build:portable": "bun run icons && bun run build && electron-builder --win portable",
     "lint": "eslint .",
     "format": "prettier . --write",

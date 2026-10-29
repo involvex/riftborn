@@ -85,10 +85,10 @@ export class Enemy {
     const painted = isPaintedSprite(this.textureKey);
     const drawScale = painted
       ? this.isBoss || this.def.isElite
-        ? 0.85
+        ? 1.05
         : this.elitePack
-          ? 0.78
-          : 0.7
+          ? 0.98
+          : 0.92
       : this.isBoss || this.def.isElite
         ? 1.55
         : this.elitePack
@@ -114,6 +114,9 @@ export class Enemy {
       this.sprite.setTint(0xb08a60);
     } else if (this.def.id === 'ash_scout') {
       this.sprite.setTint(0xd4a060);
+    } else if (this.def.id === 'ash_bat') {
+      // Red-eye bat sheet already reads aggressive; light violet punch
+      this.sprite.setTint(0xc8a0ff);
     } else if (
       (this.def.isElite || this.elitePack || this.isBoss) &&
       !painted
@@ -275,17 +278,25 @@ export class Enemy {
     if (!this.alive) return false;
     this.hp -= amount;
     this.redrawBar();
-    this.sprite.setTint(0xffffff);
-    this.sprite.scene.time.delayedCall(60, () => {
-      if (!this.alive) return;
-      this.applyBaseTint();
-    });
+    this.flashHit();
     if (this.hp <= 0) {
       this.alive = false;
       this.body.setVisible(false);
       return true;
     }
     return false;
+  }
+
+  /** White punch + slight knockback read on hit. */
+  flashHit(): void {
+    this.sprite.setTint(0xffffff);
+    const ox = this.sprite.x;
+    this.sprite.x = ox + (Math.random() > 0.5 ? 3 : -3);
+    this.sprite.scene.time.delayedCall(70, () => {
+      if (!this.alive) return;
+      this.sprite.x = ox;
+      this.applyBaseTint();
+    });
   }
 
   destroy(): void {

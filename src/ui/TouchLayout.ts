@@ -34,8 +34,8 @@ export function computeTouchLayout(width: number, height: number): TouchLayout {
   const gap = Math.max(10, Math.round(short * 0.028));
 
   const mapSize = landscape
-    ? Math.min(112, Math.round(short * 0.3))
-    : Math.min(100, Math.round(short * 0.22));
+    ? Math.min(132, Math.round(short * 0.36))
+    : Math.min(118, Math.round(short * 0.28));
 
   // —— Left: stick + dash ——
   const stickR = landscape

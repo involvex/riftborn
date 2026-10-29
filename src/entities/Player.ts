@@ -9,6 +9,7 @@ import {
   isPaintedSprite,
   playerSpriteKey,
 } from '../render/SpriteAtlas';
+import { playCombatBurst } from '../render/CombatVfx';
 import { gameState } from '../systems/GameState';
 
 type AnimKind = 'idle' | 'walk' | 'attack';
@@ -36,6 +37,7 @@ export class Player {
   private slashUntil = 0;
   private bobPhase = 0;
   private walkPhase = 0;
+  private hitFlashUntil = 0;
 
   constructor(scene: Phaser.Scene, worldX: number, worldY: number) {
     ensureGameSprites(scene);
@@ -51,7 +53,7 @@ export class Player {
     this.applyScale();
     this.slash = scene.add.graphics();
     this.label = scene.add
-      .text(0, -52, gameState.name, {
+      .text(0, -64, gameState.name, {
         fontFamily: 'Georgia, serif',
         fontSize: '12px',
         color: '#e8e4d8',
@@ -87,7 +89,7 @@ export class Player {
   }
 
   private applyScale(): void {
-    this.sprite.setScale(isPaintedSprite(this.textureKey) ? 0.78 : 1.35);
+    this.sprite.setScale(isPaintedSprite(this.textureKey) ? 0.95 : 1.35);
   }
 
   private applyFacing(): void {
@@ -167,9 +169,10 @@ export class Player {
   playAttack(): void {
     this.playAnim('attack', true);
     this.showSlash();
+    playCombatBurst(this.scene, this.worldX, this.worldY, 'slash', this.facing);
     // Punch the sprite forward slightly so the swing reads in-world.
     const dir = this.facing;
-    const base = isPaintedSprite(this.textureKey) ? 0.78 : 1.35;
+    const base = isPaintedSprite(this.textureKey) ? 0.95 : 1.35;
     this.sprite.setScale(base * 1.12);
     this.sprite.x = dir * 7;
     this.sprite.y = -6;
@@ -177,6 +180,16 @@ export class Player {
       this.applyScale();
       this.sprite.x = 0;
       this.sprite.y = -4;
+    });
+  }
+
+  /** Brief white / red flash when the player takes a hit. */
+  flashHit(): void {
+    this.hitFlashUntil = this.scene.time.now + 90;
+    this.sprite.setTint(0xff6060);
+    this.scene.time.delayedCall(90, () => {
+      if (this.scene.time.now < this.hitFlashUntil) return;
+      this.applyClassTint();
     });
   }
 

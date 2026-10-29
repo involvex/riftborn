@@ -19,6 +19,7 @@ const SHEET_KEYS = [
   'spr_shade',
   'spr_crawler',
   'spr_wisp',
+  'spr_bat',
   'spr_rift_lord',
 ] as const;
 
@@ -67,6 +68,8 @@ export function ensureGameSprites(scene: Phaser.Scene): void {
       generateEnemy(scene, key, '#8A7A60', '#C4B080', 'crawler');
     } else if (key === 'spr_wisp') {
       generateEnemy(scene, key, '#E07040', '#FFB070', 'wisp');
+    } else if (key === 'spr_bat') {
+      generateEnemy(scene, key, '#5A3A7A', '#A080C0', 'wisp');
     } else if (key === 'spr_rift_lord') {
       generateEnemy(scene, key, '#2A80C0', '#6EC6FF', 'lord');
     } else {
@@ -103,6 +106,7 @@ export function playerSpriteKey(
 
 export function enemySpriteKey(defId: string): string {
   if (defId === 'ash_scamp' || defId === 'ash_scout') return 'spr_shade';
+  if (defId === 'ash_bat') return 'spr_bat';
   if (defId === 'crawler') return 'spr_crawler';
   if (defId === 'wisp') return 'spr_wisp';
   if (defId === 'rift_lord') return 'spr_rift_lord';
@@ -160,8 +164,8 @@ function registerAnims(scene: Phaser.Scene): void {
   for (const key of SHEET_KEYS) {
     if (!scene.textures.exists(key)) continue;
     addAnim(scene, `${key}_idle`, key, 0, 3, 6, true);
-    addAnim(scene, `${key}_walk`, key, 4, 9, 14, true);
-    addAnim(scene, `${key}_attack`, key, 10, 13, 18, false);
+    addAnim(scene, `${key}_walk`, key, 4, 9, 18, true);
+    addAnim(scene, `${key}_attack`, key, 10, 13, 20, false);
   }
 }
 

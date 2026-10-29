@@ -447,6 +447,9 @@ export function generateHub(seed = 1): ZoneLayout {
     { enemyId: 'crawler', count: 1, x: 55.5, y: 11.5 },
   );
   packs.push({ enemyId: 'ash_scout', count: 1, x: 54.5, y: 54.5 });
+  // Flying elite near the cairn + a second on the watch ridge
+  packs.push({ enemyId: 'ash_bat', count: 1, x: 40.5, y: 55.5 });
+  packs.push({ enemyId: 'ash_bat', count: 1, x: 56.5, y: 33.5 });
   packs.push(
     { enemyId: 'wisp', count: 2, x: 10.5, y: 9.5 },
     { enemyId: 'ash_scamp', count: 2, x: 11.5, y: 11.5 },
@@ -552,6 +555,15 @@ export function generateRift(seed: number): ZoneLayout {
       x,
       y,
     });
+    // Occasional Nightwing elite in a rift wave
+    if (rnd() > 0.72) {
+      packs.push({
+        enemyId: 'ash_bat',
+        count: 1,
+        x: x + 0.8,
+        y: y - 0.6,
+      });
+    }
     if (rnd() > 0.45) {
       chests.push({
         id: `rift_chest_${wave}`,

@@ -39,6 +39,7 @@ import { bindAction } from '../core/Hotkeys';
 import { audioBus } from '../core/AudioBus';
 import { settingsStore } from '../core/SettingsStore';
 import { playSkillVfx } from '../render/SkillVfx';
+import { playCombatBurst } from '../render/CombatVfx';
 import classesData from '../data/classes.json';
 import type { CharacterClassId, GearRarity } from '../types/game';
 import {
@@ -134,6 +135,7 @@ export class WorldScene extends Phaser.Scene {
 
   create(): void {
     this.cameras.main.setBackgroundColor('#12161c');
+    audioBus.bind(this);
     this.tiles = this.add.graphics().setDepth(-1000);
 
     this.player = new Player(
@@ -214,7 +216,10 @@ export class WorldScene extends Phaser.Scene {
     });
 
     this.inputUnsubs.push(
-      gameEvents.on(Events.SETTINGS_CHANGED, () => this.rebindActionKeys()),
+      gameEvents.on(Events.SETTINGS_CHANGED, () => {
+        this.rebindActionKeys();
+        audioBus.applyMusicVolume();
+      }),
       gameEvents.on('combat:castSkill', (p) => {
         const d = p as { slot: number };
         this.tryCastSkill(d.slot);
@@ -252,6 +257,7 @@ export class WorldScene extends Phaser.Scene {
     this.mapH = 0;
     this.explored = [];
     this.exploredDirty = true;
+    audioBus.playMusic(rift ? 'combat' : 'hub');
     if (rift) {
       const seed = gameState.riftSeed ?? Date.now();
       this.riftDepth = riftDepthFromLevel(gameState.progression.level);
@@ -439,14 +445,14 @@ export class WorldScene extends Phaser.Scene {
           accent: 0x8a7a60,
           subtitle: 'Crawler dens · chest',
           titleColor: '#c8b898',
-          tip: 'bone crawlers guard a chest',
+          tip: 'rift serpents guard a chest',
         };
       case 'grove':
         return {
           accent: 0x50a060,
-          subtitle: 'Wisp grove · chest',
+          subtitle: 'Hornet grove · chest',
           titleColor: '#a8d0a0',
-          tip: 'ember wisps & a grove chest',
+          tip: 'ash hornets & a grove chest',
         };
       case 'watch':
         return {
@@ -458,9 +464,9 @@ export class WorldScene extends Phaser.Scene {
       case 'cairn':
         return {
           accent: 0x6a6080,
-          subtitle: 'Burial mound · chest',
+          subtitle: 'Burial mound · Nightwing',
           titleColor: '#c0b0d0',
-          tip: 'tough foes around a cairn chest',
+          tip: 'a Nightwing roosts over the cairn chest',
         };
       case 'ruin':
       default:
@@ -1075,6 +1081,7 @@ export class WorldScene extends Phaser.Scene {
             'player',
           );
         }
+        this.player.flashHit();
         audioBus.hit();
         this.triggerHitShake(120, 0.004);
         if (gameState.hp <= 0) this.onPlayerDeath();
@@ -1180,15 +1187,25 @@ export class WorldScene extends Phaser.Scene {
     }
     this.player.faceToward(aimX, aimY);
     this.player.playAttack();
+    audioBus.swing();
 
     let hit = false;
     for (const enemy of inRange) {
       hit = true;
       const { screenX, screenY } = worldToScreen(enemy.worldX, enemy.worldY);
       gameState.combat.emitDamageNumber(screenX, screenY - 18, dmg, 'enemy');
+      playCombatBurst(
+        this,
+        enemy.worldX,
+        enemy.worldY,
+        dmg >= 20 ? 'crit' : 'hit',
+      );
       if (enemy.applyDamage(dmg)) this.onEnemyKilled(enemy);
     }
-    if (hit) audioBus.hit();
+    if (hit) {
+      audioBus.hit();
+      this.triggerHitShake(55, 0.0025);
+    }
     if (netClient.connected) {
       netClient.sendInput({
         dx: 0,
@@ -1214,10 +1231,12 @@ export class WorldScene extends Phaser.Scene {
       gameState.inventory.add('gold', this.riftMod.goldOnKill);
     }
     const scoutKill = enemy.def.id === 'ash_scout';
+    const batKill = enemy.def.id === 'ash_bat';
+    const namedElite = scoutKill || batKill;
     gameState.combat.grantKillRewards(enemy.def.xp, enemy.def.lootTable, {
       elite: enemy.awardsEliteLoot,
       lootTier: tier,
-      guaranteedMinRarity: scoutKill
+      guaranteedMinRarity: namedElite
         ? 'magic'
         : enemy.isBoss
           ? 'rare'
@@ -1227,6 +1246,10 @@ export class WorldScene extends Phaser.Scene {
         if (scoutKill) {
           gameEvents.emit('ui:toast', {
             text: `Scout fall — ${g.rarity} ${g.name}`,
+          });
+        } else if (batKill) {
+          gameEvents.emit('ui:toast', {
+            text: `Nightwing down — ${g.rarity} ${g.name}`,
           });
         } else {
           gameEvents.emit('ui:toast', { text: describeGear(g) });
@@ -1534,7 +1557,8 @@ export class WorldScene extends Phaser.Scene {
 
     chest.markLooted();
     if (!gameState.inRift) gameState.bounties.noteChestOpen();
-    audioBus.hit();
+    audioBus.open();
+    audioBus.loot(tier >= 4 ? 'rare' : tier >= 3 ? 'magic' : 'common');
     this.triggerHitShake(60, 0.003);
     gameState.persist();
     gameEvents.emit('ui:toast', {
@@ -1641,6 +1665,7 @@ export class WorldScene extends Phaser.Scene {
       if (dist > 1.6) continue;
       const { screenX, screenY } = worldToScreen(enemy.worldX, enemy.worldY);
       gameState.combat.emitDamageNumber(screenX, screenY - 18, dmg, 'enemy');
+      playCombatBurst(this, enemy.worldX, enemy.worldY, 'burn');
       if (enemy.applyDamage(dmg)) this.onEnemyKilled(enemy);
     }
     this.cameras.main.flash(80, 110, 160, 200, false, undefined, this);
