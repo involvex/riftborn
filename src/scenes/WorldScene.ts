@@ -86,6 +86,7 @@ export class WorldScene extends Phaser.Scene {
   private keySkill1!: Phaser.Input.Keyboard.Key;
   private keySkill2!: Phaser.Input.Keyboard.Key;
   private keySkill3!: Phaser.Input.Keyboard.Key;
+  /** Floor diamonds (no ellipses — those tanked phone FPS). */
   private tiles!: Phaser.GameObjects.Graphics;
   private portalMarker: Phaser.GameObjects.Container | null = null;
   private benchMarker: Phaser.GameObjects.Container | null = null;
@@ -133,7 +134,7 @@ export class WorldScene extends Phaser.Scene {
 
   create(): void {
     this.cameras.main.setBackgroundColor('#12161c');
-    this.tiles = this.add.graphics();
+    this.tiles = this.add.graphics().setDepth(-1000);
 
     this.player = new Player(
       this,
@@ -771,7 +772,7 @@ export class WorldScene extends Phaser.Scene {
               ? 0x243028
               : 0x1c2620;
         }
-        this.drawIsoTile(x, y, base);
+        this.strokeIsoTile(this.tiles, x, y, base);
         if (
           plaza &&
           (x === PLAZA.x0 || x === PLAZA.x1 || y === PLAZA.y0 || y === PLAZA.y1)
@@ -791,8 +792,8 @@ export class WorldScene extends Phaser.Scene {
       for (let x = 0; x < map.width; x++) {
         if (map.cells[y][x] !== 1) continue;
         const shade = (x + y) % 2 === 0 ? 0x1c2836 : 0x16202c;
-        this.drawIsoTile(x, y, shade);
-        if (Math.random() > 0.94) {
+        this.strokeIsoTile(this.tiles, x, y, shade);
+        if ((x * 17 + y * 31) % 19 === 0) {
           const { screenX, screenY } = worldToScreen(x, y);
           this.tiles.fillStyle(0x3a6088, 0.4);
           this.tiles.fillCircle(screenX, screenY, 3);
@@ -802,40 +803,48 @@ export class WorldScene extends Phaser.Scene {
     this.tiles.setDepth(-1000);
   }
 
-  private drawIsoTile(x: number, y: number, color: number): void {
+  /** Cheap iso diamond — inset face, no ellipses. */
+  private strokeIsoTile(
+    g: Phaser.GameObjects.Graphics,
+    x: number,
+    y: number,
+    color: number,
+  ): void {
     const { screenX, screenY } = worldToScreen(x, y);
-    // Iso diamond base (walk grid)
-    this.tiles.fillStyle(color, 1);
-    this.tiles.beginPath();
-    this.tiles.moveTo(screenX, screenY - 16);
-    this.tiles.lineTo(screenX + 32, screenY);
-    this.tiles.lineTo(screenX, screenY + 16);
-    this.tiles.lineTo(screenX - 32, screenY);
-    this.tiles.closePath();
-    this.tiles.fillPath();
+    g.fillStyle(color, 1);
+    g.beginPath();
+    g.moveTo(screenX, screenY - 16);
+    g.lineTo(screenX + 32, screenY);
+    g.lineTo(screenX, screenY + 16);
+    g.lineTo(screenX - 32, screenY);
+    g.closePath();
+    g.fillPath();
 
-    // Soft foot-pad (was baked under enemy sprites) — fixed ground, not sliding
     const r = (color >> 16) & 0xff;
-    const g = (color >> 8) & 0xff;
+    const gr = (color >> 8) & 0xff;
     const b = color & 0xff;
     const face = Phaser.Display.Color.GetColor(
-      Math.min(255, r + 22),
-      Math.min(255, g + 18),
-      Math.min(255, b + 12),
+      Math.min(255, r + 20),
+      Math.min(255, gr + 16),
+      Math.min(255, b + 10),
     );
-    this.tiles.fillStyle(face, 0.42);
-    this.tiles.fillEllipse(screenX, screenY + 1, 46, 20);
-    this.tiles.fillStyle(0x000000, 0.3);
-    this.tiles.fillEllipse(screenX, screenY + 3, 34, 13);
+    g.fillStyle(face, 0.38);
+    g.beginPath();
+    g.moveTo(screenX, screenY - 8);
+    g.lineTo(screenX + 18, screenY + 1);
+    g.lineTo(screenX, screenY + 10);
+    g.lineTo(screenX - 18, screenY + 1);
+    g.closePath();
+    g.fillPath();
 
-    this.tiles.lineStyle(1, 0x000000, 0.16);
-    this.tiles.beginPath();
-    this.tiles.moveTo(screenX, screenY - 16);
-    this.tiles.lineTo(screenX + 32, screenY);
-    this.tiles.lineTo(screenX, screenY + 16);
-    this.tiles.lineTo(screenX - 32, screenY);
-    this.tiles.closePath();
-    this.tiles.strokePath();
+    g.lineStyle(1, 0x000000, 0.16);
+    g.beginPath();
+    g.moveTo(screenX, screenY - 16);
+    g.lineTo(screenX + 32, screenY);
+    g.lineTo(screenX, screenY + 16);
+    g.lineTo(screenX - 32, screenY);
+    g.closePath();
+    g.strokePath();
   }
 
   update(_time: number, delta: number): void {

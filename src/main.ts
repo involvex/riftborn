@@ -18,6 +18,11 @@ new Phaser.Game({
     width: window.innerWidth,
     height: window.innerHeight,
     autoCenter: Phaser.Scale.CENTER_BOTH,
+    autoRound: true,
+  },
+  fps: {
+    target: 60,
+    min: 30,
   },
   scene: [BootScene, CharacterCreateScene, WorldScene, UIScene],
   banner: false,
@@ -25,5 +30,6 @@ new Phaser.Game({
     antialias: false,
     pixelArt: true,
     roundPixels: true,
+    powerPreference: 'high-performance',
   },
 });

@@ -2,8 +2,8 @@ import Phaser from 'phaser';
 import { shouldShowTouchControls } from './TouchControls';
 
 /**
- * Tiny corner FPS readout so phone/desktop lag is measurable.
- * Bottom-left on desktop (above hotkey dock); bottom-center-left on touch.
+ * Corner FPS readout. Top-left under HP strip on phones so it isn't
+ * buried under the stick.
  */
 export class FpsHud {
   readonly root: Phaser.GameObjects.Container;
@@ -24,26 +24,22 @@ export class FpsHud {
         backgroundColor: '#0a0c10aa',
         padding: { x: 5, y: 2 },
       })
-      .setOrigin(0, 1);
+      .setOrigin(0, 0);
     this.root.add(this.label);
     this.layout();
   }
 
   layout(): void {
-    const w = this.scene.scale.width;
-    const h = this.scene.scale.height;
     const touch = shouldShowTouchControls();
-    // Keep clear of stick (BL) and hotkey dock; sit just above bottom pad
+    // Under HP/XP chrome on touch; bottom-left on desktop
     if (touch) {
-      this.root.setPosition(8, h - 8);
+      this.root.setPosition(8, 72);
     } else {
-      this.root.setPosition(10, h - 8);
+      this.label.setOrigin(0, 1);
+      this.root.setPosition(10, this.scene.scale.height - 8);
     }
-    // Avoid covering minimap on tiny widths
-    if (w < 500) this.root.setPosition(8, 24);
   }
 
-  /** Call from UIScene.update with delta ms. */
   tick(deltaMs: number): void {
     this.acc += deltaMs;
     this.frames += 1;

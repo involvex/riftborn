@@ -21,10 +21,12 @@ export class CharacterCreateScene extends Phaser.Scene {
   private gender: CharacterGender = 'male';
   private nameValue = 'Wanderer';
   private typingName = false;
+  private starting = false;
 
   private root!: Phaser.GameObjects.Container;
   private detailText!: Phaser.GameObjects.Text;
   private nameDisplay!: Phaser.GameObjects.Text;
+  private nameDom: Phaser.GameObjects.DOMElement | null = null;
   private previewSprite!: Phaser.GameObjects.Sprite;
   private previewFrame!: Phaser.GameObjects.Rectangle;
   private previewX = 0;
@@ -37,6 +39,7 @@ export class CharacterCreateScene extends Phaser.Scene {
   }
 
   create(): void {
+    this.starting = false;
     ensureGameSprites(this);
     this.cameras.main.setBackgroundColor('#0a0c10');
     this.root = this.add.container(0, 0);
@@ -76,11 +79,42 @@ export class CharacterCreateScene extends Phaser.Scene {
 
   private rebuild(): void {
     this.typingName = false;
+    this.destroyNameDom();
     this.root.destroy(true);
     this.cardFills.clear();
     this.genderBtns.clear();
     this.root = this.add.container(0, 0);
     this.build();
+  }
+
+  private destroyNameDom(): void {
+    if (this.nameDom) {
+      this.nameDom.destroy();
+      this.nameDom = null;
+    }
+  }
+
+  private syncNameFromDom(): void {
+    const node = this.nameDom?.node as HTMLInputElement | undefined;
+    if (node && typeof node.value === 'string') {
+      this.nameValue = node.value.slice(0, 20);
+    }
+  }
+
+  private startGame(): void {
+    if (this.starting) return;
+    this.starting = true;
+    this.syncNameFromDom();
+    this.typingName = false;
+    audioBus.uiClick();
+    gameState.createNew(
+      this.nameValue.trim() || 'Wanderer',
+      this.selected,
+      this.gender,
+    );
+    this.destroyNameDom();
+    this.scene.start('WorldScene');
+    this.scene.launch('UIScene');
   }
 
   private build(): void {
@@ -269,70 +303,83 @@ export class CharacterCreateScene extends Phaser.Scene {
       this.addGenderRow(cx, y + 12, contentW, compact);
     }
 
-    // —— Fixed footer ——
+    // —— Fixed footer (bottom-up so buttons never cover the name field) ——
     const footerBg = this.add
       .rectangle(cx, footerTop + footerH / 2, W, footerH, 0x0a0c10, 0.94)
       .setStrokeStyle(1, 0x2a3344, 0.8);
     this.root.add(footerBg);
 
-    let fy = footerTop + 10;
-    if (genderInFooter) {
-      this.addGenderRow(cx, fy + 10, contentW, true);
-      fy += 36;
-    }
+    const btnY = H - pad - 22;
+    this.root.add(
+      this.makeButton(cx - 100, btnY, 'Enter the Rift', () => this.startGame()),
+    );
+    this.root.add(
+      this.makeButton(cx + 100, btnY, 'Back', () => {
+        if (this.starting) return;
+        audioBus.uiClick();
+        this.destroyNameDom();
+        this.scene.start('BootScene');
+      }),
+    );
 
+    const nameBoxH = 36;
+    const nameY = btnY - 40;
     this.root.add(
       this.add
-        .text(cx, fy, 'NAME · click to type', {
+        .text(cx, nameY - nameBoxH / 2 - 14, 'NAME', {
           fontFamily: 'Segoe UI, sans-serif',
           fontSize: uiFont(this, 11, 9, 12),
           color: '#6a7a8a',
         })
         .setOrigin(0.5, 0),
     );
-    fy += 16;
 
-    const nameBoxW = Math.min(280, contentW * 0.55);
-    const nameBoxH = 34;
-    const nameBox = this.add
-      .rectangle(cx, fy + nameBoxH / 2, nameBoxW, nameBoxH, 0x1a2030, 1)
-      .setStrokeStyle(1, 0xc4a574)
-      .setInteractive({ useHandCursor: true });
+    const nameBoxW = Math.min(300, contentW * 0.6);
+    // Real HTML input — Phaser keyboard alone fails on phones / soft keyboards
+    const inputEl = document.createElement('input');
+    inputEl.type = 'text';
+    inputEl.value = this.nameValue;
+    inputEl.maxLength = 20;
+    inputEl.autocomplete = 'off';
+    inputEl.spellcheck = false;
+    inputEl.setAttribute('enterkeyhint', 'done');
+    Object.assign(inputEl.style, {
+      width: `${Math.round(nameBoxW)}px`,
+      height: `${nameBoxH}px`,
+      fontSize: '16px',
+      fontFamily: 'Georgia, serif',
+      color: '#e8e4d8',
+      background: '#1a2030',
+      border: '1px solid #c4a574',
+      borderRadius: '4px',
+      textAlign: 'center',
+      outline: 'none',
+      padding: '0 10px',
+      boxSizing: 'border-box',
+    });
+    inputEl.addEventListener('input', () => {
+      this.nameValue = inputEl.value.slice(0, 20);
+    });
+    inputEl.addEventListener('keydown', (ev) => {
+      if (ev.key === 'Enter') {
+        ev.preventDefault();
+        this.startGame();
+      }
+    });
+    this.nameDom = this.add.dom(cx, nameY, inputEl).setOrigin(0.5);
+    // Fallback display if DOM container unavailable
     this.nameDisplay = this.add
-      .text(cx, fy + nameBoxH / 2, this.nameValue, {
+      .text(cx, nameY, this.nameValue, {
         fontFamily: 'Georgia, serif',
         fontSize: uiFont(this, 15, 13, 18),
         color: '#e8e4d8',
       })
-      .setOrigin(0.5);
-    nameBox.on('pointerup', () => {
-      this.typingName = true;
-      this.refreshNameBox();
-      audioBus.uiClick();
-    });
-    this.root.add([nameBox, this.nameDisplay]);
-    fy += nameBoxH + 10;
+      .setOrigin(0.5)
+      .setVisible(false);
 
-    const btnY = Math.min(fy + 14, H - 28);
-    this.root.add(
-      this.makeButton(cx - 90, btnY, 'Enter the Rift', () => {
-        this.typingName = false;
-        audioBus.uiClick();
-        gameState.createNew(
-          this.nameValue.trim() || 'Wanderer',
-          this.selected,
-          this.gender,
-        );
-        this.scene.start('WorldScene');
-        this.scene.launch('UIScene');
-      }),
-    );
-    this.root.add(
-      this.makeButton(cx + 90, btnY, 'Back', () => {
-        audioBus.uiClick();
-        this.scene.start('BootScene');
-      }),
-    );
+    if (genderInFooter) {
+      this.addGenderRow(cx, nameY - nameBoxH / 2 - 36, contentW, true);
+    }
 
     this.selectClass(this.selected, false);
     this.selectGender(this.gender, false);
@@ -454,18 +501,27 @@ export class CharacterCreateScene extends Phaser.Scene {
         fontSize: uiFont(this, 14, 12, 17),
         color: '#0a0c10',
         backgroundColor: '#c4a574',
-        padding: { x: 14, y: 7 },
+        padding: { x: 16, y: 10 },
       })
       .setOrigin(0.5)
-      .setInteractive({ useHandCursor: true });
+      .setInteractive({ useHandCursor: true })
+      .setDepth(20);
     text.on('pointerover', () => text.setStyle({ backgroundColor: '#e0c890' }));
     text.on('pointerout', () => text.setStyle({ backgroundColor: '#c4a574' }));
-    text.on('pointerup', onClick);
+    // pointerdown is more reliable on touch than pointerup alone
+    text.on('pointerdown', () => {
+      text.setStyle({ backgroundColor: '#a89060' });
+    });
+    text.on('pointerup', () => {
+      text.setStyle({ backgroundColor: '#c4a574' });
+      onClick();
+    });
     return text;
   }
 
   shutdown(): void {
     this.scale.off('resize', this.onResize, this);
     this.input.keyboard?.off('keydown', this.onKey);
+    this.destroyNameDom();
   }
 }
