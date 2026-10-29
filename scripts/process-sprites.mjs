@@ -75,11 +75,14 @@ async function exists(p) {
 
 /**
  * Kill AI "card" backgrounds that caused flickering scaffolding.
- * 1) Near-black → transparent
- * 2) Flood-fill from image edges for colors close to corner samples
- *    (grey/brown/purple studio fills that knock-black missed)
+ * Always flood from edges only — never globally knock near-black
+ * (that turned the mage's dark robes into a ghost body).
+ *
+ * @param {string} inputPath
+ * @param {{ stripPedestal?: boolean }} [opts]
  */
-async function keyBackgroundToPng(inputPath) {
+async function keyBackgroundToPng(inputPath, opts = {}) {
+  const stripPedestal = opts.stripPedestal !== false;
   const { data, info } = await sharp(inputPath)
     .ensureAlpha()
     .raw()
@@ -108,102 +111,99 @@ async function keyBackgroundToPng(inputPath) {
     corners.reduce((s, c) => s + (c[0] + c[1] + c[2]) / 3, 0) /
     Math.max(1, corners.length);
 
-  if (cornerLum < 40) {
-    // Classic black-studio key — safe for dark cloaks/armor
-    for (let i = 0; i < px.length; i += 4) {
-      const lum = (px[i] + px[i + 1] + px[i + 2]) / 3;
-      if (lum < 18) px[i + 3] = 0;
-      else if (lum < 32)
-        px[i + 3] = Math.min(px[i + 3], Math.floor(((lum - 18) / 14) * 255));
+  const blackStudio = cornerLum < 40;
+  const matchesBg = (r, g, b) => {
+    if (blackStudio) {
+      // Edge-connected near-black only (preserves dark cloth interiors)
+      return (r + g + b) / 3 < 28;
     }
-  } else {
-    // Grey/brown/purple AI "card" fills — flood from edges only
-    const nearCorner = (r, g, b) => {
-      for (const [cr, cg, cb] of corners) {
-        const dr = r - cr;
-        const dg = g - cg;
-        const db = b - cb;
-        if (dr * dr + dg * dg + db * db < 52 * 52) return true;
-      }
-      return false;
-    };
+    for (const [cr, cg, cb] of corners) {
+      const dr = r - cr;
+      const dg = g - cg;
+      const db = b - cb;
+      if (dr * dr + dg * dg + db * db < 52 * 52) return true;
+    }
+    return false;
+  };
 
-    const seen = new Uint8Array(n);
-    const stack = [];
-    const push = (x, y) => {
-      if (x < 0 || y < 0 || x >= w || y >= h) return;
-      const idx = y * w + x;
-      if (seen[idx]) return;
-      const i = idx * 4;
-      if (px[i + 3] < 8) {
-        seen[idx] = 1;
-        return;
-      }
-      if (!nearCorner(px[i], px[i + 1], px[i + 2])) return;
+  const seen = new Uint8Array(n);
+  const stack = [];
+  const push = (x, y) => {
+    if (x < 0 || y < 0 || x >= w || y >= h) return;
+    const idx = y * w + x;
+    if (seen[idx]) return;
+    const i = idx * 4;
+    if (px[i + 3] < 8) {
       seen[idx] = 1;
-      stack.push(idx);
-    };
-    for (let x = 0; x < w; x++) {
-      push(x, 0);
-      push(x, h - 1);
+      return;
     }
-    for (let y = 0; y < h; y++) {
-      push(0, y);
-      push(w - 1, y);
-    }
-
-    while (stack.length) {
-      const idx = stack.pop();
-      const i = idx * 4;
-      px[i + 3] = 0;
-      const x = idx % w;
-      const y = (idx / w) | 0;
-      push(x + 1, y);
-      push(x - 1, y);
-      push(x, y + 1);
-      push(x, y - 1);
-    }
-
-    // Soft-knock near-black fringe next to cleared pixels
-    const fringe = [];
-    for (let y = 0; y < h; y++) {
-      for (let x = 0; x < w; x++) {
-        const idx = y * w + x;
-        const i = idx * 4;
-        if (px[i + 3] < 8) continue;
-        const lum = (px[i] + px[i + 1] + px[i + 2]) / 3;
-        if (lum >= 22) continue;
-        let nextToClear = false;
-        for (const [dx, dy] of [
-          [1, 0],
-          [-1, 0],
-          [0, 1],
-          [0, -1],
-        ]) {
-          const nx = x + dx;
-          const ny = y + dy;
-          if (nx < 0 || ny < 0 || nx >= w || ny >= h) {
-            nextToClear = true;
-            break;
-          }
-          if (px[(ny * w + nx) * 4 + 3] < 8) {
-            nextToClear = true;
-            break;
-          }
-        }
-        if (nextToClear) fringe.push(i);
-      }
-    }
-    for (const i of fringe) {
-      const lum = (px[i] + px[i + 1] + px[i + 2]) / 3;
-      if (lum < 12) px[i + 3] = 0;
-      else px[i + 3] = Math.min(px[i + 3], Math.floor(((lum - 12) / 10) * 200));
-    }
+    if (!matchesBg(px[i], px[i + 1], px[i + 2])) return;
+    seen[idx] = 1;
+    stack.push(idx);
+  };
+  for (let x = 0; x < w; x++) {
+    push(x, 0);
+    push(x, h - 1);
+  }
+  for (let y = 0; y < h; y++) {
+    push(0, y);
+    push(w - 1, y);
   }
 
-  // AI idles often bake an isometric stone pedestal under the figure.
-  // Those boxes flicker as "scaffolding" when frames bob. Strip them.
-  stripPedestalInPlace(px, w, h);
+  while (stack.length) {
+    const idx = stack.pop();
+    const i = idx * 4;
+    px[i + 3] = 0;
+    const x = idx % w;
+    const y = (idx / w) | 0;
+    push(x + 1, y);
+    push(x - 1, y);
+    push(x, y + 1);
+    push(x, y - 1);
+  }
+
+  // Soft fringe only on pixels already next to cleared BG
+  const fringe = [];
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      const idx = y * w + x;
+      const i = idx * 4;
+      if (px[i + 3] < 8) continue;
+      const lum = (px[i] + px[i + 1] + px[i + 2]) / 3;
+      // Keep dark robes: only soft-knock very-near-black fringe
+      if (lum >= (blackStudio ? 14 : 22)) continue;
+      let nextToClear = false;
+      for (const [dx, dy] of [
+        [1, 0],
+        [-1, 0],
+        [0, 1],
+        [0, -1],
+      ]) {
+        const nx = x + dx;
+        const ny = y + dy;
+        if (nx < 0 || ny < 0 || nx >= w || ny >= h) {
+          nextToClear = true;
+          break;
+        }
+        if (px[(ny * w + nx) * 4 + 3] < 8) {
+          nextToClear = true;
+          break;
+        }
+      }
+      if (nextToClear) fringe.push(i);
+    }
+  }
+  for (const i of fringe) {
+    const lum = (px[i] + px[i + 1] + px[i + 2]) / 3;
+    if (lum < 8) px[i + 3] = 0;
+    else px[i + 3] = Math.min(px[i + 3], Math.floor(((lum - 8) / 10) * 200));
+  }
+
+  // Pedestal strip eats dark robes (low-sat near-black matches "shadow").
+  // Only run it for enemy / non-hero sources.
+  if (stripPedestal) {
+    stripPedestalInPlace(px, w, h);
+  }
 
   return sharp(px, {
     raw: { width: w, height: h, channels: 4 },
@@ -504,8 +504,8 @@ async function isSceneLike(pngBuf) {
   return false;
 }
 
-async function knockBlackToPng(inputPath) {
-  return keyBackgroundToPng(inputPath);
+async function knockBlackToPng(inputPath, opts = {}) {
+  return keyBackgroundToPng(inputPath, opts);
 }
 
 async function toCell(pngBuf, motion = { x: 0, y: 0, scale: 1 }) {
@@ -639,12 +639,13 @@ async function filterUsablePoses(bufs) {
 }
 
 async function loadPoseBuffers(base, kind, count) {
+  const keyOpts = { stripPedestal: !base.startsWith('hero_') };
   /** @type {Buffer[]} */
   const numbered = [];
   for (let i = 0; i < 8; i++) {
     const p = path.join(SRC, `${base}_${kind}_${i}.png`);
     if (await exists(p)) {
-      numbered.push(await knockBlackToPng(p));
+      numbered.push(await knockBlackToPng(p, keyOpts));
     } else if (numbered.length > 0) {
       break;
     }
@@ -666,7 +667,7 @@ async function loadPoseBuffers(base, kind, count) {
 
   const singlePath = path.join(SRC, `${base}_${kind}.png`);
   if (await exists(singlePath)) {
-    const raw = await knockBlackToPng(singlePath);
+    const raw = await knockBlackToPng(singlePath, keyOpts);
     if (await isCardLike(raw)) {
       console.log(`  skip card-like ${base}_${kind}.png`);
       return null;
@@ -802,7 +803,9 @@ async function buildSheet(row) {
     return false;
   }
 
-  const idlePng = await knockBlackToPng(idlePath);
+  const idlePng = await knockBlackToPng(idlePath, {
+    stripPedestal: !row.base.startsWith('hero_'),
+  });
   const frames = [];
   let walkMode = 'idle-synth';
   let attackMode = 'idle-synth';
