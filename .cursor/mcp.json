@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "mobile-mcp": {
+      "command": "bunx",
+      "args": ["-y", "@mobilenext/mobile-mcp@latest"]
+    }
+  }
+}
