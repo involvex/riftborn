@@ -67,8 +67,6 @@ import {
   applyWorldArtFilters,
   DECOR_PROP_KEY,
   hasArt,
-  pickDungeonTileKey,
-  pickHubTileKey,
   propArtScale,
   TILE_ART_SCALE,
 } from '../render/WorldArt';
@@ -802,6 +800,52 @@ export class WorldScene extends Phaser.Scene {
     const pathSet = new Set(
       (this.hubLayout?.paths ?? []).map((p) => `${p.x},${p.y}`),
     );
+
+    const valueNoise = (x: number, y: number, scale: number): number => {
+      const xi = Math.floor(x / scale);
+      const yi = Math.floor(y / scale);
+      const xf = x / scale - xi;
+      const yf = y / scale - yi;
+      const seed = 131542391;
+      const hash = (nx: number, ny: number) => {
+        let h = (nx * 374761393) ^ (ny * 668265263) ^ (seed * 1274126177);
+        h = Math.imul(h ^ (h >>> 13), 1274126177);
+        return ((h ^ (h >>> 16)) >>> 0) / 4294967296;
+      };
+      const n00 = hash(xi, yi);
+      const n10 = hash(xi + 1, yi);
+      const n01 = hash(xi, yi + 1);
+      const n11 = hash(xi + 1, yi + 1);
+      const u = xf * xf * (3 - 2 * xf);
+      const v = yf * yf * (3 - 2 * yf);
+      const nx0 = n00 * (1 - u) + n10 * u;
+      const nx1 = n01 * (1 - u) + n11 * u;
+      return nx0 * (1 - v) + nx1 * v;
+    };
+
+    const pickClusteredTile = (
+      x: number,
+      y: number,
+      band: 'plaza' | 'road' | 'transition' | 'wild',
+    ): string => {
+      // Plaza = Pflaster, Strassen/Spurs = Weg, Wildnis/Fringe = Gras
+      if (band === 'plaza') {
+        const n = valueNoise(x, y, 4);
+        return n < 0.85 ? 'tile_hub_0' : 'tile_hub_1';
+      }
+      if (band === 'road') {
+        const n = valueNoise(x, y, 3);
+        return n < 0.85 ? 'tile_hub_1' : 'tile_hub_2';
+      }
+      if (band === 'transition') {
+        const n = valueNoise(x, y, 3.5);
+        return n < 0.85 ? 'tile_hub_2' : 'tile_hub_3';
+      }
+      // wild/fringe = grass
+      const n = valueNoise(x, y, 4);
+      return n < 0.85 ? 'tile_hub_4' : 'tile_hub_3';
+    };
+
     for (let y = 0; y < size; y++) {
       for (let x = 0; x < size; x++) {
         const onPath = pathSet.has(`${x},${y}`);
@@ -810,25 +854,18 @@ export class WorldScene extends Phaser.Scene {
         let fallback: number;
         if (plaza) {
           band = 'plaza';
-          fallback = (x + y) % 2 === 0 ? 0x4a463c : 0x3e3a32;
+          fallback = 0xd8d8d8;
         } else if (onPath) {
           band = 'road';
-          fallback = (x + y) % 2 === 0 ? 0x3a3830 : 0x322e28;
+          fallback = 0xd8d8d8;
         } else if (nearTown(x, y, 14)) {
           band = 'transition';
-          fallback = (x + y) % 2 === 0 ? 0x2a3428 : 0x222c20;
+          fallback = 0xd8d8d8;
         } else {
           band = 'wild';
-          const edge = x < 3 || y < 3 || x > size - 4 || y > size - 4;
-          fallback = edge
-            ? (x + y) % 2 === 0
-              ? 0x1a2218
-              : 0x141c14
-            : (x + y) % 2 === 0
-              ? 0x243028
-              : 0x1c2620;
+          fallback = 0xd8d8d8;
         }
-        this.placeFloorTile(x, y, pickHubTileKey(x, y, band), fallback);
+        this.placeFloorTile(x, y, pickClusteredTile(x, y, band), fallback);
         if (
           plaza &&
           (x === PLAZA.x0 || x === PLAZA.x1 || y === PLAZA.y0 || y === PLAZA.y1)
@@ -845,11 +882,43 @@ export class WorldScene extends Phaser.Scene {
   private drawDungeonTiles(map: DungeonMap): void {
     this.tiles.clear();
     this.clearTileSprites();
+
+    const valueNoise = (x: number, y: number, scale: number): number => {
+      const xi = Math.floor(x / scale);
+      const yi = Math.floor(y / scale);
+      const xf = x / scale - xi;
+      const yf = y / scale - yi;
+      const seed = 131542391;
+      const hash = (nx: number, ny: number) => {
+        let h = (nx * 374761393) ^ (ny * 668265263) ^ (seed * 1274126177);
+        h = Math.imul(h ^ (h >>> 13), 1274126177);
+        return ((h ^ (h >>> 16)) >>> 0) / 4294967296;
+      };
+      const n00 = hash(xi, yi);
+      const n10 = hash(xi + 1, yi);
+      const n01 = hash(xi, yi + 1);
+      const n11 = hash(xi + 1, yi + 1);
+      const u = xf * xf * (3 - 2 * xf);
+      const v = yf * yf * (3 - 2 * yf);
+      const nx0 = n00 * (1 - u) + n10 * u;
+      const nx1 = n01 * (1 - u) + n11 * u;
+      return nx0 * (1 - v) + nx1 * v;
+    };
+
     for (let y = 0; y < map.height; y++) {
       for (let x = 0; x < map.width; x++) {
         if (map.cells[y][x] !== 1) continue;
-        const shade = (x + y) % 2 === 0 ? 0x1c2836 : 0x16202c;
-        this.placeFloorTile(x, y, pickDungeonTileKey(x, y), shade);
+        const shade = 0xd8d8d8;
+        const n = valueNoise(x, y, 4);
+        let key: string;
+        if (n < 0.85) {
+          key = 'tile_dungeon_0';
+        } else if (n < 0.93) {
+          key = 'tile_dungeon_1';
+        } else {
+          key = 'tile_dungeon_2';
+        }
+        this.placeFloorTile(x, y, key, shade);
         if ((x * 17 + y * 31) % 19 === 0) {
           const { screenX, screenY } = worldToScreen(x, y);
           this.tiles.fillStyle(0x3a6088, 0.4);
