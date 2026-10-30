@@ -33,7 +33,7 @@ export type WorldTileKey = (typeof WORLD_TILE_KEYS)[number];
 export type WorldPropKey = (typeof WORLD_PROP_KEYS)[number];
 
 /** Source diamonds are 128×64; IsoMath tiles are 64×32. */
-export const TILE_ART_SCALE = 0.5;
+export const TILE_ART_SCALE = 0.515;
 
 /** Map HubDecorKind → prop texture key (stall uses tent). */
 export const DECOR_PROP_KEY: Record<string, WorldPropKey> = {
