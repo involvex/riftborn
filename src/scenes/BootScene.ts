@@ -4,6 +4,7 @@ import { preloadAudio } from '../core/AudioAssets';
 import { preloadItemIcons } from '../render/ItemIcons';
 import { ensureGameSprites, preloadGameSprites } from '../render/SpriteAtlas';
 import { preloadCombatVfx } from '../render/CombatVfx';
+import { applyWorldArtFilters, preloadWorldArt } from '../render/WorldArt';
 import { gameState } from '../systems/GameState';
 import { uiFont } from '../core/UiScale';
 import type { CharacterSave } from '../types/save';
@@ -21,11 +22,13 @@ export class BootScene extends Phaser.Scene {
     preloadGameSprites(this);
     preloadCombatVfx(this);
     preloadItemIcons(this);
+    preloadWorldArt(this);
     preloadAudio(this);
   }
 
   create(): void {
     ensureGameSprites(this);
+    applyWorldArtFilters(this);
     audioBus.bind(this);
     audioBus.playMusic('hub');
 

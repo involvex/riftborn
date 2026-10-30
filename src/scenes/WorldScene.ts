@@ -22,6 +22,7 @@ import {
   HUB_SIZE,
   HUB_SPAWN,
   inPlaza,
+  nearTown,
   PLAZA,
   type HubDecor,
   type PoiKind,
@@ -62,6 +63,15 @@ import {
 } from '../ui/MapModel';
 import { mergeExplored, packExplored, unpackExplored } from '../ui/MapFog';
 import { shouldShowTouchControls } from '../ui/TouchControls';
+import {
+  applyWorldArtFilters,
+  DECOR_PROP_KEY,
+  hasArt,
+  pickDungeonTileKey,
+  pickHubTileKey,
+  propArtScale,
+  TILE_ART_SCALE,
+} from '../render/WorldArt';
 
 const DEFAULT_HUB_SIZE = HUB_SIZE;
 const TOWN_SPAWN = { ...HUB_SPAWN };
@@ -87,8 +97,10 @@ export class WorldScene extends Phaser.Scene {
   private keySkill1!: Phaser.Input.Keyboard.Key;
   private keySkill2!: Phaser.Input.Keyboard.Key;
   private keySkill3!: Phaser.Input.Keyboard.Key;
-  /** Floor diamonds (no ellipses — those tanked phone FPS). */
+  /** Floor diamonds (fallback when tile art missing). */
   private tiles!: Phaser.GameObjects.Graphics;
+  /** Painted floor tile sprites (cleared on zone reload). */
+  private tileSprites: Phaser.GameObjects.Image[] = [];
   private portalMarker: Phaser.GameObjects.Container | null = null;
   private benchMarker: Phaser.GameObjects.Container | null = null;
   private npcs: Npc[] = [];
@@ -136,6 +148,7 @@ export class WorldScene extends Phaser.Scene {
   create(): void {
     this.cameras.main.setBackgroundColor('#12161c');
     audioBus.bind(this);
+    applyWorldArtFilters(this);
     this.tiles = this.add.graphics().setDepth(-1000);
 
     this.player = new Player(
@@ -532,6 +545,17 @@ export class WorldScene extends Phaser.Scene {
   private makeHubDecor(d: HubDecor): void {
     const p = snapToTile(d.x, d.y);
     const { screenX, screenY } = worldToScreen(p.x, p.y);
+    const propKey = DECOR_PROP_KEY[d.kind];
+    if (propKey && hasArt(this, propKey)) {
+      const img = this.add
+        .image(0, 0, propKey)
+        .setOrigin(0.5, 1)
+        .setScale(propArtScale(d.kind));
+      const c = this.add.container(screenX, screenY, [img]);
+      c.setDepth(depthFromWorld(p.x, p.y) - 20);
+      this.decor.push(c);
+      return;
+    }
     const g = this.add.graphics();
     switch (d.kind) {
       case 'lantern':
@@ -637,6 +661,20 @@ export class WorldScene extends Phaser.Scene {
         g.fillStyle(0x6a7080, 1);
         g.fillEllipse(0, -3, 8, 5);
         break;
+      case 'tree':
+        g.fillStyle(0x2a1a10, 1);
+        g.fillRect(-3, -28, 6, 28);
+        g.fillStyle(0x1a3a1a, 1);
+        g.fillCircle(0, -34, 14);
+        break;
+      case 'crystal_vein':
+        g.fillStyle(0x3a2a48, 1);
+        g.fillEllipse(0, 2, 16, 8);
+        g.fillStyle(0x6a50c0, 0.95);
+        g.fillTriangle(-4, 0, 4, 0, 0, -18);
+        g.fillStyle(0xa090ff, 0.7);
+        g.fillTriangle(2, 0, 8, 0, 5, -12);
+        break;
       default:
         break;
     }
@@ -733,44 +771,56 @@ export class WorldScene extends Phaser.Scene {
     return c;
   }
 
+  private clearTileSprites(): void {
+    for (const s of this.tileSprites) s.destroy();
+    this.tileSprites = [];
+  }
+
+  private placeFloorTile(
+    x: number,
+    y: number,
+    key: string,
+    fallbackColor: number,
+  ): void {
+    if (hasArt(this, key)) {
+      const { screenX, screenY } = worldToScreen(x, y);
+      const img = this.add
+        .image(screenX, screenY, key)
+        .setOrigin(0.5, 0.5)
+        .setScale(TILE_ART_SCALE)
+        .setDepth(-1000);
+      this.tileSprites.push(img);
+      return;
+    }
+    this.strokeIsoTile(this.tiles, x, y, fallbackColor);
+  }
+
   private drawHubTiles(): void {
     this.tiles.clear();
+    this.clearTileSprites();
     const size = this.hubSize;
     const pathSet = new Set(
       (this.hubLayout?.paths ?? []).map((p) => `${p.x},${p.y}`),
     );
-    const pois = this.hubLayout?.pois ?? [];
     for (let y = 0; y < size; y++) {
       for (let x = 0; x < size; x++) {
         const onPath = pathSet.has(`${x},${y}`);
         const plaza = inPlaza(x, y);
-        const poi = pois.find(
-          (p) => Math.hypot(x + 0.5 - p.x, y + 0.5 - p.y) <= p.radius,
-        );
-        let base: number;
+        let band: 'plaza' | 'road' | 'transition' | 'wild';
+        let fallback: number;
         if (plaza) {
-          base = (x + y) % 2 === 0 ? 0x4a463c : 0x3e3a32;
-        } else if (poi?.kind === 'camp') {
-          base = (x + y) % 2 === 0 ? 0x3a3228 : 0x322a22;
-        } else if (poi?.kind === 'scout') {
-          base = (x + y) % 2 === 0 ? 0x3a3428 : 0x322e20;
-        } else if (poi?.kind === 'shrine') {
-          base = (x + y) % 2 === 0 ? 0x3a2820 : 0x322018;
-        } else if (poi?.kind === 'warren') {
-          base = (x + y) % 2 === 0 ? 0x322c24 : 0x2a241c;
-        } else if (poi?.kind === 'grove') {
-          base = (x + y) % 2 === 0 ? 0x243828 : 0x1c3020;
-        } else if (poi?.kind === 'watch') {
-          base = (x + y) % 2 === 0 ? 0x303840 : 0x283038;
-        } else if (poi?.kind === 'cairn') {
-          base = (x + y) % 2 === 0 ? 0x2e2838 : 0x262030;
-        } else if (poi?.kind === 'ruin') {
-          base = (x + y) % 2 === 0 ? 0x2a323c : 0x222830;
+          band = 'plaza';
+          fallback = (x + y) % 2 === 0 ? 0x4a463c : 0x3e3a32;
         } else if (onPath) {
-          base = (x + y) % 2 === 0 ? 0x3a3830 : 0x322e28;
+          band = 'road';
+          fallback = (x + y) % 2 === 0 ? 0x3a3830 : 0x322e28;
+        } else if (nearTown(x, y, 14)) {
+          band = 'transition';
+          fallback = (x + y) % 2 === 0 ? 0x2a3428 : 0x222c20;
         } else {
+          band = 'wild';
           const edge = x < 3 || y < 3 || x > size - 4 || y > size - 4;
-          base = edge
+          fallback = edge
             ? (x + y) % 2 === 0
               ? 0x1a2218
               : 0x141c14
@@ -778,7 +828,7 @@ export class WorldScene extends Phaser.Scene {
               ? 0x243028
               : 0x1c2620;
         }
-        this.strokeIsoTile(this.tiles, x, y, base);
+        this.placeFloorTile(x, y, pickHubTileKey(x, y, band), fallback);
         if (
           plaza &&
           (x === PLAZA.x0 || x === PLAZA.x1 || y === PLAZA.y0 || y === PLAZA.y1)
@@ -789,16 +839,17 @@ export class WorldScene extends Phaser.Scene {
         }
       }
     }
-    this.tiles.setDepth(-1000);
+    this.tiles.setDepth(-999);
   }
 
   private drawDungeonTiles(map: DungeonMap): void {
     this.tiles.clear();
+    this.clearTileSprites();
     for (let y = 0; y < map.height; y++) {
       for (let x = 0; x < map.width; x++) {
         if (map.cells[y][x] !== 1) continue;
         const shade = (x + y) % 2 === 0 ? 0x1c2836 : 0x16202c;
-        this.strokeIsoTile(this.tiles, x, y, shade);
+        this.placeFloorTile(x, y, pickDungeonTileKey(x, y), shade);
         if ((x * 17 + y * 31) % 19 === 0) {
           const { screenX, screenY } = worldToScreen(x, y);
           this.tiles.fillStyle(0x3a6088, 0.4);
@@ -806,7 +857,7 @@ export class WorldScene extends Phaser.Scene {
         }
       }
     }
-    this.tiles.setDepth(-1000);
+    this.tiles.setDepth(-999);
   }
 
   /** Cheap iso diamond — inset face, no ellipses. */
