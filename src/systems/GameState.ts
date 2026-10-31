@@ -16,6 +16,7 @@ import { BountySystem } from './BountySystem';
 import { ShopSystem } from './ShopSystem';
 import { SkillSystem } from './SkillSystem';
 import { TraderSystem } from './TraderSystem';
+import { HUB_RESUME_SPAWN, hubResumeFromSave } from './HubResume';
 
 export class GameState {
   readonly inventory = new InventorySystem();
@@ -32,8 +33,8 @@ export class GameState {
   gender: CharacterGender = 'male';
   hp = 100;
   maxHp = 100;
-  worldX = 32.5;
-  worldY = 33.5;
+  worldX = HUB_RESUME_SPAWN.x;
+  worldY = HUB_RESUME_SPAWN.y;
   inRift = false;
   riftSeed: number | null = null;
   playTimeSec = 0;
@@ -104,10 +105,11 @@ export class GameState {
     this.inventory.load(data.inventory, data.equipment);
     this.recalcMaxHp();
     this.hp = Math.min(data.hp, this.maxHp);
-    this.worldX = data.worldX;
-    this.worldY = data.worldY;
-    this.inRift = data.inRift;
-    this.riftSeed = data.riftSeed;
+    const resume = hubResumeFromSave(data);
+    this.worldX = resume.worldX;
+    this.worldY = resume.worldY;
+    this.inRift = resume.inRift;
+    this.riftSeed = resume.riftSeed;
     this.playTimeSec = data.playTimeSec;
     this.hubExplored = data.hubExplored ?? null;
     this.bounties.load({
