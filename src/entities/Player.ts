@@ -173,6 +173,8 @@ export class Player {
     this.showSlash();
     playCombatBurst(this.scene, this.worldX, this.worldY, 'slash', this.facing);
     // Punch the sprite forward slightly so the swing reads in-world.
+    // Drop walk lean so the swing isn't tilted mid-strafe.
+    this.sprite.setRotation(0);
     const dir = this.facing;
     const base = isPaintedSprite(this.textureKey) ? 0.95 : 1.35;
     this.sprite.setScale(base * 1.12);
