@@ -285,7 +285,20 @@ export class Enemy {
     this.flashHit();
     if (this.hp <= 0) {
       this.alive = false;
-      this.body.setVisible(false);
+      this.attackGen += 1;
+      this.bar.clear();
+      // No death frames on sheets — short fade so kills don't pop.
+      this.sprite.scene.tweens.add({
+        targets: this.body,
+        alpha: 0,
+        scaleX: 0.55,
+        scaleY: 0.55,
+        duration: 180,
+        ease: 'Quad.easeIn',
+        onComplete: () => {
+          this.body.setVisible(false);
+        },
+      });
       return true;
     }
     return false;
