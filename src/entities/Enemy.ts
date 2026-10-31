@@ -83,7 +83,7 @@ export class Enemy {
     this.patrolAngle = Math.random() * Math.PI * 2;
     this.textureKey = enemySpriteKey(this.def.id);
     this.sprite = scene.add.sprite(0, -2, this.textureKey, 0);
-    this.sprite.setOrigin(0.5, 0.82);
+    this.sprite.setOrigin(0.5, 0.88);
     const painted = isPaintedSprite(this.textureKey);
     const drawScale = painted
       ? this.isBoss || this.def.isElite
@@ -97,7 +97,6 @@ export class Enemy {
           ? 1.35
           : 1.2;
     this.sprite.setScale(drawScale);
-    this.sprite.setOrigin(0.5, 0.88);
     this.applyBaseTint();
     this.bar = scene.add.graphics();
     this.body = scene.add.container(0, 0, [this.sprite, this.bar]);
