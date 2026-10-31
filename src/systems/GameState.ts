@@ -193,7 +193,7 @@ export class GameState {
     this.regenDelay = 5;
     this.regenAcc = 0;
     gameEvents.emit(Events.PLAYER_DAMAGED, { dealt, hp: this.hp });
-    if (this.hp <= 0) gameEvents.emit(Events.PLAYER_DIED, {});
+    // PLAYER_DIED is emitted by WorldScene.onPlayerDeath after respawn side effects.
     return dealt;
   }
 
