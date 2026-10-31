@@ -93,7 +93,7 @@ export class ProgressionSystem {
     if (amount <= 0 || this.unspentStatPoints < amount) return false;
     this.stats[stat] += amount;
     this.unspentStatPoints -= amount;
-    gameEvents.emit(Events.LEVEL_UP, {
+    gameEvents.emit(Events.STATS_CHANGED, {
       level: this.level,
       unspent: this.unspentStatPoints,
       spent: stat,

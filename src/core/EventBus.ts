@@ -45,6 +45,8 @@ export const Events = {
   NODE_DEPLETED: 'node:depleted',
   XP_GAINED: 'xp:gained',
   LEVEL_UP: 'level:up',
+  /** Attribute spend (not a real level-up). */
+  STATS_CHANGED: 'stats:changed',
   CRAFT_SUCCESS: 'craft:success',
   SAVE_WRITTEN: 'save:written',
   RIFT_ENTERED: 'rift:entered',

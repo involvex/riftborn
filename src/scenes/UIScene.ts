@@ -166,6 +166,12 @@ export class UIScene extends Phaser.Scene {
         if (this.inventoryPanel.open) this.inventoryPanel.refresh();
       }),
       gameEvents.on(Events.XP_GAINED, () => this.refresh()),
+      gameEvents.on(Events.STATS_CHANGED, () => {
+        gameState.recalcMaxHp();
+        gameState.persist();
+        this.refresh();
+        if (this.charOpen) this.refreshCharBody();
+      }),
       gameEvents.on(Events.LEVEL_UP, (p) => {
         const payload = p as {
           level: number;

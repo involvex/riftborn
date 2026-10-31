@@ -8,16 +8,16 @@ Verification baseline: `bun run test:smoke` green on hub (64 tiles, ≥8 POIs, n
 
 ## Loop map (code)
 
-| Step | Where |
-| --- | --- |
-| Boot hub / resume | `WorldScene.create` → `loadZone(gameState.inRift)` |
-| Enter rift (R @ obelisk) | `WorldScene.tryPortal` → `inRift=true`, seed, `loadZone(true)` |
-| Fight / loot | `tryAttack` / skills → `onEnemyKilled` → XP/loot/`persist` |
-| Boss | kill goal → `spawnRiftBoss` → kill → chest + `openExitPortal` |
-| Exit (R) / abandon (B) | `tryPortal` / `returnToTown` → hub spawn + `persist` |
-| Death | `takeDamage` → `onPlayerDeath` → half HP, hub (rift) or plaza snap |
-| Level-up | `ProgressionSystem.addXp` → `Events.LEVEL_UP` → UI toast + `recalcMaxHp` |
-| Autosave | every 8s in `WorldScene.update` + on kills/portal/death |
+| Step                     | Where                                                                    |
+| ------------------------ | ------------------------------------------------------------------------ |
+| Boot hub / resume        | `WorldScene.create` → `loadZone(gameState.inRift)`                       |
+| Enter rift (R @ obelisk) | `WorldScene.tryPortal` → `inRift=true`, seed, `loadZone(true)`           |
+| Fight / loot             | `tryAttack` / skills → `onEnemyKilled` → XP/loot/`persist`               |
+| Boss                     | kill goal → `spawnRiftBoss` → kill → chest + `openExitPortal`            |
+| Exit (R) / abandon (B)   | `tryPortal` / `returnToTown` → hub spawn + `persist`                     |
+| Death                    | `takeDamage` → `onPlayerDeath` → half HP, hub (rift) or plaza snap       |
+| Level-up                 | `ProgressionSystem.addXp` → `Events.LEVEL_UP` → UI toast + `recalcMaxHp` |
+| Autosave                 | every 8s in `WorldScene.update` + on kills/portal/death                  |
 
 Anims: sheets are 14 frames (`SpriteAtlas`: idle 0–3 @6fps, walk 4–9 @18fps, attack 10–13 @20fps once). Facing is **screen-X flip only** (`facingFromDelta`), not true 8-dir art. Hit = tint flash. Death = no frames (instant hide / respawn).
 
@@ -77,26 +77,26 @@ Anims: sheets are 14 frames (`SpriteAtlas`: idle 0–3 @6fps, walk 4–9 @18fps,
 
 ## Notes (not filed as fix targets this pass)
 
-| Topic | Finding |
-| --- | --- |
+| Topic              | Finding                                                                                               |
+| ------------------ | ----------------------------------------------------------------------------------------------------- |
 | 8-direction facing | Design is 2-way flip via screen X (`IsoMath.facingFromDelta`). True 8-dir needs new art — leave open. |
-| Hit anims | Tint flash only (`Player.flashHit`, `Enemy.flashHit`) — acceptable without hit frames. |
-| Depth sort | `depthFromWorld` on bodies — OK for iso. |
-| Frame rates | Idle 6 / walk 18 / attack 20 — coherent; no hung missing keys observed when sheets load. |
-| Level-up max HP | UIScene LEVEL_UP calls `recalcMaxHp` — OK for real levels. |
-| Hub smoke | Town buffer clear — OK. |
+| Hit anims          | Tint flash only (`Player.flashHit`, `Enemy.flashHit`) — acceptable without hit frames.                |
+| Depth sort         | `depthFromWorld` on bodies — OK for iso.                                                              |
+| Frame rates        | Idle 6 / walk 18 / attack 20 — coherent; no hung missing keys observed when sheets load.              |
+| Level-up max HP    | UIScene LEVEL_UP calls `recalcMaxHp` — OK for real levels.                                            |
+| Hub smoke          | Town buffer clear — OK.                                                                               |
 
 ## Status
 
-| # | Severity | Status |
-| --- | --- | --- |
-| 1 | major | open |
-| 2 | major | open |
-| 3 | major | open |
-| 4 | major | open |
-| 5 | major | open |
-| 6 | minor | open |
-| 7 | minor | open |
-| 8 | minor | open |
+| #   | Severity | Status |
+| --- | -------- | ------ |
+| 1   | major    | open   |
+| 2   | major    | open   |
+| 3   | major    | open   |
+| 4   | major    | open   |
+| 5   | major    | open   |
+| 6   | minor    | open   |
+| 7   | minor    | open   |
+| 8   | minor    | open   |
 
 Fixes follow in subsequent `C6: fix …` commits (≤8).
