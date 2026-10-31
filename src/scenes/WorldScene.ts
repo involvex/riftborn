@@ -1214,6 +1214,7 @@ export class WorldScene extends Phaser.Scene {
     this.cameras.main.flash(280, 120, 20, 30, false, undefined, this);
     this.triggerHitShake(320, 0.012);
     gameState.hp = Math.floor(gameState.maxHp * 0.5);
+    this.player.resetCombatPose();
     if (gameState.inRift) {
       this.returnToTown(false, true);
       gameEvents.emit('ui:toast', {

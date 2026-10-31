@@ -258,6 +258,21 @@ export class Player {
     }
   }
 
+  /** Clear attack lock / slash / tint after death or zone reset. */
+  resetCombatPose(): void {
+    this.attackGen += 1;
+    this.animKind = 'idle';
+    this.moving = false;
+    this.slash.clear();
+    this.slashUntil = 0;
+    this.sprite.x = 0;
+    this.sprite.y = -4;
+    this.sprite.setRotation(0);
+    this.applyScale();
+    this.applyClassTint();
+    this.sprite.play(`${this.textureKey}_idle`, true);
+  }
+
   tick(dt: number): void {
     this.attackCooldown = Math.max(0, this.attackCooldown - dt);
     this.skillCooldown = Math.max(0, this.skillCooldown - dt);
