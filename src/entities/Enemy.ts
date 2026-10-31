@@ -47,6 +47,8 @@ export class Enemy {
   private readonly levelMult: number;
   private readonly modDmgMult: number;
   private lodPhase = 0;
+  /** Bumps so stale attack ANIMATION_COMPLETE handlers no-op. */
+  private attackGen = 0;
 
   constructor(
     scene: Phaser.Scene,
@@ -266,7 +268,9 @@ export class Enemy {
     this.animKind = kind;
     this.sprite.play(`${this.textureKey}_${kind}`, true);
     if (kind === 'attack') {
+      const gen = ++this.attackGen;
       this.sprite.once(Phaser.Animations.Events.ANIMATION_COMPLETE, () => {
+        if (gen !== this.attackGen) return;
         this.animKind =
           this.state === 'chase' || this.state === 'patrol' ? 'walk' : 'idle';
         this.sprite.play(`${this.textureKey}_${this.animKind}`, true);

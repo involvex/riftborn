@@ -38,6 +38,8 @@ export class Player {
   private bobPhase = 0;
   private walkPhase = 0;
   private hitFlashUntil = 0;
+  /** Bumps so stale attack ANIMATION_COMPLETE handlers no-op. */
+  private attackGen = 0;
 
   constructor(scene: Phaser.Scene, worldX: number, worldY: number) {
     ensureGameSprites(scene);
@@ -246,7 +248,9 @@ export class Player {
     const key = `${this.textureKey}_${kind}`;
     this.sprite.play(key, true);
     if (kind === 'attack') {
+      const gen = ++this.attackGen;
       this.sprite.once(Phaser.Animations.Events.ANIMATION_COMPLETE, () => {
+        if (gen !== this.attackGen) return;
         if (this.animKind !== 'attack') return;
         this.animKind = this.moving ? 'walk' : 'idle';
         this.sprite.play(`${this.textureKey}_${this.animKind}`, true);
