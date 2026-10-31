@@ -86,17 +86,34 @@ Anims: sheets are 14 frames (`SpriteAtlas`: idle 0–3 @6fps, walk 4–9 @18fps,
 | Level-up max HP    | UIScene LEVEL_UP calls `recalcMaxHp` — OK for real levels.                                            |
 | Hub smoke          | Town buffer clear — OK.                                                                               |
 
-## Status
+## Status (after C6 fixes)
 
-| #   | Severity | Status |
-| --- | -------- | ------ |
-| 1   | major    | open   |
-| 2   | major    | open   |
-| 3   | major    | open   |
-| 4   | major    | open   |
-| 5   | major    | open   |
-| 6   | minor    | open   |
-| 7   | minor    | open   |
-| 8   | minor    | open   |
+| #   | Severity | Status    | Commit                                                                |
+| --- | -------- | --------- | --------------------------------------------------------------------- |
+| 1   | major    | **fixed** | `C6: fix spendStat fake level-up` — `Events.STATS_CHANGED` + bun test |
+| 2   | major    | **fixed** | `C6: fix mid-rift resume boots hub` — `hubResumeFromSave`             |
+| 3   | major    | **fixed** | `C6: fix double PLAYER_DIED emit` — emit only from `onPlayerDeath`    |
+| 4   | major    | **fixed** | `C6: fix stacked attack anim complete` — attackGen gate               |
+| 5   | major    | **fixed** | `C6: fix death resets combat pose` — `Player.resetCombatPose`         |
+| 6   | minor    | **fixed** | `C6: fix enemy death fade instead of pop`                             |
+| 7   | minor    | **fixed** | `C6: fix walk lean during attack`                                     |
+| 8   | minor    | **fixed** | `C6: fix redundant enemy foot origin`                                 |
 
-Fixes follow in subsequent `C6: fix …` commits (≤8).
+## Still open (out of fix budget / needs art)
+
+- **True 8-dir facing** — current design is SE art + screen-X flip; needs new sprite sheets.
+- **Dedicated hit/death frames** — tint/fade placeholders only; art pipeline later.
+- **Persist full rift progress** (kills/boss/exit) — deliberately not resumed; hub boot is the safe jam choice. Could add later if runs get long.
+
+## Verify (final)
+
+```
+bun test src/systems/ProgressionSystem.core.test.ts src/systems/HubResume.core.test.ts src/entities/AnimGen.core.test.ts
+bun run typecheck
+bun run lint
+bun run format:check
+bun run build
+bun run test:smoke
+```
+
+All green on branch `c6-core-loop` after the eight fix commits. No push / no merge (per C6 brief).
