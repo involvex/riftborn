@@ -1,5 +1,6 @@
 dist
 release
+.superpowers
 node_modules
 mobile/node_modules
 mobile/game-dist

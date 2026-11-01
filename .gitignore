@@ -38,3 +38,4 @@ artifacts/*
 /playwright/.cache/
 
 .phases/
+.superpowers/

@@ -1,0 +1,3 @@
+[test]
+# Keep Playwright e2e/*.spec.ts out of `bun test` (they use test.describe).
+root = "src"
