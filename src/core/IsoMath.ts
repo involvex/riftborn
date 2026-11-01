@@ -39,15 +39,70 @@ export function snapToTile(x: number, y: number): { x: number; y: number } {
   return { x: Math.floor(x) + 0.5, y: Math.floor(y) + 0.5 };
 }
 
+/** Screen-right (+1) / screen-left (−1) for 2-dir sheets + flipX. */
+export type FacingSign = 1 | -1;
+
+/** Coarse 4-way from screen axes (future 4-dir sheets). */
+export type FacingCardinal = 'e' | 'w' | 'n' | 's';
+
+export type SpriteFacing = {
+  sign: FacingSign;
+  flipX: boolean;
+  cardinal: FacingCardinal;
+};
+
+/**
+ * Map world Δ to sprite facing for sheets authored facing screen-right.
+ * - 2-dir: flipX only when screen-X dominates (E/W). Pure screen-Y moves
+ *   (N/S) keep `prevSign` so sprites don't moonwalk while strafing iso-up.
+ * - 4-dir: `cardinal` is always set for callers with directional sheets.
+ */
+export function spriteFacingFromDelta(
+  dx: number,
+  dy: number,
+  prevSign: FacingSign = 1,
+): SpriteFacing {
+  const screenDx = dx - dy;
+  const screenDy = dx + dy;
+  const ax = Math.abs(screenDx);
+  const ay = Math.abs(screenDy);
+
+  if (ax < 0.08 && ay < 0.08) {
+    return {
+      sign: prevSign,
+      flipX: prevSign < 0,
+      cardinal: prevSign >= 0 ? 'e' : 'w',
+    };
+  }
+
+  const cardinal: FacingCardinal =
+    ax >= ay ? (screenDx >= 0 ? 'e' : 'w') : screenDy >= 0 ? 's' : 'n';
+
+  // Hold facing on N/S so 2-dir sheets don't flip every iso-north step.
+  let sign: FacingSign = prevSign;
+  if (cardinal === 'e') sign = 1;
+  else if (cardinal === 'w') sign = -1;
+
+  return { sign, flipX: sign < 0, cardinal };
+}
+
 /**
  * Iso facing for SE-authored sprites: +1 faces screen-right, -1 screen-left.
- * Uses world Δ projected onto screen X (x − y).
+ * Prefer `spriteFacingFromDelta` when sticky facing / cardinal is needed.
  */
-export function facingFromDelta(dx: number, dy: number): 1 | -1 {
-  const screenDx = dx - dy;
-  if (Math.abs(screenDx) < 0.08) {
-    if (Math.abs(dx) + Math.abs(dy) < 0.01) return 1;
-    return dy >= 0 ? 1 : -1;
-  }
-  return screenDx >= 0 ? 1 : -1;
+export function facingFromDelta(
+  dx: number,
+  dy: number,
+  prevSign: FacingSign = 1,
+): FacingSign {
+  return spriteFacingFromDelta(dx, dy, prevSign).sign;
+}
+
+/** Apply unified facing to a Phaser sprite (2-dir + flipX). */
+export function applyFlipFacing(
+  sprite: { setFlipX: (v: boolean) => void },
+  facing: SpriteFacing | FacingSign,
+): void {
+  const flip = typeof facing === 'number' ? facing < 0 : facing.flipX;
+  sprite.setFlipX(flip);
 }

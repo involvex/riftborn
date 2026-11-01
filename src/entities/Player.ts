@@ -1,8 +1,10 @@
 import Phaser from 'phaser';
 import {
+  applyFlipFacing,
   depthFromWorld,
-  facingFromDelta,
+  spriteFacingFromDelta,
   worldToScreen,
+  type FacingSign,
 } from '../core/IsoMath';
 import {
   ensureGameSprites,
@@ -30,7 +32,7 @@ export class Player {
   private readonly label: Phaser.GameObjects.Text;
   private readonly slash: Phaser.GameObjects.Graphics;
   /** +1 = screen-right (SE), -1 = screen-left (mirrored). */
-  private facing: 1 | -1 = 1;
+  private facing: FacingSign = 1;
   private animKind: AnimKind = 'idle';
   private moving = false;
   private textureKey: string;
@@ -95,7 +97,7 @@ export class Player {
   }
 
   private applyFacing(): void {
-    this.sprite.setFlipX(this.facing < 0);
+    applyFlipFacing(this.sprite, this.facing);
   }
 
   private applyClassTint(): void {
@@ -128,7 +130,7 @@ export class Player {
       return;
     }
     this.moving = true;
-    this.facing = facingFromDelta(dx, dy);
+    this.facing = spriteFacingFromDelta(dx, dy, this.facing).sign;
     this.applyFacing();
 
     const len = Math.hypot(dx, dy) || 1;
@@ -164,7 +166,14 @@ export class Player {
     const dx = worldX - this.worldX;
     const dy = worldY - this.worldY;
     if (Math.abs(dx) + Math.abs(dy) < 0.05) return;
-    this.facing = facingFromDelta(dx, dy);
+    // Prefer screen-X so click-aim flips; else sticky 2-dir helper.
+    const screenDx = dx - dy;
+    this.facing =
+      Math.abs(screenDx) >= 0.08
+        ? screenDx >= 0
+          ? 1
+          : -1
+        : spriteFacingFromDelta(dx, dy, this.facing).sign;
     this.applyFacing();
   }
 

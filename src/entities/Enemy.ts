@@ -1,9 +1,11 @@
 import Phaser from 'phaser';
 import {
+  applyFlipFacing,
   depthFromWorld,
-  facingFromDelta,
+  spriteFacingFromDelta,
   worldDistance,
   worldToScreen,
+  type FacingSign,
 } from '../core/IsoMath';
 import {
   enemySpriteKey,
@@ -49,6 +51,8 @@ export class Enemy {
   private lodPhase = 0;
   /** Bumps so stale attack ANIMATION_COMPLETE handlers no-op. */
   private attackGen = 0;
+  /** Sticky 2-dir facing (avoids moonwalk on iso N/S). */
+  private facing: FacingSign = 1;
 
   constructor(
     scene: Phaser.Scene,
@@ -217,7 +221,7 @@ export class Enemy {
       const dy = Math.sin(this.patrolAngle);
       this.worldX += dx * spd * 0.35 * dt;
       this.worldY += dy * spd * 0.35 * dt;
-      this.sprite.setFlipX(facingFromDelta(dx, dy) < 0);
+      this.setFacingFromDelta(dx, dy);
       const homeDist = worldDistance(
         { x: this.worldX, y: this.worldY },
         { x: this.homeX, y: this.homeY },
@@ -233,12 +237,10 @@ export class Enemy {
       const len = Math.hypot(dx, dy) || 1;
       this.worldX += (dx / len) * spd * dt;
       this.worldY += (dy / len) * spd * dt;
-      this.sprite.setFlipX(facingFromDelta(dx, dy) < 0);
+      this.setFacingFromDelta(dx, dy);
       this.playAnim('walk');
     } else if (this.state === 'attack') {
-      this.sprite.setFlipX(
-        facingFromDelta(playerX - this.worldX, playerY - this.worldY) < 0,
-      );
+      this.setFacingToward(playerX, playerY);
       if (this.attackTimer <= 0) {
         hitPlayer = true;
         damage = Math.floor(
@@ -259,6 +261,25 @@ export class Enemy {
     this.worldY = Phaser.Math.Clamp(this.worldY, 0.5, this.maxBound);
     this.syncScreen();
     return { hitPlayer, damage };
+  }
+
+  private setFacingFromDelta(dx: number, dy: number): void {
+    const facing = spriteFacingFromDelta(dx, dy, this.facing);
+    this.facing = facing.sign;
+    applyFlipFacing(this.sprite, facing);
+  }
+
+  /** Snap to target for attacks (horizontal bias when screen-X is clear). */
+  private setFacingToward(worldX: number, worldY: number): void {
+    const dx = worldX - this.worldX;
+    const dy = worldY - this.worldY;
+    const screenDx = dx - dy;
+    if (Math.abs(screenDx) >= 0.08) {
+      this.facing = screenDx >= 0 ? 1 : -1;
+      applyFlipFacing(this.sprite, this.facing);
+      return;
+    }
+    this.setFacingFromDelta(dx, dy);
   }
 
   private playAnim(
