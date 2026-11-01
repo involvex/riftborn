@@ -666,16 +666,12 @@ export class UIScene extends Phaser.Scene {
 
     if (this.menuPage === 'root') {
       title.setText('Paused');
-      this.menuButton(-120, 'Resume', () => this.hideMenu());
-      this.menuButton(-60, 'Settings', () => {
+      this.menuButton(-80, 'Resume', () => this.hideMenu());
+      this.menuButton(-10, 'Settings', () => {
         this.menuPage = 'settings';
         this.renderMenuPage();
       });
-      this.menuButton(0, 'Save game', () => {
-        gameState.persist();
-        this.toast('Game saved');
-      });
-      this.menuButton(60, 'Quit to title', () => {
+      this.menuButton(60, 'Back to title', () => {
         gameState.persist();
         this.hideMenu();
         this.scene.stop('WorldScene');
