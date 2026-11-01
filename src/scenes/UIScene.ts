@@ -37,6 +37,11 @@ import {
 } from '../ui/SummaryOverlay';
 import { uiPanelSize } from '../core/UiScale';
 import { COMBAT_FEEL, isCombatCrit } from '../render/CombatFeel';
+import {
+  navEnterPlay,
+  navSetOverlay,
+  navSetPaused,
+} from '../core/GameNavState';
 
 type MenuPage = 'root' | 'settings' | 'hotkeys';
 
@@ -90,6 +95,7 @@ export class UIScene extends Phaser.Scene {
   }
 
   create(): void {
+    navEnterPlay();
     this.bindHotkeys();
 
     this.hudBars = new HudBars(this);
@@ -434,6 +440,10 @@ export class UIScene extends Phaser.Scene {
         if (this.menuOpen) this.hideMenu();
         else this.showMenu();
       }),
+      gameEvents.on('nav:backCloseOverlay', () => this.handleBackCloseOverlay()),
+      gameEvents.on('nav:backResume', () => {
+        if (this.menuOpen) this.hideMenu();
+      }),
     );
 
     this.scale.on('resize', () => {
@@ -473,6 +483,77 @@ export class UIScene extends Phaser.Scene {
       this.awaitingRebind = null;
       this.rebindHint.setText('');
     }
+    this.syncNavFlags();
+  }
+
+  /** Browser/Android Back: close top overlay (not pause). */
+  private handleBackCloseOverlay(): void {
+    if (this.summaryOverlay.open) {
+      this.summaryOverlay.confirm();
+      this.syncNavFlags();
+      return;
+    }
+    if (this.tutorial.open) {
+      this.tutorial.dismiss();
+      this.syncNavFlags();
+      return;
+    }
+    if (this.mapOverlay.open) {
+      this.mapOverlay.hide();
+      this.syncNavFlags();
+      return;
+    }
+    if (this.inventoryPanel.open) {
+      this.inventoryPanel.hide();
+      this.syncNavFlags();
+      return;
+    }
+    if (this.skillPanel.open) {
+      this.skillPanel.hide();
+      this.syncNavFlags();
+      return;
+    }
+    if (this.shopOpen) {
+      this.hideShop();
+      this.syncNavFlags();
+      return;
+    }
+    if (this.traderOpen) {
+      this.hideTrader();
+      this.syncNavFlags();
+      return;
+    }
+    if (this.craftOpen) {
+      this.hideCraft();
+      this.syncNavFlags();
+      return;
+    }
+    if (this.charOpen) {
+      this.hideChar();
+      this.syncNavFlags();
+      return;
+    }
+    if (this.menuOpen && this.menuPage !== 'root') {
+      this.menuPage = this.menuPage === 'hotkeys' ? 'settings' : 'root';
+      this.renderMenuPage();
+      this.syncNavFlags();
+    }
+  }
+
+  private syncNavFlags(): void {
+    const anyOverlay =
+      this.summaryOverlay?.open ||
+      this.tutorial?.open ||
+      this.mapOverlay?.open ||
+      this.inventoryPanel?.open ||
+      this.skillPanel?.open ||
+      this.shopOpen ||
+      this.traderOpen ||
+      this.craftOpen ||
+      this.charOpen ||
+      (this.menuOpen && this.menuPage !== 'root');
+    navSetOverlay(!!anyOverlay);
+    navSetPaused(this.menuOpen && this.menuPage === 'root' && !anyOverlay);
   }
 
   private bindHotkeys(): void {
@@ -885,6 +966,7 @@ export class UIScene extends Phaser.Scene {
     this.menuOpen = true;
     this.setModalChrome(true);
     this.scene.pause('WorldScene');
+    this.syncNavFlags();
   }
 
   private hideMenu(): void {
@@ -894,6 +976,7 @@ export class UIScene extends Phaser.Scene {
     this.rebindHint.setText('');
     this.setModalChrome(false);
     this.scene.resume('WorldScene');
+    this.syncNavFlags();
   }
 
   /** Hide stick/fps under modals so they don't fight the panel (and burn FPS). */
@@ -1073,6 +1156,7 @@ export class UIScene extends Phaser.Scene {
 
   update(_time: number, delta: number): void {
     this.fpsHud.tick(delta);
+    this.syncNavFlags();
     if (!this.keyMenu) return;
     this.abilityBar.refresh();
     if (this.awaitingRebind) return;

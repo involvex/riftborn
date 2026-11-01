@@ -9,6 +9,8 @@ import {
   isPaintedSprite,
   playerSpriteKey,
 } from '../render/SpriteAtlas';
+import { navEnterCreate } from '../core/GameNavState';
+import { gameEvents } from '../core/EventBus';
 
 const GENDERS: { id: CharacterGender; label: string }[] = [
   { id: 'male', label: 'Male' },
@@ -40,6 +42,7 @@ export class CharacterCreateScene extends Phaser.Scene {
 
   create(): void {
     this.starting = false;
+    navEnterCreate();
     ensureGameSprites(this);
     this.cameras.main.setBackgroundColor('#0a0c10');
     this.root = this.add.container(0, 0);
@@ -50,6 +53,13 @@ export class CharacterCreateScene extends Phaser.Scene {
 
     this.input.keyboard?.off('keydown', this.onKey);
     this.input.keyboard?.on('keydown', this.onKey);
+
+    const unsub = gameEvents.on('nav:backCloseOverlay', () => {
+      if (this.starting) return;
+      this.destroyNameDom();
+      this.scene.start('BootScene');
+    });
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => unsub());
   }
 
   private onResize = (): void => {

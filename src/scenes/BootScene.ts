@@ -12,6 +12,7 @@ import { audioBus } from '../core/AudioBus';
 import { firstEmptySlot, titleActions } from '../core/TitleFlow';
 import { settingsStore } from '../core/SettingsStore';
 import { Events, gameEvents } from '../core/EventBus';
+import { navEnterTitle, navSetOverlay } from '../core/GameNavState';
 
 type BootView = 'title' | 'slots' | 'settings';
 
@@ -51,11 +52,19 @@ export class BootScene extends Phaser.Scene {
     }
 
     this.cameras.main.setBackgroundColor('#0a0c10');
+    navEnterTitle();
     this.view = 'title';
     this.root = this.add.container(0, 0);
     this.render();
     this.scale.off('resize', this.onResize, this);
     this.scale.on('resize', this.onResize, this);
+
+    const unsub = gameEvents.on('nav:backCloseOverlay', () => {
+      if (this.view === 'title') return;
+      this.view = 'title';
+      this.render();
+    });
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => unsub());
   }
 
   private onResize = (): void => {
@@ -68,6 +77,7 @@ export class BootScene extends Phaser.Scene {
 
   private render(): void {
     this.clearRoot();
+    navSetOverlay(this.view !== 'title');
     if (this.view === 'title') this.drawTitle();
     else if (this.view === 'slots') this.drawSlots();
     else this.drawSettings();
