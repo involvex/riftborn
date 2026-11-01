@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import type { CharacterClassId, GearInstance, GearSlot } from '../types/game';
 import { resolveGearClass } from '../systems/ItemGen';
+import { rarityPhaser } from '../systems/RarityVisual';
 
 /** Files under public/assets/icons/ (copied from LootLoop-Realms). */
 export const ITEM_ICON_FILES = [
@@ -104,10 +105,10 @@ function gearIconId(item: GearInstance): ItemIconId {
 }
 
 const RARITY_EDGE: Record<string, number> = {
-  common: 0x8a9098,
-  magic: 0x4caf70,
-  rare: 0x4da6ff,
-  legendary: 0xffb74d,
+  common: rarityPhaser('common'),
+  magic: rarityPhaser('magic'),
+  rare: rarityPhaser('rare'),
+  legendary: rarityPhaser('legendary'),
 };
 
 /**

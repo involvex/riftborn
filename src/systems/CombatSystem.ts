@@ -67,6 +67,11 @@ export class CombatSystem {
       lootTier?: LootTier;
       /** Always drop at least one piece at this rarity+. */
       guaranteedMinRarity?: GearRarity;
+      /**
+       * When false, gear is not auto-bagged — caller spawns a world drop
+       * via onGear. Default true for non-world callers.
+       */
+      autoBag?: boolean;
       onGear?: (g: GearInstance) => void;
     } = {},
   ): void {
@@ -76,28 +81,38 @@ export class CombatSystem {
       this.inventory.add(drop.itemId, drop.qty);
     }
     const tier: LootTier = opts.lootTier ?? (opts.elite ? 4 : 2);
+    const bag = opts.autoBag !== false;
+    const deliver = (gear: GearInstance): void => {
+      if (bag) {
+        if (this.inventory.addGear(gear)) opts.onGear?.(gear);
+      } else {
+        opts.onGear?.(gear);
+      }
+    };
     const gearChance = opts.guaranteedMinRarity
       ? 1
       : gearDropChance(tier, opts.elite);
     if (Math.random() < gearChance) {
-      const gear = rollGearDrop(this.progression.level, {
-        elite: opts.elite || tier >= 4,
-        preferArmor: Math.random() > (tier === 1 ? 0.4 : 0.28),
-        forClass: this.progression.classId,
-        lootTier: tier,
-        minRarity: opts.guaranteedMinRarity,
-      });
-      if (this.inventory.addGear(gear)) opts.onGear?.(gear);
+      deliver(
+        rollGearDrop(this.progression.level, {
+          elite: opts.elite || tier >= 4,
+          preferArmor: Math.random() > (tier === 1 ? 0.4 : 0.28),
+          forClass: this.progression.classId,
+          lootTier: tier,
+          minRarity: opts.guaranteedMinRarity,
+        }),
+      );
     }
     // Boss / high tier: chance at a second piece
     if (tier >= 4 && Math.random() < 0.45) {
-      const gear = rollGearDrop(this.progression.level, {
-        elite: true,
-        preferArmor: Math.random() > 0.5,
-        forClass: this.progression.classId,
-        lootTier: 4,
-      });
-      if (this.inventory.addGear(gear)) opts.onGear?.(gear);
+      deliver(
+        rollGearDrop(this.progression.level, {
+          elite: true,
+          preferArmor: Math.random() > 0.5,
+          forClass: this.progression.classId,
+          lootTier: 4,
+        }),
+      );
     }
     gameEvents.emit(Events.ENEMY_DIED, { xp, drops, lootTier: tier });
   }

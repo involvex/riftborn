@@ -11,11 +11,13 @@ import {
   installRiftbornDebug,
 } from '../debug/RiftbornDebug';
 import { Enemy } from '../entities/Enemy';
+import { GroundLoot } from '../entities/GroundLoot';
 import { LootChest } from '../entities/LootChest';
 import { Npc } from '../entities/Npc';
 import { Player } from '../entities/Player';
 import { ResourceNode } from '../entities/ResourceNode';
 import { describeGear, gearDropChance, rollGearDrop } from '../systems/ItemGen';
+import { rarityCss } from '../systems/RarityVisual';
 import { gameState } from '../systems/GameState';
 import {
   generateHub,
@@ -29,7 +31,12 @@ import {
   type WildernessPoi,
   type ZoneLayout,
 } from '../world/MapGen';
-import type { LootTier } from '../types/game';
+import type {
+  CharacterClassId,
+  GearInstance,
+  GearRarity,
+  LootTier,
+} from '../types/game';
 import {
   generateDungeon,
   isWalkable,
@@ -48,7 +55,6 @@ import {
   type CombatShakeKind,
 } from '../render/CombatFeel';
 import classesData from '../data/classes.json';
-import type { CharacterClassId, GearRarity } from '../types/game';
 import {
   clampLootTier,
   riftDepthFromLevel,
@@ -125,10 +131,12 @@ export class WorldScene extends Phaser.Scene {
   private wildernessPois: WildernessPoi[] = [];
   private announcedPois = new Set<string>();
   private chests: LootChest[] = [];
+  private groundLoot: GroundLoot[] = [];
   private shrineReadyAt = 0;
   private enemySeq = 0;
   private nodeSeq = 0;
   private chestSeq = 0;
+  private lootSeq = 0;
   private dungeon: DungeonMap | null = null;
   /** Wall-clock ms — skip sim briefly for hitstop juice. */
   private hitstopUntil = 0;
@@ -215,9 +223,11 @@ export class WorldScene extends Phaser.Scene {
     for (const n of this.nodes) n.destroy();
     for (const e of this.enemies) e.destroy();
     for (const c of this.chests) c.destroy();
+    for (const l of this.groundLoot) l.destroy();
     this.nodes = [];
     this.enemies = [];
     this.chests = [];
+    this.groundLoot = [];
     for (const g of this.remoteGhosts.values()) g.destroy(true);
     this.remoteGhosts.clear();
   }
@@ -231,7 +241,9 @@ export class WorldScene extends Phaser.Scene {
     this.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
       // Touch mode uses ATK button — avoid double-fire from UI taps
       if (shouldShowTouchControls()) return;
-      if (pointer.leftButtonDown()) this.tryAttack();
+      if (!pointer.leftButtonDown()) return;
+      if (this.tryClickLoot(pointer.worldX, pointer.worldY)) return;
+      this.tryAttack();
     });
 
     this.inputUnsubs.push(
@@ -1393,8 +1405,9 @@ export class WorldScene extends Phaser.Scene {
         : enemy.isBoss
           ? 'rare'
           : undefined,
+      autoBag: false,
       onGear: (g) => {
-        this.playLootJuice(g.rarity);
+        this.spawnGearDrop(enemy.worldX, enemy.worldY, g);
         if (scoutKill) {
           gameEvents.emit('ui:toast', {
             text: `Scout fall — ${g.rarity} ${g.name}`,
@@ -1404,7 +1417,9 @@ export class WorldScene extends Phaser.Scene {
             text: `Nightwing down — ${g.rarity} ${g.name}`,
           });
         } else {
-          gameEvents.emit('ui:toast', { text: describeGear(g) });
+          gameEvents.emit('ui:toast', {
+            text: `Loot · ${describeGear(g)} · E / click`,
+          });
         }
       },
     });
@@ -1573,6 +1588,7 @@ export class WorldScene extends Phaser.Scene {
   }
 
   private tryInteract(): void {
+    if (this.tryPickupNearestLoot()) return;
     if (this.nearNpc) {
       if (this.nearNpc.role === 'vendor') {
         gameEvents.emit('ui:openShop', {});
@@ -1598,6 +1614,73 @@ export class WorldScene extends Phaser.Scene {
       return;
     }
     this.tryGather();
+  }
+
+  private spawnGearDrop(
+    nearX: number,
+    nearY: number,
+    item: GearInstance,
+  ): void {
+    const jitter = () => (Math.random() - 0.5) * 0.9;
+    const p = snapToTile(nearX + jitter(), nearY + jitter());
+    const drop = new GroundLoot(this, `loot_${this.lootSeq++}`, p.x, p.y, item);
+    this.groundLoot.push(drop);
+    this.playLootJuice(item.rarity);
+  }
+
+  private tryClickLoot(screenX: number, screenY: number): boolean {
+    for (let i = this.groundLoot.length - 1; i >= 0; i--) {
+      const drop = this.groundLoot[i]!;
+      if (drop.picked) continue;
+      if (!drop.hitTest(screenX, screenY)) continue;
+      return this.pickupLoot(drop);
+    }
+    return false;
+  }
+
+  private tryPickupNearestLoot(): boolean {
+    let nearest: GroundLoot | null = null;
+    let best = 1.55;
+    for (const drop of this.groundLoot) {
+      if (drop.picked) continue;
+      const dist = worldDistance(
+        { x: this.player.worldX, y: this.player.worldY },
+        { x: drop.worldX, y: drop.worldY },
+      );
+      if (dist < best) {
+        best = dist;
+        nearest = drop;
+      }
+    }
+    if (!nearest) return false;
+    return this.pickupLoot(nearest);
+  }
+
+  private pickupLoot(drop: GroundLoot): boolean {
+    if (drop.picked) return false;
+    if (!gameState.inventory.addGear(drop.item)) {
+      gameEvents.emit('ui:toast', { text: 'Bag full — clear space first' });
+      return true;
+    }
+    const g = drop.item;
+    drop.playPickup();
+    this.groundLoot = this.groundLoot.filter((d) => d !== drop);
+    audioBus.loot(
+      g.rarity === 'legendary'
+        ? 'legendary'
+        : g.rarity === 'rare'
+          ? 'rare'
+          : g.rarity === 'magic'
+            ? 'magic'
+            : 'common',
+    );
+    this.cameras.main.flash(80, 220, 220, 200, false, undefined, this);
+    gameState.persist();
+    gameEvents.emit('ui:toast', {
+      text: `Picked up · ${g.name}`,
+      color: rarityCss(g.rarity),
+    });
+    return true;
   }
 
   private tryBountyBoard(): void {
@@ -1702,9 +1785,8 @@ export class WorldScene extends Phaser.Scene {
         lootTier: tier,
         minRarity: tier >= 3 ? 'magic' : undefined,
       });
-      if (gameState.inventory.addGear(gear)) {
-        parts.push(`${gear.rarity} ${gear.name}`);
-      }
+      this.spawnGearDrop(chest.worldX, chest.worldY, gear);
+      parts.push(`${gear.rarity} ${gear.name} (ground)`);
     }
 
     chest.markLooted();
