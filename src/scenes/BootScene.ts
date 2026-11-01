@@ -421,9 +421,14 @@ export class BootScene extends Phaser.Scene {
     });
   }
 
+  /**
+   * Agent / Playwright hub smoke (`/?smoke=1`) skips the title screen
+   * and boots a fresh warrior in the hub. Do not change playwright.config.
+   */
   private isSmokeBoot(): boolean {
     try {
-      return new URLSearchParams(window.location.search).has('smoke');
+      const q = new URLSearchParams(window.location.search);
+      return q.has('smoke') || q.get('skipTitle') === '1';
     } catch {
       return false;
     }
