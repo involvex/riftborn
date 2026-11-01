@@ -349,6 +349,14 @@ export class BootScene extends Phaser.Scene {
         },
       },
       {
+        label: `Screen shake: ${s.screenShake ? 'ON' : 'OFF'}`,
+        onClick: () => {
+          settingsStore.save({ screenShake: !s.screenShake });
+          gameEvents.emit(Events.SETTINGS_CHANGED);
+          this.renderTitleSettings();
+        },
+      },
+      {
         label: `Damage numbers: ${s.showDamageNumbers ? 'ON' : 'OFF'}`,
         onClick: () => {
           settingsStore.save({
@@ -359,7 +367,7 @@ export class BootScene extends Phaser.Scene {
         },
       },
     ];
-    let y = -100;
+    let y = -120;
     for (const row of rows) {
       const btn = this.makeButton(0, y, row.label, row.onClick);
       this.settingsBody.add(btn);

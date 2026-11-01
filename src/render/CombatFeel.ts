@@ -1,6 +1,9 @@
+import { settingsStore } from '../core/SettingsStore';
+
 /**
  * Toggleable combat juice (hitstop, shake, damage-number styling).
  * Flip `enabled` or individual flags to mute without deleting call sites.
+ * Player-facing screen shake also respects SettingsStore.screenShake.
  */
 
 export const COMBAT_FEEL = {
@@ -46,6 +49,7 @@ export function combatShakeParams(kind: CombatShakeKind): {
 } {
   const c = COMBAT_FEEL;
   if (!c.enabled || !c.shakeEnabled) return { ms: 0, intensity: 0 };
+  if (!settingsStore.get().screenShake) return { ms: 0, intensity: 0 };
   switch (kind) {
     case 'crit':
       return { ms: c.shakeCritMs, intensity: c.shakeCritIntensity };

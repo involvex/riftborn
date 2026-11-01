@@ -721,7 +721,16 @@ export class UIScene extends Phaser.Scene {
         this.renderMenuPage();
       });
       this.menuButton(
-        60,
+        50,
+        `Screen shake: ${s.screenShake ? 'ON' : 'OFF'}`,
+        () => {
+          settingsStore.save({ screenShake: !s.screenShake });
+          gameEvents.emit(Events.SETTINGS_CHANGED);
+          this.renderMenuPage();
+        },
+      );
+      this.menuButton(
+        100,
         `Damage numbers: ${s.showDamageNumbers ? 'ON' : 'OFF'}`,
         () => {
           settingsStore.save({ showDamageNumbers: !s.showDamageNumbers });
@@ -730,7 +739,7 @@ export class UIScene extends Phaser.Scene {
         },
       );
       this.menuButton(
-        110,
+        150,
         `Auto-sell junk: ${s.autoSellJunk ? 'ON' : 'OFF'}`,
         () => {
           settingsStore.save({ autoSellJunk: !s.autoSellJunk });
@@ -738,11 +747,11 @@ export class UIScene extends Phaser.Scene {
           this.renderMenuPage();
         },
       );
-      this.menuButton(160, 'Hotkeys…', () => {
+      this.menuButton(200, 'Hotkeys…', () => {
         this.menuPage = 'hotkeys';
         this.renderMenuPage();
       });
-      this.menuButton(210, 'Back', () => {
+      this.menuButton(250, 'Back', () => {
         this.menuPage = 'root';
         this.renderMenuPage();
       });

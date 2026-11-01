@@ -23,6 +23,8 @@ export type GameSettings = {
   musicVolume: number;
   mute: boolean;
   showDamageNumbers: boolean;
+  /** Camera shake on hits / crits / boss. */
+  screenShake: boolean;
   /** Auto-convert common gear drops to gold. */
   autoSellJunk: boolean;
   hotkeys: HotkeyMap;
@@ -54,6 +56,7 @@ export const DEFAULT_SETTINGS: GameSettings = {
   musicVolume: 0.5,
   mute: false,
   showDamageNumbers: true,
+  screenShake: true,
   autoSellJunk: false,
   hotkeys: { ...DEFAULT_HOTKEYS },
 };
@@ -84,6 +87,9 @@ export class SettingsStore {
         musicVolume: clamp01(
           parsed.musicVolume ?? DEFAULT_SETTINGS.musicVolume,
         ),
+        showDamageNumbers:
+          parsed.showDamageNumbers ?? DEFAULT_SETTINGS.showDamageNumbers,
+        screenShake: parsed.screenShake ?? DEFAULT_SETTINGS.screenShake,
       };
     } catch {
       this.data = structuredClone(DEFAULT_SETTINGS);
