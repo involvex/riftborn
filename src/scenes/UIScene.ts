@@ -97,11 +97,14 @@ export class UIScene extends Phaser.Scene {
 
     this.toastText = this.add
       .text(this.scale.width / 2, 80, '', {
-        fontFamily: 'Georgia, serif',
-        fontSize: '18px',
+        fontFamily: 'Consolas, "Courier New", monospace',
+        fontSize: '17px',
         color: '#f0e6d0',
-        backgroundColor: '#00000088',
-        padding: { x: 12, y: 6 },
+        backgroundColor: '#000000aa',
+        padding: { x: 14, y: 8 },
+        resolution: 2,
+        stroke: '#0a0c10',
+        strokeThickness: 2,
       })
       .setOrigin(0.5)
       .setScrollFactor(0)
@@ -166,7 +169,11 @@ export class UIScene extends Phaser.Scene {
         this.refresh();
         if (this.inventoryPanel.open) this.inventoryPanel.refresh();
       }),
-      gameEvents.on(Events.XP_GAINED, () => this.refresh()),
+      gameEvents.on(Events.XP_GAINED, (p) => {
+        const d = p as { amount?: number };
+        this.hudBars.playXpGain(d.amount ?? 0);
+        this.refresh();
+      }),
       gameEvents.on(Events.STATS_CHANGED, () => {
         gameState.recalcMaxHp();
         gameState.persist();
@@ -180,6 +187,8 @@ export class UIScene extends Phaser.Scene {
           skillPoint?: number;
         };
         audioBus.levelUp();
+        this.hudBars.playLevelUp();
+        this.cameras.main.flash(220, 255, 220, 120, false, undefined, this);
         const bits: string[] = [`Level ${payload.level}!`];
         if (payload.unspent) {
           bits.push(
@@ -189,7 +198,7 @@ export class UIScene extends Phaser.Scene {
         if (payload.skillPoint) {
           bits.push(`+1 skill (${formatHotkey('skills')})`);
         }
-        this.toast(bits.join(' '));
+        this.toast(bits.join(' '), '#ffe082');
         gameState.recalcMaxHp();
         gameState.persist();
         this.refresh();
@@ -220,8 +229,8 @@ export class UIScene extends Phaser.Scene {
         this.spawnDamageNumber(d.screenX, d.screenY, d.amount, d.kind);
       }),
       gameEvents.on('ui:toast', (p) => {
-        const d = p as { text: string };
-        this.toast(d.text);
+        const d = p as { text: string; color?: string };
+        this.toast(d.text, d.color);
       }),
       gameEvents.on(Events.JUNK_SOLD, (p) => {
         const d = p as {
@@ -907,8 +916,9 @@ export class UIScene extends Phaser.Scene {
     this.abilityBar.refresh();
   }
 
-  private toast(text: string): void {
+  private toast(text: string, color = '#e8e4d8'): void {
     this.toastText.setText(text);
+    this.toastText.setColor(color);
     this.toastText.setAlpha(1);
     this.tweens.killTweensOf(this.toastText);
     this.tweens.add({
