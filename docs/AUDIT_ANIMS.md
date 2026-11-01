@@ -1,10 +1,12 @@
 # AUDIT — Enemy & combat animations (C7)
 
-Sheets are **14 frames × 128×128** (`idle 0–3`, `walk 4–9`, `attack 10–13`).
-Pipeline: `bun run sprites:process` → `process-sprites.mjs` (heroes + rift
-lord) + `process-lpc-enemies.mjs` (shade/crawler/wisp/bat). Runtime:
-`SpriteAtlas.registerAnims` only registers idle/walk/attack. Facing today is
-**2-way** via `facingFromDelta` + `flipX` (no 8-dir / 4-dir sheets).
+Sheets are **20 frames × 128×128** (`idle 0–3`, `walk 4–9`, `attack 10–13`,
+`hit 14–15`, `death 16–19`). Pipeline: `bun run sprites:process` →
+`process-sprites.mjs` + `process-lpc-enemies.mjs` +
+`append-combat-frames.mjs`. Hit/death derived from attack/idle (knockback,
+squash, flash, dissolve) — see `AnimFrames.ts` / `scripts/lib/combat-frames.mjs`.
+Runtime registers idle/walk/attack/hit/death. Facing is **2-way** via
+`facingFromDelta` + `flipX` (no 8-dir sheets).
 
 ## Player sheets
 
@@ -45,8 +47,7 @@ tween fade (`Enemy.applyDamage`) — comment notes no death frames.
 
 ## Gaps for C7
 
-1. **Hit / death frames** — derive in pipeline (knockback, squash, white
-   flash, 4–6 dissolve) and register `${key}_hit` / `${key}_death`.
+1. ~~**Hit / death frames**~~ — done (derived + registered).
 2. **Facing** — keep 2-dir + flipX as the real sheet model; unify helper so
    enemies/players share the same screen-X mapping (no moonwalk).
 3. **Combat feedback** — hitstop / crit shake / readable damage numbers

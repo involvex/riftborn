@@ -1,5 +1,14 @@
 import Phaser from 'phaser';
 import type { CharacterClassId, CharacterGender } from '../types/game';
+import {
+  ANIM_RANGES,
+  CORE_FRAMES,
+  DEATH_COUNT,
+  HIT_COUNT,
+  TOTAL_FRAMES,
+  deathMotion,
+  hitMotion,
+} from './AnimFrames';
 
 /** Procedural fallback frame size. */
 const FW = 48;
@@ -7,8 +16,8 @@ const FH = 48;
 /** Painted sheet frame size (scripts/process-sprites.mjs). */
 export const PAINTED_FW = 128;
 export const PAINTED_FH = 128;
-/** idle 0–3, walk 4–9, attack 10–13 */
-const FRAMES = 14;
+/** idle / walk / attack / hit / death */
+const FRAMES = TOTAL_FRAMES;
 
 const SHEET_KEYS = [
   'spr_player_male',
@@ -163,10 +172,30 @@ function paletteForPlayer(key: string): Palette {
 function registerAnims(scene: Phaser.Scene): void {
   for (const key of SHEET_KEYS) {
     if (!scene.textures.exists(key)) continue;
+    const maxFrame = textureFrameCount(scene, key) - 1;
+    const hit = ANIM_RANGES.hit;
+    const death = ANIM_RANGES.death;
     addAnim(scene, `${key}_idle`, key, 0, 3, 6, true);
     addAnim(scene, `${key}_walk`, key, 4, 9, 18, true);
     addAnim(scene, `${key}_attack`, key, 10, 13, 20, false);
+    if (maxFrame >= hit.end) {
+      addAnim(scene, `${key}_hit`, key, hit.start, hit.end, 14, false);
+    }
+    if (maxFrame >= death.end) {
+      addAnim(scene, `${key}_death`, key, death.start, death.end, 10, false);
+    }
   }
+}
+
+function textureFrameCount(scene: Phaser.Scene, key: string): number {
+  const tex = scene.textures.get(key);
+  // Phaser lists __BASE plus numbered frames.
+  return Math.max(0, tex.frameTotal - 1);
+}
+
+/** True when `${key}_hit` / `_death` anims exist. */
+export function hasCombatAnims(scene: Phaser.Scene, key: string): boolean {
+  return scene.anims.exists(`${key}_hit`) && scene.anims.exists(`${key}_death`);
 }
 
 function addAnim(
@@ -196,13 +225,14 @@ function generatePlayer(scene: Phaser.Scene, key: string, pal: Palette): void {
   const ctx = tex.getContext();
   ctx.imageSmoothingEnabled = false;
 
-  for (let f = 0; f < FRAMES; f++) {
+  for (let f = 0; f < CORE_FRAMES; f++) {
     const ox = f * FW;
     const bob = f < 4 ? Math.sin((f / 4) * Math.PI * 2) * 2.8 : 0;
     const walkPhase = f >= 4 && f < 10 ? (f - 4) / 6 : 0;
     const atk = f >= 10 ? (f - 10) / 3 : 0;
     drawPlayerFrame(ctx, ox, bob, walkPhase, atk, pal, f);
   }
+  paintDerivedCombat(ctx, FW, FH, CORE_FRAMES);
 
   tex.refresh();
   for (let i = 0; i < FRAMES; i++) {
@@ -282,18 +312,111 @@ function generateEnemy(
   const ctx = tex.getContext();
   ctx.imageSmoothingEnabled = false;
 
-  for (let f = 0; f < FRAMES; f++) {
+  for (let f = 0; f < CORE_FRAMES; f++) {
     const ox = f * FW;
     const bob = f < 4 ? Math.sin((f / 4) * Math.PI * 2) * 2 : 0;
     const walk = f >= 4 && f < 10 ? (f - 4) / 6 : 0;
     const atk = f >= 10 ? (f - 10) / 3 : 0;
     drawEnemyFrame(ctx, ox, bob, walk, atk, body, glow, kind, f);
   }
+  paintDerivedCombat(ctx, FW, FH, CORE_FRAMES);
 
   tex.refresh();
   for (let i = 0; i < FRAMES; i++) {
     tex.add(i, 0, i * FW, 0, FW, FH);
   }
+}
+
+/** Copy core cells into hit/death slots with squash / flash / dissolve. */
+function paintDerivedCombat(
+  ctx: CanvasRenderingContext2D,
+  cellW: number,
+  cellH: number,
+  coreCount: number,
+): void {
+  for (let i = 0; i < HIT_COUNT; i++) {
+    const src = i <= 0 ? 13 : 0;
+    const m = hitMotion(i);
+    blitTransformed(
+      ctx,
+      src * cellW,
+      0,
+      coreCount * cellW + i * cellW,
+      0,
+      cellW,
+      cellH,
+      m.squashX,
+      m.squashY,
+      m.knockPx,
+      Math.round((1 - m.squashY) * 6),
+      m.flash,
+      1,
+    );
+  }
+  for (let i = 0; i < DEATH_COUNT; i++) {
+    const m = deathMotion(i);
+    const srcX = i <= 1 ? (coreCount + 0) * cellW : 0;
+    blitTransformed(
+      ctx,
+      srcX,
+      0,
+      (coreCount + HIT_COUNT + i) * cellW,
+      0,
+      cellW,
+      cellH,
+      m.shrink,
+      m.shrink,
+      m.scatterX,
+      m.settleY,
+      0,
+      m.alpha,
+    );
+  }
+}
+
+function blitTransformed(
+  ctx: CanvasRenderingContext2D,
+  sx: number,
+  sy: number,
+  dx: number,
+  dy: number,
+  w: number,
+  h: number,
+  scaleX: number,
+  scaleY: number,
+  ox: number,
+  oy: number,
+  flash: number,
+  alpha: number,
+): void {
+  const tmp = ctx.getImageData(sx, sy, w, h);
+  const out = ctx.createImageData(w, h);
+  const cx = w / 2;
+  const cy = h * 0.88;
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      const srcX = Math.round((x - cx - ox) / scaleX + cx);
+      const srcY = Math.round((y - cy - oy) / scaleY + cy);
+      if (srcX < 0 || srcY < 0 || srcX >= w || srcY >= h) continue;
+      if (alpha < 0.55 && (x + y) % 3 === 0) continue;
+      const si = (srcY * w + srcX) * 4;
+      const di = (y * w + x) * 4;
+      let r = tmp.data[si];
+      let g = tmp.data[si + 1];
+      let b = tmp.data[si + 2];
+      const a = Math.round(tmp.data[si + 3] * alpha);
+      if (flash > 0) {
+        r = Math.min(255, Math.round(r + (255 - r) * flash));
+        g = Math.min(255, Math.round(g + (255 - g) * flash));
+        b = Math.min(255, Math.round(b + (255 - b) * flash));
+      }
+      out.data[di] = r;
+      out.data[di + 1] = g;
+      out.data[di + 2] = b;
+      out.data[di + 3] = a;
+    }
+  }
+  ctx.putImageData(out, dx, dy);
 }
 
 function drawEnemyFrame(

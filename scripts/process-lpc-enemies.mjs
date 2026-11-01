@@ -8,18 +8,27 @@
  *   bee   → spr_wisp
  *   bat   → spr_bat (flying elite)
  *
- * Layout out: idle 0–3, walk 4–9, attack 10–13 (128×128 cells).
+ * Layout out: idle 0–3, walk 4–9, attack 10–13, hit 14–15, death 16–19.
  */
 import { mkdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import sharp from 'sharp';
+import {
+  CORE_FRAMES,
+  DEATH_COUNT,
+  FH,
+  FW,
+  HIT_COUNT,
+  TOTAL_FRAMES,
+  deriveDeathRgba,
+  deriveHitRgba,
+  hitSourceFrame,
+} from './lib/combat-frames.mjs';
 
 const ROOT = path.resolve(import.meta.dirname, '..');
 const LPC = path.join(ROOT, 'public/assets/sprites/lpc');
 const OUT = path.join(ROOT, 'public/assets/sprites/game');
-const FW = 128;
-const FH = 128;
-const FRAMES = 14;
+const FRAMES = TOTAL_FRAMES;
 
 /** @type {{ src: string, out: string, cols: number, rows: number, faceRow: number, walkCols: number[], attackCols: number[] }[]} */
 const MAP = [
@@ -183,6 +192,41 @@ async function buildOne(row) {
         y: i === 1 || i === 2 ? -3 : 0,
         scale: i === 2 ? 1.06 : 1,
       }),
+    );
+  }
+
+  if (cells.length !== CORE_FRAMES) {
+    throw new Error(
+      `${row.out}: expected ${CORE_FRAMES} core, got ${cells.length}`,
+    );
+  }
+
+  for (let i = 0; i < HIT_COUNT; i++) {
+    const src = cells[hitSourceFrame(i)];
+    const { data } = await sharp(src)
+      .ensureAlpha()
+      .raw()
+      .toBuffer({ resolveWithObject: true });
+    cells.push(
+      await sharp(deriveHitRgba(Buffer.from(data), i), {
+        raw: { width: FW, height: FH, channels: 4 },
+      })
+        .png()
+        .toBuffer(),
+    );
+  }
+  for (let i = 0; i < DEATH_COUNT; i++) {
+    const src = i <= 1 ? cells[14] : cells[0];
+    const { data } = await sharp(src)
+      .ensureAlpha()
+      .raw()
+      .toBuffer({ resolveWithObject: true });
+    cells.push(
+      await sharp(deriveDeathRgba(Buffer.from(data), i), {
+        raw: { width: FW, height: FH, channels: 4 },
+      })
+        .png()
+        .toBuffer(),
     );
   }
 

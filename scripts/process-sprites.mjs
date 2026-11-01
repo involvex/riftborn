@@ -1,6 +1,6 @@
 /**
- * Build 14-frame game sheets (128×128 cells).
- * Layout: idle 0–3, walk 4–9, attack 10–13.
+ * Build 20-frame game sheets (128×128 cells).
+ * Layout: idle 0–3, walk 4–9, attack 10–13, hit 14–15, death 16–19.
  *
  * Prefers real pose sources when present:
  *   {base}_idle.png
@@ -11,13 +11,22 @@
 import { access, mkdir, readdir } from 'node:fs/promises';
 import path from 'node:path';
 import sharp from 'sharp';
+import {
+  CORE_FRAMES,
+  DEATH_COUNT,
+  FH,
+  FW,
+  HIT_COUNT,
+  TOTAL_FRAMES,
+  deriveDeathRgba,
+  deriveHitRgba,
+  hitSourceFrame,
+} from './lib/combat-frames.mjs';
 
 const ROOT = path.resolve(import.meta.dirname, '..');
 const SRC = path.join(ROOT, 'public/assets/sprites');
 const OUT = path.join(ROOT, 'public/assets/sprites/game');
-const FW = 128;
-const FH = 128;
-const FRAMES = 14;
+const FRAMES = TOTAL_FRAMES;
 
 /**
  * @type {{
@@ -856,6 +865,42 @@ async function buildSheet(row) {
     for (let i = 0; i < 4; i++) {
       frames.push(await toCell(idlePng, attackMotion(i)));
     }
+  }
+
+  if (frames.length !== CORE_FRAMES) {
+    throw new Error(
+      `${row.out}: expected ${CORE_FRAMES} core frames, got ${frames.length}`,
+    );
+  }
+
+  // Hit / death derived from attack wind-down + idle (no pose art).
+  for (let i = 0; i < HIT_COUNT; i++) {
+    const src = frames[hitSourceFrame(i)];
+    const { data } = await sharp(src)
+      .ensureAlpha()
+      .raw()
+      .toBuffer({ resolveWithObject: true });
+    frames.push(
+      await sharp(deriveHitRgba(Buffer.from(data), i), {
+        raw: { width: FW, height: FH, channels: 4 },
+      })
+        .png()
+        .toBuffer(),
+    );
+  }
+  for (let i = 0; i < DEATH_COUNT; i++) {
+    const src = i <= 1 ? frames[14] : frames[0];
+    const { data } = await sharp(src)
+      .ensureAlpha()
+      .raw()
+      .toBuffer({ resolveWithObject: true });
+    frames.push(
+      await sharp(deriveDeathRgba(Buffer.from(data), i), {
+        raw: { width: FW, height: FH, channels: 4 },
+      })
+        .png()
+        .toBuffer(),
+    );
   }
 
   if (frames.length !== FRAMES) {

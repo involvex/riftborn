@@ -34,7 +34,7 @@ export class Enemy {
   private readonly homeX: number;
   private readonly homeY: number;
   private readonly textureKey: string;
-  private animKind: 'idle' | 'walk' | 'attack' = 'idle';
+  private animKind: 'idle' | 'walk' | 'attack' | 'hit' | 'death' = 'idle';
   maxBound = 48;
   private slowMult = 1;
   private slowTimer = 0;
@@ -261,15 +261,23 @@ export class Enemy {
     return { hitPlayer, damage };
   }
 
-  private playAnim(kind: 'idle' | 'walk' | 'attack', force = false): void {
+  private playAnim(
+    kind: 'idle' | 'walk' | 'attack' | 'hit' | 'death',
+    force = false,
+  ): void {
     if (!force && this.animKind === kind) return;
+    if (this.animKind === 'death' && kind !== 'death') return;
     if (kind !== 'attack' && this.animKind === 'attack' && !force) return;
+    if (kind !== 'hit' && this.animKind === 'hit' && !force) return;
+    const key = `${this.textureKey}_${kind}`;
+    if (!this.sprite.scene.anims.exists(key)) return;
     this.animKind = kind;
-    this.sprite.play(`${this.textureKey}_${kind}`, true);
+    this.sprite.play(key, true);
     if (kind === 'attack') {
       const gen = ++this.attackGen;
       this.sprite.once(Phaser.Animations.Events.ANIMATION_COMPLETE, () => {
         if (gen !== this.attackGen) return;
+        if (this.animKind === 'death') return;
         this.animKind =
           this.state === 'chase' || this.state === 'patrol' ? 'walk' : 'idle';
         this.sprite.play(`${this.textureKey}_${this.animKind}`, true);
@@ -286,25 +294,26 @@ export class Enemy {
       this.alive = false;
       this.attackGen += 1;
       this.bar.clear();
-      // No death frames on sheets — short fade so kills don't pop.
-      this.sprite.scene.tweens.add({
-        targets: this.body,
-        alpha: 0,
-        scaleX: 0.55,
-        scaleY: 0.55,
-        duration: 180,
-        ease: 'Quad.easeIn',
-        onComplete: () => {
-          this.body.setVisible(false);
-        },
-      });
+      this.playDeath();
       return true;
     }
     return false;
   }
 
-  /** White punch + slight knockback read on hit. */
+  /** Hit frames when available; tint + nudge as fallback. */
   flashHit(): void {
+    if (!this.alive) return;
+    const hitKey = `${this.textureKey}_hit`;
+    if (this.sprite.scene.anims.exists(hitKey)) {
+      this.playAnim('hit', true);
+      this.sprite.scene.time.delayedCall(120, () => {
+        if (!this.alive || this.animKind !== 'hit') return;
+        this.animKind =
+          this.state === 'chase' || this.state === 'patrol' ? 'walk' : 'idle';
+        this.sprite.play(`${this.textureKey}_${this.animKind}`, true);
+      });
+      return;
+    }
     this.sprite.setTint(0xffffff);
     const ox = this.sprite.x;
     this.sprite.x = ox + (Math.random() > 0.5 ? 3 : -3);
@@ -312,6 +321,33 @@ export class Enemy {
       if (!this.alive) return;
       this.sprite.x = ox;
       this.applyBaseTint();
+    });
+  }
+
+  private playDeath(): void {
+    const deathKey = `${this.textureKey}_death`;
+    if (this.sprite.scene.anims.exists(deathKey)) {
+      this.animKind = 'death';
+      this.sprite.play(deathKey, false);
+      this.sprite.once(Phaser.Animations.Events.ANIMATION_COMPLETE, () => {
+        this.body.setVisible(false);
+      });
+      // Safety hide if complete never fires
+      this.sprite.scene.time.delayedCall(450, () => {
+        this.body.setVisible(false);
+      });
+      return;
+    }
+    this.sprite.scene.tweens.add({
+      targets: this.body,
+      alpha: 0,
+      scaleX: 0.55,
+      scaleY: 0.55,
+      duration: 180,
+      ease: 'Quad.easeIn',
+      onComplete: () => {
+        this.body.setVisible(false);
+      },
     });
   }
 

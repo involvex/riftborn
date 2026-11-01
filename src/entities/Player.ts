@@ -12,7 +12,7 @@ import {
 import { playCombatBurst } from '../render/CombatVfx';
 import { gameState } from '../systems/GameState';
 
-type AnimKind = 'idle' | 'walk' | 'attack';
+type AnimKind = 'idle' | 'walk' | 'attack' | 'hit';
 
 export class Player {
   readonly body: Phaser.GameObjects.Container;
@@ -187,13 +187,22 @@ export class Player {
     });
   }
 
-  /** Brief white / red flash when the player takes a hit. */
+  /** Hit frames (sheet) with light tint fallback if anim missing. */
   flashHit(): void {
-    this.hitFlashUntil = this.scene.time.now + 90;
-    this.sprite.setTint(0xff6060);
-    this.scene.time.delayedCall(90, () => {
+    this.hitFlashUntil = this.scene.time.now + 140;
+    const hitKey = `${this.textureKey}_hit`;
+    if (this.scene.anims.exists(hitKey) && this.animKind !== 'attack') {
+      this.playAnim('hit', true);
+    } else {
+      this.sprite.setTint(0xff6060);
+    }
+    this.scene.time.delayedCall(140, () => {
       if (this.scene.time.now < this.hitFlashUntil) return;
       this.applyClassTint();
+      if (this.animKind === 'hit') {
+        this.animKind = this.moving ? 'walk' : 'idle';
+        this.sprite.play(`${this.textureKey}_${this.animKind}`, true);
+      }
     });
   }
 
@@ -246,8 +255,10 @@ export class Player {
   private playAnim(kind: AnimKind, force = false): void {
     if (!force && this.animKind === kind) return;
     if (kind !== 'attack' && this.animKind === 'attack' && !force) return;
-    this.animKind = kind;
+    if (kind !== 'hit' && this.animKind === 'hit' && !force) return;
     const key = `${this.textureKey}_${kind}`;
+    if (!this.scene.anims.exists(key)) return;
+    this.animKind = kind;
     this.sprite.play(key, true);
     if (kind === 'attack') {
       const gen = ++this.attackGen;
