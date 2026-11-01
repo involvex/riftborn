@@ -51,7 +51,11 @@ export const Events = {
   SAVE_WRITTEN: 'save:written',
   RIFT_ENTERED: 'rift:entered',
   RIFT_CLEARED: 'rift:cleared',
+  /** Boss slain — show run summary while still in the rift. */
+  RIFT_BOSS_SUMMARY: 'rift:bossSummary',
   PLAYER_DIED: 'player:died',
+  /** UI confirmed death → WorldScene finishes respawn. */
+  RESOLVE_DEATH: 'player:resolveDeath',
   DAMAGE_NUMBER: 'combat:damageNumber',
   SESSION_REWARDS: 'net:sessionRewards',
   SETTINGS_CHANGED: 'settings:changed',

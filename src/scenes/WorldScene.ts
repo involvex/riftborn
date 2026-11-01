@@ -124,6 +124,9 @@ export class WorldScene extends Phaser.Scene {
   private riftBossSpawned = false;
   private riftBossDead = false;
   private riftDepth = 1;
+  /** Kills since last death / spawn (shown on death screen). */
+  private lifeKills = 0;
+  private deathPending = false;
   private riftMod: RiftModifier = getRiftModifier('none');
   private bossAnchor: { x: number; y: number } | null = null;
   private hubLayout: ZoneLayout | null = null;
@@ -265,6 +268,7 @@ export class WorldScene extends Phaser.Scene {
       gameEvents.on('combat:dash', () => {
         this.tryDash(this.touchDx || 0, this.touchDy || 0);
       }),
+      gameEvents.on(Events.RESOLVE_DEATH, () => this.finishDeath()),
     );
   }
 
@@ -994,6 +998,10 @@ export class WorldScene extends Phaser.Scene {
   }
 
   update(_time: number, delta: number): void {
+    if (this.deathPending) {
+      this.player.syncScreen();
+      return;
+    }
     if (this.inHitstop()) {
       this.player.syncScreen();
       return;
@@ -1251,17 +1259,30 @@ export class WorldScene extends Phaser.Scene {
   }
 
   private onPlayerDeath(): void {
+    if (this.deathPending) return;
+    this.deathPending = true;
     audioBus.death();
     this.cameras.main.flash(280, 120, 20, 30, false, undefined, this);
     this.triggerCombatShake('boss');
     this.triggerHitstop(true);
+    this.player.resetCombatPose();
+    gameEvents.emit(Events.PLAYER_DIED, {
+      kills: this.lifeKills,
+      level: gameState.progression.level,
+      gold: gameState.inventory.count('gold'),
+      playTimeSec: gameState.playTimeSec,
+      inRift: gameState.inRift,
+      depth: gameState.inRift ? this.riftDepth : undefined,
+    });
+  }
+
+  /** After death-screen confirm: half HP and back to plaza. */
+  private finishDeath(): void {
+    if (!this.deathPending) return;
     gameState.hp = Math.floor(gameState.maxHp * 0.5);
     this.player.resetCombatPose();
     if (gameState.inRift) {
       this.returnToTown(false, true);
-      gameEvents.emit('ui:toast', {
-        text: 'You fall in the rift… waking in town at half health.',
-      });
     } else {
       this.player.worldX = TOWN_SPAWN.x;
       this.player.worldY = TOWN_SPAWN.y;
@@ -1269,11 +1290,9 @@ export class WorldScene extends Phaser.Scene {
       gameState.worldY = TOWN_SPAWN.y;
       this.player.syncScreen();
       gameState.persist();
-      gameEvents.emit('ui:toast', {
-        text: 'You fall… Mira drags you back to the plaza.',
-      });
     }
-    gameEvents.emit(Events.PLAYER_DIED, {});
+    this.lifeKills = 0;
+    this.deathPending = false;
   }
 
   /** Always available (B): leave rift / reset to plaza. */
@@ -1428,6 +1447,7 @@ export class WorldScene extends Phaser.Scene {
       else gameState.bounties.noteWildernessKill();
     }
     gameState.persist();
+    this.lifeKills += 1;
     this.triggerCombatShake(enemy.isBoss ? 'boss' : 'hit');
     if (!gameState.inRift) return;
 
@@ -1436,11 +1456,15 @@ export class WorldScene extends Phaser.Scene {
       this.riftCleared = true;
       this.spawnBossChest(enemy.worldX, enemy.worldY);
       this.openExitPortal();
-      gameEvents.emit('ui:toast', {
-        text: 'Boss slain! Loot the chest · Exit portal · R / B town',
-      });
       this.cameras.main.flash(220, 80, 160, 220, false, undefined, this);
       this.emitRiftProgress();
+      gameEvents.emit(Events.RIFT_BOSS_SUMMARY, {
+        depth: this.riftDepth,
+        kills: this.riftKills,
+        modName: this.riftMod.name,
+        gold: gameState.inventory.count('gold'),
+        level: gameState.progression.level,
+      });
       return;
     }
 

@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { worldToScreen } from '../core/IsoMath';
+import { settingsStore } from '../core/SettingsStore';
 import type { AbilityKind } from '../types/game';
 
 export type SkillVfxRequest = {
@@ -44,7 +45,9 @@ export function playSkillVfx(scene: Phaser.Scene, req: SkillVfxRequest): void {
         ease: 'Cubic.Out',
         onComplete: () => g.destroy(),
       });
-      scene.cameras.main.shake(120, 0.004);
+      if (settingsStore.get().screenShake) {
+        scene.cameras.main.shake(120, 0.004);
+      }
       break;
     }
     case 'pulse':

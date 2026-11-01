@@ -31,6 +31,10 @@ import { HotkeyDock } from '../ui/HotkeyDock';
 import { FpsHud } from '../ui/FpsHud';
 import { shouldShowTouchControls, TouchControls } from '../ui/TouchControls';
 import { TutorialOverlay } from '../ui/TutorialOverlay';
+import {
+  formatPlayTime,
+  SummaryOverlay,
+} from '../ui/SummaryOverlay';
 import { uiPanelSize } from '../core/UiScale';
 import { COMBAT_FEEL, isCombatCrit } from '../render/CombatFeel';
 
@@ -62,6 +66,7 @@ export class UIScene extends Phaser.Scene {
   private miniMap!: MiniMap;
   private mapOverlay!: MapOverlay;
   private tutorial!: TutorialOverlay;
+  private summaryOverlay!: SummaryOverlay;
   private lastMapSnap: MapSnapshot | null = null;
   private unsubs: (() => void)[] = [];
   private shopOpen = false;
@@ -121,6 +126,7 @@ export class UIScene extends Phaser.Scene {
     this.miniMap = new MiniMap(this);
     this.mapOverlay = new MapOverlay(this);
     this.tutorial = new TutorialOverlay(this);
+    this.summaryOverlay = new SummaryOverlay(this);
     this.buildCraftPanel();
     this.buildCharPanel();
     this.buildMenuPanel();
@@ -276,6 +282,36 @@ export class UIScene extends Phaser.Scene {
         this.riftHud.hide();
         this.refresh();
       }),
+      gameEvents.on(Events.RIFT_BOSS_SUMMARY, (p) => {
+        const d = p as {
+          depth: number;
+          kills: number;
+          modName?: string;
+          gold: number;
+          level: number;
+        };
+        this.closeAllPanels();
+        this.summaryOverlay.show({
+          title: 'Rift Lord Defeated',
+          lines: [
+            { text: `Depth D${d.depth}` },
+            { text: `Pack kills: ${d.kills}` },
+            { text: d.modName ? `Mod: ${d.modName}` : 'Mod: —' },
+            { text: `Level ${d.level} · ${d.gold}g` },
+            { text: '' },
+            { text: 'Loot the chest · Exit portal · B town' },
+          ],
+          actionLabel: 'Continue',
+          onAction: () => {
+            this.summaryOverlay.hide();
+            this.setModalChrome(false);
+            this.scene.resume('WorldScene');
+            this.toast('Boss slain — claim loot or leave');
+          },
+        });
+        this.setModalChrome(true);
+        this.scene.pause('WorldScene');
+      }),
       gameEvents.on(Events.RIFT_PROGRESS, (p) => {
         const d = p as {
           active?: boolean;
@@ -298,7 +334,44 @@ export class UIScene extends Phaser.Scene {
           d.modName,
         );
       }),
-      gameEvents.on(Events.PLAYER_DIED, () => {
+      gameEvents.on(Events.PLAYER_DIED, (p) => {
+        const d = p as {
+          kills: number;
+          level: number;
+          gold: number;
+          playTimeSec: number;
+          inRift: boolean;
+          depth?: number;
+        };
+        this.closeAllPanels();
+        const lines = [
+          { text: `Level ${d.level}` },
+          { text: `Kills this life: ${d.kills}` },
+          { text: `Gold: ${d.gold}` },
+          { text: `Play time: ${formatPlayTime(d.playTimeSec)}` },
+        ];
+        if (d.inRift && d.depth != null) {
+          lines.push({ text: `Fell in rift D${d.depth}` });
+        }
+        this.summaryOverlay.show({
+          title: 'You Died',
+          lines,
+          actionLabel: 'Return to hub',
+          onAction: () => {
+            this.summaryOverlay.hide();
+            this.setModalChrome(false);
+            gameEvents.emit(Events.RESOLVE_DEATH);
+            this.scene.resume('WorldScene');
+            this.refresh();
+            this.toast(
+              d.inRift
+                ? 'You fall in the rift… waking in town at half health.'
+                : 'You fall… Mira drags you back to the plaza.',
+            );
+          },
+        });
+        this.setModalChrome(true);
+        this.scene.pause('WorldScene');
         this.refresh();
       }),
       gameEvents.on(Events.BOUNTY_CHANGED, () => this.refresh()),
@@ -381,7 +454,25 @@ export class UIScene extends Phaser.Scene {
       if (this.traderPanel.open) this.traderPanel.layout();
       if (this.skillPanel.open) this.skillPanel.layout();
       if (this.mapOverlay.open) this.mapOverlay.layout();
+      if (this.summaryOverlay.open) this.summaryOverlay.layout();
     });
+  }
+
+  /** Close inventory / map / shops / pause before a blocking summary. */
+  private closeAllPanels(): void {
+    this.hideCraft();
+    this.hideShop();
+    this.hideTrader();
+    this.hideChar();
+    this.skillPanel.hide();
+    this.inventoryPanel.hide();
+    this.mapOverlay.hide();
+    if (this.menuOpen) {
+      this.menuPanel.setVisible(false);
+      this.menuOpen = false;
+      this.awaitingRebind = null;
+      this.rebindHint.setText('');
+    }
   }
 
   private bindHotkeys(): void {
@@ -987,6 +1078,10 @@ export class UIScene extends Phaser.Scene {
     if (this.awaitingRebind) return;
 
     if (Phaser.Input.Keyboard.JustDown(this.keyMenu)) {
+      if (this.summaryOverlay.open) {
+        this.summaryOverlay.confirm();
+        return;
+      }
       if (this.tutorial.open) {
         this.tutorial.dismiss();
         return;
@@ -1132,5 +1227,6 @@ export class UIScene extends Phaser.Scene {
     for (const u of this.unsubs) u();
     this.unsubs = [];
     this.tutorial?.destroy();
+    this.summaryOverlay?.destroy();
   }
 }
