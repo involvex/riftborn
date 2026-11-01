@@ -1,31 +1,33 @@
 import Phaser from 'phaser';
 import { audioBus } from '../core/AudioBus';
+import { classLabel, resolveGearClass } from '../systems/ItemGen';
+import { gearSellValue, stackSellValue } from '../systems/Economy';
 import {
-  classLabel,
-  describeGear,
-  describeGearFull,
-  resolveGearClass,
-} from '../systems/ItemGen';
-import { stackSellValue } from '../systems/Economy';
+  buildGearTooltipLines,
+  type TooltipLine,
+} from '../systems/GearCompare';
 import { getItemDef } from '../systems/InventorySystem';
 import { gameState } from '../systems/GameState';
 import { addSlotIcon } from '../render/ItemIcons';
 import type { EquipmentSlots, InventorySlot } from '../types/save';
 import { uiFont, uiPanelSize } from '../core/UiScale';
 import { settingsStore } from '../core/SettingsStore';
+import type { GearInstance } from '../types/game';
 
 type EqKey = keyof EquipmentSlots;
 
+const UI_FONT = 'Consolas, "Courier New", monospace';
+
 /**
  * Bag UI: equipment strip + grid.
- * Armor values only on hover / Character tab. Double-click to equip.
+ * Hover shows multi-line tooltip with equip compare (green/red).
  */
 export class InventoryPanel {
   readonly root: Phaser.GameObjects.Container;
   private readonly scene: Phaser.Scene;
   private gridRoot: Phaser.GameObjects.Container;
   private eqRoot: Phaser.GameObjects.Container;
-  private detail!: Phaser.GameObjects.Text;
+  private detailRoot: Phaser.GameObjects.Container;
   private title!: Phaser.GameObjects.Text;
   private bg!: Phaser.GameObjects.Rectangle;
   private selectedIndex: number | null = null;
@@ -38,30 +40,25 @@ export class InventoryPanel {
   constructor(scene: Phaser.Scene) {
     this.scene = scene;
     this.root = scene.add.container(0, 0).setScrollFactor(0).setDepth(10_025);
-    this.bg = scene.add.rectangle(0, 0, 100, 100, 0x0e1218, 0.97);
-    this.bg.setStrokeStyle(2, 0xc4a574, 0.8);
+    this.bg = scene.add.rectangle(0, 0, 100, 100, 0x0a0e14, 0.98);
+    this.bg.setStrokeStyle(2, 0xd0b070, 0.95);
     this.title = scene.add
       .text(0, 0, 'Inventory', {
-        fontFamily: 'Georgia, serif',
+        fontFamily: UI_FONT,
         fontSize: '22px',
-        color: '#e8e4d8',
+        color: '#f2eee4',
+        resolution: 2,
       })
       .setOrigin(0.5);
-    this.detail = scene.add
-      .text(0, 0, 'Double-click gear to equip · Hover for full stats', {
-        fontFamily: 'Segoe UI, sans-serif',
-        fontSize: '12px',
-        color: '#8a9aaa',
-        align: 'center',
-      })
-      .setOrigin(0.5, 0);
+    this.detailRoot = scene.add.container(0, 0);
     this.eqRoot = scene.add.container(0, 0);
     this.gridRoot = scene.add.container(0, 0);
     const close = scene.add
       .text(0, 0, 'Close (I / Esc)', {
-        fontFamily: 'Segoe UI, sans-serif',
+        fontFamily: UI_FONT,
         fontSize: '13px',
-        color: '#8a9aaa',
+        color: '#c8d0da',
+        resolution: 2,
       })
       .setOrigin(0.5)
       .setInteractive({ useHandCursor: true });
@@ -72,11 +69,12 @@ export class InventoryPanel {
       this.title,
       this.eqRoot,
       this.gridRoot,
-      this.detail,
+      this.detailRoot,
       close,
     ]);
     this.root.setData('closeBtn', close);
     this.root.setVisible(false);
+    this.setDetailPlain('Double-click gear to equip · Hover for compare');
     this.layout();
   }
 
@@ -85,12 +83,11 @@ export class InventoryPanel {
     this.panelW = w;
     this.panelH = h;
     this.bg.setSize(w, h);
-    this.title.setPosition(0, -h / 2 + 22);
+    this.title.setPosition(0, -h / 2 + 26);
     this.title.setStyle({ fontSize: uiFont(this.scene, 22, 16, 26) });
     const close = this.root.getData('closeBtn') as Phaser.GameObjects.Text;
-    close.setPosition(0, h / 2 - 18);
-    this.detail.setPosition(0, h / 2 - 48);
-    this.detail.setWordWrapWidth(w - 36);
+    close.setPosition(0, h / 2 - 16);
+    this.detailRoot.setPosition(0, h / 2 - 110);
     this.root.setPosition(
       this.scene.scale.width / 2,
       this.scene.scale.height / 2,
@@ -115,13 +112,55 @@ export class InventoryPanel {
     else this.show();
   }
 
+  private setDetailPlain(text: string, color = '#a8b4c0'): void {
+    this.setDetailLines([{ text, color }]);
+  }
+
+  private setDetailLines(lines: TooltipLine[]): void {
+    this.detailRoot.removeAll(true);
+    const maxW = this.panelW - 48;
+    let y = 0;
+    for (const line of lines) {
+      const t = this.scene.add
+        .text(0, y, line.text, {
+          fontFamily: UI_FONT,
+          fontSize: '12px',
+          color: line.color,
+          align: 'center',
+          resolution: 2,
+          wordWrap: { width: maxW },
+        })
+        .setOrigin(0.5, 0);
+      this.detailRoot.add(t);
+      y += t.height + 2;
+    }
+  }
+
+  private showGearTooltip(item: GearInstance, hint: string): void {
+    const slot = item.slot;
+    const equipped =
+      slot === 'weapon' ||
+      slot === 'hat' ||
+      slot === 'chest' ||
+      slot === 'legs' ||
+      slot === 'feet'
+        ? gameState.inventory.equipment[slot]
+        : null;
+    this.setDetailLines(
+      buildGearTooltipLines(item, equipped, {
+        sellGold: gearSellValue(item),
+        hint,
+      }),
+    );
+  }
+
   refresh(): void {
     this.eqRoot.removeAll(true);
     this.gridRoot.removeAll(true);
 
     const w = this.panelW;
     const h = this.panelH;
-    const pad = 18;
+    const pad = 22;
     const innerW = w - pad * 2;
 
     const eq = gameState.inventory.equipment;
@@ -134,10 +173,10 @@ export class InventoryPanel {
       { key: 'tool', label: 'TOOL' },
     ];
     const eqCols = 3;
-    const eqGap = 8;
+    const eqGap = 10;
     const eqCellW = (innerW - eqGap * (eqCols - 1)) / eqCols;
-    const eqCellH = 44;
-    this.eqRoot.setPosition(-innerW / 2, -h / 2 + 48);
+    const eqCellH = 48;
+    this.eqRoot.setPosition(-innerW / 2, -h / 2 + 54);
 
     slots.forEach((s, i) => {
       const col = i % eqCols;
@@ -145,11 +184,11 @@ export class InventoryPanel {
       const x = col * (eqCellW + eqGap) + eqCellW / 2;
       const y = row * (eqCellH + eqGap) + eqCellH / 2;
       const cell = this.scene.add
-        .rectangle(x, y, eqCellW, eqCellH, 0x1a2230, 1)
-        .setStrokeStyle(1, 0x4a5568)
+        .rectangle(x, y, eqCellW, eqCellH, 0x141c28, 1)
+        .setStrokeStyle(1, 0x5a6a80)
         .setInteractive({ useHandCursor: true });
       const iconSize = Math.min(36, eqCellH - 8);
-      const iconX = x - eqCellW / 2 + 6;
+      const iconX = x - eqCellW / 2 + 8;
       const iconY = y - iconSize / 2;
       const icons: Phaser.GameObjects.GameObject[] = [];
       if (s.key === 'tool' && eq.tool) {
@@ -176,36 +215,37 @@ export class InventoryPanel {
       const short = label.length > 16 ? `${label.slice(0, 14)}…` : label;
       const text = this.scene.add
         .text(iconX + iconSize + 8, y, `${s.label}  ${short}`, {
-          fontFamily: 'Segoe UI, sans-serif',
-          fontSize: '11px',
-          color: '#e8e4d8',
+          fontFamily: UI_FONT,
+          fontSize: '12px',
+          color: '#f0ebe3',
+          resolution: 2,
         })
         .setOrigin(0, 0.5);
       cell.on('pointerup', () => this.onEquipClick(s.key));
       cell.on('pointerover', () => {
         if (s.key !== 'tool' && eq[s.key]) {
-          this.detail.setText(describeGearFull(eq[s.key]!));
+          this.showGearTooltip(eq[s.key]!, 'Currently equipped');
         } else if (s.key === 'tool' && eq.tool) {
-          this.detail.setText(getItemDef(eq.tool)?.name ?? eq.tool);
+          this.setDetailPlain(getItemDef(eq.tool)?.name ?? eq.tool);
         }
       });
       this.eqRoot.add([cell, ...icons, text]);
     });
 
     const eqBlockH = 2 * eqCellH + eqGap;
-    const bagTop = -h / 2 + 48 + eqBlockH + 20;
-    const bagBottom = h / 2 - 72;
+    const bagTop = -h / 2 + 54 + eqBlockH + 24;
+    const bagBottom = h / 2 - 120;
     const bagH = Math.max(120, bagBottom - bagTop);
 
     const cols = gameState.inventory.bagCols;
     const rows = gameState.inventory.bagRows;
-    const gap = 4;
+    const gap = 6;
     const cell = Math.max(
       28,
       Math.min(
         52,
         Math.floor((innerW - gap * (cols - 1)) / cols),
-        Math.floor((bagH - 22 - gap * (rows - 1)) / rows),
+        Math.floor((bagH - 26 - gap * (rows - 1)) / rows),
       ),
     );
     const gridW = cols * cell + (cols - 1) * gap;
@@ -216,18 +256,20 @@ export class InventoryPanel {
       0,
       `Bag  ${gameState.inventory.slots.length}/${gameState.inventory.capacity}   ·   Gold ${gameState.inventory.count('gold')}`,
       {
-        fontFamily: 'Georgia, serif',
+        fontFamily: UI_FONT,
         fontSize: '14px',
-        color: '#c4a574',
+        color: '#e0c890',
+        resolution: 2,
       },
     );
     const sortBtn = this.scene.add
       .text(gridW, 2, 'Sort', {
-        fontFamily: 'Segoe UI, sans-serif',
+        fontFamily: UI_FONT,
         fontSize: '12px',
         color: '#0a0c10',
-        backgroundColor: '#c4a574',
+        backgroundColor: '#d0b070',
         padding: { x: 8, y: 3 },
+        resolution: 2,
       })
       .setOrigin(1, 0)
       .setInteractive({ useHandCursor: true });
@@ -235,16 +277,17 @@ export class InventoryPanel {
       audioBus.uiClick();
       gameState.inventory.sortBag();
       gameState.persist();
-      this.detail.setText('Bag sorted · gear by rarity, then materials');
+      this.setDetailPlain('Bag sorted · gear by rarity, then materials');
       this.refresh();
     });
     const junkHint = settingsStore.get().autoSellJunk
       ? '  ·  Auto-sell junk ON'
       : '';
-    const hint = this.scene.add.text(0, 16, junkHint, {
-      fontFamily: 'Segoe UI, sans-serif',
-      fontSize: '10px',
-      color: '#6a8090',
+    const hint = this.scene.add.text(0, 18, junkHint, {
+      fontFamily: UI_FONT,
+      fontSize: '11px',
+      color: '#8a9aaa',
+      resolution: 2,
     });
     this.gridRoot.add([bagLabel, sortBtn, hint]);
 
@@ -254,11 +297,11 @@ export class InventoryPanel {
       const col = i % cols;
       const row = Math.floor(i / cols);
       const x = col * (cell + gap);
-      const y = 28 + row * (cell + gap);
+      const y = 30 + row * (cell + gap);
       const slot = gameState.inventory.slots[i] as InventorySlot | undefined;
       const rect = this.scene.add
-        .rectangle(x + cell / 2, y + cell / 2, cell, cell, 0x16202c, 1)
-        .setStrokeStyle(1, this.selectedIndex === i ? 0x6ec6ff : 0x3a4555)
+        .rectangle(x + cell / 2, y + cell / 2, cell, cell, 0x121820, 1)
+        .setStrokeStyle(1, this.selectedIndex === i ? 0x7ed0ff : 0x4a5568)
         .setInteractive({ useHandCursor: true });
 
       const contents: Phaser.GameObjects.GameObject[] = [rect];
@@ -272,11 +315,12 @@ export class InventoryPanel {
           );
           const qty = this.scene.add
             .text(x + cell - 3, y + cell - 3, `x${slot.qty}`, {
-              fontFamily: 'Consolas, monospace',
+              fontFamily: UI_FONT,
               fontSize: `${Math.max(9, Math.floor(cell * 0.22))}px`,
-              color: '#e8e4d8',
+              color: '#f0ebe3',
               stroke: '#0a0c10',
               strokeThickness: 3,
+              resolution: 2,
             })
             .setOrigin(1, 1);
           contents.push(qty);
@@ -296,7 +340,7 @@ export class InventoryPanel {
       rect.on('pointerup', () => this.onBagClick(i));
       rect.on('pointerover', () => {
         if (!slot) {
-          this.detail.setText('Empty slot');
+          this.setDetailPlain('Empty slot');
           return;
         }
         if (slot.kind === 'stack') {
@@ -304,16 +348,17 @@ export class InventoryPanel {
           const unit = stackSellValue(slot.itemId);
           const sell =
             unit > 0 ? `  ·  sell ${unit * slot.qty}g` : '  ·  not sellable';
-          this.detail.setText(
+          this.setDetailPlain(
             `${def?.name ?? slot.itemId}  ×${slot.qty}${sell}`,
+            '#e8e4d8',
           );
         } else {
           const req = resolveGearClass(slot.item);
           const usable = !req || req === playerClass;
-          const hint = usable
+          const tip = usable
             ? 'Double-click to equip'
             : `${classLabel(req)} only`;
-          this.detail.setText(`${describeGearFull(slot.item)}  — ${hint}`);
+          this.showGearTooltip(slot.item, tip);
         }
       });
 
@@ -341,9 +386,7 @@ export class InventoryPanel {
     if (slot.kind === 'gear') {
       this.selectedIndex = index;
       if (!isDouble) {
-        this.detail.setText(
-          `${describeGear(slot.item)}  — double-click to equip`,
-        );
+        this.showGearTooltip(slot.item, 'Double-click to equip');
         this.refresh();
         return;
       }
@@ -355,12 +398,12 @@ export class InventoryPanel {
     if (def?.kind === 'tool' && isDouble) {
       gameState.inventory.equipTool(slot.itemId);
       gameState.persist();
-      this.detail.setText(`Equipped ${def.name}`);
+      this.setDetailPlain(`Equipped ${def.name}`, '#6ecf7a');
       this.refresh();
       return;
     }
     this.selectedIndex = index;
-    this.detail.setText(
+    this.setDetailPlain(
       `${def?.name ?? slot.itemId} ×${slot.qty}` +
         (def?.kind === 'tool' ? '  — double-click to equip' : ''),
     );
@@ -378,8 +421,9 @@ export class InventoryPanel {
         gameState.progression.classId,
       )
     ) {
-      this.detail.setText(
+      this.setDetailPlain(
         `Requires ${classLabel(resolveGearClass(slot.item))} — cannot equip`,
+        '#e07070',
       );
       this.refresh();
       return;
@@ -387,9 +431,9 @@ export class InventoryPanel {
     if (gameState.inventory.equipGear(uid, gameState.progression.classId)) {
       gameState.recalcMaxHp();
       gameState.persist();
-      this.detail.setText(`Equipped ${slot.item.name}`);
+      this.setDetailPlain(`Equipped ${slot.item.name}`, '#6ecf7a');
     } else {
-      this.detail.setText('Cannot equip (bag full when swapping?)');
+      this.setDetailPlain('Cannot equip (bag full when swapping?)', '#e07070');
     }
     this.refresh();
   }
@@ -399,24 +443,24 @@ export class InventoryPanel {
     if (key === 'tool') {
       if (!gameState.inventory.equipment.tool) return;
       if (!gameState.inventory.canAdd(gameState.inventory.equipment.tool, 1)) {
-        this.detail.setText('Bag full');
+        this.setDetailPlain('Bag full', '#e07070');
         return;
       }
       const id = gameState.inventory.equipment.tool;
       gameState.inventory.equipment.tool = null;
       gameState.inventory.add(id, 1);
       gameState.persist();
-      this.detail.setText('Unequipped tool');
+      this.setDetailPlain('Unequipped tool');
       this.refresh();
       return;
     }
     if (gameState.inventory.unequipGear(key)) {
       gameState.recalcMaxHp();
       gameState.persist();
-      this.detail.setText('Unequipped');
+      this.setDetailPlain('Unequipped');
       this.refresh();
     } else {
-      this.detail.setText('Cannot unequip (bag full)');
+      this.setDetailPlain('Cannot unequip (bag full)', '#e07070');
     }
   }
 }
