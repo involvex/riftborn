@@ -51,5 +51,5 @@ fallback if missing).
 
 1. ~~**Hit / death frames**~~ — done (derived + registered).
 2. ~~**Facing**~~ — done (unified sticky 2-dir + 4-dir cardinal).
-3. **Combat feedback** — hitstop / crit shake / readable damage numbers
-   (constants, toggleable).
+3. ~~**Combat feedback**~~ — done (`CombatFeel.ts` constants; hitstop,
+   crit/boss shake, clearer damage numbers).

@@ -41,6 +41,12 @@ import { audioBus } from '../core/AudioBus';
 import { settingsStore } from '../core/SettingsStore';
 import { playSkillVfx } from '../render/SkillVfx';
 import { playCombatBurst } from '../render/CombatVfx';
+import {
+  combatHitstopMs,
+  combatShakeParams,
+  isCombatCrit,
+  type CombatShakeKind,
+} from '../render/CombatFeel';
 import classesData from '../data/classes.json';
 import type { CharacterClassId, GearRarity } from '../types/game';
 import {
@@ -124,6 +130,8 @@ export class WorldScene extends Phaser.Scene {
   private nodeSeq = 0;
   private chestSeq = 0;
   private dungeon: DungeonMap | null = null;
+  /** Wall-clock ms — skip sim briefly for hitstop juice. */
+  private hitstopUntil = 0;
   private remoteGhosts = new Map<string, Phaser.GameObjects.Container>();
   private unsubNet: (() => void) | null = null;
   private mapEmitAcc = 0;
@@ -974,6 +982,10 @@ export class WorldScene extends Phaser.Scene {
   }
 
   update(_time: number, delta: number): void {
+    if (this.inHitstop()) {
+      this.player.syncScreen();
+      return;
+    }
     const dt = Math.min(0.05, delta / 1000);
     gameState.playTimeSec += dt;
     this.player.tick(dt);
@@ -1045,7 +1057,23 @@ export class WorldScene extends Phaser.Scene {
   }
 
   private triggerHitShake(ms = 100, intensity = 0.004): void {
+    if (ms <= 0 || intensity <= 0) return;
     this.cameras.main.shake(ms, intensity);
+  }
+
+  private triggerCombatShake(kind: CombatShakeKind): void {
+    const { ms, intensity } = combatShakeParams(kind);
+    this.triggerHitShake(ms, intensity);
+  }
+
+  private triggerHitstop(crit = false): void {
+    const ms = combatHitstopMs(crit);
+    if (ms <= 0) return;
+    this.hitstopUntil = Math.max(this.hitstopUntil, performance.now() + ms);
+  }
+
+  private inHitstop(): boolean {
+    return performance.now() < this.hitstopUntil;
   }
 
   private compactDeadEnemies(): void {
@@ -1203,7 +1231,8 @@ export class WorldScene extends Phaser.Scene {
         }
         this.player.flashHit();
         audioBus.hit();
-        this.triggerHitShake(120, 0.004);
+        this.triggerCombatShake('playerHit');
+        this.triggerHitstop(false);
         if (gameState.hp <= 0) this.onPlayerDeath();
       }
     }
@@ -1212,7 +1241,8 @@ export class WorldScene extends Phaser.Scene {
   private onPlayerDeath(): void {
     audioBus.death();
     this.cameras.main.flash(280, 120, 20, 30, false, undefined, this);
-    this.triggerHitShake(320, 0.012);
+    this.triggerCombatShake('boss');
+    this.triggerHitstop(true);
     gameState.hp = Math.floor(gameState.maxHp * 0.5);
     this.player.resetCombatPose();
     if (gameState.inRift) {
@@ -1311,21 +1341,22 @@ export class WorldScene extends Phaser.Scene {
     audioBus.swing();
 
     let hit = false;
+    let anyCrit = false;
+    let anyBoss = false;
     for (const enemy of inRange) {
       hit = true;
+      const crit = isCombatCrit(dmg);
+      if (crit) anyCrit = true;
+      if (enemy.isBoss) anyBoss = true;
       const { screenX, screenY } = worldToScreen(enemy.worldX, enemy.worldY);
       gameState.combat.emitDamageNumber(screenX, screenY - 18, dmg, 'enemy');
-      playCombatBurst(
-        this,
-        enemy.worldX,
-        enemy.worldY,
-        dmg >= 20 ? 'crit' : 'hit',
-      );
+      playCombatBurst(this, enemy.worldX, enemy.worldY, crit ? 'crit' : 'hit');
       if (enemy.applyDamage(dmg)) this.onEnemyKilled(enemy);
     }
     if (hit) {
       audioBus.hit();
-      this.triggerHitShake(55, 0.0025);
+      this.triggerCombatShake(anyBoss ? 'boss' : anyCrit ? 'crit' : 'hit');
+      this.triggerHitstop(anyCrit || anyBoss);
     }
     if (netClient.connected) {
       netClient.sendInput({
@@ -1382,7 +1413,7 @@ export class WorldScene extends Phaser.Scene {
       else gameState.bounties.noteWildernessKill();
     }
     gameState.persist();
-    this.triggerHitShake(80, 0.003);
+    this.triggerCombatShake(enemy.isBoss ? 'boss' : 'hit');
     if (!gameState.inRift) return;
 
     if (enemy.isBoss) {

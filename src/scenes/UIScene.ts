@@ -32,6 +32,7 @@ import { FpsHud } from '../ui/FpsHud';
 import { shouldShowTouchControls, TouchControls } from '../ui/TouchControls';
 import { TutorialOverlay } from '../ui/TutorialOverlay';
 import { uiPanelSize } from '../core/UiScale';
+import { COMBAT_FEEL, isCombatCrit } from '../render/CombatFeel';
 
 type MenuPage = 'root' | 'settings' | 'hotkeys';
 
@@ -924,29 +925,41 @@ export class UIScene extends Phaser.Scene {
     amount: number,
     kind: string,
   ): void {
+    const style = COMBAT_FEEL.damageNumbers;
     const toPlayer = kind === 'player';
-    const color = toPlayer ? '#ff6b6b' : '#ffe08a';
-    const size = toPlayer ? '15px' : amount >= 40 ? '20px' : '16px';
+    const crit = !toPlayer && isCombatCrit(amount);
+    const color = toPlayer
+      ? style.playerColor
+      : crit
+        ? style.critColor
+        : style.enemyColor;
+    const size = toPlayer
+      ? style.fontPlayer
+      : crit
+        ? style.fontCrit
+        : style.fontEnemy;
     const drift = (Math.random() - 0.5) * 18;
+    const label = crit ? `${amount}!` : String(amount);
     const t = this.add
-      .text(x + drift, y, String(amount), {
+      .text(x + drift, y, label, {
         fontFamily: 'Segoe UI, sans-serif',
         fontSize: size,
         color,
         fontStyle: 'bold',
-        stroke: '#0a0c10',
-        strokeThickness: 3,
+        stroke: style.stroke,
+        strokeThickness: style.strokeThickness,
       })
       .setOrigin(0.5)
-      .setScale(toPlayer ? 1 : 1.15);
+      .setDepth(40)
+      .setScale(toPlayer ? 1 : crit ? 1.25 : 1.15);
     this.damageLayer.add(t);
     this.tweens.add({
       targets: t,
-      y: y - (toPlayer ? 36 : 42),
+      y: y - (toPlayer ? 36 : crit ? 52 : 44),
       x: x + drift * 1.4,
       alpha: 0,
-      scale: toPlayer ? 0.85 : 0.95,
-      duration: toPlayer ? 700 : 650,
+      scale: toPlayer ? 0.85 : crit ? 1.05 : 0.95,
+      duration: toPlayer ? 700 : crit ? 780 : 650,
       ease: 'Cubic.easeOut',
       onComplete: () => t.destroy(),
     });

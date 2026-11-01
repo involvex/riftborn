@@ -1,0 +1,69 @@
+/**
+ * Toggleable combat juice (hitstop, shake, damage-number styling).
+ * Flip `enabled` or individual flags to mute without deleting call sites.
+ */
+
+export const COMBAT_FEEL = {
+  /** Master switch — disables hitstop + extra shake (numbers still respect settings). */
+  enabled: true,
+
+  hitstopEnabled: true,
+  /** Brief freeze on a solid enemy hit (ms, wall-clock). */
+  hitstopMs: 55,
+  /** Stronger freeze on crit / boss kill. */
+  hitstopCritMs: 75,
+
+  shakeEnabled: true,
+  shakeHitMs: 55,
+  shakeHitIntensity: 0.0025,
+  shakeCritMs: 90,
+  shakeCritIntensity: 0.006,
+  shakeBossMs: 130,
+  shakeBossIntensity: 0.009,
+  shakePlayerHitMs: 110,
+  shakePlayerHitIntensity: 0.004,
+
+  /** Absolute damage ≥ this reads as a crit for juice (matches burst VFX). */
+  critDamageThreshold: 20,
+
+  damageNumbers: {
+    enemyColor: '#ffe08a',
+    critColor: '#fff6c8',
+    playerColor: '#ff6b6b',
+    stroke: '#0a0c10',
+    strokeThickness: 4,
+    fontEnemy: '17px',
+    fontCrit: '22px',
+    fontPlayer: '16px',
+  },
+} as const;
+
+export type CombatShakeKind = 'hit' | 'crit' | 'boss' | 'playerHit';
+
+export function combatShakeParams(kind: CombatShakeKind): {
+  ms: number;
+  intensity: number;
+} {
+  const c = COMBAT_FEEL;
+  if (!c.enabled || !c.shakeEnabled) return { ms: 0, intensity: 0 };
+  switch (kind) {
+    case 'crit':
+      return { ms: c.shakeCritMs, intensity: c.shakeCritIntensity };
+    case 'boss':
+      return { ms: c.shakeBossMs, intensity: c.shakeBossIntensity };
+    case 'playerHit':
+      return { ms: c.shakePlayerHitMs, intensity: c.shakePlayerHitIntensity };
+    default:
+      return { ms: c.shakeHitMs, intensity: c.shakeHitIntensity };
+  }
+}
+
+export function combatHitstopMs(crit: boolean): number {
+  const c = COMBAT_FEEL;
+  if (!c.enabled || !c.hitstopEnabled) return 0;
+  return crit ? c.hitstopCritMs : c.hitstopMs;
+}
+
+export function isCombatCrit(damage: number): boolean {
+  return damage >= COMBAT_FEEL.critDamageThreshold;
+}
