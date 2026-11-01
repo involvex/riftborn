@@ -31,10 +31,7 @@ import { HotkeyDock } from '../ui/HotkeyDock';
 import { FpsHud } from '../ui/FpsHud';
 import { shouldShowTouchControls, TouchControls } from '../ui/TouchControls';
 import { TutorialOverlay } from '../ui/TutorialOverlay';
-import {
-  formatPlayTime,
-  SummaryOverlay,
-} from '../ui/SummaryOverlay';
+import { formatPlayTime, SummaryOverlay } from '../ui/SummaryOverlay';
 import { uiPanelSize } from '../core/UiScale';
 import { COMBAT_FEEL, isCombatCrit } from '../render/CombatFeel';
 import {
@@ -440,7 +437,9 @@ export class UIScene extends Phaser.Scene {
         if (this.menuOpen) this.hideMenu();
         else this.showMenu();
       }),
-      gameEvents.on('nav:backCloseOverlay', () => this.handleBackCloseOverlay()),
+      gameEvents.on('nav:backCloseOverlay', () =>
+        this.handleBackCloseOverlay(),
+      ),
       gameEvents.on('nav:backResume', () => {
         if (this.menuOpen) this.hideMenu();
       }),

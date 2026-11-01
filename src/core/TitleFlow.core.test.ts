@@ -7,11 +7,7 @@ describe('titleActions', () => {
   });
 
   test('shows Continue when a save exists', () => {
-    expect(titleActions(true)).toEqual([
-      'newGame',
-      'continue',
-      'settings',
-    ]);
+    expect(titleActions(true)).toEqual(['newGame', 'continue', 'settings']);
   });
 });
 

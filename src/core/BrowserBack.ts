@@ -1,16 +1,8 @@
 /** Where the player is in the menu / game stack for Android/browser Back. */
-export type BackContext =
-  | 'title'
-  | 'playing'
-  | 'paused'
-  | 'overlay';
+export type BackContext = 'title' | 'playing' | 'paused' | 'overlay';
 
 /** What Back should do for a given context. */
-export type BackAction =
-  | 'leave'
-  | 'openPause'
-  | 'resume'
-  | 'closeOverlay';
+export type BackAction = 'leave' | 'openPause' | 'resume' | 'closeOverlay';
 
 /**
  * Pure back-navigation policy.

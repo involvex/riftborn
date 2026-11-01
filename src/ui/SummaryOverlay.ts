@@ -69,9 +69,7 @@ export class SummaryOverlay {
     onAction: () => void;
   }): void {
     this.title.setText(opts.title);
-    this.body.setText(
-      opts.lines.map((l) => l.text).join('\n'),
-    );
+    this.body.setText(opts.lines.map((l) => l.text).join('\n'));
     this.actionBtn.setText(opts.actionLabel);
     this.onAction = opts.onAction;
     this.layout();

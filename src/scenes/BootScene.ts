@@ -152,9 +152,7 @@ export class BootScene extends Phaser.Scene {
 
   private onContinue(): void {
     const slots = saveStore.listSlots();
-    const filled = slots
-      .map((s, i) => (s ? i : -1))
-      .filter((i) => i >= 0);
+    const filled = slots.map((s, i) => (s ? i : -1)).filter((i) => i >= 0);
     if (filled.length === 0) return;
     if (filled.length === 1) {
       this.bootSlot(filled[0]!);
