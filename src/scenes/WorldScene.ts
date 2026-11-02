@@ -252,6 +252,7 @@ export class WorldScene extends Phaser.Scene {
       walkDiagonalCorridor: (steps?: number) =>
         this.debugWalkDiagonalCorridor(steps ?? 45),
       spawnLootNearPlayer: () => this.debugSpawnLootNearPlayer(),
+      gotoNearestHostile: () => this.debugGotoNearestHostile(),
       interactHint: () => this.lastInteractHint,
     });
   }
@@ -270,6 +271,42 @@ export class WorldScene extends Phaser.Scene {
     });
     this.spawnGearDrop(this.player.worldX, this.player.worldY, gear);
     this.refreshInteractHint();
+    return true;
+  }
+
+  /** Warp ~2 tiles from the nearest living foe for rift screenshots. */
+  private debugGotoNearestHostile(): boolean {
+    if (!gameState.inRift) return false;
+    let best: Enemy | null = null;
+    let bestD = Infinity;
+    for (const e of this.enemies) {
+      if (!e.alive) continue;
+      const d = worldDistance(
+        { x: this.player.worldX, y: this.player.worldY },
+        { x: e.worldX, y: e.worldY },
+      );
+      if (d < bestD) {
+        bestD = d;
+        best = e;
+      }
+    }
+    if (!best) return false;
+    const dx = this.player.worldX - best.worldX;
+    const dy = this.player.worldY - best.worldY;
+    const len = Math.hypot(dx, dy) || 1;
+    const tx = best.worldX + (dx / len) * 2.2;
+    const ty = best.worldY + (dy / len) * 2.2;
+    const snapped = snapToTile(tx, ty);
+    if (this.player.walkCheck?.(snapped.x, snapped.y)) {
+      this.player.worldX = snapped.x;
+      this.player.worldY = snapped.y;
+    } else {
+      this.player.worldX = best.worldX;
+      this.player.worldY = best.worldY;
+    }
+    this.player.syncScreen();
+    this.revealFogAroundPlayer();
+    this.emitMapSnapshot();
     return true;
   }
 
@@ -394,6 +431,7 @@ export class WorldScene extends Phaser.Scene {
         this.emitShiftHud();
       }),
       gameEvents.on('combat:shift', () => this.tryPlayerShift()),
+      gameEvents.on('ui:returnToTown', () => this.returnToTown()),
     );
   }
 
@@ -481,6 +519,8 @@ export class WorldScene extends Phaser.Scene {
     this.applyShiftVisuals(this.shiftSystem.layer);
     this.emitShiftHud();
     this.emitMapSnapshot();
+    // Touch town affordance — only outside the hub.
+    gameEvents.emit('ui:townButton', { visible: rift });
   }
 
   private emitShiftHud(): void {
@@ -590,15 +630,26 @@ export class WorldScene extends Phaser.Scene {
     }
 
     // Hub fringe + rifts both use packs; plaza never hosts enemies.
+    // Rift packs are already footprint-reachable (RiftEnemyPlacement) —
+    // keep them on their tile; hub still jitters around the pack center.
     for (const pack of layout.packs) {
       if (!gameState.inRift && inPlaza(pack.x, pack.y)) continue;
       const count =
         pack.count + (gameState.inRift ? this.riftMod.packCountBonus : 0);
       for (let i = 0; i < count; i++) {
-        const ox = (Math.random() - 0.5) * 1.8;
-        const oy = (Math.random() - 0.5) * 1.8;
-        const p = snapToTile(pack.x + ox, pack.y + oy);
-        if (!gameState.inRift && inPlaza(p.x, p.y)) continue;
+        let p = snapToTile(pack.x, pack.y);
+        if (!gameState.inRift) {
+          const ox = (Math.random() - 0.5) * 1.8;
+          const oy = (Math.random() - 0.5) * 1.8;
+          p = snapToTile(pack.x + ox, pack.y + oy);
+          if (inPlaza(p.x, p.y)) continue;
+        } else if (i > 0) {
+          // Extra mod bonus foes: nudge within the same floor tile family
+          const ox = (Math.random() - 0.5) * 0.6;
+          const oy = (Math.random() - 0.5) * 0.6;
+          const cand = snapToTile(pack.x + ox, pack.y + oy);
+          if (this.player.walkCheck?.(cand.x, cand.y)) p = cand;
+        }
         const eliteChance = gameState.inRift
           ? riftPackBonus(this.riftDepth).eliteChance
           : 0.14;
@@ -616,7 +667,9 @@ export class WorldScene extends Phaser.Scene {
             dmgMult: gameState.inRift ? this.riftMod.dmgMult : 1,
           },
         );
-        enemy.maxBound = gameState.inRift ? 22 : this.hubSize - 0.5;
+        enemy.maxBound = gameState.inRift
+          ? (this.dungeon?.width ?? 22) - 1.5
+          : this.hubSize - 0.5;
         if (gameState.inRift) {
           enemy.syncShiftLayer(this.shiftSystem.layer);
         }

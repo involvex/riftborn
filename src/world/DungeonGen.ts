@@ -4,6 +4,7 @@ import {
   stampShiftGates,
   type ShiftGateGrid,
 } from './ShiftGateMap';
+import { minRiftEnemyCount, placeRiftEnemyPacks } from './RiftEnemyPlacement';
 
 export type DungeonCell = 0 | 1; // 0 wall, 1 floor
 
@@ -114,42 +115,24 @@ export function generateDungeon(seed: number, depth = 1): DungeonMap {
     );
   }
 
-  const packTypes = ['shade', 'crawler', 'wisp'] as const;
-  const packs: ZoneLayout['packs'] = [];
   const nodes: ZoneLayout['nodes'] = [];
-  let expectedKills = 0;
-
-  const countBonus = Math.floor((d - 1) / 3);
   for (let i = 1; i < rooms.length; i++) {
-    const r = rooms[i];
-    const cx = Math.floor(r.x + r.w / 2) + 0.5;
-    const cy = Math.floor(r.y + r.h / 2) + 0.5;
-    const count = 3 + Math.floor(rnd() * 4) + countBonus;
-    expectedKills += count;
-    packs.push({
-      enemyId: packTypes[Math.floor(rnd() * packTypes.length)],
-      count,
-      x: cx,
-      y: cy,
-    });
+    const r = rooms[i]!;
     if (rnd() > 0.45 - d * 0.02) {
       nodes.push({
         defId: 'rift_vein',
-        x: Math.floor(r.x + 1 + rnd() * (r.w - 2)) + 0.5,
-        y: Math.floor(r.y + 1 + rnd() * (r.h - 2)) + 0.5,
+        x: Math.floor(r.x + 1 + rnd() * Math.max(1, r.w - 2)) + 0.5,
+        y: Math.floor(r.y + 1 + rnd() * Math.max(1, r.h - 2)) + 0.5,
       });
     }
   }
 
-  const start = rooms[0];
-  const bossRoom = rooms[rooms.length - 1];
-  // Progress bar fills before boss — scales with depth
-  const fillRatio = Math.min(0.85, 0.68 + d * 0.015);
-  const killGoal = Math.max(12 + d, Math.floor(expectedKills * fillRatio));
+  const start = rooms[0]!;
+  const bossRoom = rooms[rooms.length - 1]!;
 
   const layout: ZoneLayout = {
     nodes,
-    packs,
+    packs: [],
     // Exit appears only after boss kill
     portal: null,
     bench: {
@@ -164,7 +147,7 @@ export function generateDungeon(seed: number, depth = 1): DungeonMap {
       x: Math.floor(start.x + start.w / 2) + 0.5,
       y: Math.floor(start.y + start.h / 2) + 0.5,
     },
-    killGoal,
+    killGoal: 12 + d,
   };
 
   const layerGates =
@@ -172,7 +155,24 @@ export function generateDungeon(seed: number, depth = 1): DungeonMap {
       ? stampShiftGates(cells, rooms, rnd)
       : emptyGateGrid(width, height);
 
-  return { width, height, cells, layout, rooms, layerGates };
+  const map: DungeonMap = {
+    width,
+    height,
+    cells,
+    layout,
+    rooms,
+    layerGates,
+  };
+  // Place after gates so flood-fill matches real rift walkability.
+  layout.packs = placeRiftEnemyPacks(map, d, rnd);
+  const expectedKills = layout.packs.reduce((s, p) => s + p.count, 0);
+  const fillRatio = Math.min(0.85, 0.68 + d * 0.015);
+  layout.killGoal = Math.max(
+    minRiftEnemyCount(d),
+    Math.max(12 + d, Math.floor(expectedKills * fillRatio)),
+  );
+
+  return map;
 }
 
 export function isWalkable(map: DungeonMap, x: number, y: number): boolean {

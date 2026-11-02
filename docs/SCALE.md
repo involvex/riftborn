@@ -56,3 +56,17 @@ bun test src/core/Movement.core.test.ts
 bun test src/core/RiftWalkSim.core.test.ts
 bun test src
 ```
+
+## M1h — empty / unreachable rift enemies
+
+**Cause:** `generateDungeon` only spawned packs in rooms after the start
+room. Seeds with few accepted rooms (overlap rejection) could drop to a
+single pack of ~3 foes. Pack centers also ignored footprint reachability
+after shift gates were stamped, and `WorldScene` jittered ±0.9 tiles so
+foes could land off the walkable set.
+
+**Fix:** `reachableFloorCells` flood-fills from spawn with
+`footprintFits` + layer shifts (same rules as rift movement).
+`placeRiftEnemyPacks` snaps room packs onto that set (≥3 tiles from
+spawn) and tops up to `minRiftEnemyCount(depth)` (≥6). Rift spawns no
+longer scatter off-tile.
