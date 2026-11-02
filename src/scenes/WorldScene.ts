@@ -96,6 +96,11 @@ import {
   layerTileTint,
 } from '../render/ShiftVisual';
 import { SHIFT_LAYERS, type ShiftLayerId } from '../data/shiftLayers';
+import {
+  resolveInteractAction,
+  type InteractCandidate,
+  type ResolvedInteract,
+} from '../systems/InteractResolve';
 
 const DEFAULT_HUB_SIZE = HUB_SIZE;
 const TOWN_SPAWN = { ...HUB_SPAWN };
@@ -246,7 +251,26 @@ export class WorldScene extends Phaser.Scene {
       gotoDiagonalCorridor: () => this.debugGotoDiagonalCorridor(),
       walkDiagonalCorridor: (steps?: number) =>
         this.debugWalkDiagonalCorridor(steps ?? 45),
+      spawnLootNearPlayer: () => this.debugSpawnLootNearPlayer(),
+      interactHint: () => this.lastInteractHint,
     });
+  }
+
+  private lastInteractHint: {
+    label: string;
+    dimmed: boolean;
+    kind: string;
+  } = { label: 'E', dimmed: true, kind: 'none' };
+
+  /** Agent / Playwright — drop loot at the player's feet for E-label shots. */
+  private debugSpawnLootNearPlayer(): boolean {
+    const gear = rollGearDrop(gameState.progression.level, {
+      forClass: gameState.progression.classId,
+      lootTier: 2,
+    });
+    this.spawnGearDrop(this.player.worldX, this.player.worldY, gear);
+    this.refreshInteractHint();
+    return true;
   }
 
   /** Agent / Playwright helper — skip walking to the obelisk. */
@@ -1306,6 +1330,7 @@ export class WorldScene extends Phaser.Scene {
       this.proxAcc = 0;
       this.updateNpcProximity();
       this.updatePoiProximity();
+      this.refreshInteractHint();
     }
 
     this.corpseAcc += dt;
@@ -1903,32 +1928,148 @@ export class WorldScene extends Phaser.Scene {
   }
 
   private tryInteract(): void {
-    if (this.tryPickupNearestLoot()) return;
-    if (this.nearNpc) {
-      if (this.nearNpc.role === 'vendor') {
-        gameEvents.emit('ui:openShop', {});
+    const action = this.resolveCurrentInteract();
+    this.applyInteract(action);
+  }
+
+  private collectInteractCandidates(): InteractCandidate[] {
+    const out: InteractCandidate[] = [];
+    for (const drop of this.groundLoot) {
+      if (drop.picked) continue;
+      out.push({
+        kind: 'loot',
+        x: drop.worldX,
+        y: drop.worldY,
+        id: drop.id,
+      });
+    }
+    for (const npc of this.npcs) {
+      out.push({
+        kind: 'npc',
+        x: npc.worldX,
+        y: npc.worldY,
+        id: npc.id,
+        npcRole: npc.role,
+      });
+    }
+    if (this.portalMarker) {
+      out.push({
+        kind: 'portal',
+        x: this.portalMarker.getData('wx') as number,
+        y: this.portalMarker.getData('wy') as number,
+        id: 'portal',
+        portalExit: gameState.inRift,
+      });
+    }
+    for (const chest of this.chests) {
+      if (chest.looted) continue;
+      out.push({
+        kind: 'chest',
+        x: chest.worldX,
+        y: chest.worldY,
+        id: chest.id,
+      });
+    }
+    if (!gameState.inRift) {
+      const shrine = this.wildernessPois.find((p) => p.kind === 'shrine');
+      if (shrine) {
+        out.push({
+          kind: 'shrine',
+          x: shrine.x,
+          y: shrine.y,
+          id: shrine.id,
+        });
+      }
+    }
+    if (this.benchMarker) {
+      out.push({
+        kind: 'bench',
+        x: this.benchMarker.getData('wx') as number,
+        y: this.benchMarker.getData('wy') as number,
+        id: 'bench',
+      });
+    }
+    for (const node of this.nodes) {
+      if (node.depleted) continue;
+      out.push({
+        kind: 'gather',
+        x: node.worldX,
+        y: node.worldY,
+        id: node.id,
+      });
+    }
+    return out;
+  }
+
+  private resolveCurrentInteract(): ResolvedInteract {
+    return resolveInteractAction(
+      { x: this.player.worldX, y: this.player.worldY },
+      this.collectInteractCandidates(),
+      { gatherRange: this.player.gatherRange },
+    );
+  }
+
+  private refreshInteractHint(): void {
+    const a = this.resolveCurrentInteract();
+    this.lastInteractHint = {
+      label: a.label,
+      dimmed: a.dimmed,
+      kind: a.kind,
+    };
+    gameEvents.emit('ui:interactHint', this.lastInteractHint);
+  }
+
+  private applyInteract(action: ResolvedInteract): void {
+    switch (action.kind) {
+      case 'loot': {
+        if (action.id) {
+          const drop = this.groundLoot.find((d) => d.id === action.id);
+          if (drop && this.pickupLoot(drop)) return;
+        }
+        this.tryPickupNearestLoot();
         return;
       }
-      if (this.nearNpc.role === 'trader') {
-        gameEvents.emit('ui:openTrader', {});
+      case 'npc': {
+        const role = action.npcRole;
+        if (role === 'vendor') {
+          gameEvents.emit('ui:openShop', {});
+          return;
+        }
+        if (role === 'trader') {
+          gameEvents.emit('ui:openTrader', {});
+          return;
+        }
+        if (role === 'crafter') {
+          gameEvents.emit('ui:openCraft', {});
+          return;
+        }
+        if (role === 'board') {
+          this.tryBountyBoard();
+          return;
+        }
         return;
       }
-      if (this.nearNpc.role === 'crafter') {
+      case 'portal':
+        this.tryPortal();
+        return;
+      case 'chest':
+        this.tryOpenChest();
+        return;
+      case 'shrine':
+        this.tryShrine();
+        return;
+      case 'bench':
         gameEvents.emit('ui:openCraft', {});
         return;
-      }
-      if (this.nearNpc.role === 'board') {
-        this.tryBountyBoard();
+      case 'gather':
+        this.tryGather();
         return;
-      }
+      case 'none':
+        gameEvents.emit('ui:toast', {
+          text: 'Mira · Nix · Bram · Board — E near them',
+        });
+        return;
     }
-    if (this.tryShrine()) return;
-    if (this.tryOpenChest()) return;
-    if (this.nearBench) {
-      gameEvents.emit('ui:openCraft', {});
-      return;
-    }
-    this.tryGather();
   }
 
   private spawnGearDrop(
