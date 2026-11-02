@@ -80,13 +80,14 @@ import {
   TILE_ART_SCALE,
 } from '../render/WorldArt';
 import { ShiftSystem } from '../systems/ShiftSystem';
+import { BossShiftBrain } from '../systems/BossShift';
 import { playShiftTransition } from '../render/ShiftFx';
 import {
   layerOverlayAlpha,
   layerPropTint,
   layerTileTint,
 } from '../render/ShiftVisual';
-import type { ShiftLayerId } from '../data/shiftLayers';
+import { SHIFT_LAYERS, type ShiftLayerId } from '../data/shiftLayers';
 
 const DEFAULT_HUB_SIZE = HUB_SIZE;
 const TOWN_SPAWN = { ...HUB_SPAWN };
@@ -114,6 +115,7 @@ export class WorldScene extends Phaser.Scene {
   private keySkill3!: Phaser.Input.Keyboard.Key;
   private keyShift!: Phaser.Input.Keyboard.Key;
   private readonly shiftSystem = new ShiftSystem(gameEvents);
+  private readonly bossShift = new BossShiftBrain();
   private shiftOverlay: Phaser.GameObjects.Rectangle | null = null;
   /** 0..1 from settings (step 5); default full. */
   private shiftFxIntensity = 1;
@@ -315,6 +317,7 @@ export class WorldScene extends Phaser.Scene {
     this.exploredDirty = true;
     this.shiftSystem.reset();
     this.shiftSystem.setEnabled(rift);
+    this.bossShift.reset();
     audioBus.playMusic(rift ? 'combat' : 'hub');
     if (rift) {
       const seed = gameState.riftSeed ?? Date.now();
@@ -1128,6 +1131,7 @@ export class WorldScene extends Phaser.Scene {
     }
 
     this.shiftSystem.tick(delta);
+    this.tickBossShift(delta);
     this.updateEnemies(dt);
 
     this.proxAcc += dt;
@@ -1577,12 +1581,30 @@ export class WorldScene extends Phaser.Scene {
       },
     );
     boss.maxBound = 22;
+    boss.setCombatLayer(this.bossShift.layer);
+    boss.syncShiftLayer(this.shiftSystem.layer);
     this.enemies.push(boss);
     gameEvents.emit('ui:toast', {
       text: `Rift Lord emerges! (${riftDepthLabel(this.riftDepth)})`,
     });
     this.cameras.main.flash(160, 120, 40, 80, false, undefined, this);
     this.emitRiftProgress();
+  }
+
+  private tickBossShift(dtMs: number): void {
+    if (!gameState.inRift || !this.riftBossSpawned || this.riftBossDead) {
+      return;
+    }
+    const next = this.bossShift.tick(dtMs);
+    if (!next) return;
+    const boss = this.enemies.find((e) => e.alive && e.isBoss);
+    if (!boss) return;
+    boss.setCombatLayer(next);
+    boss.syncShiftLayer(this.shiftSystem.layer);
+    const name = SHIFT_LAYERS[next].name;
+    gameEvents.emit('ui:toast', {
+      text: `Rift Lord shifts to ${name}!`,
+    });
   }
 
   private spawnBossChest(wx: number, wy: number): void {

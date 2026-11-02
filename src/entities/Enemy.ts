@@ -36,7 +36,7 @@ export class Enemy {
   attackTimer = 0;
   alive = true;
   /** Layer this foe exists on ('both' = always solid). */
-  readonly shiftLayer: EnemyShiftLayer;
+  shiftLayer: EnemyShiftLayer;
   /** True when player is on another layer — ghosted. */
   private ghosted = false;
   readonly body: Phaser.GameObjects.Container;
@@ -126,6 +126,11 @@ export class Enemy {
 
   get isGhosted(): boolean {
     return this.ghosted;
+  }
+
+  /** Boss / scripted foes lock to ash or shadow (not both). */
+  setCombatLayer(layer: ShiftLayerId): void {
+    this.shiftLayer = layer;
   }
 
   /** Sync ghost alpha when the player shifts layers. */
