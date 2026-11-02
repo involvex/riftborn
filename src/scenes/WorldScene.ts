@@ -82,6 +82,14 @@ import {
   propArtScale,
   TILE_ART_SCALE,
 } from '../render/WorldArt';
+import { ShiftSystem } from '../systems/ShiftSystem';
+import { playShiftTransition } from '../render/ShiftFx';
+import {
+  layerOverlayAlpha,
+  layerPropTint,
+  layerTileTint,
+} from '../render/ShiftVisual';
+import type { ShiftLayerId } from '../data/shiftLayers';
 
 const DEFAULT_HUB_SIZE = HUB_SIZE;
 const TOWN_SPAWN = { ...HUB_SPAWN };
@@ -107,6 +115,11 @@ export class WorldScene extends Phaser.Scene {
   private keySkill1!: Phaser.Input.Keyboard.Key;
   private keySkill2!: Phaser.Input.Keyboard.Key;
   private keySkill3!: Phaser.Input.Keyboard.Key;
+  private keyShift!: Phaser.Input.Keyboard.Key;
+  private readonly shiftSystem = new ShiftSystem(gameEvents);
+  private shiftOverlay: Phaser.GameObjects.Rectangle | null = null;
+  /** 0..1 from settings (step 5); default full. */
+  private shiftFxIntensity = 1;
   /** Floor diamonds (fallback when tile art missing). */
   private tiles!: Phaser.GameObjects.Graphics;
   /** Painted floor tile sprites (cleared on zone reload). */
@@ -222,6 +235,8 @@ export class WorldScene extends Phaser.Scene {
     this.unsubNet = null;
     for (const u of this.inputUnsubs) u();
     this.inputUnsubs = [];
+    this.shiftOverlay?.destroy();
+    this.shiftOverlay = null;
     this.player?.destroy();
     for (const n of this.nodes) n.destroy();
     for (const e of this.enemies) e.destroy();
@@ -269,6 +284,12 @@ export class WorldScene extends Phaser.Scene {
         this.tryDash(this.touchDx || 0, this.touchDy || 0);
       }),
       gameEvents.on(Events.RESOLVE_DEATH, () => this.finishDeath()),
+      gameEvents.on(Events.SHIFT_CHANGED, (p) => {
+        const d = p as { layer: ShiftLayerId };
+        this.applyShiftVisuals(d.layer);
+        playShiftTransition(this, d.layer, this.shiftFxIntensity);
+      }),
+      gameEvents.on('combat:shift', () => this.tryPlayerShift()),
     );
   }
 
@@ -284,6 +305,9 @@ export class WorldScene extends Phaser.Scene {
     this.keySkill1 = bindAction(this.input.keyboard, 'skill1');
     this.keySkill2 = bindAction(this.input.keyboard, 'skill2');
     this.keySkill3 = bindAction(this.input.keyboard, 'skill3');
+    this.keyShift = this.input.keyboard.addKey(
+      Phaser.Input.Keyboard.KeyCodes.Q,
+    );
   }
 
   private loadZone(rift: boolean): void {
@@ -292,6 +316,8 @@ export class WorldScene extends Phaser.Scene {
     this.mapH = 0;
     this.explored = [];
     this.exploredDirty = true;
+    this.shiftSystem.reset();
+    this.shiftSystem.setEnabled(rift);
     audioBus.playMusic(rift ? 'combat' : 'hub');
     if (rift) {
       const seed = gameState.riftSeed ?? Date.now();
@@ -339,7 +365,45 @@ export class WorldScene extends Phaser.Scene {
       this.spawnFromLayout(this.hubLayout);
     }
     this.player.syncScreen();
+    this.applyShiftVisuals(this.shiftSystem.layer);
     this.emitMapSnapshot();
+  }
+
+  private tryPlayerShift(): void {
+    if (!gameState.inRift) return;
+    this.shiftSystem.tryShift();
+  }
+
+  private applyShiftVisuals(layer: ShiftLayerId): void {
+    const i = this.shiftFxIntensity;
+    const tileTint = layerTileTint(layer, i);
+    for (const s of this.tileSprites) s.setTint(tileTint);
+    const propTint = layerPropTint(layer, i);
+    for (const d of this.decor) {
+      d.iterate((obj: Phaser.GameObjects.GameObject) => {
+        const img = obj as Phaser.GameObjects.Image;
+        if (typeof img.setTint === 'function') img.setTint(propTint);
+      });
+    }
+    const alpha = layerOverlayAlpha(layer, i);
+    if (!this.shiftOverlay) {
+      this.shiftOverlay = this.add
+        .rectangle(
+          this.scale.width / 2,
+          this.scale.height / 2,
+          this.scale.width * 2,
+          this.scale.height * 2,
+          0x6a50c8,
+          0,
+        )
+        .setScrollFactor(0)
+        .setDepth(-500)
+        .setVisible(true);
+    }
+    this.shiftOverlay.setFillStyle(0x6a50c8, alpha);
+    this.cameras.main.setBackgroundColor(
+      layer === 'shadow' ? '#0e0c18' : '#12161c',
+    );
   }
 
   private spawnFromLayout(layout: ZoneLayout): void {
@@ -1046,7 +1110,11 @@ export class WorldScene extends Phaser.Scene {
     if (Phaser.Input.Keyboard.JustDown(this.keySkill1)) this.tryCastSkill(0);
     if (Phaser.Input.Keyboard.JustDown(this.keySkill2)) this.tryCastSkill(1);
     if (Phaser.Input.Keyboard.JustDown(this.keySkill3)) this.tryCastSkill(2);
+    if (this.keyShift && Phaser.Input.Keyboard.JustDown(this.keyShift)) {
+      this.tryPlayerShift();
+    }
 
+    this.shiftSystem.tick(delta);
     this.updateEnemies(dt);
 
     this.proxAcc += dt;
@@ -1401,6 +1469,7 @@ export class WorldScene extends Phaser.Scene {
   }
 
   private onEnemyKilled(enemy: Enemy): void {
+    if (gameState.inRift) this.shiftSystem.onKill();
     const depthBump = gameState.inRift
       ? riftLootTierBump(this.riftDepth) + this.riftMod.lootBump
       : 0;
