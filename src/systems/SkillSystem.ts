@@ -6,6 +6,7 @@ import type { Player } from '../entities/Player';
 import type { AbilityDef, CharacterClassId, SkillNodeDef } from '../types/game';
 import skillsData from '../data/skills.json';
 import type { CombatSystem } from './CombatSystem';
+import { pickAimedEnemyIndex } from './SkillAim';
 
 const abilities = skillsData.abilities as Record<string, AbilityDef>;
 const trees = skillsData.trees as Record<CharacterClassId, SkillNodeDef[]>;
@@ -29,6 +30,15 @@ export function classAbilityIds(classId: CharacterClassId): string[] {
   return ids.slice(0, ACTIVE_SLOTS);
 }
 
+export type SkillAimHint = {
+  /** Normalized world direction for leap / facing. */
+  dirX: number;
+  dirY: number;
+  /** Preferred world aim point (bolt / strike pick). */
+  worldX: number;
+  worldY: number;
+};
+
 export type SkillCastContext = {
   player: Player;
   enemies: Enemy[];
@@ -37,6 +47,8 @@ export type SkillCastContext = {
   onKill: (enemy: Enemy) => void;
   /** From equipped gear + set bonuses (percent). */
   gearSkillPower?: number;
+  /** Touch / aimed cast; omit for keyboard auto-target. */
+  aim?: SkillAimHint;
 };
 
 export type SkillCastResult = {
@@ -236,6 +248,21 @@ export class SkillSystem {
     };
 
     const nearestInRange = (r: number): Enemy | null => {
+      if (ctx.aim) {
+        const idx = pickAimedEnemyIndex(
+          ctx.enemies.map((e) => ({
+            x: e.worldX,
+            y: e.worldY,
+            alive: e.alive && !e.isGhosted,
+          })),
+          px,
+          py,
+          ctx.aim.worldX,
+          ctx.aim.worldY,
+          r,
+        );
+        if (idx >= 0) return ctx.enemies[idx] ?? null;
+      }
       let best: Enemy | null = null;
       let bestD = Infinity;
       for (const e of ctx.enemies) {
@@ -262,12 +289,22 @@ export class SkillSystem {
     };
 
     const moveBy = (dist: number): void => {
-      const facing = ctx.player.getFacing();
-      let nx = px + facing * dist * 0.75;
-      let ny = py + dist * 0.35;
+      let dx: number;
+      let dy: number;
+      if (ctx.aim) {
+        dx = ctx.aim.dirX * dist;
+        dy = ctx.aim.dirY * dist;
+        ctx.player.faceToward(px + dx, py + dy);
+      } else {
+        const facing = ctx.player.getFacing();
+        dx = facing * dist * 0.75;
+        dy = dist * 0.35;
+      }
+      let nx = px + dx;
+      let ny = py + dy;
       if (ctx.walkCheck && !ctx.walkCheck(nx, ny)) {
-        nx = px + facing * dist * 0.5;
-        ny = py;
+        nx = px + dx * 0.5;
+        ny = py + dy * 0.5;
         if (ctx.walkCheck && !ctx.walkCheck(nx, ny)) return;
       }
       ctx.player.worldX = Phaser.Math.Clamp(nx, 0.5, ctx.player.maxX);

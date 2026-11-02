@@ -45,6 +45,8 @@ import { audioBus } from '../core/AudioBus';
 import { settingsStore } from '../core/SettingsStore';
 import { playSkillVfx } from '../render/SkillVfx';
 import { playCombatBurst } from '../render/CombatVfx';
+import { screenDirToWorldDelta } from '../systems/SkillAim';
+import type { SkillAimHint } from '../systems/SkillSystem';
 import {
   combatHitstopMs,
   combatShakeParams,
@@ -275,8 +277,18 @@ export class WorldScene extends Phaser.Scene {
         this.shiftFxIntensity = settingsStore.get().shiftFxIntensity;
       }),
       gameEvents.on('combat:castSkill', (p) => {
-        const d = p as { slot: number };
-        this.tryCastSkill(d.slot);
+        const d = p as {
+          slot: number;
+          aimScreen?: {
+            originX: number;
+            originY: number;
+            pointerX: number;
+            pointerY: number;
+            dirX: number;
+            dirY: number;
+          };
+        };
+        this.tryCastSkill(d.slot, d.aimScreen);
       }),
       gameEvents.on('input:move', (p) => {
         const d = p as { dx: number; dy: number };
@@ -1692,7 +1704,26 @@ export class WorldScene extends Phaser.Scene {
     });
   }
 
-  private tryCastSkill(slot: number): void {
+  private tryCastSkill(
+    slot: number,
+    aimScreen?: {
+      dirX: number;
+      dirY: number;
+      pointerX: number;
+      pointerY: number;
+    },
+  ): void {
+    let aim: SkillAimHint | undefined;
+    if (aimScreen) {
+      const { dx, dy } = screenDirToWorldDelta(aimScreen.dirX, aimScreen.dirY);
+      const reach = 5;
+      aim = {
+        dirX: dx,
+        dirY: dy,
+        worldX: this.player.worldX + dx * reach,
+        worldY: this.player.worldY + dy * reach,
+      };
+    }
     const result = gameState.skills.cast(slot, {
       player: this.player,
       enemies: this.enemies,
@@ -1700,6 +1731,7 @@ export class WorldScene extends Phaser.Scene {
       walkCheck: this.player.walkCheck,
       gearSkillPower: gameState.inventory.totalGearStats().skillPower,
       onKill: (enemy) => this.onEnemyKilled(enemy),
+      aim,
     });
     if (!result.ok) {
       if (result.reason) gameEvents.emit('ui:toast', { text: result.reason });

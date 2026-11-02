@@ -3,12 +3,19 @@ import { gameEvents } from '../core/EventBus';
 import { formatHotkey } from '../core/Hotkeys';
 import { gameState } from '../systems/GameState';
 import { ACTIVE_SLOTS, getAbilityDef } from '../systems/SkillSystem';
+import {
+  beginSkillAim,
+  resolveSkillAimRelease,
+  skillAimDragDist,
+  updateSkillAim,
+  type SkillAimState,
+} from '../systems/SkillAim';
 import { shouldShowTouchControls } from './TouchControls';
 import { computeTouchLayout } from './TouchLayout';
 
 /**
- * Desktop: bottom hotkey strip. Touch: round skill buttons in the
- * right-thumb combat column (see TouchLayout).
+ * Desktop: bottom hotkey strip. Touch: round skill buttons with
+ * hold-drag aim (preview line) + short-tap auto-target.
  */
 export class AbilityBar {
   readonly root: Phaser.GameObjects.Container;
@@ -19,14 +26,21 @@ export class AbilityBar {
     cd: Phaser.GameObjects.Text;
     key: Phaser.GameObjects.Text;
     ring?: Phaser.GameObjects.Arc;
+    cx: number;
+    cy: number;
+    r: number;
   }[] = [];
   private touchMode = false;
+  private aimState: SkillAimState | null = null;
+  private aimPointerId: number | null = null;
+  private aimPreview!: Phaser.GameObjects.Graphics;
 
   constructor(scene: Phaser.Scene) {
     this.scene = scene;
     // Below TouchControls ATK/E (10006) so primary buttons win on overlap;
     // above world / minimap chrome for skill taps.
     this.root = scene.add.container(0, 0).setScrollFactor(0).setDepth(10_005);
+    this.aimPreview = scene.add.graphics().setScrollFactor(0).setDepth(10_007);
     this.touchMode = shouldShowTouchControls();
     const keys: Array<'skill1' | 'skill2' | 'skill3'> = [
       'skill1',
@@ -40,12 +54,10 @@ export class AbilityBar {
           .circle(0, 0, 30, 0x121820, 0.9)
           .setStrokeStyle(2.5, 0x4a6070, 0.95)
           .setInteractive({ useHandCursor: true });
-        ring.on('pointerdown', () => ring.setScale(0.92));
-        ring.on('pointerup', () => {
-          ring.setScale(1);
-          gameEvents.emit('combat:castSkill', { slot });
+        ring.on('pointerdown', (p: Phaser.Input.Pointer) => {
+          ring.setScale(0.92);
+          this.startAim(slot, ring.x, ring.y, p);
         });
-        ring.on('pointerout', () => ring.setScale(1));
         const name = scene.add
           .text(0, -2, '', {
             fontFamily: 'Segoe UI, sans-serif',
@@ -63,7 +75,7 @@ export class AbilityBar {
           })
           .setOrigin(0.5);
         const key = scene.add.text(0, 0, '').setVisible(false);
-        this.slots.push({ bg: ring, name, cd, key, ring });
+        this.slots.push({ bg: ring, name, cd, key, ring, cx: 0, cy: 0, r: 30 });
         this.root.add([ring, name, cd]);
       } else {
         const bg = scene.add.rectangle(0, 0, 96, 52, 0x121820, 0.92);
@@ -95,12 +107,82 @@ export class AbilityBar {
             color: '#6a7a8a',
           })
           .setOrigin(0.5);
-        this.slots.push({ bg, name, cd, key });
+        this.slots.push({ bg, name, cd, key, cx: 0, cy: 0, r: 0 });
         this.root.add([bg, name, cd, key]);
       }
     }
+
+    if (this.touchMode) {
+      scene.input.on('pointermove', (p: Phaser.Input.Pointer) => {
+        if (this.aimPointerId !== p.id || !this.aimState) return;
+        this.aimState = updateSkillAim(this.aimState, p.x, p.y);
+        this.drawAimPreview();
+      });
+      const end = (p: Phaser.Input.Pointer) => {
+        if (this.aimPointerId !== p.id || !this.aimState) return;
+        this.finishAim(p.x, p.y);
+      };
+      scene.input.on('pointerup', end);
+      scene.input.on('pointerupoutside', end);
+    }
+
     this.layout();
     this.refresh();
+  }
+
+  private startAim(
+    slot: number,
+    ox: number,
+    oy: number,
+    p: Phaser.Input.Pointer,
+  ): void {
+    this.aimPointerId = p.id;
+    this.aimState = beginSkillAim(slot, ox, oy, this.scene.time.now);
+    this.aimState = updateSkillAim(this.aimState, p.x, p.y);
+    this.drawAimPreview();
+  }
+
+  private finishAim(x: number, y: number): void {
+    const state = this.aimState;
+    const slotInfo = state ? this.slots[state.slot] : null;
+    if (slotInfo?.ring) slotInfo.ring.setScale(1);
+    this.aimPointerId = null;
+    this.aimPreview.clear();
+    if (!state) return;
+    const updated = updateSkillAim(state, x, y);
+    const result = resolveSkillAimRelease(updated, this.scene.time.now);
+    this.aimState = null;
+    if (result.action === 'cancel') return;
+    if (result.action === 'auto') {
+      gameEvents.emit('combat:castSkill', { slot: updated.slot });
+      return;
+    }
+    gameEvents.emit('combat:castSkill', {
+      slot: updated.slot,
+      aimScreen: {
+        originX: updated.originX,
+        originY: updated.originY,
+        pointerX: result.pointerX,
+        pointerY: result.pointerY,
+        dirX: result.dirX,
+        dirY: result.dirY,
+      },
+    });
+  }
+
+  private drawAimPreview(): void {
+    this.aimPreview.clear();
+    if (!this.aimState) return;
+    const dist = skillAimDragDist(this.aimState);
+    if (dist < 12) return;
+    const { originX, originY, pointerX, pointerY } = this.aimState;
+    const cancel = dist <= 36;
+    this.aimPreview.lineStyle(3, cancel ? 0xc45c3a : 0x6ec6ff, 0.9);
+    this.aimPreview.lineBetween(originX, originY, pointerX, pointerY);
+    this.aimPreview.fillStyle(cancel ? 0xc45c3a : 0x6ec6ff, 0.35);
+    this.aimPreview.fillCircle(pointerX, pointerY, cancel ? 18 : 22);
+    this.aimPreview.lineStyle(2, cancel ? 0xc45c3a : 0xe8e4d8, 0.85);
+    this.aimPreview.strokeCircle(pointerX, pointerY, cancel ? 18 : 22);
   }
 
   layout(): void {
@@ -129,6 +211,8 @@ export class AbilityBar {
         s.bg.setSize(w, slotH);
         s.bg.setPosition(x, 0);
       }
+      s.cx = x;
+      s.cy = 0;
       s.name.setPosition(x, compact ? -5 : -8);
       s.name.setFontSize(compact ? 10 : 11);
       s.name.setWordWrapWidth(w - 4);
@@ -152,6 +236,9 @@ export class AbilityBar {
       const slot = m.skillSlots[i];
       if (!slot) return;
       const { x, y, r } = slot;
+      s.cx = x;
+      s.cy = y;
+      s.r = r;
       if (s.ring) {
         s.ring.setRadius(r);
         s.ring.setPosition(x, y);
