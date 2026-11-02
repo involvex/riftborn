@@ -10,7 +10,7 @@ import { getItemDef } from '../systems/InventorySystem';
 import { gameState } from '../systems/GameState';
 import { addSlotIcon } from '../render/ItemIcons';
 import type { EquipmentSlots, InventorySlot } from '../types/save';
-import { uiFont, uiPanelSize } from '../core/UiScale';
+import { uiFont } from '../core/UiScale';
 import { settingsStore } from '../core/SettingsStore';
 import type { GearInstance } from '../types/game';
 import {
@@ -19,32 +19,41 @@ import {
   type OverlayDismissHandles,
 } from './OverlayDismiss';
 import { shouldShowTouchControls } from './TouchControls';
+import {
+  computeInventoryLayout,
+  inventoryPanelFromViewport,
+  type InventoryLayout,
+} from './InventoryLayout';
 
 type EqKey = keyof EquipmentSlots;
 
 const UI_FONT = 'Consolas, "Courier New", monospace';
 
 /**
- * Bag UI: equipment strip + grid + fixed detail band (never over the grid).
+ * Bag UI: equipment + grid + detail band via computeInventoryLayout
+ * (no overlap; short panels put detail beside the bag).
  */
 export class InventoryPanel {
   readonly root: Phaser.GameObjects.Container;
   private readonly scene: Phaser.Scene;
   private gridRoot: Phaser.GameObjects.Container;
+  private bagCellsRoot: Phaser.GameObjects.Container;
   private eqRoot: Phaser.GameObjects.Container;
   private detailRoot: Phaser.GameObjects.Container;
   private hintRoot: Phaser.GameObjects.Container;
   private detailBg!: Phaser.GameObjects.Rectangle;
   private title!: Phaser.GameObjects.Text;
   private bg!: Phaser.GameObjects.Rectangle;
+  private closeBtn!: Phaser.GameObjects.Text;
   private selectedIndex: number | null = null;
   private lastClickIndex: number | null = null;
   private lastClickAt = 0;
   private panelW = 800;
   private panelH = 560;
   private dismiss!: OverlayDismissHandles;
-  /** Reserved bottom band for detail + close (px). */
-  private footerH = 120;
+  private lastLayout: InventoryLayout | null = null;
+  /** Pixel scroll into the bag grid (scrollable layouts only). */
+  private bagScrollY = 0;
   open = false;
 
   constructor(scene: Phaser.Scene) {
@@ -67,7 +76,8 @@ export class InventoryPanel {
     this.hintRoot = scene.add.container(0, 0);
     this.eqRoot = scene.add.container(0, 0);
     this.gridRoot = scene.add.container(0, 0);
-    const close = scene.add
+    this.bagCellsRoot = scene.add.container(0, 0);
+    this.closeBtn = scene.add
       .text(0, 0, 'Close (I / Esc)', {
         fontFamily: UI_FONT,
         fontSize: '13px',
@@ -76,7 +86,7 @@ export class InventoryPanel {
       })
       .setOrigin(0.5)
       .setInteractive({ useHandCursor: true });
-    close.on('pointerup', () => this.hide());
+    this.closeBtn.on('pointerup', () => this.hide());
 
     this.root.add([
       this.bg,
@@ -86,39 +96,70 @@ export class InventoryPanel {
       this.gridRoot,
       this.detailBg,
       this.detailRoot,
-      close,
+      this.closeBtn,
     ]);
-    this.root.setData('closeBtn', close);
     this.dismiss = attachOverlayDismiss(scene, this.root, () => this.hide());
     this.root.setVisible(false);
     this.setDetailPlain('Tap gear for stats · Double-tap to equip');
     this.layout();
   }
 
-  layout(): void {
+  /** Panel-local top-left → root-local (origin at panel center). */
+  private local(x: number, y: number): { x: number; y: number } {
+    return { x: x - this.panelW / 2, y: y - this.panelH / 2 };
+  }
+
+  private computeLayout(): InventoryLayout {
     const touch = shouldShowTouchControls();
-    const { w, h } = uiPanelSize(
-      this.scene,
-      touch ? 0.96 : 0.94,
-      touch ? 0.94 : 0.88,
-      860,
-      620,
+    const { panelW, panelH } = inventoryPanelFromViewport(
+      this.scene.scale.width,
+      this.scene.scale.height,
+      touch,
     );
-    this.panelW = w;
-    this.panelH = h;
-    this.footerH = touch ? 108 : 120;
+    return computeInventoryLayout({
+      panelW,
+      panelH,
+      touch,
+      bagCols: gameState.inventory.bagCols,
+      bagRows: gameState.inventory.bagRows,
+      showCloseX: true,
+    });
+  }
+
+  layout(): void {
+    const layout = this.computeLayout();
+    this.lastLayout = layout;
+    this.panelW = layout.panel.w;
+    this.panelH = layout.panel.h;
+    const w = this.panelW;
+    const h = this.panelH;
+
     this.bg.setSize(w, h);
-    this.title.setPosition(0, -h / 2 + (touch ? 20 : 26));
+    const titlePos = this.local(
+      layout.title.x + layout.title.w / 2,
+      layout.title.y + layout.title.h / 2,
+    );
+    this.title.setPosition(titlePos.x, titlePos.y);
     this.title.setStyle({ fontSize: uiFont(this.scene, 22, 16, 26) });
-    const close = this.root.getData('closeBtn') as Phaser.GameObjects.Text;
-    close.setPosition(0, h / 2 - (touch ? 14 : 16));
-    close.setFontSize(touch ? '14px' : '13px');
-    // Detail band sits above Close, never inside the bag grid.
-    const detailH = touch ? 70 : 78;
-    const detailY = h / 2 - (touch ? 52 : 58);
-    this.detailBg.setSize(w - 28, detailH);
-    this.detailBg.setPosition(0, detailY - detailH / 2 + 8);
-    this.detailRoot.setPosition(0, detailY - detailH / 2 + 14);
+
+    this.closeBtn.setVisible(layout.showCloseText);
+    if (layout.close) {
+      const c = this.local(
+        layout.close.x + layout.close.w / 2,
+        layout.close.y + layout.close.h / 2,
+      );
+      this.closeBtn.setPosition(c.x, c.y);
+      this.closeBtn.setFontSize(shouldShowTouchControls() ? '14px' : '13px');
+    }
+
+    const d = layout.detail;
+    const dPos = this.local(d.x + d.w / 2, d.y + d.h / 2);
+    this.detailBg.setSize(d.w, d.h);
+    this.detailBg.setPosition(dPos.x, dPos.y);
+    // Detail text starts near top of detail band.
+    const textPos = this.local(d.x + d.w / 2, d.y + 8);
+    this.detailRoot.setPosition(textPos.x, textPos.y);
+
     this.dismiss.layout(w, h);
     this.root.setPosition(
       this.scene.scale.width / 2,
@@ -127,21 +168,59 @@ export class InventoryPanel {
   }
 
   show(): void {
+    this.bagScrollY = 0;
     this.layout();
     this.refresh();
     this.root.setVisible(true);
     this.open = true;
+    this.bindWheel();
   }
 
   hide(): void {
     this.root.setVisible(false);
     this.open = false;
     this.selectedIndex = null;
+    this.unbindWheel();
   }
 
   toggle(): void {
     if (this.open) this.hide();
     else this.show();
+  }
+
+  private bindWheel(): void {
+    this.unbindWheel();
+    this.scene.input.on('wheel', this.onWheel, this);
+  }
+
+  private unbindWheel(): void {
+    this.scene.input.off('wheel', this.onWheel, this);
+  }
+
+  private onWheel(
+    _pointer: Phaser.Input.Pointer,
+    _over: Phaser.GameObjects.GameObject[],
+    _dx: number,
+    dy: number,
+  ): void {
+    if (!this.open || !this.lastLayout?.scrollable) return;
+    const next = Phaser.Math.Clamp(
+      this.bagScrollY + dy * 0.35,
+      0,
+      this.maxBagScroll(),
+    );
+    if (Math.abs(next - this.bagScrollY) < 0.5) return;
+    this.bagScrollY = next;
+    this.refresh();
+  }
+
+  private maxBagScroll(): number {
+    const layout = this.lastLayout;
+    if (!layout) return 0;
+    const rows = gameState.inventory.bagRows;
+    const pitch = layout.cellSize + layout.bagGap;
+    const contentH = rows * pitch - layout.bagGap;
+    return Math.max(0, contentH - layout.bagGrid.h);
   }
 
   private setDetailPlain(text: string, color = '#a8b4c0'): void {
@@ -150,21 +229,25 @@ export class InventoryPanel {
 
   private setDetailLines(lines: TooltipLine[]): void {
     this.detailRoot.removeAll(true);
-    const maxW = this.panelW - 56;
+    const layout = this.lastLayout;
+    const maxW = layout ? layout.detail.w - 16 : this.panelW - 56;
     const touch = shouldShowTouchControls();
     let y = 0;
-    const maxLines = touch ? 4 : 6;
+    const maxLines = layout?.detailBeside ? (touch ? 8 : 10) : touch ? 4 : 6;
     for (const line of lines.slice(0, maxLines)) {
       const t = this.scene.add
         .text(0, y, line.text, {
           fontFamily: UI_FONT,
           fontSize: touch ? '11px' : '12px',
           color: line.color,
-          align: 'center',
+          align: layout?.detailBeside ? 'left' : 'center',
           resolution: 2,
           wordWrap: { width: maxW },
         })
-        .setOrigin(0.5, 0);
+        .setOrigin(layout?.detailBeside ? 0 : 0.5, 0);
+      if (layout?.detailBeside) {
+        t.setX(-maxW / 2);
+      }
       this.detailRoot.add(t);
       y += t.height + 1;
     }
@@ -197,13 +280,11 @@ export class InventoryPanel {
     this.eqRoot.removeAll(true);
     this.gridRoot.removeAll(true);
     this.hintRoot.removeAll(true);
+    this.bagCellsRoot = this.scene.add.container(0, 0);
 
     const touch = shouldShowTouchControls();
-    const w = this.panelW;
-    const h = this.panelH;
-    const pad = touch ? 14 : 22;
-    const innerW = w - pad * 2;
-
+    const layout = this.lastLayout ?? this.computeLayout();
+    this.lastLayout = layout;
     const eq = gameState.inventory.equipment;
     const slots: { key: EqKey; label: string }[] = [
       { key: 'weapon', label: 'WPN' },
@@ -213,17 +294,18 @@ export class InventoryPanel {
       { key: 'feet', label: 'FET' },
       { key: 'tool', label: 'TOOL' },
     ];
-    const eqCols = touch ? 3 : 3;
-    const eqGap = touch ? 6 : 10;
-    const eqCellW = (innerW - eqGap * (eqCols - 1)) / eqCols;
-    const eqCellH = touch ? 40 : 48;
-    this.eqRoot.setPosition(-innerW / 2, -h / 2 + (touch ? 42 : 54));
+
+    const eqOrigin = this.local(layout.equipment.x, layout.equipment.y);
+    this.eqRoot.setPosition(eqOrigin.x, eqOrigin.y);
+    const eqCellW =
+      (layout.equipment.w - layout.eqGap * (layout.eqCols - 1)) / layout.eqCols;
+    const eqCellH = layout.eqCellH;
 
     slots.forEach((s, i) => {
-      const col = i % eqCols;
-      const row = Math.floor(i / eqCols);
-      const x = col * (eqCellW + eqGap) + eqCellW / 2;
-      const y = row * (eqCellH + eqGap) + eqCellH / 2;
+      const col = i % layout.eqCols;
+      const row = Math.floor(i / layout.eqCols);
+      const x = col * (eqCellW + layout.eqGap) + eqCellW / 2;
+      const y = row * (eqCellH + layout.eqGap) + eqCellH / 2;
       const cell = this.scene.add
         .rectangle(x, y, eqCellW, eqCellH, 0x141c28, 1)
         .setStrokeStyle(1, 0x5a6a80)
@@ -284,10 +366,11 @@ export class InventoryPanel {
       this.eqRoot.add([cell, ...icons, text, nameTxt]);
     });
 
-    const eqBlockH = 2 * eqCellH + eqGap;
-    const hintY = -h / 2 + (touch ? 42 : 54) + eqBlockH + 8;
-    this.hintRoot.setPosition(0, hintY);
-
+    const hintOrigin = this.local(
+      layout.hint.x + layout.hint.w / 2,
+      layout.hint.y,
+    );
+    this.hintRoot.setPosition(hintOrigin.x, hintOrigin.y);
     const junkOn = settingsStore.get().autoSellJunk;
     const hintLine = touch
       ? `Double-tap to equip${junkOn ? '  ·  Auto-sell ON' : ''}`
@@ -298,30 +381,18 @@ export class InventoryPanel {
         fontSize: touch ? '10px' : '11px',
         color: '#8a9aaa',
         resolution: 2,
-        wordWrap: { width: innerW },
+        wordWrap: { width: layout.hint.w },
         align: 'center',
       })
       .setOrigin(0.5, 0);
     this.hintRoot.add(hint);
 
-    const bagTop = hintY + hint.height + 10;
-    const bagBottom = h / 2 - this.footerH;
-    const bagH = Math.max(100, bagBottom - bagTop);
-
-    const cols = gameState.inventory.bagCols;
-    const rows = gameState.inventory.bagRows;
-    const gap = touch ? 4 : 6;
-    const headerBand = 22;
-    const fitW = Math.floor((innerW - gap * (cols - 1)) / cols);
-    const fitH = Math.floor((bagH - headerBand - gap * (rows - 1)) / rows);
-    // Never force a min cell that would push the grid into the detail band.
-    const cell = Math.max(18, Math.min(touch ? 44 : 52, fitW, fitH));
-    const gridW = cols * cell + (cols - 1) * gap;
-    this.gridRoot.setPosition(-gridW / 2, bagTop);
+    // Bag header + grid live in gridRoot at panel origin for easier masking.
+    this.gridRoot.setPosition(-this.panelW / 2, -this.panelH / 2);
 
     const bagLabel = this.scene.add.text(
-      0,
-      0,
+      layout.bagHeader.x,
+      layout.bagHeader.y + 2,
       `Bag ${gameState.inventory.slots.length}/${gameState.inventory.capacity}  ·  ${gameState.inventory.count('gold')}g`,
       {
         fontFamily: UI_FONT,
@@ -331,14 +402,19 @@ export class InventoryPanel {
       },
     );
     const sortBtn = this.scene.add
-      .text(gridW, 0, 'Sort', {
-        fontFamily: UI_FONT,
-        fontSize: '12px',
-        color: '#0a0c10',
-        backgroundColor: '#d0b070',
-        padding: { x: 8, y: 3 },
-        resolution: 2,
-      })
+      .text(
+        layout.bagHeader.x + layout.bagHeader.w,
+        layout.bagHeader.y + 2,
+        'Sort',
+        {
+          fontFamily: UI_FONT,
+          fontSize: '12px',
+          color: '#0a0c10',
+          backgroundColor: '#d0b070',
+          padding: { x: 8, y: 3 },
+          resolution: 2,
+        },
+      )
       .setOrigin(1, 0)
       .setInteractive({ useHandCursor: true });
     sortBtn.on('pointerup', () => {
@@ -350,81 +426,147 @@ export class InventoryPanel {
     });
     this.gridRoot.add([bagLabel, sortBtn]);
 
-    const playerClass = gameState.progression.classId;
-    const gridOriginY = 22;
+    const cell = layout.cellSize;
+    const gap = layout.bagGap;
+    const cols = gameState.inventory.bagCols;
+    const rows = gameState.inventory.bagRows;
+    const gridW = cols * cell + (cols - 1) * gap;
+    const gridOriginX =
+      layout.bagGrid.x + Math.max(0, (layout.bagGrid.w - gridW) / 2);
+    const gridOriginY = layout.bagGrid.y;
+    const rowPitch = cell + gap;
 
-    for (let i = 0; i < cols * rows; i++) {
-      const col = i % cols;
-      const row = Math.floor(i / cols);
-      const x = col * (cell + gap);
-      const y = gridOriginY + row * (cell + gap);
-      const slot = gameState.inventory.slots[i] as InventorySlot | undefined;
-      const rect = this.scene.add
-        .rectangle(x + cell / 2, y + cell / 2, cell, cell, 0x121820, 1)
-        .setStrokeStyle(1, this.selectedIndex === i ? 0x7ed0ff : 0x4a5568)
-        .setInteractive({ useHandCursor: true });
+    // Windowed rows — avoids Phaser 4 WebGL GeometryMask (unsupported).
+    this.bagScrollY = Phaser.Math.Clamp(
+      this.bagScrollY,
+      0,
+      this.maxBagScroll(),
+    );
+    const firstRow = layout.scrollable
+      ? Math.floor(this.bagScrollY / rowPitch)
+      : 0;
+    const rowsToShow = layout.scrollable
+      ? Math.min(rows, layout.visibleRows + 1)
+      : rows;
+    const yOffset = layout.scrollable ? -(this.bagScrollY % rowPitch) : 0;
 
-      const contents: Phaser.GameObjects.GameObject[] = [rect];
-      if (slot) {
-        if (slot.kind === 'stack') {
-          contents.push(
-            ...addSlotIcon(this.scene, x, y, cell, {
-              kind: 'stack',
-              itemId: slot.itemId,
-            }),
-          );
-          const qty = this.scene.add
-            .text(x + cell - 3, y + cell - 3, `x${slot.qty}`, {
-              fontFamily: UI_FONT,
-              fontSize: `${Math.max(9, Math.floor(cell * 0.22))}px`,
-              color: '#f0ebe3',
-              stroke: '#0a0c10',
-              strokeThickness: 3,
-              resolution: 2,
-            })
-            .setOrigin(1, 1);
-          contents.push(qty);
-        } else {
-          const req = resolveGearClass(slot.item);
-          const usable = !req || req === playerClass;
-          contents.push(
-            ...addSlotIcon(this.scene, x, y, cell, {
-              kind: 'gear',
-              item: slot.item,
-              dimmed: !usable,
-            }),
-          );
-        }
-      }
+    this.bagCellsRoot.setPosition(gridOriginX, gridOriginY + yOffset);
+    this.gridRoot.add(this.bagCellsRoot);
 
-      rect.on('pointerup', () => this.onBagClick(i));
-      rect.on('pointerover', () => {
-        if (!slot) {
-          this.setDetailPlain('Empty slot');
-          return;
-        }
-        if (slot.kind === 'stack') {
-          const def = getItemDef(slot.itemId);
-          const unit = stackSellValue(slot.itemId);
-          const sell =
-            unit > 0 ? `  ·  sell ${unit * slot.qty}g` : '  ·  not sellable';
-          this.setDetailPlain(
-            `${def?.name ?? slot.itemId}  ×${slot.qty}${sell}`,
-            '#e8e4d8',
-          );
-        } else {
-          const req = resolveGearClass(slot.item);
-          const usable = !req || req === playerClass;
-          const tip = usable
-            ? touch
-              ? 'Double-tap to equip'
-              : 'Double-click to equip'
-            : `${classLabel(req)} only`;
-          this.showGearTooltip(slot.item, tip);
-        }
+    if (layout.scrollable) {
+      const hit = this.scene.add
+        .rectangle(
+          layout.bagGrid.x + layout.bagGrid.w / 2,
+          layout.bagGrid.y + layout.bagGrid.h / 2,
+          layout.bagGrid.w,
+          layout.bagGrid.h,
+          0x000000,
+          0.001,
+        )
+        .setInteractive({ draggable: true, useHandCursor: true });
+      this.gridRoot.add(hit);
+      let dragStart = 0;
+      let scrollStart = 0;
+      hit.on('dragstart', (_p: Phaser.Input.Pointer, _x: number, y: number) => {
+        dragStart = y;
+        scrollStart = this.bagScrollY;
       });
+      hit.on('drag', (_p: Phaser.Input.Pointer, _x: number, y: number) => {
+        const next = Phaser.Math.Clamp(
+          scrollStart - (y - dragStart),
+          0,
+          this.maxBagScroll(),
+        );
+        if (Math.abs(next - this.bagScrollY) < 1) return;
+        this.bagScrollY = next;
+        this.refresh();
+      });
+    }
 
-      this.gridRoot.add(contents);
+    const playerClass = gameState.progression.classId;
+
+    for (let r = 0; r < rowsToShow; r++) {
+      const row = firstRow + r;
+      if (row >= rows) break;
+      // Clip last partial row below the bag viewport.
+      if (
+        layout.scrollable &&
+        yOffset + r * rowPitch + cell > layout.bagGrid.h
+      ) {
+        break;
+      }
+      for (let col = 0; col < cols; col++) {
+        const i = row * cols + col;
+        const x = col * (cell + gap);
+        const y = r * rowPitch;
+        const slot = gameState.inventory.slots[i] as InventorySlot | undefined;
+        const rect = this.scene.add
+          .rectangle(x + cell / 2, y + cell / 2, cell, cell, 0x121820, 1)
+          .setStrokeStyle(1, this.selectedIndex === i ? 0x7ed0ff : 0x4a5568)
+          .setInteractive({ useHandCursor: true });
+
+        const contents: Phaser.GameObjects.GameObject[] = [rect];
+        if (slot) {
+          if (slot.kind === 'stack') {
+            contents.push(
+              ...addSlotIcon(this.scene, x, y, cell, {
+                kind: 'stack',
+                itemId: slot.itemId,
+              }),
+            );
+            const qty = this.scene.add
+              .text(x + cell - 3, y + cell - 3, `x${slot.qty}`, {
+                fontFamily: UI_FONT,
+                fontSize: `${Math.max(9, Math.floor(cell * 0.22))}px`,
+                color: '#f0ebe3',
+                stroke: '#0a0c10',
+                strokeThickness: 3,
+                resolution: 2,
+              })
+              .setOrigin(1, 1);
+            contents.push(qty);
+          } else {
+            const req = resolveGearClass(slot.item);
+            const usable = !req || req === playerClass;
+            contents.push(
+              ...addSlotIcon(this.scene, x, y, cell, {
+                kind: 'gear',
+                item: slot.item,
+                dimmed: !usable,
+              }),
+            );
+          }
+        }
+
+        rect.on('pointerup', () => this.onBagClick(i));
+        rect.on('pointerover', () => {
+          if (!slot) {
+            this.setDetailPlain('Empty slot');
+            return;
+          }
+          if (slot.kind === 'stack') {
+            const def = getItemDef(slot.itemId);
+            const unit = stackSellValue(slot.itemId);
+            const sell =
+              unit > 0 ? `  ·  sell ${unit * slot.qty}g` : '  ·  not sellable';
+            this.setDetailPlain(
+              `${def?.name ?? slot.itemId}  ×${slot.qty}${sell}`,
+              '#e8e4d8',
+            );
+          } else {
+            const req = resolveGearClass(slot.item);
+            const usable = !req || req === playerClass;
+            const tip = usable
+              ? touch
+                ? 'Double-tap to equip'
+                : 'Double-click to equip'
+              : `${classLabel(req)} only`;
+            this.showGearTooltip(slot.item, tip);
+          }
+        });
+
+        this.bagCellsRoot.add(contents);
+      }
     }
   }
 
