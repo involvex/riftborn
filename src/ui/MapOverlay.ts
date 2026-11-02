@@ -4,6 +4,11 @@ import { formatHotkey } from '../core/Hotkeys';
 import { uiFont, uiPanelSize } from '../core/UiScale';
 import { MAP_CELL_COLOR, MAP_MARKER_COLOR, type MapSnapshot } from './MapModel';
 import { shouldShowTouchControls } from './TouchControls';
+import {
+  attachOverlayDismiss,
+  makePanelHitBlock,
+  type OverlayDismissHandles,
+} from './OverlayDismiss';
 
 const LEGEND: { kind: keyof typeof MAP_MARKER_COLOR; label: string }[] = [
   { kind: 'player', label: 'You' },
@@ -29,12 +34,14 @@ export class MapOverlay {
   private mapH = 420;
   open = false;
   private snap: MapSnapshot | null = null;
+  private dismiss!: OverlayDismissHandles;
 
   constructor(scene: Phaser.Scene) {
     this.scene = scene;
     this.root = scene.add.container(0, 0).setScrollFactor(0).setDepth(10_040);
     this.bg = scene.add.rectangle(0, 0, 520, 560, 0x0e1218, 0.97);
     this.bg.setStrokeStyle(2, 0xc4a574, 0.85);
+    makePanelHitBlock(this.bg);
     this.title = scene.add
       .text(0, 0, 'World Map', {
         fontFamily: 'Georgia, serif',
@@ -69,6 +76,7 @@ export class MapOverlay {
       this.legend,
       this.hint,
     ]);
+    this.dismiss = attachOverlayDismiss(scene, this.root, () => this.hide());
     this.root.setVisible(false);
     this.layout();
   }
@@ -103,6 +111,7 @@ export class MapOverlay {
     this.hint.setText(
       touch ? 'Tap here to close' : `Close (${formatHotkey('map')} / Esc)`,
     );
+    this.dismiss.layout(w, h);
     this.root.setPosition(
       this.scene.scale.width / 2,
       this.scene.scale.height / 2,

@@ -90,7 +90,8 @@ export function computeTouchLayout(width: number, height: number): TouchLayout {
     { x: skillsX, y: midY + skillPitch + shift, r: skillR },
   ];
 
-  const chromeR = landscape ? 20 : 22;
+  // ≥44px diameter for Bag/Char/Map/Menu touch targets
+  const chromeR = Math.max(22, landscape ? 22 : 24);
   const chrome = {
     y: Math.max(48, Math.round(short * 0.11)),
     r: chromeR,

@@ -4,6 +4,11 @@ import { formatHotkey } from '../core/Hotkeys';
 import { uiFont, uiPanelSize } from '../core/UiScale';
 import { gameState } from '../systems/GameState';
 import { getAbilityDef, getClassTree } from '../systems/SkillSystem';
+import {
+  attachOverlayDismiss,
+  makePanelHitBlock,
+  type OverlayDismissHandles,
+} from './OverlayDismiss';
 
 /** Class skill tree — spend skill points to unlock / rank abilities. */
 export class SkillTreePanel {
@@ -14,6 +19,7 @@ export class SkillTreePanel {
   private readonly points: Phaser.GameObjects.Text;
   private readonly nodesRoot: Phaser.GameObjects.Container;
   private readonly detail: Phaser.GameObjects.Text;
+  private dismiss!: OverlayDismissHandles;
   open = false;
 
   constructor(scene: Phaser.Scene) {
@@ -21,6 +27,7 @@ export class SkillTreePanel {
     this.root = scene.add.container(0, 0).setScrollFactor(0).setDepth(10_028);
     this.bg = scene.add.rectangle(0, 0, 520, 420, 0x0e1218, 0.97);
     this.bg.setStrokeStyle(2, 0x6ec6a0, 0.85);
+    makePanelHitBlock(this.bg);
     this.title = scene.add
       .text(0, 0, 'Skill Tree', {
         fontFamily: 'Georgia, serif',
@@ -63,6 +70,7 @@ export class SkillTreePanel {
       close,
     ]);
     this.root.setData('closeBtn', close);
+    this.dismiss = attachOverlayDismiss(scene, this.root, () => this.hide());
     this.root.setVisible(false);
     this.layout();
   }
@@ -78,6 +86,7 @@ export class SkillTreePanel {
     this.detail.setWordWrapWidth(w - 48);
     const close = this.root.getData('closeBtn') as Phaser.GameObjects.Text;
     close.setPosition(0, h / 2 - 20);
+    this.dismiss.layout(w, h);
     this.root.setPosition(
       this.scene.scale.width / 2,
       this.scene.scale.height / 2,

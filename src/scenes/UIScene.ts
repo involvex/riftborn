@@ -19,6 +19,11 @@ import {
   DEFAULT_HOTKEYS,
 } from '../core/SettingsStore';
 import { DamageNumberPool } from '../ui/DamageNumberPool';
+import {
+  attachOverlayDismiss,
+  makePanelHitBlock,
+  type OverlayDismissHandles,
+} from '../ui/OverlayDismiss';
 import { listRecipes } from '../systems/CraftingSystem';
 import { describeGearFull } from '../systems/ItemGen';
 import { getItemDef } from '../systems/InventorySystem';
@@ -64,6 +69,7 @@ export class UIScene extends Phaser.Scene {
   private charStatBtns: Phaser.GameObjects.Text[] = [];
   private menuPanel!: Phaser.GameObjects.Container;
   private menuBg!: Phaser.GameObjects.Rectangle;
+  private menuTitle!: Phaser.GameObjects.Text;
   private menuBody!: Phaser.GameObjects.Container;
   private charBody!: Phaser.GameObjects.Text;
   private damageLayer!: Phaser.GameObjects.Container;
@@ -95,6 +101,11 @@ export class UIScene extends Phaser.Scene {
   private menuPage: MenuPage = 'root';
   private awaitingRebind: HotkeyAction | null = null;
   private rebindHint!: Phaser.GameObjects.Text;
+  private charDismiss!: OverlayDismissHandles;
+  private menuDismiss!: OverlayDismissHandles;
+  private craftDismiss!: OverlayDismissHandles;
+  private craftPanelW = 420;
+  private craftPanelH = 280;
 
   constructor() {
     super('UIScene');
@@ -600,6 +611,7 @@ export class UIScene extends Phaser.Scene {
   private buildCraftPanel(): void {
     const bg = this.add.rectangle(0, 0, 320, 260, 0x0e1218, 0.94);
     bg.setStrokeStyle(1, 0xc4a574, 0.7);
+    makePanelHitBlock(bg);
     const title = this.add
       .text(0, -110, 'Crafting Bench', {
         fontFamily: 'Georgia, serif',
@@ -652,11 +664,18 @@ export class UIScene extends Phaser.Scene {
       .setScrollFactor(0)
       .setDepth(10_010)
       .setVisible(false);
+    this.craftPanelW = 320;
+    this.craftPanelH = 260;
+    this.craftDismiss = attachOverlayDismiss(this, this.craftPanel, () =>
+      this.hideCraft(),
+    );
+    this.craftDismiss.layout(this.craftPanelW, this.craftPanelH);
   }
 
   private buildCharPanel(): void {
     this.charBg = this.add.rectangle(0, 0, 560, 520, 0x0e1218, 0.96);
     this.charBg.setStrokeStyle(1, 0x4db6ff, 0.6);
+    makePanelHitBlock(this.charBg);
     this.charTitle = this.add
       .text(0, -235, 'Character', {
         fontFamily: 'Georgia, serif',
@@ -722,6 +741,9 @@ export class UIScene extends Phaser.Scene {
       .setScrollFactor(0)
       .setDepth(10_020)
       .setVisible(false);
+    this.charDismiss = attachOverlayDismiss(this, this.charPanel, () =>
+      this.hideChar(),
+    );
     this.layoutCharPanel();
   }
 
@@ -753,6 +775,7 @@ export class UIScene extends Phaser.Scene {
     });
     this.charClose.setPosition(0, h / 2 - (touch ? 22 : 28));
     this.charClose.setFontSize(touch ? '15px' : '14px');
+    this.charDismiss?.layout(w, h);
     if (this.charOpen) {
       this.charPanel.setPosition(this.scale.width / 2, this.scale.height / 2);
     }
@@ -761,7 +784,8 @@ export class UIScene extends Phaser.Scene {
   private buildMenuPanel(): void {
     this.menuBg = this.add.rectangle(0, 0, 420, 460, 0x0e1218, 0.97);
     this.menuBg.setStrokeStyle(1, 0xc4a574, 0.75);
-    const title = this.add
+    makePanelHitBlock(this.menuBg);
+    this.menuTitle = this.add
       .text(0, -200, 'Paused', {
         fontFamily: 'Georgia, serif',
         fontSize: '26px',
@@ -781,13 +805,16 @@ export class UIScene extends Phaser.Scene {
     this.menuPanel = this.add
       .container(this.scale.width / 2, this.scale.height / 2, [
         this.menuBg,
-        title,
+        this.menuTitle,
         this.menuBody,
         this.rebindHint,
       ])
       .setScrollFactor(0)
       .setDepth(10_030)
       .setVisible(false);
+    this.menuDismiss = attachOverlayDismiss(this, this.menuPanel, () =>
+      this.hideMenu(),
+    );
 
     this.layoutMenuPanel();
     this.renderMenuPage();
@@ -803,10 +830,10 @@ export class UIScene extends Phaser.Scene {
       touch ? 500 : 540,
     );
     this.menuBg.setSize(w, h);
-    const title = this.menuPanel.list[1] as Phaser.GameObjects.Text;
-    title.setPosition(0, -h / 2 + (touch ? 28 : 36));
-    title.setFontSize(touch ? '22px' : '26px');
+    this.menuTitle.setPosition(0, -h / 2 + (touch ? 28 : 36));
+    this.menuTitle.setFontSize(touch ? '22px' : '26px');
     this.rebindHint.setPosition(0, h / 2 - (touch ? 28 : 32));
+    this.menuDismiss?.layout(w, h);
     if (this.menuOpen) {
       this.menuPanel.setPosition(this.scale.width / 2, this.scale.height / 2);
     }
@@ -849,10 +876,8 @@ export class UIScene extends Phaser.Scene {
     this.clearMenuBody();
     this.awaitingRebind = null;
     this.rebindHint.setText('');
-    const title = this.menuPanel.list[1] as Phaser.GameObjects.Text;
-
     if (this.menuPage === 'root') {
-      title.setText('Paused');
+      this.menuTitle.setText('Paused');
       this.menuButton(-80, 'Resume', () => this.hideMenu());
       this.menuButton(-10, 'Settings', () => {
         this.menuPage = 'settings';
@@ -869,7 +894,7 @@ export class UIScene extends Phaser.Scene {
     }
 
     if (this.menuPage === 'settings') {
-      title.setText('Settings');
+      this.menuTitle.setText('Settings');
       const s = settingsStore.get();
       const row = (i: number) => -175 + i * 36;
       this.menuButton(
@@ -976,7 +1001,7 @@ export class UIScene extends Phaser.Scene {
     }
 
     // hotkeys
-    title.setText('Hotkeys');
+    this.menuTitle.setText('Hotkeys');
     const actions = Object.keys(DEFAULT_HOTKEYS) as HotkeyAction[];
     actions.forEach((action, i) => {
       const y = -170 + i * 32;

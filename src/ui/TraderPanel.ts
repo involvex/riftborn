@@ -3,6 +3,11 @@ import { audioBus } from '../core/AudioBus';
 import { uiFont, uiPanelSize } from '../core/UiScale';
 import { getItemDef } from '../systems/InventorySystem';
 import { gameState } from '../systems/GameState';
+import {
+  attachOverlayDismiss,
+  makePanelHitBlock,
+  type OverlayDismissHandles,
+} from './OverlayDismiss';
 
 type TraderTab = 'supplies' | 'mats' | 'repair';
 
@@ -16,6 +21,7 @@ export class TraderPanel {
   private readonly list: Phaser.GameObjects.Container;
   private readonly detail: Phaser.GameObjects.Text;
   private tab: TraderTab = 'supplies';
+  private dismiss!: OverlayDismissHandles;
   open = false;
 
   constructor(scene: Phaser.Scene) {
@@ -23,6 +29,7 @@ export class TraderPanel {
     this.root = scene.add.container(0, 0).setScrollFactor(0).setDepth(10_031);
     this.bg = scene.add.rectangle(0, 0, 420, 440, 0x0e1218, 0.97);
     this.bg.setStrokeStyle(2, 0x8ab4d4, 0.85);
+    makePanelHitBlock(this.bg);
     this.title = scene.add
       .text(0, 0, 'Nix — Scrapper', {
         fontFamily: 'Georgia, serif',
@@ -65,6 +72,7 @@ export class TraderPanel {
       close,
     ]);
     this.root.setData('close', close);
+    this.dismiss = attachOverlayDismiss(scene, this.root, () => this.hide());
     this.root.setVisible(false);
     this.layout();
   }
@@ -80,6 +88,7 @@ export class TraderPanel {
     this.detail.setWordWrapWidth(w - 40);
     const close = this.root.getData('close') as Phaser.GameObjects.Text;
     close.setPosition(0, h / 2 - 22);
+    this.dismiss.layout(w, h);
     this.root.setPosition(
       this.scene.scale.width / 2,
       this.scene.scale.height / 2,

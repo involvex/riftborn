@@ -137,7 +137,8 @@ export class TouchControls {
 
   setChromeOpen(open: boolean): void {
     this.chromeOpen = open;
-    this.chromeBtns.forEach((b) => b.root.setVisible(open && this.active));
+    // Keep chrome reachable on phones — tray stays visible while active.
+    this.chromeBtns.forEach((b) => b.root.setVisible(this.active));
     gameEvents.emit('ui:touchChrome', { open });
   }
 
@@ -184,9 +185,9 @@ export class TouchControls {
         startX + i * m.chrome.gap,
         m.chrome.y,
         m.chrome.r,
-        m.chrome.r > 20 ? '10px' : '9px',
+        m.chrome.r >= 22 ? '10px' : '9px',
       );
-      b.root.setVisible(this.chromeOpen && this.active);
+      b.root.setVisible(this.active);
     });
   }
 

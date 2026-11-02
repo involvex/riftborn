@@ -13,6 +13,8 @@ import type { EquipmentSlots, InventorySlot } from '../types/save';
 import { uiFont, uiPanelSize } from '../core/UiScale';
 import { settingsStore } from '../core/SettingsStore';
 import type { GearInstance } from '../types/game';
+import { attachOverlayDismiss, makePanelHitBlock } from './OverlayDismiss';
+import type { OverlayDismissHandles } from './OverlayDismiss';
 
 type EqKey = keyof EquipmentSlots;
 
@@ -35,6 +37,7 @@ export class InventoryPanel {
   private lastClickAt = 0;
   private panelW = 800;
   private panelH = 560;
+  private dismiss!: OverlayDismissHandles;
   open = false;
 
   constructor(scene: Phaser.Scene) {
@@ -42,6 +45,7 @@ export class InventoryPanel {
     this.root = scene.add.container(0, 0).setScrollFactor(0).setDepth(10_025);
     this.bg = scene.add.rectangle(0, 0, 100, 100, 0x0a0e14, 0.98);
     this.bg.setStrokeStyle(2, 0xd0b070, 0.95);
+    makePanelHitBlock(this.bg);
     this.title = scene.add
       .text(0, 0, 'Inventory', {
         fontFamily: UI_FONT,
@@ -73,6 +77,7 @@ export class InventoryPanel {
       close,
     ]);
     this.root.setData('closeBtn', close);
+    this.dismiss = attachOverlayDismiss(scene, this.root, () => this.hide());
     this.root.setVisible(false);
     this.setDetailPlain('Double-click gear to equip · Hover for compare');
     this.layout();
@@ -88,6 +93,7 @@ export class InventoryPanel {
     const close = this.root.getData('closeBtn') as Phaser.GameObjects.Text;
     close.setPosition(0, h / 2 - 16);
     this.detailRoot.setPosition(0, h / 2 - 110);
+    this.dismiss.layout(w, h);
     this.root.setPosition(
       this.scene.scale.width / 2,
       this.scene.scale.height / 2,
