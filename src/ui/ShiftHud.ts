@@ -9,6 +9,8 @@ export type ShiftHudPayload = {
   energy: number;
   cooldownLeft: number;
   canShift: boolean;
+  /** True when standing near a layer-locked gate tile. */
+  nearGate?: boolean;
 };
 
 /** Rift-only layer name + shift energy bar (top-left under HP). */
@@ -70,9 +72,17 @@ export class ShiftHud {
     );
     const cd =
       p.cooldownLeft > 0 ? ` · CD ${(p.cooldownLeft / 1000).toFixed(1)}s` : '';
-    this.hint.setText(
-      p.canShift ? 'Q Shift ready' : `Q Shift${cd} · kills fill energy`,
-    );
+    if (p.nearGate) {
+      this.hint.setColor('#7ad4e8');
+      this.hint.setText(
+        p.canShift ? 'Q Shift — gate ahead' : `Q Shift near gate${cd}`,
+      );
+    } else {
+      this.hint.setColor('#7a8090');
+      this.hint.setText(
+        p.canShift ? 'Q Shift ready' : `Q Shift${cd} · kills fill energy`,
+      );
+    }
   }
 
   destroy(): void {

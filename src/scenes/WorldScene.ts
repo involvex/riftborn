@@ -90,6 +90,7 @@ import { ShiftSystem } from '../systems/ShiftSystem';
 import { BossShiftBrain } from '../systems/BossShift';
 import { playShiftTransition } from '../render/ShiftFx';
 import {
+  blendTint,
   layerOverlayAlpha,
   layerPropTint,
   layerTileTint,
@@ -169,6 +170,7 @@ export class WorldScene extends Phaser.Scene {
   private corpseAcc = 0;
   private touchDx = 0;
   private touchDy = 0;
+  private lastNearGate = false;
   private inputUnsubs: (() => void)[] = [];
   /** Cached terrain for minimap — rebuilt only on zone change. */
   private mapCells: MapCellKind[] | null = null;
@@ -242,6 +244,8 @@ export class WorldScene extends Phaser.Scene {
       }),
       enterRift: () => this.debugEnterRift(),
       gotoDiagonalCorridor: () => this.debugGotoDiagonalCorridor(),
+      walkDiagonalCorridor: (steps?: number) =>
+        this.debugWalkDiagonalCorridor(steps ?? 45),
     });
   }
 
@@ -271,6 +275,26 @@ export class WorldScene extends Phaser.Scene {
     this.revealFogAroundPlayer();
     this.emitMapSnapshot();
     return true;
+  }
+
+  /**
+   * Scripted diagonal walk along a stair corridor (M1f pass screenshot).
+   * Uses real Player.move / slideMove. Returns tiles traveled.
+   */
+  private debugWalkDiagonalCorridor(steps: number): number {
+    if (!gameState.inRift || !this.dungeon) return 0;
+    if (!this.debugGotoDiagonalCorridor()) return 0;
+    const startX = this.player.worldX;
+    const startY = this.player.worldY;
+    const dt = 1 / 30;
+    for (let i = 0; i < steps; i++) {
+      this.player.move(1, 1, dt);
+      this.revealFogAroundPlayer();
+    }
+    this.player.syncScreen();
+    this.emitMapSnapshot();
+    this.emitShiftHud();
+    return Math.hypot(this.player.worldX - startX, this.player.worldY - startY);
   }
 
   private cleanup(): void {
@@ -442,7 +466,21 @@ export class WorldScene extends Phaser.Scene {
       energy: this.shiftSystem.energy,
       cooldownLeft: this.shiftSystem.cooldownLeft,
       canShift: this.shiftSystem.canShift(),
+      nearGate: this.playerNearShiftGate(),
     });
+  }
+
+  /** True when a layer gate is within ~1.5 tiles of the player. */
+  private playerNearShiftGate(): boolean {
+    if (!this.dungeon) return false;
+    const px = Math.floor(this.player.worldX);
+    const py = Math.floor(this.player.worldY);
+    for (let dy = -1; dy <= 1; dy++) {
+      for (let dx = -1; dx <= 1; dx++) {
+        if (this.dungeon.layerGates[py + dy]?.[px + dx]) return true;
+      }
+    }
+    return false;
   }
 
   private tryPlayerShift(): void {
@@ -458,7 +496,16 @@ export class WorldScene extends Phaser.Scene {
     this.syncEnemyShiftLayers(layer);
     const i = this.shiftFxIntensity;
     const tileTint = layerTileTint(layer, i);
-    for (const s of this.tileSprites) s.setTint(tileTint);
+    for (const s of this.tileSprites) {
+      const gate = s.getData('gate') as ShiftLayerId | null;
+      if (gate) {
+        // Keep gate identity visible under layer wash.
+        const base = gate === 'ash' ? 0xc8e8ff : 0x7ad4e8;
+        s.setTint(blendTint(base, tileTint, 0.35 * i));
+      } else {
+        s.setTint(tileTint);
+      }
+    }
     const propTint = layerPropTint(layer, i);
     for (const d of this.decor) {
       d.iterate((obj: Phaser.GameObjects.GameObject) => {
@@ -951,6 +998,7 @@ export class WorldScene extends Phaser.Scene {
     y: number,
     key: string,
     fallbackColor: number,
+    gate: ShiftLayerId | null = null,
   ): void {
     if (hasArt(this, key)) {
       const { screenX, screenY } = worldToScreen(x, y);
@@ -959,10 +1007,29 @@ export class WorldScene extends Phaser.Scene {
         .setOrigin(0.5, 0.5)
         .setScale(TILE_ART_SCALE)
         .setDepth(-1000);
+      img.setData('gate', gate);
+      // Gate tiles: cyan edge so layer locks are not confused with floor.
+      if (gate) {
+        img.setTint(gate === 'ash' ? 0xc8e8ff : 0x7ad4e8);
+        this.strokeIsoTileOutline(
+          this.tiles,
+          x,
+          y,
+          gate === 'ash' ? 0xa0d4ff : 0x40c8e0,
+        );
+      }
       this.tileSprites.push(img);
       return;
     }
     this.strokeIsoTile(this.tiles, x, y, fallbackColor);
+    if (gate) {
+      this.strokeIsoTileOutline(
+        this.tiles,
+        x,
+        y,
+        gate === 'ash' ? 0xa0d4ff : 0x40c8e0,
+      );
+    }
   }
 
   private drawHubTiles(): void {
@@ -1090,8 +1157,9 @@ export class WorldScene extends Phaser.Scene {
         } else {
           key = 'tile_dungeon_2';
         }
-        this.placeFloorTile(x, y, key, shade);
-        if ((x * 17 + y * 31) % 19 === 0) {
+        const gate = map.layerGates[y]![x] ?? null;
+        this.placeFloorTile(x, y, key, shade, gate);
+        if ((x * 17 + y * 31) % 19 === 0 && !gate) {
           const { screenX, screenY } = worldToScreen(x, y);
           this.tiles.fillStyle(0x3a6088, 0.4);
           this.tiles.fillCircle(screenX, screenY, 3);
@@ -1099,6 +1167,24 @@ export class WorldScene extends Phaser.Scene {
       }
     }
     this.tiles.setDepth(-999);
+  }
+
+  /** Iso diamond outline for shift-gate tiles. */
+  private strokeIsoTileOutline(
+    g: Phaser.GameObjects.Graphics,
+    x: number,
+    y: number,
+    color: number,
+  ): void {
+    const { screenX, screenY } = worldToScreen(x, y);
+    g.lineStyle(2, color, 0.85);
+    g.beginPath();
+    g.moveTo(screenX, screenY - 16);
+    g.lineTo(screenX + 32, screenY);
+    g.lineTo(screenX, screenY + 16);
+    g.lineTo(screenX - 32, screenY);
+    g.closePath();
+    g.strokePath();
   }
 
   /** Cheap iso diamond — inset face, no ellipses. */
@@ -1180,6 +1266,14 @@ export class WorldScene extends Phaser.Scene {
         gather: false,
         skill: false,
       });
+    }
+
+    if (gameState.inRift) {
+      const near = this.playerNearShiftGate();
+      if (near !== this.lastNearGate) {
+        this.lastNearGate = near;
+        this.emitShiftHud();
+      }
     }
 
     gameState.skills.tick(dt);

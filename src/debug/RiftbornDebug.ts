@@ -65,6 +65,8 @@ export type RiftbornApi = {
   enterRift: () => boolean;
   /** Warp onto a diagonal corridor bend (rift only). */
   gotoDiagonalCorridor: () => boolean;
+  /** Walk along a stair corridor with real move; returns distance. */
+  walkDiagonalCorridor: (steps?: number) => number;
 };
 
 export type RiftbornSnapshotSource = {
@@ -83,6 +85,8 @@ export type RiftbornDebugHooks = {
   enterRift?: () => boolean;
   /** Warp onto a diagonal corridor bend (rift only). */
   gotoDiagonalCorridor?: () => boolean;
+  /** Walk along a stair corridor with real move; returns distance. */
+  walkDiagonalCorridor?: (steps?: number) => number;
 };
 
 declare global {
@@ -124,6 +128,7 @@ function buildSnapshot(src: RiftbornSnapshotSource): RiftbornSnapshot {
 let source: (() => RiftbornSnapshotSource) | null = null;
 let enterRiftHook: (() => boolean) | null = null;
 let gotoDiagonalHook: (() => boolean) | null = null;
+let walkDiagonalHook: ((steps?: number) => number) | null = null;
 
 /** Publish live world state for Cursor agents / Playwright. */
 export function installRiftbornDebug(
@@ -133,10 +138,12 @@ export function installRiftbornDebug(
     source = getSource;
     enterRiftHook = null;
     gotoDiagonalHook = null;
+    walkDiagonalHook = null;
   } else {
     source = getSource.getSource;
     enterRiftHook = getSource.enterRift ?? null;
     gotoDiagonalHook = getSource.gotoDiagonalCorridor ?? null;
+    walkDiagonalHook = getSource.walkDiagonalCorridor ?? null;
   }
   const api: RiftbornApi = {
     get ready() {
@@ -179,6 +186,8 @@ export function installRiftbornDebug(
     openCharacter: () => gameEvents.emit('ui:openCharacter', {}),
     enterRift: () => (enterRiftHook ? enterRiftHook() : false),
     gotoDiagonalCorridor: () => (gotoDiagonalHook ? gotoDiagonalHook() : false),
+    walkDiagonalCorridor: (steps?: number) =>
+      walkDiagonalHook ? walkDiagonalHook(steps) : 0,
   };
   window.__RIFTBORN = api;
 }
@@ -187,6 +196,7 @@ export function clearRiftbornDebug(): void {
   source = null;
   enterRiftHook = null;
   gotoDiagonalHook = null;
+  walkDiagonalHook = null;
   if (window.__RIFTBORN) {
     window.__RIFTBORN = {
       ready: false,
@@ -209,6 +219,7 @@ export function clearRiftbornDebug(): void {
       openCharacter: () => {},
       enterRift: () => false,
       gotoDiagonalCorridor: () => false,
+      walkDiagonalCorridor: () => 0,
     };
   }
 }
