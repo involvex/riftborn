@@ -31,6 +31,17 @@ function carveRoom(
   }
 }
 
+/** Paint a 2×2 floor brush so corridors stay ≥2 tiles wide (incl. stairs). */
+function carveBrush2(cells: DungeonCell[][], x: number, y: number): void {
+  for (let dy = 0; dy < 2; dy++) {
+    for (let dx = 0; dx < 2; dx++) {
+      const xx = x + dx;
+      const yy = y + dy;
+      if (cells[yy]?.[xx] !== undefined) cells[yy][xx] = 1;
+    }
+  }
+}
+
 function carveCorridor(
   cells: DungeonCell[][],
   x1: number,
@@ -42,11 +53,11 @@ function carveCorridor(
   let x = x1;
   let y = y1;
   while (x !== x2 || y !== y2) {
-    cells[y][x] = 1;
+    carveBrush2(cells, x, y);
     if (x !== x2 && (y === y2 || rnd() > 0.5)) x += x < x2 ? 1 : -1;
     else if (y !== y2) y += y < y2 ? 1 : -1;
   }
-  cells[y2][x2] = 1;
+  carveBrush2(cells, x2, y2);
 }
 
 /** Room-and-corridor procedural rift dungeon. Depth 1–10 scales packs. */
@@ -168,4 +179,77 @@ export function isWalkable(map: DungeonMap, x: number, y: number): boolean {
   const ix = Math.floor(x);
   const iy = Math.floor(y);
   return map.cells[iy]?.[ix] === 1;
+}
+
+function cellInRooms(
+  x: number,
+  y: number,
+  rooms: { x: number; y: number; w: number; h: number }[],
+): boolean {
+  return rooms.some(
+    (r) => x >= r.x && x < r.x + r.w && y >= r.y && y < r.y + r.h,
+  );
+}
+
+function nearRoom(
+  x: number,
+  y: number,
+  rooms: { x: number; y: number; w: number; h: number }[],
+  margin = 1,
+): boolean {
+  for (let dy = -margin; dy <= margin; dy++) {
+    for (let dx = -margin; dx <= margin; dx++) {
+      if (cellInRooms(x + dx, y + dy, rooms)) return true;
+    }
+  }
+  return false;
+}
+
+function axisFloorRun(
+  cells: DungeonCell[][],
+  x: number,
+  y: number,
+  dx: number,
+  dy: number,
+): number {
+  let n = 1;
+  for (let i = 1; i < 8; i++) {
+    if (cells[y + dy * i]?.[x + dx * i] !== 1) break;
+    n += 1;
+  }
+  for (let i = 1; i < 8; i++) {
+    if (cells[y - dy * i]?.[x - dx * i] !== 1) break;
+    n += 1;
+  }
+  return n;
+}
+
+/**
+ * Pick a floor cell on a narrow diagonal (stair-step) corridor for
+ * screenshots. Prefers ≥1 tile from rooms and cross-section ≈2.
+ */
+export function findDiagonalCorridorCell(
+  map: DungeonMap,
+): { x: number; y: number } | null {
+  let best: { x: number; y: number; score: number } | null = null;
+  for (let y = 2; y < map.height - 3; y++) {
+    for (let x = 2; x < map.width - 3; x++) {
+      if (map.cells[y]![x] !== 1) continue;
+      if (cellInRooms(x, y, map.rooms)) continue;
+      if (nearRoom(x, y, map.rooms, 1)) continue;
+      // Stair-step through this cell
+      if (map.cells[y + 1]![x + 1] !== 1) continue;
+      if (map.cells[y - 1]![x - 1] !== 1) continue;
+      if (cellInRooms(x + 1, y + 1, map.rooms)) continue;
+      if (cellInRooms(x - 1, y - 1, map.rooms)) continue;
+      const wH = axisFloorRun(map.cells, x, y, 1, 0);
+      const wV = axisFloorRun(map.cells, x, y, 0, 1);
+      const cross = Math.min(wH, wV);
+      if (cross < 2 || cross > 4) continue;
+      // Prefer minimal cross-section (true corridor feel).
+      const score = cross * 100 + wH + wV;
+      if (!best || score < best.score) best = { x, y, score };
+    }
+  }
+  return best ? { x: best.x, y: best.y } : null;
 }

@@ -58,11 +58,15 @@ export function stampShiftGates(
     // Skip room interiors near start/boss
     if (inRoom(p.x, p.y, start) || inRoom(p.x, p.y, boss)) continue;
     const layer: ShiftLayerId = stamped % 2 === 0 ? 'shadow' : 'ash';
-    gates[p.y]![p.x] = layer;
+    stampGatePair(cells, gates, path, i, layer);
     stamped += 1;
     if (stamped >= 4 + Math.floor(rnd() * 3)) break;
   }
   // Ensure spawn & boss centers stay dual-layer
+  gates[sy]![sx] = null;
+  gates[by]![bx] = null;
+  ensureGatePairs(cells, gates);
+  // Re-clear after pair expansion (boss/spawn must stay dual)
   gates[sy]![sx] = null;
   gates[by]![bx] = null;
   return gates;
@@ -74,6 +78,78 @@ function inRoom(
   r: { x: number; y: number; w: number; h: number },
 ): boolean {
   return x >= r.x && x < r.x + r.w && y >= r.y && y < r.y + r.h;
+}
+
+/**
+ * Stamp a 2-tile-wide gate strip so 2×2 corridors cannot be bypassed
+ * on the ungated neighbor tile.
+ */
+function stampGatePair(
+  cells: DungeonCell[][],
+  gates: ShiftGateGrid,
+  path: { x: number; y: number }[],
+  i: number,
+  layer: ShiftLayerId,
+): void {
+  const p = path[i]!;
+  gates[p.y]![p.x] = layer;
+  const prev = path[i - 1];
+  const next = path[i + 1];
+  const alongX =
+    (prev && prev.y === p.y) || (next && next.y === p.y) ? true : false;
+  const alongY =
+    (prev && prev.x === p.x) || (next && next.x === p.x) ? true : false;
+  // Prefer perpendicular neighbor; fall back to any adjacent floor.
+  const candidates: [number, number][] = [];
+  if (alongX && !alongY) {
+    candidates.push([0, 1], [0, -1]);
+  } else if (alongY && !alongX) {
+    candidates.push([1, 0], [-1, 0]);
+  } else {
+    candidates.push([1, 0], [-1, 0], [0, 1], [0, -1]);
+  }
+  for (const [dx, dy] of candidates) {
+    const nx = p.x + dx;
+    const ny = p.y + dy;
+    if (cells[ny]?.[nx] !== 1) continue;
+    // Do not overwrite a different layer — leave for ensureGatePairs.
+    if (gates[ny]![nx] !== null && gates[ny]![nx] !== layer) continue;
+    gates[ny]![nx] = layer;
+    return;
+  }
+}
+
+const ORTHO: [number, number][] = [
+  [1, 0],
+  [-1, 0],
+  [0, 1],
+  [0, -1],
+];
+
+/** Expand orphan single-tile gates onto a dual (null) floor neighbor. */
+function ensureGatePairs(cells: DungeonCell[][], gates: ShiftGateGrid): void {
+  const h = cells.length;
+  const w = cells[0]?.length ?? 0;
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      const g = gates[y]![x];
+      if (g === null || cells[y]![x] !== 1) continue;
+      const hasPair = ORTHO.some(([dx, dy]) => {
+        const nx = x + dx;
+        const ny = y + dy;
+        return cells[ny]?.[nx] === 1 && gates[ny]?.[nx] === g;
+      });
+      if (hasPair) continue;
+      for (const [dx, dy] of ORTHO) {
+        const nx = x + dx;
+        const ny = y + dy;
+        if (cells[ny]?.[nx] !== 1) continue;
+        if (gates[ny]![nx] !== null) continue;
+        gates[ny]![nx] = g;
+        break;
+      }
+    }
+  }
 }
 
 function bfsFloorPath(
