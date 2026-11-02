@@ -5,6 +5,7 @@ import {
   computeTouchLayout,
   TOUCH_CHROME_COUNT,
   type TouchLayout,
+  type TouchPoint,
 } from './TouchLayout';
 
 /** Detect whether on-screen controls should show. */
@@ -26,6 +27,9 @@ export function shouldShowTouchControls(): boolean {
   return coarse || small;
 }
 
+const CHROME_AUTO_CLOSE_MS = 4000;
+const MENU_INDEX = TOUCH_CHROME_COUNT - 1;
+
 type Btn = {
   root: Phaser.GameObjects.Container;
   bg: Phaser.GameObjects.Arc;
@@ -44,7 +48,7 @@ const CHROME: ChromeEntry[] = [
 
 /**
  * Phone pads — stick+DASH left, ATK+skills+E right.
- * Top chrome tray toggled by tapping the minimap (☰).
+ * Top chrome tray toggled by tapping the minimap or ☰ (collapsed by default).
  */
 export class TouchControls {
   readonly root: Phaser.GameObjects.Container;
@@ -62,10 +66,13 @@ export class TouchControls {
   private shiftBtn!: Btn;
   private chromeBtns: Btn[] = [];
   private chromeOpen = false;
+  private chromeTimer: Phaser.Time.TimerEvent | null = null;
+  private chromeIgnoreOutsideUntil = 0;
   private metrics: TouchLayout | null = null;
   dx = 0;
   dy = 0;
   private active = false;
+  private interactDimmed = true;
 
   constructor(scene: Phaser.Scene) {
     this.scene = scene;
@@ -90,19 +97,29 @@ export class TouchControls {
       this.shiftBtn.root,
     ]);
 
-    this.chromeBtns = CHROME.slice(0, TOUCH_CHROME_COUNT).map((e) =>
-      this.makeBtn(e.label, e.stroke, () => {
-        audioBus.uiClick();
-        gameEvents.emit(e.event, {});
-        this.setChromeOpen(false);
-      }),
+    this.chromeBtns = CHROME.slice(0, TOUCH_CHROME_COUNT).map((e, i) =>
+      this.makeBtn(e.label, e.stroke, () => this.onChromeTap(i, e)),
     );
     this.root.add(this.chromeBtns.map((b) => b.root));
     this.setChromeOpen(false);
+    this.setInteractHint('E', true);
 
     gameEvents.on('ui:toggleTouchChrome', () => {
       if (!this.active) return;
       this.setChromeOpen(!this.chromeOpen);
+    });
+    gameEvents.on('ui:setTouchChrome', (p) => {
+      if (!this.active) return;
+      const open = !!(p as { open?: boolean }).open;
+      this.setChromeOpen(open);
+    });
+    gameEvents.on('ui:interactHint', (p) => {
+      const d = p as { label?: string; dimmed?: boolean };
+      this.setInteractHint(d.label ?? 'E', !!d.dimmed);
+    });
+
+    this.scene.input.on('pointerup', (p: Phaser.Input.Pointer) => {
+      this.maybeCloseChromeOutside(p.x, p.y);
     });
 
     this.layout();
@@ -135,10 +152,28 @@ export class TouchControls {
     }
   }
 
+  setInteractHint(label: string, dimmed: boolean): void {
+    this.interactDimmed = dimmed;
+    this.interact.label.setText(label);
+    const font =
+      label.length >= 5 ? '11px' : label.length >= 4 ? '12px' : '14px';
+    this.interact.label.setFontSize(font);
+    this.interact.root.setAlpha(dimmed ? 0.42 : 1);
+  }
+
   setChromeOpen(open: boolean): void {
     this.chromeOpen = open;
-    // Keep chrome reachable on phones — tray stays visible while active.
-    this.chromeBtns.forEach((b) => b.root.setVisible(this.active));
+    this.applyChromeVisibility();
+    this.clearChromeTimer();
+    if (open && this.active) {
+      this.chromeIgnoreOutsideUntil = this.scene.time.now + 80;
+      this.chromeTimer = this.scene.time.delayedCall(
+        CHROME_AUTO_CLOSE_MS,
+        () => {
+          this.setChromeOpen(false);
+        },
+      );
+    }
     gameEvents.emit('ui:touchChrome', { open });
   }
 
@@ -174,15 +209,72 @@ export class TouchControls {
       m.interact.x,
       m.interact.y,
       m.interact.r,
-      '14px',
+      this.interactDimmed ? '14px' : '12px',
     );
 
     this.chromeBtns.forEach((b, i) => {
       const c = m.chromeButtons[i];
       if (!c) return;
       this.placeBtn(b, c.x, c.y, c.r, c.r >= 22 ? '10px' : '9px');
-      b.root.setVisible(this.active);
     });
+    this.applyChromeVisibility();
+  }
+
+  private onChromeTap(index: number, entry: ChromeEntry): void {
+    audioBus.uiClick();
+    if (index === MENU_INDEX) {
+      if (!this.chromeOpen) {
+        this.setChromeOpen(true);
+        return;
+      }
+      gameEvents.emit(entry.event, {});
+      this.setChromeOpen(false);
+      return;
+    }
+    gameEvents.emit(entry.event, {});
+    this.setChromeOpen(false);
+  }
+
+  private applyChromeVisibility(): void {
+    this.chromeBtns.forEach((b, i) => {
+      const isMenu = i === MENU_INDEX;
+      // Collapsed: only ☰ stays as the expand affordance (+ minimap tap).
+      b.root.setVisible(this.active && (this.chromeOpen || isMenu));
+    });
+  }
+
+  private clearChromeTimer(): void {
+    if (this.chromeTimer) {
+      this.chromeTimer.remove(false);
+      this.chromeTimer = null;
+    }
+  }
+
+  private maybeCloseChromeOutside(px: number, py: number): void {
+    if (!this.active || !this.chromeOpen) return;
+    if (this.scene.time.now < this.chromeIgnoreOutsideUntil) return;
+    if (this.hitChromeOrMinimap(px, py)) {
+      // Keep tray open; refresh auto-close while using chrome.
+      this.clearChromeTimer();
+      this.chromeTimer = this.scene.time.delayedCall(
+        CHROME_AUTO_CLOSE_MS,
+        () => {
+          this.setChromeOpen(false);
+        },
+      );
+      return;
+    }
+    this.setChromeOpen(false);
+  }
+
+  private hitChromeOrMinimap(px: number, py: number): boolean {
+    const m = this.metrics;
+    if (!m) return false;
+    if (pointInRect(px, py, m.minimap)) return true;
+    for (const c of m.chromeButtons) {
+      if (pointInCircle(px, py, c)) return true;
+    }
+    return false;
   }
 
   private placeBtn(
@@ -289,4 +381,16 @@ export class TouchControls {
     const root = this.scene.add.container(0, 0, [bg, t]);
     return { root, bg, label: t };
   }
+}
+
+function pointInRect(
+  px: number,
+  py: number,
+  r: { x: number; y: number; w: number; h: number },
+): boolean {
+  return px >= r.x && px <= r.x + r.w && py >= r.y && py <= r.y + r.h;
+}
+
+function pointInCircle(px: number, py: number, c: TouchPoint): boolean {
+  return Math.hypot(px - c.x, py - c.y) <= c.r + 4;
 }
