@@ -5,12 +5,12 @@ import {
   FIGURE_CONTENT_PX,
   FIGURE_HEIGHT_TILES,
   FIGURE_WIDTH_TILES_MAX,
-  canTraverseWithFootprint,
   figureDrawScale,
   figureEliteDrawScale,
   figureVisibleTiles,
   footprintFits,
 } from './FigureScale';
+import { canTraverseWithFootprint } from './Movement';
 
 describe('figureDrawScale', () => {
   test('height lands in 1.3–1.5 tile heights', () => {

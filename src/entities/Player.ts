@@ -7,6 +7,7 @@ import {
   type FacingSign,
 } from '../core/IsoMath';
 import { figureDrawScale } from '../core/FigureScale';
+import { slideMove } from '../core/Movement';
 import {
   ensureGameSprites,
   isPaintedSprite,
@@ -136,16 +137,21 @@ export class Player {
     this.applyFacing();
 
     const len = Math.hypot(dx, dy) || 1;
-    const nx = this.worldX + (dx / len) * this.speed * dt;
-    const ny = this.worldY + (dy / len) * this.speed * dt;
-    const tryX = Phaser.Math.Clamp(nx, 0.5, this.maxX);
-    const tryY = Phaser.Math.Clamp(ny, 0.5, this.maxY);
-
-    if (!this.walkCheck || this.walkCheck(tryX, this.worldY)) {
-      this.worldX = tryX;
-    }
-    if (!this.walkCheck || this.walkCheck(this.worldX, tryY)) {
-      this.worldY = tryY;
+    const stepX = (dx / len) * this.speed * dt;
+    const stepY = (dy / len) * this.speed * dt;
+    if (this.walkCheck) {
+      const res = slideMove(
+        this.walkCheck,
+        this.worldX,
+        this.worldY,
+        stepX,
+        stepY,
+      );
+      this.worldX = Phaser.Math.Clamp(res.x, 0.5, this.maxX);
+      this.worldY = Phaser.Math.Clamp(res.y, 0.5, this.maxY);
+    } else {
+      this.worldX = Phaser.Math.Clamp(this.worldX + stepX, 0.5, this.maxX);
+      this.worldY = Phaser.Math.Clamp(this.worldY + stepY, 0.5, this.maxY);
     }
 
     gameState.worldX = this.worldX;

@@ -75,42 +75,6 @@ export function footprintFits(
   return true;
 }
 
-/**
- * Simulate axis-separated steps through a corridor (mirrors Player.move).
- * Returns false if blocked before reaching the goal.
- */
-export function canTraverseWithFootprint(
-  walkAt: (x: number, y: number) => boolean,
-  start: { x: number; y: number },
-  goal: { x: number; y: number },
-  radius: number = FIGURE_COLLISION_RADIUS,
-  step = 0.1,
-): boolean {
-  let x = start.x;
-  let y = start.y;
-  const maxIter = 500;
-  for (let i = 0; i < maxIter; i++) {
-    const dx = goal.x - x;
-    const dy = goal.y - y;
-    if (Math.hypot(dx, dy) <= step) {
-      return footprintFits(walkAt, goal.x, goal.y, radius);
-    }
-    const len = Math.hypot(dx, dy) || 1;
-    const nx = x + (dx / len) * step;
-    const ny = y + (dy / len) * step;
-    // Axis-separated like Player.move
-    if (footprintFits(walkAt, nx, y, radius)) x = nx;
-    if (footprintFits(walkAt, x, ny, radius)) y = ny;
-    if (
-      !footprintFits(walkAt, nx, y, radius) &&
-      !footprintFits(walkAt, x, ny, radius)
-    ) {
-      return false;
-    }
-  }
-  return false;
-}
-
 /** Frame size used by painted sheets (for docs / asserts). */
 export const FIGURE_FRAME = {
   w: FIGURE_FRAME_PX,
