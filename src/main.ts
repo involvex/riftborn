@@ -6,10 +6,23 @@ import { WorldScene } from './scenes/WorldScene';
 import { gameEvents } from './core/EventBus';
 import { currentBackContext } from './core/GameNavState';
 import { installHistoryBackGuard } from './core/HistoryBackGuard';
+import {
+  applyGraphicsProfile,
+  currentGraphicsProfile,
+} from './core/GraphicsQuality';
 
 const parent = document.getElementById('app');
+const bootProfile = currentGraphicsProfile();
+const bootW = Math.max(
+  320,
+  Math.floor(window.innerWidth * bootProfile.renderScale),
+);
+const bootH = Math.max(
+  180,
+  Math.floor(window.innerHeight * bootProfile.renderScale),
+);
 
-new Phaser.Game({
+const game = new Phaser.Game({
   type: Phaser.AUTO,
   parent: parent ?? undefined,
   backgroundColor: '#0a0c10',
@@ -17,9 +30,10 @@ new Phaser.Game({
     createContainer: true,
   },
   scale: {
-    mode: Phaser.Scale.RESIZE,
-    width: window.innerWidth,
-    height: window.innerHeight,
+    // NONE — GraphicsQuality owns buffer size + CSS stretch on mobile.
+    mode: Phaser.Scale.NONE,
+    width: bootW,
+    height: bootH,
     autoCenter: Phaser.Scale.CENTER_BOTH,
     autoRound: true,
   },
@@ -36,6 +50,8 @@ new Phaser.Game({
     powerPreference: 'high-performance',
   },
 });
+
+applyGraphicsProfile(game);
 
 /** Android / browser Back stays in-game until the title screen. */
 installHistoryBackGuard({

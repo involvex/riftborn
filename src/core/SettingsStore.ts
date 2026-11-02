@@ -18,6 +18,9 @@ export type HotkeyAction =
 
 export type HotkeyMap = Record<HotkeyAction, string>;
 
+/** Auto = Low on touch / coarse devices, High on desktop. */
+export type GraphicsQualitySetting = 'auto' | 'high' | 'low';
+
 export type GameSettings = {
   masterVolume: number;
   sfxVolume: number;
@@ -30,6 +33,11 @@ export type GameSettings = {
   autoSellJunk: boolean;
   /** 0 / 0.5 / 1 — ash/shadow transition intensity. */
   shiftFxIntensity: number;
+  /**
+   * Render/VFX budget. Auto picks Low on phones so WebView stays
+   * near 60 fps; override in Settings.
+   */
+  graphicsQuality: GraphicsQualitySetting;
   hotkeys: HotkeyMap;
 };
 
@@ -63,6 +71,7 @@ export const DEFAULT_SETTINGS: GameSettings = {
   screenShake: true,
   autoSellJunk: false,
   shiftFxIntensity: 1,
+  graphicsQuality: 'auto',
   hotkeys: { ...DEFAULT_HOTKEYS },
 };
 
@@ -80,6 +89,11 @@ export function shiftFxIntensityLabel(v: number): string {
 
 function clamp01(n: number): number {
   return Math.min(1, Math.max(0, n));
+}
+
+function parseGraphicsQuality(v: unknown): GraphicsQualitySetting {
+  if (v === 'high' || v === 'low' || v === 'auto') return v;
+  return DEFAULT_SETTINGS.graphicsQuality;
 }
 
 export class SettingsStore {
@@ -110,6 +124,7 @@ export class SettingsStore {
         shiftFxIntensity: clamp01(
           parsed.shiftFxIntensity ?? DEFAULT_SETTINGS.shiftFxIntensity,
         ),
+        graphicsQuality: parseGraphicsQuality(parsed.graphicsQuality),
       };
     } catch {
       this.data = structuredClone(DEFAULT_SETTINGS);

@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { currentGraphicsProfile } from '../core/GraphicsQuality';
 import { worldToScreen } from '../core/IsoMath';
 
 export type CombatBurstKind = 'slash' | 'hit' | 'crit' | 'burn';
@@ -9,6 +10,8 @@ const KEYS: Record<CombatBurstKind, string> = {
   crit: 'fx_shrapflash',
   burn: 'fx_fireburst',
 };
+
+let liveBursts = 0;
 
 /** Preload converted hackcraft particle PNGs. */
 export function preloadCombatVfx(scene: Phaser.Scene): void {
@@ -38,16 +41,22 @@ export function playCombatBurst(
   kind: CombatBurstKind = 'hit',
   facing: 1 | -1 = 1,
 ): void {
+  const profile = currentGraphicsProfile();
+  // Low: keep crits / player slash; drop routine hit/burn overdraw.
+  if (profile.tier === 'low' && (kind === 'hit' || kind === 'burn')) return;
+  if (liveBursts >= profile.particleCap) return;
+
   const texKey = KEYS[kind];
   if (!scene.textures.exists(texKey)) return;
   const { screenX, screenY } = worldToScreen(worldX, worldY);
   const img = scene.add
     .image(screenX + facing * 10, screenY - 14, texKey)
     .setDepth(9_600)
-    .setScale(0.55)
+    .setScale(profile.tier === 'low' ? 0.42 : 0.55)
     .setAlpha(0.95)
     .setBlendMode(Phaser.BlendModes.ADD);
   if (facing < 0) img.setFlipX(true);
+  liveBursts += 1;
   scene.tweens.add({
     targets: img,
     alpha: 0,
@@ -55,6 +64,9 @@ export function playCombatBurst(
     y: img.y - 16,
     duration: kind === 'slash' ? 180 : 260,
     ease: 'Cubic.Out',
-    onComplete: () => img.destroy(),
+    onComplete: () => {
+      liveBursts = Math.max(0, liveBursts - 1);
+      img.destroy();
+    },
   });
 }

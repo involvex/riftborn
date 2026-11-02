@@ -11,6 +11,11 @@ import type { CharacterSave } from '../types/save';
 import { audioBus } from '../core/AudioBus';
 import { firstEmptySlot, titleActions } from '../core/TitleFlow';
 import {
+  cycleGraphicsQuality,
+  graphicsQualityLabel,
+  refreshGraphicsProfile,
+} from '../core/GraphicsQuality';
+import {
   cycleShiftFxIntensity,
   settingsStore,
   shiftFxIntensityLabel,
@@ -388,12 +393,23 @@ export class BootScene extends Phaser.Scene {
           this.renderTitleSettings();
         },
       },
+      {
+        label: `Graphics: ${graphicsQualityLabel(s.graphicsQuality)}`,
+        onClick: () => {
+          settingsStore.save({
+            graphicsQuality: cycleGraphicsQuality(s.graphicsQuality),
+          });
+          refreshGraphicsProfile();
+          gameEvents.emit(Events.SETTINGS_CHANGED);
+          this.renderTitleSettings();
+        },
+      },
     ];
-    let y = -120;
+    let y = -140;
     for (const row of rows) {
       const btn = this.makeButton(0, y, row.label, row.onClick);
       this.settingsBody.add(btn);
-      y += 48;
+      y += 42;
     }
   }
 

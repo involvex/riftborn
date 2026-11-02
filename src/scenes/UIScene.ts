@@ -7,12 +7,18 @@ import {
   keyCodeFromSetting,
 } from '../core/Hotkeys';
 import {
+  cycleGraphicsQuality,
+  graphicsQualityLabel,
+  refreshGraphicsProfile,
+} from '../core/GraphicsQuality';
+import {
   cycleShiftFxIntensity,
   settingsStore,
   shiftFxIntensityLabel,
   type HotkeyAction,
   DEFAULT_HOTKEYS,
 } from '../core/SettingsStore';
+import { DamageNumberPool } from '../ui/DamageNumberPool';
 import { listRecipes } from '../systems/CraftingSystem';
 import { describeGearFull } from '../systems/ItemGen';
 import { getItemDef } from '../systems/InventorySystem';
@@ -36,7 +42,6 @@ import { shouldShowTouchControls, TouchControls } from '../ui/TouchControls';
 import { TutorialOverlay } from '../ui/TutorialOverlay';
 import { formatPlayTime, SummaryOverlay } from '../ui/SummaryOverlay';
 import { uiPanelSize } from '../core/UiScale';
-import { COMBAT_FEEL, isCombatCrit } from '../render/CombatFeel';
 import {
   navEnterPlay,
   navSetOverlay,
@@ -62,6 +67,7 @@ export class UIScene extends Phaser.Scene {
   private menuBody!: Phaser.GameObjects.Container;
   private charBody!: Phaser.GameObjects.Text;
   private damageLayer!: Phaser.GameObjects.Container;
+  private damagePool!: DamageNumberPool;
   private inventoryPanel!: InventoryPanel;
   private shopPanel!: ShopPanel;
   private traderPanel!: TraderPanel;
@@ -123,6 +129,7 @@ export class UIScene extends Phaser.Scene {
       .setAlpha(0);
 
     this.damageLayer = this.add.container(0, 0).setDepth(10_002);
+    this.damagePool = new DamageNumberPool(this, this.damageLayer);
     this.inventoryPanel = new InventoryPanel(this);
     this.shopPanel = new ShopPanel(this);
     this.traderPanel = new TraderPanel(this);
@@ -239,7 +246,7 @@ export class UIScene extends Phaser.Scene {
           amount: number;
           kind: string;
         };
-        this.spawnDamageNumber(d.screenX, d.screenY, d.amount, d.kind);
+        this.damagePool.spawn(d.screenX, d.screenY, d.amount, d.kind);
       }),
       gameEvents.on('ui:toast', (p) => {
         const d = p as { text: string; color?: string };
@@ -399,6 +406,7 @@ export class UIScene extends Phaser.Scene {
       gameEvents.on(Events.SETTINGS_CHANGED, () => {
         this.bindHotkeys();
         this.hotkeyDock.refresh();
+        refreshGraphicsProfile();
       }),
       gameEvents.on('ui:mapSnapshot', (p) => {
         const snap = p as MapSnapshot;
@@ -789,10 +797,10 @@ export class UIScene extends Phaser.Scene {
     const touch = shouldShowTouchControls();
     const { w, h } = uiPanelSize(
       this,
-      touch ? 0.72 : 0.55,
-      touch ? 0.78 : 0.7,
-      touch ? 380 : 420,
-      touch ? 420 : 460,
+      touch ? 0.78 : 0.58,
+      touch ? 0.9 : 0.82,
+      touch ? 400 : 440,
+      touch ? 500 : 540,
     );
     this.menuBg.setSize(w, h);
     const title = this.menuPanel.list[1] as Phaser.GameObjects.Text;
@@ -812,14 +820,18 @@ export class UIScene extends Phaser.Scene {
     y: number,
     label: string,
     onClick: () => void,
+    opts?: { fontSize?: string; padY?: number },
   ): Phaser.GameObjects.Text {
+    const touch = shouldShowTouchControls();
+    const fontSize = opts?.fontSize ?? (touch ? '15px' : '18px');
+    const padY = opts?.padY ?? (touch ? 5 : 8);
     const btn = this.add
       .text(0, y, label, {
         fontFamily: 'Georgia, serif',
-        fontSize: '18px',
+        fontSize,
         color: '#0a0c10',
         backgroundColor: '#c4a574',
-        padding: { x: 16, y: 8 },
+        padding: { x: 14, y: padY },
       })
       .setOrigin(0.5)
       .setInteractive({ useHandCursor: true });
@@ -859,8 +871,9 @@ export class UIScene extends Phaser.Scene {
     if (this.menuPage === 'settings') {
       title.setText('Settings');
       const s = settingsStore.get();
+      const row = (i: number) => -175 + i * 36;
       this.menuButton(
-        -140,
+        row(0),
         `Master vol: ${Math.round(s.masterVolume * 100)}%`,
         () => {
           const next = (s.masterVolume + 0.1) % 1.1;
@@ -871,15 +884,21 @@ export class UIScene extends Phaser.Scene {
           this.renderMenuPage();
         },
       );
-      this.menuButton(-90, `SFX vol: ${Math.round(s.sfxVolume * 100)}%`, () => {
-        const next = (s.sfxVolume + 0.1) % 1.1;
-        settingsStore.save({ sfxVolume: Math.min(1, Number(next.toFixed(1))) });
-        gameEvents.emit(Events.SETTINGS_CHANGED);
-        audioBus.uiClick();
-        this.renderMenuPage();
-      });
       this.menuButton(
-        -40,
+        row(1),
+        `SFX vol: ${Math.round(s.sfxVolume * 100)}%`,
+        () => {
+          const next = (s.sfxVolume + 0.1) % 1.1;
+          settingsStore.save({
+            sfxVolume: Math.min(1, Number(next.toFixed(1))),
+          });
+          gameEvents.emit(Events.SETTINGS_CHANGED);
+          audioBus.uiClick();
+          this.renderMenuPage();
+        },
+      );
+      this.menuButton(
+        row(2),
         `Music vol: ${Math.round(s.musicVolume * 100)}%`,
         () => {
           const next = (s.musicVolume + 0.1) % 1.1;
@@ -890,13 +909,13 @@ export class UIScene extends Phaser.Scene {
           this.renderMenuPage();
         },
       );
-      this.menuButton(10, `Mute: ${s.mute ? 'ON' : 'OFF'}`, () => {
+      this.menuButton(row(3), `Mute: ${s.mute ? 'ON' : 'OFF'}`, () => {
         settingsStore.save({ mute: !s.mute });
         gameEvents.emit(Events.SETTINGS_CHANGED);
         this.renderMenuPage();
       });
       this.menuButton(
-        50,
+        row(4),
         `Screen shake: ${s.screenShake ? 'ON' : 'OFF'}`,
         () => {
           settingsStore.save({ screenShake: !s.screenShake });
@@ -905,7 +924,7 @@ export class UIScene extends Phaser.Scene {
         },
       );
       this.menuButton(
-        100,
+        row(5),
         `Damage numbers: ${s.showDamageNumbers ? 'ON' : 'OFF'}`,
         () => {
           settingsStore.save({ showDamageNumbers: !s.showDamageNumbers });
@@ -914,7 +933,7 @@ export class UIScene extends Phaser.Scene {
         },
       );
       this.menuButton(
-        150,
+        row(6),
         `Auto-sell junk: ${s.autoSellJunk ? 'ON' : 'OFF'}`,
         () => {
           settingsStore.save({ autoSellJunk: !s.autoSellJunk });
@@ -923,7 +942,7 @@ export class UIScene extends Phaser.Scene {
         },
       );
       this.menuButton(
-        200,
+        row(7),
         `Shift FX: ${shiftFxIntensityLabel(s.shiftFxIntensity)}`,
         () => {
           settingsStore.save({
@@ -933,11 +952,23 @@ export class UIScene extends Phaser.Scene {
           this.renderMenuPage();
         },
       );
-      this.menuButton(250, 'Hotkeys…', () => {
+      this.menuButton(
+        row(8),
+        `Graphics: ${graphicsQualityLabel(s.graphicsQuality)}`,
+        () => {
+          settingsStore.save({
+            graphicsQuality: cycleGraphicsQuality(s.graphicsQuality),
+          });
+          refreshGraphicsProfile();
+          gameEvents.emit(Events.SETTINGS_CHANGED);
+          this.renderMenuPage();
+        },
+      );
+      this.menuButton(row(9), 'Hotkeys…', () => {
         this.menuPage = 'hotkeys';
         this.renderMenuPage();
       });
-      this.menuButton(300, 'Back', () => {
+      this.menuButton(row(10), 'Back', () => {
         this.menuPage = 'root';
         this.renderMenuPage();
       });
@@ -1119,52 +1150,6 @@ export class UIScene extends Phaser.Scene {
       alpha: 0,
       delay: 1800,
       duration: 500,
-    });
-  }
-
-  private spawnDamageNumber(
-    x: number,
-    y: number,
-    amount: number,
-    kind: string,
-  ): void {
-    const style = COMBAT_FEEL.damageNumbers;
-    const toPlayer = kind === 'player';
-    const crit = !toPlayer && isCombatCrit(amount);
-    const color = toPlayer
-      ? style.playerColor
-      : crit
-        ? style.critColor
-        : style.enemyColor;
-    const size = toPlayer
-      ? style.fontPlayer
-      : crit
-        ? style.fontCrit
-        : style.fontEnemy;
-    const drift = (Math.random() - 0.5) * 18;
-    const label = crit ? `${amount}!` : String(amount);
-    const t = this.add
-      .text(x + drift, y, label, {
-        fontFamily: 'Segoe UI, sans-serif',
-        fontSize: size,
-        color,
-        fontStyle: 'bold',
-        stroke: style.stroke,
-        strokeThickness: style.strokeThickness,
-      })
-      .setOrigin(0.5)
-      .setDepth(40)
-      .setScale(toPlayer ? 1 : crit ? 1.25 : 1.15);
-    this.damageLayer.add(t);
-    this.tweens.add({
-      targets: t,
-      y: y - (toPlayer ? 36 : crit ? 52 : 44),
-      x: x + drift * 1.4,
-      alpha: 0,
-      scale: toPlayer ? 0.85 : crit ? 1.05 : 0.95,
-      duration: toPlayer ? 700 : crit ? 780 : 650,
-      ease: 'Cubic.easeOut',
-      onComplete: () => t.destroy(),
     });
   }
 

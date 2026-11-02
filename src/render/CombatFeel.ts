@@ -1,9 +1,11 @@
+import { currentGraphicsProfile } from '../core/GraphicsQuality';
 import { settingsStore } from '../core/SettingsStore';
 
 /**
  * Toggleable combat juice (hitstop, shake, damage-number styling).
  * Flip `enabled` or individual flags to mute without deleting call sites.
  * Player-facing screen shake also respects SettingsStore.screenShake.
+ * Mobile Low quality scales durations via GraphicsQuality.juiceScale.
  */
 
 export const COMBAT_FEEL = {
@@ -50,22 +52,37 @@ export function combatShakeParams(kind: CombatShakeKind): {
   const c = COMBAT_FEEL;
   if (!c.enabled || !c.shakeEnabled) return { ms: 0, intensity: 0 };
   if (!settingsStore.get().screenShake) return { ms: 0, intensity: 0 };
+  const juice = currentGraphicsProfile().juiceScale;
+  let ms: number = c.shakeHitMs;
+  let intensity: number = c.shakeHitIntensity;
   switch (kind) {
     case 'crit':
-      return { ms: c.shakeCritMs, intensity: c.shakeCritIntensity };
+      ms = c.shakeCritMs;
+      intensity = c.shakeCritIntensity;
+      break;
     case 'boss':
-      return { ms: c.shakeBossMs, intensity: c.shakeBossIntensity };
+      ms = c.shakeBossMs;
+      intensity = c.shakeBossIntensity;
+      break;
     case 'playerHit':
-      return { ms: c.shakePlayerHitMs, intensity: c.shakePlayerHitIntensity };
+      ms = c.shakePlayerHitMs;
+      intensity = c.shakePlayerHitIntensity;
+      break;
     default:
-      return { ms: c.shakeHitMs, intensity: c.shakeHitIntensity };
+      break;
   }
+  return {
+    ms: Math.round(ms * juice),
+    intensity: intensity * Math.min(1, juice + 0.25),
+  };
 }
 
 export function combatHitstopMs(crit: boolean): number {
   const c = COMBAT_FEEL;
   if (!c.enabled || !c.hitstopEnabled) return 0;
-  return crit ? c.hitstopCritMs : c.hitstopMs;
+  const juice = currentGraphicsProfile().juiceScale;
+  const base = crit ? c.hitstopCritMs : c.hitstopMs;
+  return Math.round(base * juice);
 }
 
 export function isCombatCrit(damage: number): boolean {
