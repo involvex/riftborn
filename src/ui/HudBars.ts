@@ -3,6 +3,7 @@ import { uiFont } from '../core/UiScale';
 import { gameState } from '../systems/GameState';
 import { MAX_LEVEL, xpForLevel } from '../systems/ProgressionSystem';
 import { shouldShowTouchControls } from './TouchControls';
+import { computeTouchLayout } from './TouchLayout';
 
 const UI_FONT = 'Consolas, "Courier New", monospace';
 
@@ -106,14 +107,21 @@ export class HudBars {
 
   layout(): void {
     const touch = shouldShowTouchControls();
-    this.barW = touch
-      ? Math.round(Math.min(160, Math.max(120, this.scene.scale.width * 0.22)))
-      : this.computeBarW();
+    if (touch) {
+      const m = computeTouchLayout(
+        this.scene.scale.width,
+        this.scene.scale.height,
+      );
+      this.barW = Math.round(Math.min(160, Math.max(120, m.status.w - 24)));
+      this.root.setPosition(m.status.x, m.status.y);
+    } else {
+      this.barW = this.computeBarW();
+      this.root.setPosition(14, 12);
+    }
     this.hpBg.width = this.barW;
     this.xpBg.width = this.barW;
     this.hpText.setX(this.barW / 2);
     this.xpText.setX(this.barW / 2);
-    this.root.setPosition(touch ? 8 : 14, touch ? 6 : 12);
     this.meta.setFontSize(uiFont(this.scene, touch ? 11 : 15, 10, 18));
     this.meta.setWordWrapWidth(
       Math.min(this.barW + 24, this.scene.scale.width * 0.4),

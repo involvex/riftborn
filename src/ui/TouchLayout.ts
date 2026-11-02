@@ -1,15 +1,15 @@
 /**
- * Phone HUD geometry (landscape-first).
+ * Phone HUD geometry (landscape-first) as pure rectangles / circles.
  *
  * Left:  stick + DASH
- * Right: skills column | E | ATK  (no overlaps)
- * Top:   chrome tray toggled via minimap
- *
- *        [1]
- *        [2]  [E] [ATK]
- *        [3]
+ * Right: skills column | E | ATK
+ * Top:   status (HP/XP) left; minimap right; chrome under minimap
+ *        (never over the status strip).
  */
+
 export type TouchPoint = { x: number; y: number; r: number };
+
+export type Rect = { x: number; y: number; w: number; h: number };
 
 export type TouchLayout = {
   pad: number;
@@ -20,12 +20,27 @@ export type TouchLayout = {
   interact: TouchPoint;
   /** [0]=top, [1]=mid, [2]=bottom — column left of E. */
   skillSlots: TouchPoint[];
+  /** BAG / CHAR / SKILL / MAP / MENU — ≥44px diameter. */
+  chromeButtons: TouchPoint[];
+  /** @deprecated use chromeButtons; kept for callers reading y/r/gap. */
   chrome: { y: number; r: number; gap: number; count: number };
   mapSize: number;
+  minimap: Rect;
+  status: Rect;
   menuBadge: { x: number; y: number; r: number };
 };
 
 export const TOUCH_CHROME_COUNT = 5;
+
+export function rectsOverlap(a: Rect, b: Rect): boolean {
+  return (
+    a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y
+  );
+}
+
+export function circleRect(c: TouchPoint): Rect {
+  return { x: c.x - c.r, y: c.y - c.r, w: c.r * 2, h: c.r * 2 };
+}
 
 export function computeTouchLayout(width: number, height: number): TouchLayout {
   const landscape = width >= height;
@@ -36,6 +51,22 @@ export function computeTouchLayout(width: number, height: number): TouchLayout {
   const mapSize = landscape
     ? Math.min(132, Math.round(short * 0.36))
     : Math.min(118, Math.round(short * 0.28));
+
+  const minimap: Rect = {
+    x: width - mapSize - 8,
+    y: 8,
+    w: mapSize,
+    h: mapSize,
+  };
+
+  // Status strip (HudBars + Fps) — top-left, clear of chrome/minimap.
+  const statusW = Math.round(Math.min(160, Math.max(120, width * 0.22)));
+  const status: Rect = {
+    x: 8,
+    y: 6,
+    w: statusW + 24,
+    h: 86,
+  };
 
   // —— Left: stick + dash ——
   const stickR = landscape
@@ -53,12 +84,15 @@ export function computeTouchLayout(width: number, height: number): TouchLayout {
     r: dashR,
   };
 
-  // —— Right combat: ATK + E + skill column (guaranteed clearance) ——
-  const atkR = landscape
-    ? Math.round(Math.min(40, short * 0.11))
-    : Math.round(Math.min(38, short * 0.1));
-  const skillR = Math.round(atkR * 0.58);
-  const eR = Math.round(atkR * 0.55);
+  // —— Right combat: ATK + E + skill column ——
+  const atkR = Math.max(
+    22,
+    landscape
+      ? Math.round(Math.min(40, short * 0.11))
+      : Math.round(Math.min(38, short * 0.1)),
+  );
+  const skillR = Math.max(18, Math.round(atkR * 0.58));
+  const eR = Math.max(18, Math.round(atkR * 0.55));
 
   const atk = {
     x: width - pad - atkR - 4,
@@ -73,15 +107,13 @@ export function computeTouchLayout(width: number, height: number): TouchLayout {
 
   const skillsX = interact.x - eR - skillR - gap;
   const skillPitch = skillR * 2 + gap;
-  // Center column on ATK; if bottom clips, shift whole column up
   let midY = atk.y;
   const bottomY = midY + skillPitch;
   if (bottomY + skillR > height - pad) {
     midY = height - pad - skillR - skillPitch;
   }
   const topY = midY - skillPitch;
-  // Keep top under minimap / chrome
-  const topFloor = mapSize + skillR + 16;
+  const topFloor = minimap.y + minimap.h + skillR + 16;
   const shift = topY < topFloor ? topFloor - topY : 0;
 
   const skillSlots: TouchPoint[] = [
@@ -90,20 +122,53 @@ export function computeTouchLayout(width: number, height: number): TouchLayout {
     { x: skillsX, y: midY + skillPitch + shift, r: skillR },
   ];
 
-  // ≥44px diameter for Bag/Char/Map/Menu touch targets
-  const chromeR = Math.max(22, landscape ? 22 : 24);
+  // ≥44px diameter chrome — row under minimap, right-aligned (clears status).
+  const chromeR = 22;
+  const chromeGap = chromeR * 2 + 8;
+  const chromeY = minimap.y + minimap.h + pad + chromeR;
+  const chromeButtons: TouchPoint[] = [];
+  const rightmostX = minimap.x + minimap.w - chromeR;
+  for (let i = 0; i < TOUCH_CHROME_COUNT; i++) {
+    // Index 0 = leftmost (BAG) … last = rightmost (MENU) under map.
+    const fromRight = TOUCH_CHROME_COUNT - 1 - i;
+    chromeButtons.push({
+      x: rightmostX - fromRight * chromeGap,
+      y: chromeY,
+      r: chromeR,
+    });
+  }
+
+  // If the row would clip into the status block, drop it to a column
+  // left of the minimap instead.
+  let useColumn = false;
+  for (const btn of chromeButtons) {
+    if (rectsOverlap(status, circleRect(btn))) {
+      useColumn = true;
+      break;
+    }
+  }
+  if (useColumn || chromeButtons[0]!.x - chromeR < status.x + status.w + 8) {
+    const colX = minimap.x - gap - chromeR;
+    const colStartY = minimap.y + chromeR;
+    for (let i = 0; i < TOUCH_CHROME_COUNT; i++) {
+      chromeButtons[i] = {
+        x: Math.max(status.x + status.w + chromeR + 8, colX),
+        y: colStartY + i * chromeGap,
+        r: chromeR,
+      };
+    }
+  }
+
   const chrome = {
-    y: Math.max(48, Math.round(short * 0.11)),
+    y: chromeButtons[0]!.y,
     r: chromeR,
-    gap: chromeR * 2 + 10,
+    gap: chromeGap,
     count: TOUCH_CHROME_COUNT,
   };
 
-  const mapX = width - mapSize / 2 - 8;
-  const mapY = mapSize / 2 + 8;
   const menuBadge = {
-    x: mapX + mapSize / 2 - 14,
-    y: mapY - mapSize / 2 + 14,
+    x: minimap.x + minimap.w - 14,
+    y: minimap.y + 14,
     r: 14,
   };
 
@@ -115,8 +180,11 @@ export function computeTouchLayout(width: number, height: number): TouchLayout {
     atk,
     interact,
     skillSlots,
+    chromeButtons,
     chrome,
     mapSize,
+    minimap,
+    status,
     menuBadge,
   };
 }

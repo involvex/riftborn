@@ -91,8 +91,11 @@ export class MiniMap {
   layout(): void {
     const sw = this.scene.scale.width;
     const touch = shouldShowTouchControls();
-    const size = touch
-      ? computeTouchLayout(sw, this.scene.scale.height).mapSize
+    const layout = touch
+      ? computeTouchLayout(sw, this.scene.scale.height)
+      : null;
+    const size = layout
+      ? layout.mapSize
       : sw < 900
         ? 100
         : sw < 1100
@@ -108,9 +111,16 @@ export class MiniMap {
     );
     this.menuBadge.setVisible(touch);
     this.refreshBadge();
-    const x = sw - size / 2 - 8;
-    const y = size / 2 + (touch ? 8 : 8);
-    this.root.setPosition(x, y);
+    if (layout) {
+      this.root.setPosition(
+        layout.minimap.x + layout.minimap.w / 2,
+        layout.minimap.y + layout.minimap.h / 2,
+      );
+    } else {
+      const x = sw - size / 2 - 8;
+      const y = size / 2 + 8;
+      this.root.setPosition(x, y);
+    }
   }
 
   private refreshBadge(): void {

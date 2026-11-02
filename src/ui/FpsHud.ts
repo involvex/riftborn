@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { shouldShowTouchControls } from './TouchControls';
+import { computeTouchLayout } from './TouchLayout';
 
 /**
  * Corner FPS readout. Top-left under HP strip on phones so it isn't
@@ -33,7 +34,12 @@ export class FpsHud {
     const touch = shouldShowTouchControls();
     // Under HP/XP chrome on touch; bottom-left on desktop
     if (touch) {
-      this.root.setPosition(8, 72);
+      const m = computeTouchLayout(
+        this.scene.scale.width,
+        this.scene.scale.height,
+      );
+      this.label.setOrigin(0, 0);
+      this.root.setPosition(m.status.x, m.status.y + m.status.h - 16);
     } else {
       this.label.setOrigin(0, 1);
       this.root.setPosition(10, this.scene.scale.height - 8);

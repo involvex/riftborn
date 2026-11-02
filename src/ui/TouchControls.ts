@@ -177,16 +177,10 @@ export class TouchControls {
       '14px',
     );
 
-    const totalW = (m.chrome.count - 1) * m.chrome.gap;
-    const startX = this.scene.scale.width / 2 - totalW / 2;
     this.chromeBtns.forEach((b, i) => {
-      this.placeBtn(
-        b,
-        startX + i * m.chrome.gap,
-        m.chrome.y,
-        m.chrome.r,
-        m.chrome.r >= 22 ? '10px' : '9px',
-      );
+      const c = m.chromeButtons[i];
+      if (!c) return;
+      this.placeBtn(b, c.x, c.y, c.r, c.r >= 22 ? '10px' : '9px');
       b.root.setVisible(this.active);
     });
   }
