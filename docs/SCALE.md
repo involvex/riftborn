@@ -34,9 +34,25 @@ Walk checks in the rift use `footprintFits` (center + 8 rim samples).
 **M1e:** corridors carve with a **2×2 brush** (incl. stair-step diagonals);
 shift gates stamp **2 tiles** wide. Figure still fits with room to spare.
 
-## Verify
+## M1f — rift stuck on stair diagonals
+
+**Cause (hypothesis b):** axis-only wall slide + circular footprint
+(`FIGURE_COLLISION_RADIUS = 0.32`) wedges into outer corners of
+stair-step corridors. Holding a diagonal 8-dir input (WASD / stick)
+could freeze motion for >0.5s. Shift gates (a) were a red herring for
+the playtest knick — turquoise floor was decoration / gate wash, not
+the jam itself; (c) footprint origin matches FigureScale; (d) props are
+not collision solids.
+
+**Fix:** `slideMove` in `Movement.ts` — axis separate, then lateral
+pre-nudge (≤0.25 tile), angled deflection, pure lateral wall-slide.
+`Player.move` uses it when `walkCheck` is set (rift). Gates keep a cyan
+outline + near-gate “Q Shift” HUD hint so layer locks stay readable.
+
+**Verify**
 
 ```bash
-bun test src/core/FigureScale.core.test.ts
+bun test src/core/Movement.core.test.ts
+bun test src/core/RiftWalkSim.core.test.ts
 bun test src
 ```
