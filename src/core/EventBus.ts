@@ -64,4 +64,6 @@ export const Events = {
   RIFT_PROGRESS: 'rift:progress',
   BOUNTY_CHANGED: 'bounty:changed',
   BOUNTY_COMPLETE: 'bounty:complete',
+  /** Player (or boss) changed ash/shadow layer. */
+  SHIFT_CHANGED: 'shift:changed',
 } as const;
