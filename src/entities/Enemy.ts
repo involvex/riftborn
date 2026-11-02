@@ -7,6 +7,7 @@ import {
   worldToScreen,
   type FacingSign,
 } from '../core/IsoMath';
+import { figureDrawScale, figureEliteDrawScale } from '../core/FigureScale';
 import {
   enemySpriteKey,
   ensureGameSprites,
@@ -99,18 +100,10 @@ export class Enemy {
     this.textureKey = enemySpriteKey(this.def.id);
     this.sprite = scene.add.sprite(0, -2, this.textureKey, 0);
     this.sprite.setOrigin(0.5, 0.88);
-    const painted = isPaintedSprite(this.textureKey);
-    const drawScale = painted
-      ? this.isBoss || this.def.isElite
-        ? 1.05
-        : this.elitePack
-          ? 0.98
-          : 0.92
-      : this.isBoss || this.def.isElite
-        ? 1.55
-        : this.elitePack
-          ? 1.35
-          : 1.2;
+    const drawScale =
+      this.isBoss || this.def.isElite || this.elitePack
+        ? figureEliteDrawScale()
+        : figureDrawScale();
     this.sprite.setScale(drawScale);
     this.applyBaseTint();
     this.bar = scene.add.graphics();

@@ -6,6 +6,7 @@ import {
   worldToScreen,
   type FacingSign,
 } from '../core/IsoMath';
+import { figureDrawScale } from '../core/FigureScale';
 import {
   ensureGameSprites,
   isPaintedSprite,
@@ -93,7 +94,8 @@ export class Player {
   }
 
   private applyScale(): void {
-    this.sprite.setScale(isPaintedSprite(this.textureKey) ? 0.95 : 1.35);
+    // Painted + procedural share tile-relative scale (M1d).
+    this.sprite.setScale(figureDrawScale());
   }
 
   private applyFacing(): void {
@@ -185,7 +187,7 @@ export class Player {
     // Drop walk lean so the swing isn't tilted mid-strafe.
     this.sprite.setRotation(0);
     const dir = this.facing;
-    const base = isPaintedSprite(this.textureKey) ? 0.95 : 1.35;
+    const base = figureDrawScale();
     this.sprite.setScale(base * 1.12);
     this.sprite.x = dir * 7;
     this.sprite.y = -6;

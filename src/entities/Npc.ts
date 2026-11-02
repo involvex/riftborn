@@ -1,6 +1,10 @@
 import Phaser from 'phaser';
+import { figureDrawScale, FIGURE_CONTENT_PX } from '../core/FigureScale';
 import { depthFromWorld, worldToScreen } from '../core/IsoMath';
 import type { NpcRole } from '../world/MapGen';
+
+/** Hub NPC graphics were ~25px tall at scale 1; match figure height. */
+const NPC_NATIVE_H = 25;
 
 const ROLE_COLOR: Record<NpcRole, number> = {
   vendor: 0xc4a574,
@@ -75,6 +79,11 @@ export class Npc {
       .setVisible(false);
 
     this.body = scene.add.container(0, 0, [g, label, this.prompt]);
+    // Match shared figure height (~1.4 tile); labels stay readable.
+    const fig = figureDrawScale() * (FIGURE_CONTENT_PX / NPC_NATIVE_H);
+    g.setScale(fig);
+    label.setY(-12 * fig - 8);
+    this.prompt.setY(8 * fig);
     this.syncScreen();
   }
 
