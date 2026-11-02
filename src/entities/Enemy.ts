@@ -14,6 +14,12 @@ import {
 } from '../render/SpriteAtlas';
 import type { EnemyDef } from '../types/game';
 import enemiesData from '../data/enemies.json';
+import {
+  enemyActiveOnLayer,
+  enemyShiftLayer,
+  type EnemyShiftLayer,
+  type ShiftLayerId,
+} from '../data/shiftLayers';
 
 const enemies = enemiesData as Record<string, EnemyDef>;
 
@@ -29,6 +35,10 @@ export class Enemy {
   state: AiState = 'patrol';
   attackTimer = 0;
   alive = true;
+  /** Layer this foe exists on ('both' = always solid). */
+  readonly shiftLayer: EnemyShiftLayer;
+  /** True when player is on another layer — ghosted. */
+  private ghosted = false;
   readonly body: Phaser.GameObjects.Container;
   private readonly sprite: Phaser.GameObjects.Sprite;
   private readonly bar: Phaser.GameObjects.Graphics;
@@ -71,6 +81,7 @@ export class Enemy {
     ensureGameSprites(scene);
     this.id = id;
     this.def = enemies[defId] ?? enemies.shade;
+    this.shiftLayer = enemyShiftLayer(this.def.id);
     this.worldX = worldX;
     this.worldY = worldY;
     this.homeX = worldX;
@@ -111,6 +122,19 @@ export class Enemy {
 
   get awardsEliteLoot(): boolean {
     return this.def.isElite || this.elitePack || this.isBoss;
+  }
+
+  get isGhosted(): boolean {
+    return this.ghosted;
+  }
+
+  /** Sync ghost alpha when the player shifts layers. */
+  syncShiftLayer(playerLayer: ShiftLayerId): void {
+    const active = enemyActiveOnLayer(this.shiftLayer, playerLayer);
+    this.ghosted = !active;
+    this.body.setAlpha(this.ghosted ? 0.35 : 1);
+    if (this.ghosted) this.bar.setAlpha(0.25);
+    else this.bar.setAlpha(1);
   }
 
   private applyBaseTint(): void {
@@ -176,6 +200,12 @@ export class Enemy {
     this.slowTimer = Math.max(0, this.slowTimer - dt);
     this.stunTimer = Math.max(0, this.stunTimer - dt);
     if (this.slowTimer <= 0) this.slowMult = 1;
+
+    if (this.ghosted) {
+      this.playAnim('idle');
+      this.syncScreen();
+      return { hitPlayer: false, damage: 0 };
+    }
 
     const dist = worldDistance(
       { x: this.worldX, y: this.worldY },
@@ -307,7 +337,7 @@ export class Enemy {
   }
 
   applyDamage(amount: number): boolean {
-    if (!this.alive) return false;
+    if (!this.alive || this.ghosted) return false;
     this.hp -= amount;
     this.redrawBar();
     this.flashHit();

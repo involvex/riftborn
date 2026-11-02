@@ -34,3 +34,27 @@ export const SHIFT_LAYERS: Record<ShiftLayerId, ShiftLayerDef> = {
 export function otherLayer(layer: ShiftLayerId): ShiftLayerId {
   return layer === 'ash' ? 'shadow' : 'ash';
 }
+
+/** Enemy default layer; 'both' always interactive. */
+export type EnemyShiftLayer = ShiftLayerId | 'both';
+
+export const ENEMY_SHIFT_LAYER: Record<string, EnemyShiftLayer> = {
+  ash_scamp: 'ash',
+  ash_scout: 'ash',
+  ash_bat: 'ash',
+  shade: 'shadow',
+  crawler: 'shadow',
+  wisp: 'both',
+  rift_lord: 'both',
+};
+
+export function enemyShiftLayer(defId: string): EnemyShiftLayer {
+  return ENEMY_SHIFT_LAYER[defId] ?? 'both';
+}
+
+export function enemyActiveOnLayer(
+  enemyLayer: EnemyShiftLayer,
+  playerLayer: ShiftLayerId,
+): boolean {
+  return enemyLayer === 'both' || enemyLayer === playerLayer;
+}

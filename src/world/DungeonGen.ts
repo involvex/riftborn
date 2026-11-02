@@ -1,4 +1,9 @@
 import { mulberry32, type ZoneLayout } from './MapGen';
+import {
+  emptyGateGrid,
+  stampShiftGates,
+  type ShiftGateGrid,
+} from './ShiftGateMap';
 
 export type DungeonCell = 0 | 1; // 0 wall, 1 floor
 
@@ -8,6 +13,8 @@ export type DungeonMap = {
   cells: DungeonCell[][];
   layout: ZoneLayout;
   rooms: { x: number; y: number; w: number; h: number }[];
+  /** Layer gates — null cell = both layers. */
+  layerGates: ShiftGateGrid;
 };
 
 function carveRoom(
@@ -149,7 +156,12 @@ export function generateDungeon(seed: number, depth = 1): DungeonMap {
     killGoal,
   };
 
-  return { width, height, cells, layout, rooms };
+  const layerGates =
+    rooms.length >= 2
+      ? stampShiftGates(cells, rooms, rnd)
+      : emptyGateGrid(width, height);
+
+  return { width, height, cells, layout, rooms, layerGates };
 }
 
 export function isWalkable(map: DungeonMap, x: number, y: number): boolean {

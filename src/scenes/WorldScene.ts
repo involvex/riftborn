@@ -37,11 +37,8 @@ import type {
   GearRarity,
   LootTier,
 } from '../types/game';
-import {
-  generateDungeon,
-  isWalkable,
-  type DungeonMap,
-} from '../world/DungeonGen';
+import { generateDungeon, type DungeonMap } from '../world/DungeonGen';
+import { isWalkableOnLayer } from '../world/ShiftGateMap';
 import { netClient } from '../net/NetClient';
 import { bindAction } from '../core/Hotkeys';
 import { audioBus } from '../core/AudioBus';
@@ -326,8 +323,16 @@ export class WorldScene extends Phaser.Scene {
       this.dungeon = generateDungeon(seed, this.riftDepth);
       this.player.maxX = this.dungeon.width - 1.5;
       this.player.maxY = this.dungeon.height - 1.5;
-      this.player.walkCheck = (x, y) =>
-        this.dungeon ? isWalkable(this.dungeon, x, y) : true;
+      this.player.walkCheck = (x, y) => {
+        if (!this.dungeon) return true;
+        return isWalkableOnLayer(
+          this.dungeon.cells,
+          this.dungeon.layerGates,
+          x,
+          y,
+          this.shiftSystem.layer,
+        );
+      };
       this.drawDungeonTiles(this.dungeon);
       const spawn = this.dungeon.layout.spawn;
       if (spawn) {
@@ -374,7 +379,12 @@ export class WorldScene extends Phaser.Scene {
     this.shiftSystem.tryShift();
   }
 
+  private syncEnemyShiftLayers(layer: ShiftLayerId): void {
+    for (const e of this.enemies) e.syncShiftLayer(layer);
+  }
+
   private applyShiftVisuals(layer: ShiftLayerId): void {
+    this.syncEnemyShiftLayers(layer);
     const i = this.shiftFxIntensity;
     const tileTint = layerTileTint(layer, i);
     for (const s of this.tileSprites) s.setTint(tileTint);
@@ -465,6 +475,9 @@ export class WorldScene extends Phaser.Scene {
           },
         );
         enemy.maxBound = gameState.inRift ? 22 : this.hubSize - 0.5;
+        if (gameState.inRift) {
+          enemy.syncShiftLayer(this.shiftSystem.layer);
+        }
         this.enemies.push(enemy);
       }
     }
@@ -1418,7 +1431,7 @@ export class WorldScene extends Phaser.Scene {
     );
 
     for (const enemy of this.enemies) {
-      if (!enemy.alive) continue;
+      if (!enemy.alive || enemy.isGhosted) continue;
       const dist = worldDistance(
         { x: this.player.worldX, y: this.player.worldY },
         { x: enemy.worldX, y: enemy.worldY },

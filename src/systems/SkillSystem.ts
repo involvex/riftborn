@@ -239,7 +239,7 @@ export class SkillSystem {
       let best: Enemy | null = null;
       let bestD = Infinity;
       for (const e of ctx.enemies) {
-        if (!e.alive) continue;
+        if (!e.alive || e.isGhosted) continue;
         const d = worldDistance({ x: px, y: py }, { x: e.worldX, y: e.worldY });
         if (d <= r && d < bestD) {
           bestD = d;
@@ -251,7 +251,7 @@ export class SkillSystem {
 
     const enemiesInRange = (r: number, cap: number): Enemy[] => {
       const list = ctx.enemies
-        .filter((e) => e.alive)
+        .filter((e) => e.alive && !e.isGhosted)
         .map((e) => ({
           e,
           d: worldDistance({ x: px, y: py }, { x: e.worldX, y: e.worldY }),
