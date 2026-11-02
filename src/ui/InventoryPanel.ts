@@ -100,7 +100,11 @@ export class InventoryPanel {
     ]);
     this.dismiss = attachOverlayDismiss(scene, this.root, () => this.hide());
     this.root.setVisible(false);
-    this.setDetailPlain('Tap gear for stats · Double-tap to equip');
+    this.setDetailPlain(
+      shouldShowTouchControls()
+        ? 'Tap item for stats'
+        : 'Hover gear for compare · Double-click to equip',
+    );
     this.layout();
   }
 
@@ -390,9 +394,15 @@ export class InventoryPanel {
     );
     this.hintRoot.setPosition(hintOrigin.x, hintOrigin.y);
     const junkOn = settingsStore.get().autoSellJunk;
+    // Keep the row short so it never crowds Sort / the panel edge (M1d).
+    // Longer help lives in the detail box.
     const hintLine = touch
-      ? `Double-tap to equip${junkOn ? '  ·  Auto-sell ON' : ''}`
-      : `Double-click to equip · Hover for compare${junkOn ? '  ·  Auto-sell junk ON' : ''}`;
+      ? junkOn
+        ? 'Auto-sell ON'
+        : 'Double-tap to equip'
+      : junkOn
+        ? 'Hover to compare · Auto-sell junk ON'
+        : 'Hover to compare · Double-click to equip';
     const hint = this.scene.add
       .text(0, 0, hintLine, {
         fontFamily: UI_FONT,
