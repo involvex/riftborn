@@ -6,6 +6,7 @@ import { WorldScene } from './scenes/WorldScene';
 import { gameEvents } from './core/EventBus';
 import { currentBackContext } from './core/GameNavState';
 import { installHistoryBackGuard } from './core/HistoryBackGuard';
+import { installNativeBackBridge } from './core/NativeBackBridge';
 import {
   applyGraphicsProfile,
   currentGraphicsProfile,
@@ -54,9 +55,12 @@ const game = new Phaser.Game({
 applyGraphicsProfile(game);
 
 /** Android / browser Back stays in-game until the title screen. */
-installHistoryBackGuard({
+const backHandlers = {
   getContext: currentBackContext,
   closeOverlay: () => gameEvents.emit('nav:backCloseOverlay'),
   openPause: () => gameEvents.emit('ui:toggleMenu'),
   resume: () => gameEvents.emit('nav:backResume'),
-});
+};
+installHistoryBackGuard(backHandlers);
+/** Expo WebView hardware back → same policy; leave → exitApp. */
+installNativeBackBridge(backHandlers);

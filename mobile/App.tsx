@@ -1,9 +1,10 @@
 import Constants from 'expo-constants';
 import { StatusBar } from 'expo-status-bar';
 import * as ScreenOrientation from 'expo-screen-orientation';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
+  BackHandler,
   Platform,
   StyleSheet,
   Text,
@@ -12,6 +13,9 @@ import {
 import { WebView } from 'react-native-webview';
 
 type WebSource = { uri: string };
+
+/** Minimal WebView handle — RN WebView generics are noisy under tsc. */
+type WebHandle = { injectJavaScript: (script: string) => void };
 
 function withTouch(raw: string): string {
   try {
@@ -50,19 +54,48 @@ function resolveSource(): WebSource {
 }
 
 /**
+ * Injected on hardware back: ask the Phaser shell to run C9 back policy.
+ */
+const INJECT_NATIVE_BACK = `
+(function () {
+  try {
+    window.dispatchEvent(new Event('riftborn-native-back'));
+  } catch (e) {}
+  true;
+})();
+`;
+
+/**
  * Native shell: full-screen WebView over the Phaser build.
  * Dev → LAN Vite. Release → bundled file:// assets (no server).
+ * Android Back is forwarded into the game (same policy as browser popstate).
  */
 export default function App() {
   const source = useMemo(() => resolveSource(), []);
   const bundled = isBundled();
   const [ready, setReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const webRef = useRef<WebHandle | null>(null);
 
   useEffect(() => {
     ScreenOrientation.lockAsync(
       ScreenOrientation.OrientationLock.LANDSCAPE,
     ).catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    if (Platform.OS !== 'android') return;
+    const sub = BackHandler.addEventListener('hardwareBackPress', () => {
+      const web = webRef.current;
+      if (!web) {
+        BackHandler.exitApp();
+        return true;
+      }
+      web.injectJavaScript(INJECT_NATIVE_BACK);
+      // Consume the event; game replies via onMessage if it wants leave.
+      return true;
+    });
+    return () => sub.remove();
   }, []);
 
   return (
@@ -88,7 +121,10 @@ export default function App() {
           </Text>
         </View>
       )}
+      {/* WebView prop types from react-native-webview clash with RN 0.88 + TS 6. */}
+      {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
       <WebView
+        ref={webRef as any}
         source={source}
         style={styles.webview}
         originWhitelist={['*']}
@@ -102,12 +138,29 @@ export default function App() {
         mixedContentMode="always"
         setSupportMultipleWindows={false}
         onLoadEnd={() => setReady(true)}
-        onError={(e) => {
+        onError={(e: { nativeEvent: { description?: string } }) => {
           setError(e.nativeEvent.description || 'Could not load the game');
         }}
-        onHttpError={(e) => {
+        onHttpError={(e: { nativeEvent: { statusCode: number } }) => {
           if (e.nativeEvent.statusCode >= 400) {
             setError(`HTTP ${e.nativeEvent.statusCode}`);
+          }
+        }}
+        onMessage={(e: { nativeEvent: { data: string } }) => {
+          try {
+            const msg = JSON.parse(e.nativeEvent.data) as {
+              type?: string;
+              action?: string;
+            };
+            if (
+              msg.type === 'riftborn:backResult' &&
+              msg.action === 'leave' &&
+              Platform.OS === 'android'
+            ) {
+              BackHandler.exitApp();
+            }
+          } catch {
+            /* ignore non-JSON */
           }
         }}
       />
