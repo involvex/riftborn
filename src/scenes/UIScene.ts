@@ -433,6 +433,9 @@ export class UIScene extends Phaser.Scene {
         this.skillPanel.hide();
         this.mapOverlay.hide();
         this.inventoryPanel.toggle();
+        this.setModalChrome(this.inventoryPanel.open);
+        if (this.inventoryPanel.open) this.scene.pause('WorldScene');
+        else this.scene.resume('WorldScene');
       }),
       gameEvents.on('ui:openCharacter', () => {
         this.hideCraft();
@@ -576,6 +579,15 @@ export class UIScene extends Phaser.Scene {
       (this.menuOpen && this.menuPage !== 'root');
     navSetOverlay(!!anyOverlay);
     navSetPaused(this.menuOpen && this.menuPage === 'root' && !anyOverlay);
+    // Keep FPS / pads / world pause in sync when closing via ✕ / scrim.
+    const modal =
+      !!anyOverlay ||
+      this.menuOpen ||
+      this.charOpen ||
+      this.inventoryPanel?.open ||
+      this.skillPanel?.open ||
+      this.mapOverlay?.open;
+    if (this.inventoryPanel) this.setModalChrome(!!modal);
   }
 
   private bindHotkeys(): void {
@@ -1073,32 +1085,33 @@ export class UIScene extends Phaser.Scene {
           : 'Male';
     const lines = [
       `${gameState.name}  ·  ${p.classDef().name}  ·  ${genderLabel}`,
-      `Level ${p.level}/${MAX_LEVEL}   Attr pts: ${p.unspentStatPoints}   Skill pts: ${gameState.skills.unspentSkillPoints}`,
+      `Level ${p.level}/${MAX_LEVEL}   Attr ${p.unspentStatPoints}   Skill ${gameState.skills.unspentSkillPoints}`,
       '',
-      `STR ${p.stats.strength} (+${gear.strength} gear)`,
-      `DEX ${p.stats.dexterity} (+${gear.dexterity} gear)`,
-      `STA ${p.stats.stamina} (+${gear.stamina} gear)`,
-      `INT ${p.stats.intellect} (+${gear.intellect} gear)`,
+      '— Attributes —',
+      `STR ${p.stats.strength} (+${gear.strength})   DEX ${p.stats.dexterity} (+${gear.dexterity})`,
+      `STA ${p.stats.stamina} (+${gear.stamina})   INT ${p.stats.intellect} (+${gear.intellect})`,
       '',
-      `Weapon DMG ${gameState.inventory.weaponDamage()}   Attack ~ ${gameState.combat.playerAttackDamage()}`,
-      `Skill power +${gear.skillPower}%   (from gear / sets)`,
-      `Armor ${gear.armor}  ·  shown here & on item hover`,
-      `Skills: ${formatHotkey('skills')} tree · ${formatHotkey('skill1')}/${formatHotkey('skill2')}/${formatHotkey('skill3')} cast`,
+      '— Offensive —',
+      `Weapon ${gameState.inventory.weaponDamage()}   Attack ~ ${gameState.combat.playerAttackDamage()}`,
+      `Skill power +${gear.skillPower}%`,
       '',
-      'Equipment:',
-      `  WPN  ${eq.weapon ? describeGearFull(eq.weapon) : '—'}`,
-      `  HAT  ${eq.hat ? describeGearFull(eq.hat) : '—'}`,
-      `  CHT  ${eq.chest ? describeGearFull(eq.chest) : '—'}`,
-      `  LEG  ${eq.legs ? describeGearFull(eq.legs) : '—'}`,
-      `  FET  ${eq.feet ? describeGearFull(eq.feet) : '—'}`,
-      `  TOOL ${eq.tool ? (getItemDef(eq.tool)?.name ?? eq.tool) : '—'}`,
+      '— Defensive —',
+      `Armor ${gear.armor}   Max HP ${gameState.maxHp}`,
       '',
-      'Set bonuses:',
+      '— Equipment —',
+      `WPN  ${eq.weapon ? describeGearFull(eq.weapon) : '—'}`,
+      `HAT  ${eq.hat ? describeGearFull(eq.hat) : '—'}`,
+      `CHT  ${eq.chest ? describeGearFull(eq.chest) : '—'}`,
+      `LEG  ${eq.legs ? describeGearFull(eq.legs) : '—'}`,
+      `FET  ${eq.feet ? describeGearFull(eq.feet) : '—'}`,
+      `TOOL ${eq.tool ? (getItemDef(eq.tool)?.name ?? eq.tool) : '—'}`,
+      '',
+      '— Set bonuses —',
     ];
-    if (sets.length === 0) lines.push('  (none)');
+    if (sets.length === 0) lines.push('(none)');
     for (const s of sets) {
-      lines.push(`  ${s.name} (${s.pieces}/4)`);
-      for (const l of s.labels) lines.push(`    ${l}`);
+      lines.push(`${s.name} (${s.pieces}/4)`);
+      for (const l of s.labels) lines.push(`  ${l}`);
     }
     this.charBody.setText(lines.join('\n'));
   }

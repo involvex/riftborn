@@ -1,3 +1,4 @@
+import { gameEvents } from '../core/EventBus';
 import { HUB_SIZE, nearTown, PLAZA } from '../world/MapGen';
 
 export type RiftbornEnemySnap = {
@@ -56,6 +57,10 @@ export type RiftbornApi = {
   hostilesNearTown: (margin?: number) => number;
   /** Min distance from plaza rectangle edge to a living enemy. */
   nearestHostileDistToPlaza: () => number;
+  /** Open bag overlay (layout screenshots / agents). */
+  openInventory: () => void;
+  /** Open character overlay. */
+  openCharacter: () => void;
 };
 
 export type RiftbornSnapshotSource = {
@@ -148,6 +153,8 @@ export function installRiftbornDebug(
       }
       return nearest;
     },
+    openInventory: () => gameEvents.emit('ui:openInventory', {}),
+    openCharacter: () => gameEvents.emit('ui:openCharacter', {}),
   };
   window.__RIFTBORN = api;
 }
@@ -172,6 +179,8 @@ export function clearRiftbornDebug(): void {
       }),
       hostilesNearTown: () => 0,
       nearestHostileDistToPlaza: () => Number.POSITIVE_INFINITY,
+      openInventory: () => {},
+      openCharacter: () => {},
     };
   }
 }
