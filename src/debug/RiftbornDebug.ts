@@ -61,6 +61,8 @@ export type RiftbornApi = {
   openInventory: () => void;
   /** Open character overlay. */
   openCharacter: () => void;
+  /** Enter a rift (hub only) for scale / dungeon screenshots. */
+  enterRift: () => boolean;
 };
 
 export type RiftbornSnapshotSource = {
@@ -71,6 +73,12 @@ export type RiftbornSnapshotSource = {
   pois: RiftbornPoiSnap[];
   chests: RiftbornChestSnap[];
   shift: RiftbornShiftSnap;
+};
+
+export type RiftbornDebugHooks = {
+  getSource: () => RiftbornSnapshotSource;
+  /** Return true when a rift load was started. */
+  enterRift?: () => boolean;
 };
 
 declare global {
@@ -110,12 +118,19 @@ function buildSnapshot(src: RiftbornSnapshotSource): RiftbornSnapshot {
 }
 
 let source: (() => RiftbornSnapshotSource) | null = null;
+let enterRiftHook: (() => boolean) | null = null;
 
 /** Publish live world state for Cursor agents / Playwright. */
 export function installRiftbornDebug(
-  getSource: () => RiftbornSnapshotSource,
+  getSource: (() => RiftbornSnapshotSource) | RiftbornDebugHooks,
 ): void {
-  source = getSource;
+  if (typeof getSource === 'function') {
+    source = getSource;
+    enterRiftHook = null;
+  } else {
+    source = getSource.getSource;
+    enterRiftHook = getSource.enterRift ?? null;
+  }
   const api: RiftbornApi = {
     get ready() {
       return source !== null;
@@ -155,12 +170,14 @@ export function installRiftbornDebug(
     },
     openInventory: () => gameEvents.emit('ui:openInventory', {}),
     openCharacter: () => gameEvents.emit('ui:openCharacter', {}),
+    enterRift: () => (enterRiftHook ? enterRiftHook() : false),
   };
   window.__RIFTBORN = api;
 }
 
 export function clearRiftbornDebug(): void {
   source = null;
+  enterRiftHook = null;
   if (window.__RIFTBORN) {
     window.__RIFTBORN = {
       ready: false,
@@ -181,6 +198,7 @@ export function clearRiftbornDebug(): void {
       nearestHostileDistToPlaza: () => Number.POSITIVE_INFINITY,
       openInventory: () => {},
       openCharacter: () => {},
+      enterRift: () => false,
     };
   }
 }

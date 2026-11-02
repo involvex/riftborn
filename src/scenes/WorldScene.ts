@@ -5,6 +5,7 @@ import {
   worldDistance,
   worldToScreen,
 } from '../core/IsoMath';
+import { FIGURE_COLLISION_RADIUS, footprintFits } from '../core/FigureScale';
 import { Events, gameEvents } from '../core/EventBus';
 import {
   clearRiftbornDebug,
@@ -202,38 +203,55 @@ export class WorldScene extends Phaser.Scene {
 
   /** Live snapshots for Cursor agents & Playwright (`window.__RIFTBORN`). */
   private publishDebugApi(): void {
-    installRiftbornDebug(() => ({
-      hubSize: this.hubSize,
-      inRift: gameState.inRift,
-      player: { x: this.player.worldX, y: this.player.worldY },
-      enemies: this.enemies.map((e) => ({
-        id: e.id,
-        defId: e.def.id,
-        x: e.worldX,
-        y: e.worldY,
-        alive: e.alive,
-      })),
-      pois: this.wildernessPois.map((p) => ({
-        id: p.id,
-        kind: p.kind,
-        name: p.name,
-        x: p.x,
-        y: p.y,
-        radius: p.radius,
-      })),
-      chests: this.chests.map((c) => ({
-        id: c.id,
-        x: c.worldX,
-        y: c.worldY,
-        looted: c.looted,
-        lootTier: c.lootTier,
-      })),
-      shift: {
-        enabled: this.shiftSystem.enabled,
-        layer: this.shiftSystem.layer,
-        energy: this.shiftSystem.energy,
-      },
-    }));
+    installRiftbornDebug({
+      getSource: () => ({
+        hubSize: this.hubSize,
+        inRift: gameState.inRift,
+        player: { x: this.player.worldX, y: this.player.worldY },
+        enemies: this.enemies.map((e) => ({
+          id: e.id,
+          defId: e.def.id,
+          x: e.worldX,
+          y: e.worldY,
+          alive: e.alive,
+        })),
+        pois: this.wildernessPois.map((p) => ({
+          id: p.id,
+          kind: p.kind,
+          name: p.name,
+          x: p.x,
+          y: p.y,
+          radius: p.radius,
+        })),
+        chests: this.chests.map((c) => ({
+          id: c.id,
+          x: c.worldX,
+          y: c.worldY,
+          looted: c.looted,
+          lootTier: c.lootTier,
+        })),
+        shift: {
+          enabled: this.shiftSystem.enabled,
+          layer: this.shiftSystem.layer,
+          energy: this.shiftSystem.energy,
+        },
+      }),
+      enterRift: () => this.debugEnterRift(),
+    });
+  }
+
+  /** Agent / Playwright helper — skip walking to the obelisk. */
+  private debugEnterRift(): boolean {
+    if (gameState.inRift) return true;
+    gameState.inRift = true;
+    gameState.riftSeed = (Date.now() ^ (Math.random() * 1e9)) >>> 0;
+    this.loadZone(true);
+    gameEvents.emit(Events.RIFT_ENTERED, {
+      seed: gameState.riftSeed,
+      depth: this.riftDepth,
+    });
+    this.emitRiftProgress();
+    return true;
   }
 
   private cleanup(): void {
@@ -346,12 +364,14 @@ export class WorldScene extends Phaser.Scene {
       this.player.maxY = this.dungeon.height - 1.5;
       this.player.walkCheck = (x, y) => {
         if (!this.dungeon) return true;
-        return isWalkableOnLayer(
-          this.dungeon.cells,
-          this.dungeon.layerGates,
+        const layer = this.shiftSystem.layer;
+        const cells = this.dungeon.cells;
+        const gates = this.dungeon.layerGates;
+        return footprintFits(
+          (px, py) => isWalkableOnLayer(cells, gates, px, py, layer),
           x,
           y,
-          this.shiftSystem.layer,
+          FIGURE_COLLISION_RADIUS,
         );
       };
       this.drawDungeonTiles(this.dungeon);
