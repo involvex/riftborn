@@ -88,10 +88,12 @@ describe('computeInventoryLayout', () => {
       expect(layout.close).toBeNull();
 
       // Sort lives in the bag header band; hint stays above it.
-      expect(layout.sortBtn.y).toBeGreaterThanOrEqual(layout.bagHeader.y - 0.01);
-      expect(
-        layout.sortBtn.y + layout.sortBtn.h,
-      ).toBeLessThanOrEqual(layout.bagHeader.y + layout.bagHeader.h + 0.01);
+      expect(layout.sortBtn.y).toBeGreaterThanOrEqual(
+        layout.bagHeader.y - 0.01,
+      );
+      expect(layout.sortBtn.y + layout.sortBtn.h).toBeLessThanOrEqual(
+        layout.bagHeader.y + layout.bagHeader.h + 0.01,
+      );
       expect(layout.hint.y + layout.hint.h).toBeLessThanOrEqual(
         layout.bagHeader.y + 0.01,
       );

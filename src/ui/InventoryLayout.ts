@@ -78,7 +78,8 @@ export function computeInventoryLayout(
   const titleH = touch ? (short ? 22 : 28) : 34;
   const hintH = touch ? (short ? 16 : 18) : 18;
   const headerBand = short ? 22 : 24;
-  const sortW = touch ? 52 : 56;
+  // Padding on the Sort text (~8px×2) needs room — avoid spilling into detail.
+  const sortW = touch ? 64 : 68;
   const sortH = Math.min(headerBand - 2, touch ? 20 : 22);
   const bagGap = touch ? 4 : 6;
   const minCell = touch ? 36 : 24;
@@ -267,13 +268,9 @@ export function computeInventoryLayout(
   }
 
   // Equipment name column: card width minus icon + padding.
-  const eqCellW =
-    (equipment.w - eqGap * (eqCols - 1)) / eqCols;
+  const eqCellW = (equipment.w - eqGap * (eqCols - 1)) / eqCols;
   const eqIconGuess = touch ? (short ? 24 : 28) : 36;
-  const eqNameMaxPx = Math.max(
-    48,
-    Math.floor(eqCellW - eqIconGuess - 14),
-  );
+  const eqNameMaxPx = Math.max(48, Math.floor(eqCellW - eqIconGuess - 14));
 
   return {
     panel: { x: 0, y: 0, w: panelW, h: panelH },
