@@ -1,10 +1,26 @@
-import { gameEvents } from '../core/EventBus';
+import { Events, gameEvents } from '../core/EventBus';
 import {
   currentGraphicsProfile,
   getAppliedRenderScale,
 } from '../core/GraphicsQuality';
 import { settingsStore } from '../core/SettingsStore';
+import {
+  circleRect,
+  computeTouchLayout,
+  type Rect,
+  type TouchPoint,
+} from '../ui/TouchLayout';
 import { HUB_SIZE, nearTown, PLAZA } from '../world/MapGen';
+
+export type TouchHit = {
+  name: string;
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+  /** Min(w,h) — for circles this is the diameter. */
+  minSide: number;
+};
 
 export type RiftbornEnemySnap = {
   id: string;
@@ -66,6 +82,24 @@ export type RiftbornApi = {
   openInventory: () => void;
   /** Open character overlay. */
   openCharacter: () => void;
+  /** Open skill tree overlay. */
+  openSkills: () => void;
+  /** Toggle full map overlay. */
+  toggleMap: () => void;
+  /** Toggle pause / settings menu. */
+  toggleMenu: () => void;
+  /** Open Mira shop (no proximity required). */
+  openShop: () => void;
+  /** Open Nix trader. */
+  openTrader: () => void;
+  /** Open craft panel. */
+  openCraft: () => void;
+  /** Show death summary modal (screenshot / layout). */
+  showDeathSummary: () => void;
+  /** Dismiss death / rift summary via primary action. */
+  dismissSummary: () => void;
+  /** Pure touch HUD hit rects for the current viewport. */
+  touchHits: () => TouchHit[];
   /** Enter a rift (hub only) for scale / dungeon screenshots. */
   enterRift: () => boolean;
   /** Warp onto a diagonal corridor bend (rift only). */
@@ -125,6 +159,44 @@ export function distToPlazaEdge(x: number, y: number): number {
   const dx = Math.max(PLAZA.x0 - x, 0, x - PLAZA.x1);
   const dy = Math.max(PLAZA.y0 - y, 0, y - PLAZA.y1);
   return Math.hypot(dx, dy);
+}
+
+function hitFromRect(name: string, r: Rect): TouchHit {
+  return {
+    name,
+    x: r.x,
+    y: r.y,
+    w: r.w,
+    h: r.h,
+    minSide: Math.min(r.w, r.h),
+  };
+}
+
+function hitFromCircle(name: string, c: TouchPoint): TouchHit {
+  return hitFromRect(name, circleRect(c));
+}
+
+/** Interactive touch HUD targets for the current CSS viewport. */
+export function collectTouchHits(
+  width = typeof window !== 'undefined' ? window.innerWidth : 1280,
+  height = typeof window !== 'undefined' ? window.innerHeight : 720,
+): TouchHit[] {
+  const layout = computeTouchLayout(width, height);
+  const out: TouchHit[] = [
+    hitFromCircle('stick', layout.stick),
+    hitFromCircle('dash', layout.dash),
+    hitFromCircle('shift', layout.shift),
+    hitFromCircle('atk', layout.atk),
+    hitFromCircle('interact', layout.interact),
+    hitFromCircle('town', layout.townButton),
+  ];
+  layout.chromeButtons.forEach((c, i) => {
+    out.push(hitFromCircle(`chrome${i}`, c));
+  });
+  layout.skillSlots.forEach((s, i) => {
+    out.push(hitFromCircle(`skill${i}`, s));
+  });
+  return out;
 }
 
 function buildSnapshot(src: RiftbornSnapshotSource): RiftbornSnapshot {
@@ -231,6 +303,23 @@ export function installRiftbornDebug(
     },
     openInventory: () => gameEvents.emit('ui:openInventory', {}),
     openCharacter: () => gameEvents.emit('ui:openCharacter', {}),
+    openSkills: () => gameEvents.emit('ui:openSkills', {}),
+    toggleMap: () => gameEvents.emit('ui:toggleMap', {}),
+    toggleMenu: () => gameEvents.emit('ui:toggleMenu', {}),
+    openShop: () => gameEvents.emit('ui:openShop', {}),
+    openTrader: () => gameEvents.emit('ui:openTrader', {}),
+    openCraft: () => gameEvents.emit('ui:openCraft', {}),
+    showDeathSummary: () => {
+      gameEvents.emit(Events.PLAYER_DIED, {
+        kills: 0,
+        level: 1,
+        gold: 0,
+        playTimeSec: 0,
+        inRift: false,
+      });
+    },
+    dismissSummary: () => gameEvents.emit('ui:dismissSummary', {}),
+    touchHits: () => collectTouchHits(),
     enterRift: () => (enterRiftHook ? enterRiftHook() : false),
     gotoDiagonalCorridor: () => (gotoDiagonalHook ? gotoDiagonalHook() : false),
     walkDiagonalCorridor: (steps?: number) =>
@@ -286,6 +375,15 @@ export function clearRiftbornDebug(): void {
       nearestHostileDistToPlaza: () => Number.POSITIVE_INFINITY,
       openInventory: () => {},
       openCharacter: () => {},
+      openSkills: () => {},
+      toggleMap: () => {},
+      toggleMenu: () => {},
+      openShop: () => {},
+      openTrader: () => {},
+      openCraft: () => {},
+      showDeathSummary: () => {},
+      dismissSummary: () => {},
+      touchHits: () => [],
       enterRift: () => false,
       gotoDiagonalCorridor: () => false,
       walkDiagonalCorridor: () => 0,
