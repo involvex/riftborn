@@ -74,6 +74,8 @@ export type RiftbornApi = {
   walkDiagonalCorridor: (steps?: number) => number;
   /** Drop gear at the player for E-button label screenshots. */
   spawnLootNearPlayer: () => boolean;
+  /** Warp near the closest living foe (rift screenshot framing). */
+  gotoNearestHostile: () => boolean;
   /** Current context E-button hint. */
   interactHint: () => { label: string; dimmed: boolean; kind: string };
   /** Expand / collapse the touch chrome tray (BAG/CHAR/…). */
@@ -108,6 +110,7 @@ export type RiftbornDebugHooks = {
   /** Walk along a stair corridor with real move; returns distance. */
   walkDiagonalCorridor?: (steps?: number) => number;
   spawnLootNearPlayer?: () => boolean;
+  gotoNearestHostile?: () => boolean;
   interactHint?: () => { label: string; dimmed: boolean; kind: string };
 };
 
@@ -152,6 +155,7 @@ let enterRiftHook: (() => boolean) | null = null;
 let gotoDiagonalHook: (() => boolean) | null = null;
 let walkDiagonalHook: ((steps?: number) => number) | null = null;
 let spawnLootHook: (() => boolean) | null = null;
+let gotoHostileHook: (() => boolean) | null = null;
 let interactHintHook:
   (() => { label: string; dimmed: boolean; kind: string }) | null = null;
 let touchChromeOpen = false;
@@ -176,6 +180,7 @@ export function installRiftbornDebug(
     gotoDiagonalHook = null;
     walkDiagonalHook = null;
     spawnLootHook = null;
+    gotoHostileHook = null;
     interactHintHook = null;
   } else {
     source = getSource.getSource;
@@ -183,6 +188,7 @@ export function installRiftbornDebug(
     gotoDiagonalHook = getSource.gotoDiagonalCorridor ?? null;
     walkDiagonalHook = getSource.walkDiagonalCorridor ?? null;
     spawnLootHook = getSource.spawnLootNearPlayer ?? null;
+    gotoHostileHook = getSource.gotoNearestHostile ?? null;
     interactHintHook = getSource.interactHint ?? null;
   }
   const emptyHint = { label: 'E', dimmed: true, kind: 'none' };
@@ -230,6 +236,7 @@ export function installRiftbornDebug(
     walkDiagonalCorridor: (steps?: number) =>
       walkDiagonalHook ? walkDiagonalHook(steps) : 0,
     spawnLootNearPlayer: () => (spawnLootHook ? spawnLootHook() : false),
+    gotoNearestHostile: () => (gotoHostileHook ? gotoHostileHook() : false),
     interactHint: () => (interactHintHook ? interactHintHook() : emptyHint),
     setTouchChrome: (open: boolean) => {
       gameEvents.emit('ui:setTouchChrome', { open });
@@ -256,6 +263,7 @@ export function clearRiftbornDebug(): void {
   gotoDiagonalHook = null;
   walkDiagonalHook = null;
   spawnLootHook = null;
+  gotoHostileHook = null;
   interactHintHook = null;
   touchChromeOpen = false;
   if (window.__RIFTBORN) {
@@ -282,6 +290,7 @@ export function clearRiftbornDebug(): void {
       gotoDiagonalCorridor: () => false,
       walkDiagonalCorridor: () => 0,
       spawnLootNearPlayer: () => false,
+      gotoNearestHostile: () => false,
       interactHint: () => ({ label: 'E', dimmed: true, kind: 'none' }),
       setTouchChrome: () => {},
       touchChromeOpen: () => false,

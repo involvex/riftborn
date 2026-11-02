@@ -64,6 +64,7 @@ export class TouchControls {
   private interact!: Btn;
   private dash!: Btn;
   private shiftBtn!: Btn;
+  private townBtn!: Btn;
   private chromeBtns: Btn[] = [];
   private chromeOpen = false;
   private chromeTimer: Phaser.Time.TimerEvent | null = null;
@@ -73,6 +74,8 @@ export class TouchControls {
   dy = 0;
   private active = false;
   private interactDimmed = true;
+  /** Town button only outside hub (rift / wilderness). */
+  private townVisible = false;
 
   constructor(scene: Phaser.Scene) {
     this.scene = scene;
@@ -90,11 +93,17 @@ export class TouchControls {
     this.shiftBtn = this.makeBtn('SHIFT', 0x9a80e0, () =>
       gameEvents.emit('combat:shift', {}),
     );
+    this.townBtn = this.makeBtn('⌂', 0xc4a574, () => {
+      audioBus.uiClick();
+      gameEvents.emit('ui:returnToTown', {});
+    });
+    this.townBtn.root.setVisible(false);
     this.root.add([
       this.atk.root,
       this.interact.root,
       this.dash.root,
       this.shiftBtn.root,
+      this.townBtn.root,
     ]);
 
     this.chromeBtns = CHROME.slice(0, TOUCH_CHROME_COUNT).map((e, i) =>
@@ -117,6 +126,10 @@ export class TouchControls {
       const d = p as { label?: string; dimmed?: boolean };
       this.setInteractHint(d.label ?? 'E', !!d.dimmed);
     });
+    gameEvents.on('ui:townButton', (p) => {
+      const d = p as { visible?: boolean };
+      this.setTownVisible(!!d.visible);
+    });
 
     this.scene.input.on('pointerup', (p: Phaser.Input.Pointer) => {
       this.maybeCloseChromeOutside(p.x, p.y);
@@ -124,6 +137,11 @@ export class TouchControls {
 
     this.layout();
     this.root.setVisible(false);
+  }
+
+  setTownVisible(on: boolean): void {
+    this.townVisible = on;
+    this.townBtn.root.setVisible(this.active && on);
   }
 
   getMetrics(): TouchLayout | null {
@@ -217,6 +235,9 @@ export class TouchControls {
       if (!c) return;
       this.placeBtn(b, c.x, c.y, c.r, c.r >= 22 ? '10px' : '9px');
     });
+    const town = m.townButton;
+    this.placeBtn(this.townBtn, town.x, town.y, town.r, '18px');
+    this.townBtn.root.setVisible(this.active && this.townVisible);
     this.applyChromeVisibility();
   }
 

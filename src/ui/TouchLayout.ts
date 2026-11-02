@@ -28,6 +28,8 @@ export type TouchLayout = {
   minimap: Rect;
   status: Rect;
   menuBadge: { x: number; y: number; r: number };
+  /** Return-to-town (B) — left of minimap, ≥44px hit. */
+  townButton: TouchPoint;
 };
 
 export const TOUCH_CHROME_COUNT = 5;
@@ -172,6 +174,27 @@ export function computeTouchLayout(width: number, height: number): TouchLayout {
     r: 14,
   };
 
+  // Town (B) — round hit left of minimap, clears status + chrome column.
+  const townR = 22;
+  let townX = minimap.x - gap - townR;
+  let townY = minimap.y + townR;
+  const menuBtn = chromeButtons[TOUCH_CHROME_COUNT - 1]!;
+  // If chrome sits as a column left of the map, park town above/left of it.
+  if (menuBtn.x < minimap.x) {
+    townX = Math.min(townX, menuBtn.x - chromeGap);
+    townY = minimap.y + townR;
+  }
+  // Keep clear of the HP/XP strip.
+  if (townX - townR < status.x + status.w + 8) {
+    townX = status.x + status.w + 8 + townR;
+    townY = minimap.y + minimap.h + pad + townR;
+    // Prefer still left of map when status is short.
+    if (townX + townR < minimap.x - 2) {
+      townY = minimap.y + townR;
+    }
+  }
+  const townButton: TouchPoint = { x: townX, y: townY, r: townR };
+
   return {
     pad,
     landscape,
@@ -186,5 +209,6 @@ export function computeTouchLayout(width: number, height: number): TouchLayout {
     minimap,
     status,
     menuBadge,
+    townButton,
   };
 }

@@ -22,6 +22,7 @@ function namedHudRects(layout: TouchLayout): { name: string; rect: Rect }[] {
     { name: 'dash', rect: circleRect(layout.dash) },
     { name: 'atk', rect: circleRect(layout.atk) },
     { name: 'interact', rect: circleRect(layout.interact) },
+    { name: 'town', rect: circleRect(layout.townButton) },
   ];
   layout.chromeButtons.forEach((c, i) => {
     out.push({ name: `chrome${i}`, rect: circleRect(c) });
@@ -95,6 +96,24 @@ describe('computeTouchLayout', () => {
         Math.abs(btn.x - midX) > 80 ||
           btn.y > layout.status.y + layout.status.h,
       ).toBe(true);
+    }
+  });
+
+  test('town button left of minimap — ≥44px, clear of map/menu/status', () => {
+    for (const vp of VIEWPORTS) {
+      const layout = computeTouchLayout(vp.w, vp.h);
+      expect(layout.townButton).toBeTruthy();
+      const town = layout.townButton!;
+      expect(town.r * 2).toBeGreaterThanOrEqual(44);
+      // Left of minimap (center x strictly less than map left edge + gap).
+      expect(town.x + town.r).toBeLessThanOrEqual(layout.minimap.x - 2);
+      expect(rectsOverlap(circleRect(town), layout.minimap)).toBe(false);
+      expect(rectsOverlap(circleRect(town), layout.status)).toBe(false);
+      const menu = layout.chromeButtons[layout.chromeButtons.length - 1]!;
+      expect(rectsOverlap(circleRect(town), circleRect(menu))).toBe(false);
+      // Inside viewport
+      expect(town.x - town.r).toBeGreaterThanOrEqual(-0.5);
+      expect(town.y - town.r).toBeGreaterThanOrEqual(-0.5);
     }
   });
 });
