@@ -58,7 +58,7 @@ export class TutorialOverlay {
     this.root.removeAll(true);
     const { width, height } = this.scene.scale;
     const panelW = Math.min(420, width - 32);
-    const panelH = shouldShowTouchControls() ? 280 : 310;
+    const panelH = shouldShowTouchControls() ? 300 : 340;
 
     const dim = this.scene.add
       .rectangle(width / 2, height / 2, width, height, 0x05070a, 0.72)
@@ -81,19 +81,20 @@ export class TutorialOverlay {
       ? [
           'Stick — move',
           'ATK — attack · E — interact',
-          'DASH — burst · 1/2/3 — skills',
+          'DASH — burst · SHIFT — Asche/Schatten',
+          '1/2/3 — skills · kills fill Shift energy',
           '',
-          'Explore the hub, open a rift (R),',
-          'fight, loot, return to town (B).',
+          'In rifts, SHIFT layers to open paths.',
         ]
       : [
           `WASD — move · LMB — attack`,
           `${formatHotkey('gather')} — interact / gather / chest`,
+          `${formatHotkey('shift')} — world shift (Asche ↔ Schatten)`,
           `${formatHotkey('skill1')} / ${formatHotkey('skill2')} / ${formatHotkey('skill3')} — class skills`,
           `${formatHotkey('dash')} — dash · ${formatHotkey('portal')} — rift · ${formatHotkey('town')} — town`,
           `${formatHotkey('map')} map · ${formatHotkey('inventory')} bag · ${formatHotkey('character')} attrs`,
           '',
-          'Loop: hub → wilderness / rift → loot → town.',
+          'Rifts: kill → energy → Q shift · follow the Lord.',
         ];
 
     const body = this.scene.add

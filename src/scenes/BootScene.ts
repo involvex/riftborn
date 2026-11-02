@@ -10,7 +10,11 @@ import { uiFont } from '../core/UiScale';
 import type { CharacterSave } from '../types/save';
 import { audioBus } from '../core/AudioBus';
 import { firstEmptySlot, titleActions } from '../core/TitleFlow';
-import { settingsStore } from '../core/SettingsStore';
+import {
+  cycleShiftFxIntensity,
+  settingsStore,
+  shiftFxIntensityLabel,
+} from '../core/SettingsStore';
 import { Events, gameEvents } from '../core/EventBus';
 import { navEnterTitle, navSetOverlay } from '../core/GameNavState';
 
@@ -93,7 +97,7 @@ export class BootScene extends Phaser.Scene {
       })
       .setOrigin(0.5);
     const sub = this.add
-      .text(width / 2, height * 0.32, 'Hub · wilderness · rifts', {
+      .text(width / 2, height * 0.32, 'SHIFT between Asche & Schatten', {
         fontFamily: 'Segoe UI, sans-serif',
         fontSize: uiFont(this, 18, 14, 22),
         color: '#8a9aaa',
@@ -126,7 +130,7 @@ export class BootScene extends Phaser.Scene {
       .text(
         width / 2,
         height * 0.9,
-        'WASD · LMB · 1/2/3 · M map · R rift · B town',
+        'WASD · LMB · Q shift · 1/2/3 · M map · R rift · B town',
         {
           fontFamily: 'Segoe UI, sans-serif',
           fontSize: '13px',
@@ -369,6 +373,16 @@ export class BootScene extends Phaser.Scene {
         onClick: () => {
           settingsStore.save({
             showDamageNumbers: !s.showDamageNumbers,
+          });
+          gameEvents.emit(Events.SETTINGS_CHANGED);
+          this.renderTitleSettings();
+        },
+      },
+      {
+        label: `Shift FX: ${shiftFxIntensityLabel(s.shiftFxIntensity)}`,
+        onClick: () => {
+          settingsStore.save({
+            shiftFxIntensity: cycleShiftFxIntensity(s.shiftFxIntensity),
           });
           gameEvents.emit(Events.SETTINGS_CHANGED);
           this.renderTitleSettings();

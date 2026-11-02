@@ -7,7 +7,9 @@ import {
   keyCodeFromSetting,
 } from '../core/Hotkeys';
 import {
+  cycleShiftFxIntensity,
   settingsStore,
+  shiftFxIntensityLabel,
   type HotkeyAction,
   DEFAULT_HOTKEYS,
 } from '../core/SettingsStore';
@@ -21,6 +23,7 @@ import { AbilityBar } from '../ui/AbilityBar';
 import { HudBars } from '../ui/HudBars';
 import { InventoryPanel } from '../ui/InventoryPanel';
 import { RiftProgressHud } from '../ui/RiftProgressHud';
+import { ShiftHud } from '../ui/ShiftHud';
 import { ShopPanel } from '../ui/ShopPanel';
 import { TraderPanel } from '../ui/TraderPanel';
 import { SkillTreePanel } from '../ui/SkillTreePanel';
@@ -126,6 +129,7 @@ export class UIScene extends Phaser.Scene {
     this.skillPanel = new SkillTreePanel(this);
     this.abilityBar = new AbilityBar(this);
     this.riftHud = new RiftProgressHud(this);
+    new ShiftHud(this);
     this.miniMap = new MiniMap(this);
     this.mapOverlay = new MapOverlay(this);
     this.tutorial = new TutorialOverlay(this);
@@ -918,11 +922,22 @@ export class UIScene extends Phaser.Scene {
           this.renderMenuPage();
         },
       );
-      this.menuButton(200, 'Hotkeys…', () => {
+      this.menuButton(
+        200,
+        `Shift FX: ${shiftFxIntensityLabel(s.shiftFxIntensity)}`,
+        () => {
+          settingsStore.save({
+            shiftFxIntensity: cycleShiftFxIntensity(s.shiftFxIntensity),
+          });
+          gameEvents.emit(Events.SETTINGS_CHANGED);
+          this.renderMenuPage();
+        },
+      );
+      this.menuButton(250, 'Hotkeys…', () => {
         this.menuPage = 'hotkeys';
         this.renderMenuPage();
       });
-      this.menuButton(250, 'Back', () => {
+      this.menuButton(300, 'Back', () => {
         this.menuPage = 'root';
         this.renderMenuPage();
       });

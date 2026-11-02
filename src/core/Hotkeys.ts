@@ -60,4 +60,5 @@ export const HOTKEY_LABELS: Record<HotkeyAction, string> = {
   menu: 'Pause menu',
   equipTool: 'Equip tool',
   map: 'Map',
+  shift: 'World shift',
 };

@@ -13,7 +13,8 @@ export type HotkeyAction =
   | 'coop'
   | 'menu'
   | 'equipTool'
-  | 'map';
+  | 'map'
+  | 'shift';
 
 export type HotkeyMap = Record<HotkeyAction, string>;
 
@@ -27,6 +28,8 @@ export type GameSettings = {
   screenShake: boolean;
   /** Auto-convert common gear drops to gold. */
   autoSellJunk: boolean;
+  /** 0 / 0.5 / 1 — ash/shadow transition intensity. */
+  shiftFxIntensity: number;
   hotkeys: HotkeyMap;
 };
 
@@ -48,6 +51,7 @@ export const DEFAULT_HOTKEYS: HotkeyMap = {
   menu: 'ESC',
   equipTool: 'T',
   map: 'M',
+  shift: 'Q',
 };
 
 export const DEFAULT_SETTINGS: GameSettings = {
@@ -58,8 +62,21 @@ export const DEFAULT_SETTINGS: GameSettings = {
   showDamageNumbers: true,
   screenShake: true,
   autoSellJunk: false,
+  shiftFxIntensity: 1,
   hotkeys: { ...DEFAULT_HOTKEYS },
 };
+
+export function cycleShiftFxIntensity(current: number): number {
+  if (current >= 0.99) return 0;
+  if (current >= 0.4) return 1;
+  return 0.5;
+}
+
+export function shiftFxIntensityLabel(v: number): string {
+  if (v >= 0.99) return 'Full';
+  if (v >= 0.4) return 'Low';
+  return 'Off';
+}
 
 function clamp01(n: number): number {
   return Math.min(1, Math.max(0, n));
@@ -90,6 +107,9 @@ export class SettingsStore {
         showDamageNumbers:
           parsed.showDamageNumbers ?? DEFAULT_SETTINGS.showDamageNumbers,
         screenShake: parsed.screenShake ?? DEFAULT_SETTINGS.screenShake,
+        shiftFxIntensity: clamp01(
+          parsed.shiftFxIntensity ?? DEFAULT_SETTINGS.shiftFxIntensity,
+        ),
       };
     } catch {
       this.data = structuredClone(DEFAULT_SETTINGS);

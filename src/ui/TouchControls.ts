@@ -59,6 +59,7 @@ export class TouchControls {
   private atk!: Btn;
   private interact!: Btn;
   private dash!: Btn;
+  private shiftBtn!: Btn;
   private chromeBtns: Btn[] = [];
   private chromeOpen = false;
   private metrics: TouchLayout | null = null;
@@ -79,7 +80,15 @@ export class TouchControls {
     this.dash = this.makeBtn('DASH', 0x5a8fd4, () =>
       gameEvents.emit('combat:dash', {}),
     );
-    this.root.add([this.atk.root, this.interact.root, this.dash.root]);
+    this.shiftBtn = this.makeBtn('SHIFT', 0x9a80e0, () =>
+      gameEvents.emit('combat:shift', {}),
+    );
+    this.root.add([
+      this.atk.root,
+      this.interact.root,
+      this.dash.root,
+      this.shiftBtn.root,
+    ]);
 
     this.chromeBtns = CHROME.slice(0, TOUCH_CHROME_COUNT).map((e) =>
       this.makeBtn(e.label, e.stroke, () => {
@@ -151,6 +160,13 @@ export class TouchControls {
     this.resetKnob();
 
     this.placeBtn(this.dash, m.dash.x, m.dash.y, m.dash.r, '11px');
+    this.placeBtn(
+      this.shiftBtn,
+      m.dash.x,
+      m.dash.y - m.dash.r * 2.4,
+      Math.round(m.dash.r * 0.95),
+      '10px',
+    );
     this.placeBtn(this.atk, m.atk.x, m.atk.y, m.atk.r, '15px');
     this.placeBtn(
       this.interact,

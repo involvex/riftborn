@@ -117,8 +117,8 @@ export class WorldScene extends Phaser.Scene {
   private readonly shiftSystem = new ShiftSystem(gameEvents);
   private readonly bossShift = new BossShiftBrain();
   private shiftOverlay: Phaser.GameObjects.Rectangle | null = null;
-  /** 0..1 from settings (step 5); default full. */
-  private shiftFxIntensity = 1;
+  private shiftFxIntensity = settingsStore.get().shiftFxIntensity;
+  private shiftHudAcc = 0;
   /** Floor diamonds (fallback when tile art missing). */
   private tiles!: Phaser.GameObjects.Graphics;
   /** Painted floor tile sprites (cleared on zone reload). */
@@ -267,6 +267,7 @@ export class WorldScene extends Phaser.Scene {
       gameEvents.on(Events.SETTINGS_CHANGED, () => {
         this.rebindActionKeys();
         audioBus.applyMusicVolume();
+        this.shiftFxIntensity = settingsStore.get().shiftFxIntensity;
       }),
       gameEvents.on('combat:castSkill', (p) => {
         const d = p as { slot: number };
@@ -287,6 +288,7 @@ export class WorldScene extends Phaser.Scene {
         const d = p as { layer: ShiftLayerId };
         this.applyShiftVisuals(d.layer);
         playShiftTransition(this, d.layer, this.shiftFxIntensity);
+        this.emitShiftHud();
       }),
       gameEvents.on('combat:shift', () => this.tryPlayerShift()),
     );
@@ -304,9 +306,7 @@ export class WorldScene extends Phaser.Scene {
     this.keySkill1 = bindAction(this.input.keyboard, 'skill1');
     this.keySkill2 = bindAction(this.input.keyboard, 'skill2');
     this.keySkill3 = bindAction(this.input.keyboard, 'skill3');
-    this.keyShift = this.input.keyboard.addKey(
-      Phaser.Input.Keyboard.KeyCodes.Q,
-    );
+    this.keyShift = bindAction(this.input.keyboard, 'shift');
   }
 
   private loadZone(rift: boolean): void {
@@ -374,7 +374,18 @@ export class WorldScene extends Phaser.Scene {
     }
     this.player.syncScreen();
     this.applyShiftVisuals(this.shiftSystem.layer);
+    this.emitShiftHud();
     this.emitMapSnapshot();
+  }
+
+  private emitShiftHud(): void {
+    gameEvents.emit('ui:shiftHud', {
+      active: gameState.inRift,
+      layer: this.shiftSystem.layer,
+      energy: this.shiftSystem.energy,
+      cooldownLeft: this.shiftSystem.cooldownLeft,
+      canShift: this.shiftSystem.canShift(),
+    });
   }
 
   private tryPlayerShift(): void {
@@ -1132,6 +1143,11 @@ export class WorldScene extends Phaser.Scene {
 
     this.shiftSystem.tick(delta);
     this.tickBossShift(delta);
+    this.shiftHudAcc += dt;
+    if (this.shiftHudAcc >= 0.2) {
+      this.shiftHudAcc = 0;
+      this.emitShiftHud();
+    }
     this.updateEnemies(dt);
 
     this.proxAcc += dt;

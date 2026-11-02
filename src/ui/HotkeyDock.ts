@@ -14,6 +14,7 @@ const ENTRIES: DockEntry[] = [
   { action: 'skills', symbol: '✦', label: 'skills' },
   { action: 'map', symbol: '◫', label: 'map' },
   { action: 'portal', symbol: '◈', label: 'rift' },
+  { action: 'shift', symbol: '⇄', label: 'shift' },
   { action: 'town', symbol: '⌂', label: 'town' },
   { action: 'menu', symbol: '☰', label: 'menu' },
 ];
