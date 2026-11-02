@@ -25,6 +25,12 @@ export type RiftbornChestSnap = {
   lootTier: number;
 };
 
+export type RiftbornShiftSnap = {
+  enabled: boolean;
+  layer: 'ash' | 'shadow';
+  energy: number;
+};
+
 export type RiftbornSnapshot = {
   ready: boolean;
   hubSize: number;
@@ -38,6 +44,7 @@ export type RiftbornSnapshot = {
   nearestHostileDistToPlaza: number;
   /** Alive hostiles inside the soft town buffer (default margin 10). */
   hostilesNearTown: number;
+  shift: RiftbornShiftSnap;
 };
 
 export type RiftbornApi = {
@@ -58,6 +65,7 @@ export type RiftbornSnapshotSource = {
   enemies: RiftbornEnemySnap[];
   pois: RiftbornPoiSnap[];
   chests: RiftbornChestSnap[];
+  shift: RiftbornShiftSnap;
 };
 
 declare global {
@@ -92,6 +100,7 @@ function buildSnapshot(src: RiftbornSnapshotSource): RiftbornSnapshot {
     chests: src.chests.map((c) => ({ ...c })),
     nearestHostileDistToPlaza: nearest,
     hostilesNearTown: nearCount,
+    shift: { ...src.shift },
   };
 }
 
@@ -119,6 +128,7 @@ export function installRiftbornDebug(
           chests: [],
           nearestHostileDistToPlaza: Number.POSITIVE_INFINITY,
           hostilesNearTown: 0,
+          shift: { enabled: false, layer: 'ash', energy: 0 },
         };
       }
       return buildSnapshot(source());
@@ -158,6 +168,7 @@ export function clearRiftbornDebug(): void {
         chests: [],
         nearestHostileDistToPlaza: Number.POSITIVE_INFINITY,
         hostilesNearTown: 0,
+        shift: { enabled: false, layer: 'ash', energy: 0 },
       }),
       hostilesNearTown: () => 0,
       nearestHostileDistToPlaza: () => Number.POSITIVE_INFINITY,

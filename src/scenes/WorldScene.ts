@@ -225,6 +225,11 @@ export class WorldScene extends Phaser.Scene {
         looted: c.looted,
         lootTier: c.lootTier,
       })),
+      shift: {
+        enabled: this.shiftSystem.enabled,
+        layer: this.shiftSystem.layer,
+        energy: this.shiftSystem.energy,
+      },
     }));
   }
 

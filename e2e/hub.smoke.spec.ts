@@ -10,6 +10,7 @@ type RiftbornSnap = {
   nearestHostileDistToPlaza: number;
   pois: { id: string }[];
   enemies: { alive: boolean }[];
+  shift: { enabled: boolean; layer: string; energy: number };
 };
 
 test.describe('hub smoke', () => {
@@ -36,6 +37,7 @@ test.describe('hub smoke', () => {
 
     expect(snap.ready).toBe(true);
     expect(snap.inRift).toBe(false);
+    expect(snap.shift.enabled).toBe(false);
     expect(snap.hubSize).toBe(64);
     expect(snap.pois.length).toBeGreaterThanOrEqual(8);
     // Soft town buffer (margin 10) must stay clear — agents assert this after map/POI edits.
