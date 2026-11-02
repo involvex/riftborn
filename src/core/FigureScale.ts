@@ -10,7 +10,7 @@ export const FIGURE_FRAME_PX = 128;
 export const FIGURE_HEIGHT_TILES = 1.4;
 /** No sprite may read wider than this fraction of TILE_WIDTH. */
 export const FIGURE_WIDTH_TILES_MAX = 0.9;
-/** World-space collision footprint (tiles). Must fit 1-tile corridors. */
+/** World-space collision footprint (tiles). Fits ≥2-tile (M1e) corridors. */
 export const FIGURE_COLLISION_RADIUS = 0.32;
 /** Measured opaque span of spr_player_mage idle (px). */
 export const FIGURE_CONTENT_PX = 108;

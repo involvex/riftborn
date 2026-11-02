@@ -38,7 +38,11 @@ import type {
   GearRarity,
   LootTier,
 } from '../types/game';
-import { generateDungeon, type DungeonMap } from '../world/DungeonGen';
+import {
+  findDiagonalCorridorCell,
+  generateDungeon,
+  type DungeonMap,
+} from '../world/DungeonGen';
 import { isWalkableOnLayer } from '../world/ShiftGateMap';
 import { netClient } from '../net/NetClient';
 import { bindAction } from '../core/Hotkeys';
@@ -237,6 +241,7 @@ export class WorldScene extends Phaser.Scene {
         },
       }),
       enterRift: () => this.debugEnterRift(),
+      gotoDiagonalCorridor: () => this.debugGotoDiagonalCorridor(),
     });
   }
 
@@ -244,13 +249,27 @@ export class WorldScene extends Phaser.Scene {
   private debugEnterRift(): boolean {
     if (gameState.inRift) return true;
     gameState.inRift = true;
-    gameState.riftSeed = (Date.now() ^ (Math.random() * 1e9)) >>> 0;
+    // Prefer a seed known to have narrow diagonal corridors (M1e screenshots).
+    gameState.riftSeed = 99;
     this.loadZone(true);
     gameEvents.emit(Events.RIFT_ENTERED, {
       seed: gameState.riftSeed,
       depth: this.riftDepth,
     });
     this.emitRiftProgress();
+    return true;
+  }
+
+  /** Warp player onto a stair-step corridor for width screenshots. */
+  private debugGotoDiagonalCorridor(): boolean {
+    if (!gameState.inRift || !this.dungeon) return false;
+    const cell = findDiagonalCorridorCell(this.dungeon);
+    if (!cell) return false;
+    this.player.worldX = cell.x + 0.5;
+    this.player.worldY = cell.y + 0.5;
+    this.player.syncScreen();
+    this.revealFogAroundPlayer();
+    this.emitMapSnapshot();
     return true;
   }
 

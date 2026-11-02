@@ -63,6 +63,8 @@ export type RiftbornApi = {
   openCharacter: () => void;
   /** Enter a rift (hub only) for scale / dungeon screenshots. */
   enterRift: () => boolean;
+  /** Warp onto a diagonal corridor bend (rift only). */
+  gotoDiagonalCorridor: () => boolean;
 };
 
 export type RiftbornSnapshotSource = {
@@ -79,6 +81,8 @@ export type RiftbornDebugHooks = {
   getSource: () => RiftbornSnapshotSource;
   /** Return true when a rift load was started. */
   enterRift?: () => boolean;
+  /** Warp onto a diagonal corridor bend (rift only). */
+  gotoDiagonalCorridor?: () => boolean;
 };
 
 declare global {
@@ -119,6 +123,7 @@ function buildSnapshot(src: RiftbornSnapshotSource): RiftbornSnapshot {
 
 let source: (() => RiftbornSnapshotSource) | null = null;
 let enterRiftHook: (() => boolean) | null = null;
+let gotoDiagonalHook: (() => boolean) | null = null;
 
 /** Publish live world state for Cursor agents / Playwright. */
 export function installRiftbornDebug(
@@ -127,9 +132,11 @@ export function installRiftbornDebug(
   if (typeof getSource === 'function') {
     source = getSource;
     enterRiftHook = null;
+    gotoDiagonalHook = null;
   } else {
     source = getSource.getSource;
     enterRiftHook = getSource.enterRift ?? null;
+    gotoDiagonalHook = getSource.gotoDiagonalCorridor ?? null;
   }
   const api: RiftbornApi = {
     get ready() {
@@ -171,6 +178,7 @@ export function installRiftbornDebug(
     openInventory: () => gameEvents.emit('ui:openInventory', {}),
     openCharacter: () => gameEvents.emit('ui:openCharacter', {}),
     enterRift: () => (enterRiftHook ? enterRiftHook() : false),
+    gotoDiagonalCorridor: () => (gotoDiagonalHook ? gotoDiagonalHook() : false),
   };
   window.__RIFTBORN = api;
 }
@@ -178,6 +186,7 @@ export function installRiftbornDebug(
 export function clearRiftbornDebug(): void {
   source = null;
   enterRiftHook = null;
+  gotoDiagonalHook = null;
   if (window.__RIFTBORN) {
     window.__RIFTBORN = {
       ready: false,
@@ -199,6 +208,7 @@ export function clearRiftbornDebug(): void {
       openInventory: () => {},
       openCharacter: () => {},
       enterRift: () => false,
+      gotoDiagonalCorridor: () => false,
     };
   }
 }
