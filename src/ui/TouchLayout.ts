@@ -16,6 +16,8 @@ export type TouchLayout = {
   landscape: boolean;
   stick: TouchPoint;
   dash: TouchPoint;
+  /** World shift (Q) — above DASH, ≥44px hit. */
+  shift: TouchPoint;
   atk: TouchPoint;
   interact: TouchPoint;
   /** [0]=top, [1]=mid, [2]=bottom — column left of E. */
@@ -79,11 +81,17 @@ export function computeTouchLayout(width: number, height: number): TouchLayout {
     y: height - pad - stickR - (landscape ? 2 : 10),
     r: stickR,
   };
-  const dashR = Math.round(stickR * 0.52);
+  const dashR = Math.max(22, Math.round(stickR * 0.52));
   const dash = {
     x: stick.x + stickR + dashR + gap,
     y: stick.y,
     r: dashR,
+  };
+  const shiftR = Math.max(22, Math.round(dashR * 0.95));
+  const shiftBtn: TouchPoint = {
+    x: dash.x,
+    y: dash.y - dashR * 2.4,
+    r: shiftR,
   };
 
   // —— Right combat: ATK + E + skill column ——
@@ -93,8 +101,8 @@ export function computeTouchLayout(width: number, height: number): TouchLayout {
       ? Math.round(Math.min(40, short * 0.11))
       : Math.round(Math.min(38, short * 0.1)),
   );
-  const skillR = Math.max(18, Math.round(atkR * 0.58));
-  const eR = Math.max(18, Math.round(atkR * 0.55));
+  const skillR = Math.max(22, Math.round(atkR * 0.58));
+  const eR = Math.max(22, Math.round(atkR * 0.55));
 
   const atk = {
     x: width - pad - atkR - 4,
@@ -200,6 +208,7 @@ export function computeTouchLayout(width: number, height: number): TouchLayout {
     landscape,
     stick,
     dash,
+    shift: shiftBtn,
     atk,
     interact,
     skillSlots,

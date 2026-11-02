@@ -214,13 +214,7 @@ export class TouchControls {
     this.resetKnob();
 
     this.placeBtn(this.dash, m.dash.x, m.dash.y, m.dash.r, '11px');
-    this.placeBtn(
-      this.shiftBtn,
-      m.dash.x,
-      m.dash.y - m.dash.r * 2.4,
-      Math.round(m.dash.r * 0.95),
-      '10px',
-    );
+    this.placeBtn(this.shiftBtn, m.shift.x, m.shift.y, m.shift.r, '10px');
     this.placeBtn(this.atk, m.atk.x, m.atk.y, m.atk.r, '15px');
     this.placeBtn(
       this.interact,

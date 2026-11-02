@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { audioBus } from '../core/AudioBus';
+import { shouldShowTouchControls } from './TouchControls';
 
 export type SummaryLine = { text: string; color?: string };
 
@@ -92,12 +93,20 @@ export class SummaryOverlay {
   layout(): void {
     const { width, height } = this.scene.scale;
     this.root.setPosition(width / 2, height / 2);
-    const w = Math.min(440, Math.floor(width * 0.72));
-    const h = Math.min(340, Math.floor(height * 0.7));
+    const touch = shouldShowTouchControls();
+    const w = Math.min(440, Math.floor(width * (touch ? 0.82 : 0.72)));
+    const h = Math.min(340, Math.floor(height * (touch ? 0.82 : 0.7)));
     this.bg.setSize(w, h);
-    this.title.setPosition(0, -h / 2 + 40);
+    this.title.setPosition(0, -h / 2 + (touch ? 32 : 40));
+    this.title.setFontSize(touch ? '22px' : '26px');
     this.body.setPosition(0, -10);
-    this.actionBtn.setPosition(0, h / 2 - 48);
+    this.body.setFontSize(touch ? '14px' : '16px');
+    // ≥44px tall tap target on phone
+    this.actionBtn.setStyle({
+      fontSize: touch ? '16px' : '18px',
+      padding: { x: touch ? 20 : 16, y: touch ? 12 : 8 },
+    });
+    this.actionBtn.setPosition(0, h / 2 - (touch ? 40 : 48));
   }
 
   destroy(): void {

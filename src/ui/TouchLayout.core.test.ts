@@ -20,6 +20,7 @@ function namedHudRects(layout: TouchLayout): { name: string; rect: Rect }[] {
     { name: 'minimap', rect: layout.minimap },
     { name: 'stick', rect: circleRect(layout.stick) },
     { name: 'dash', rect: circleRect(layout.dash) },
+    { name: 'shift', rect: circleRect(layout.shift) },
     { name: 'atk', rect: circleRect(layout.atk) },
     { name: 'interact', rect: circleRect(layout.interact) },
     { name: 'town', rect: circleRect(layout.townButton) },
@@ -75,6 +76,12 @@ describe('computeTouchLayout', () => {
       }
       expect(layout.atk.r * 2).toBeGreaterThanOrEqual(44);
       expect(layout.stick.r * 2).toBeGreaterThanOrEqual(44);
+      expect(layout.dash.r * 2).toBeGreaterThanOrEqual(44);
+      expect(layout.shift.r * 2).toBeGreaterThanOrEqual(44);
+      expect(layout.interact.r * 2).toBeGreaterThanOrEqual(44);
+      for (const s of layout.skillSlots) {
+        expect(s.r * 2).toBeGreaterThanOrEqual(44);
+      }
 
       assertInsideViewport(layout, width, height);
       assertNoOverlaps(layout);

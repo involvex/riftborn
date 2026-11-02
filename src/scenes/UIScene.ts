@@ -335,7 +335,7 @@ export class UIScene extends Phaser.Scene {
           },
         });
         this.setModalChrome(true);
-        this.scene.pause('WorldScene');
+        this.pauseWorldSafe();
       }),
       gameEvents.on(Events.RIFT_PROGRESS, (p) => {
         const d = p as {
@@ -358,6 +358,11 @@ export class UIScene extends Phaser.Scene {
           d.depth ?? 1,
           d.modName,
         );
+      }),
+      gameEvents.on('ui:dismissSummary', () => {
+        if (!this.summaryOverlay.open) return;
+        this.summaryOverlay.confirm();
+        this.syncNavFlags();
       }),
       gameEvents.on(Events.PLAYER_DIED, (p) => {
         const d = p as {
@@ -396,7 +401,7 @@ export class UIScene extends Phaser.Scene {
           },
         });
         this.setModalChrome(true);
-        this.scene.pause('WorldScene');
+        this.pauseWorldSafe();
         this.refresh();
       }),
       gameEvents.on(Events.BOUNTY_CHANGED, () => this.refresh()),
@@ -434,7 +439,7 @@ export class UIScene extends Phaser.Scene {
         this.mapOverlay.hide();
         this.inventoryPanel.toggle();
         this.setModalChrome(this.inventoryPanel.open);
-        if (this.inventoryPanel.open) this.scene.pause('WorldScene');
+        if (this.inventoryPanel.open) this.pauseWorldSafe();
         else this.scene.resume('WorldScene');
       }),
       gameEvents.on('ui:openCharacter', () => {
@@ -890,12 +895,16 @@ export class UIScene extends Phaser.Scene {
     this.rebindHint.setText('');
     if (this.menuPage === 'root') {
       this.menuTitle.setText('Paused');
-      this.menuButton(-80, 'Resume', () => this.hideMenu());
-      this.menuButton(-10, 'Settings', () => {
+      this.menuButton(-100, 'Resume', () => this.hideMenu());
+      this.menuButton(-30, 'Settings', () => {
         this.menuPage = 'settings';
         this.renderMenuPage();
       });
-      this.menuButton(60, 'Back to title', () => {
+      this.menuButton(40, 'Co-op', () => {
+        this.hideMenu();
+        gameEvents.emit('ui:toggleCoop', {});
+      });
+      this.menuButton(110, 'Back to title', () => {
         gameState.persist();
         this.hideMenu();
         this.scene.stop('WorldScene');
@@ -1012,9 +1021,43 @@ export class UIScene extends Phaser.Scene {
       return;
     }
 
-    // hotkeys
+    // hotkeys — two columns on touch so the list fits phone landscape
     this.menuTitle.setText('Hotkeys');
     const actions = Object.keys(DEFAULT_HOTKEYS) as HotkeyAction[];
+    const touch = shouldShowTouchControls();
+    if (touch) {
+      const colH = 26;
+      const mid = Math.ceil(actions.length / 2);
+      actions.forEach((action, i) => {
+        const col = i < mid ? 0 : 1;
+        const row = i < mid ? i : i - mid;
+        const x = col === 0 ? -100 : 100;
+        const y = -150 + row * colH;
+        const label = `${HOTKEY_LABELS[action]} [${formatHotkey(action)}]`;
+        const btn = this.menuButton(
+          y,
+          label,
+          () => {
+            this.awaitingRebind = action;
+            this.rebindHint.setText(
+              `Press a key for ${HOTKEY_LABELS[action]}…`,
+            );
+          },
+          { fontSize: '12px', padY: 3 },
+        );
+        btn.setX(x);
+      });
+      this.menuButton(150, 'Reset defaults', () => {
+        settingsStore.reset();
+        gameEvents.emit(Events.SETTINGS_CHANGED);
+        this.renderMenuPage();
+      });
+      this.menuButton(185, 'Back', () => {
+        this.menuPage = 'settings';
+        this.renderMenuPage();
+      });
+      return;
+    }
     actions.forEach((action, i) => {
       const y = -170 + i * 32;
       const label = `${HOTKEY_LABELS[action]}: [${formatHotkey(action)}]`;
@@ -1034,8 +1077,18 @@ export class UIScene extends Phaser.Scene {
     });
   }
 
+  /** Pause WorldScene only when it is running (avoids Phaser warn). */
+  private pauseWorldSafe(): void {
+    const world = this.scene.get('WorldScene');
+    if (world && world.scene.isActive() && !world.scene.isPaused()) {
+      this.scene.pause('WorldScene');
+    }
+  }
+
   private showMenu(): void {
     this.hideCraft();
+    this.hideShop();
+    this.hideTrader();
     this.hideChar();
     this.skillPanel.hide();
     this.inventoryPanel.hide();
@@ -1047,7 +1100,7 @@ export class UIScene extends Phaser.Scene {
     this.menuPanel.setVisible(true);
     this.menuOpen = true;
     this.setModalChrome(true);
-    this.scene.pause('WorldScene');
+    this.pauseWorldSafe();
     this.syncNavFlags();
   }
 
@@ -1162,7 +1215,7 @@ export class UIScene extends Phaser.Scene {
     this.charPanel.setVisible(true);
     this.charOpen = true;
     this.setModalChrome(true);
-    this.scene.pause('WorldScene');
+    this.pauseWorldSafe();
   }
 
   private hideChar(): void {

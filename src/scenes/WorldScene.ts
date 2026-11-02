@@ -432,6 +432,7 @@ export class WorldScene extends Phaser.Scene {
       }),
       gameEvents.on('combat:shift', () => this.tryPlayerShift()),
       gameEvents.on('ui:returnToTown', () => this.returnToTown()),
+      gameEvents.on('ui:toggleCoop', () => this.toggleCoop()),
     );
   }
 
