@@ -193,7 +193,8 @@ export class WorldScene extends Phaser.Scene {
     // Tighter follow on touch — soft lerp reads as input lag
     const camLerp = shouldShowTouchControls() ? 0.38 : 0.14;
     this.cameras.main.startFollow(this.player.body, true, camLerp, camLerp);
-    this.cameras.main.setZoom(shouldShowTouchControls() ? 1.05 : 1.1);
+    // Same FOV on phone and desktop — Low graphics must not zoom via renderScale.
+    this.cameras.main.setZoom(1.1);
     this.publishDebugApi();
 
     this.events.on(Phaser.Scenes.Events.SHUTDOWN, () => this.cleanup());

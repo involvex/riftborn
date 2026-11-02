@@ -9,19 +9,14 @@ import { installHistoryBackGuard } from './core/HistoryBackGuard';
 import { installNativeBackBridge } from './core/NativeBackBridge';
 import {
   applyGraphicsProfile,
-  currentGraphicsProfile,
+  gameSizeForProfile,
 } from './core/GraphicsQuality';
 
 const parent = document.getElementById('app');
-const bootProfile = currentGraphicsProfile();
-const bootW = Math.max(
-  320,
-  Math.floor(window.innerWidth * bootProfile.renderScale),
-);
-const bootH = Math.max(
-  180,
-  Math.floor(window.innerHeight * bootProfile.renderScale),
-);
+// Logical size = CSS viewport; renderScale only affects buffer later.
+const bootSize = gameSizeForProfile(window.innerWidth, window.innerHeight, 1);
+const bootW = bootSize.width;
+const bootH = bootSize.height;
 
 const game = new Phaser.Game({
   type: Phaser.AUTO,

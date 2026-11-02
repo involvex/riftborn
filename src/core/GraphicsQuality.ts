@@ -1,4 +1,5 @@
 import type Phaser from 'phaser';
+import { TILE_HEIGHT, TILE_WIDTH } from './IsoMath';
 import { settingsStore, type GraphicsQualitySetting } from './SettingsStore';
 
 /** Resolved runtime tier after Auto → High/Low. */
@@ -6,7 +7,7 @@ export type GraphicsTier = 'high' | 'low';
 
 export type GraphicsProfile = {
   tier: GraphicsTier;
-  /** Internal canvas scale vs CSS size (1 = native). */
+  /** Internal canvas buffer scale vs CSS size (1 = native). */
   renderScale: number;
   /** Max concurrent floating damage texts. */
   maxDamageNumbers: number;
@@ -17,6 +18,52 @@ export type GraphicsProfile = {
   /** Damage-number font resolution (Phaser text). */
   textResolution: number;
 };
+
+export type Size2 = { width: number; height: number };
+
+/**
+ * Logical Phaser game size — always CSS viewport.
+ * renderScale must not shrink this (that zooms the world).
+ */
+export function gameSizeForProfile(
+  cssW: number,
+  cssH: number,
+  _renderScale: number,
+): Size2 {
+  return {
+    width: Math.max(320, Math.floor(cssW)),
+    height: Math.max(180, Math.floor(cssH)),
+  };
+}
+
+/** Backing-store size for lower GPU fill-rate (CSS × renderScale). */
+export function bufferSizeForProfile(
+  cssW: number,
+  cssH: number,
+  renderScale: number,
+): Size2 {
+  const scale = Math.min(1, Math.max(0.35, renderScale));
+  return {
+    width: Math.max(320, Math.floor(cssW * scale)),
+    height: Math.max(180, Math.floor(cssH * scale)),
+  };
+}
+
+/**
+ * Approximate visible world tiles along screen axes at a camera zoom.
+ * Used to assert Low/High show the same FOV.
+ */
+export function visibleWorldTileSpan(
+  viewW: number,
+  viewH: number,
+  zoom: number,
+): { tilesX: number; tilesY: number } {
+  const z = Math.max(0.01, zoom);
+  return {
+    tilesX: viewW / z / TILE_WIDTH,
+    tilesY: viewH / z / TILE_HEIGHT,
+  };
+}
 
 const HIGH: GraphicsProfile = {
   tier: 'high',
@@ -94,8 +141,10 @@ let resizeHooked = false;
 let gameRef: Phaser.Game | null = null;
 
 /**
- * Lower the Phaser buffer size and stretch via CSS so GPU fill-rate
- * drops on phones without changing layout coordinates in scenes.
+ * Keep logical game size = CSS viewport (same world FOV at Low/High).
+ * renderScale no longer shrinks scale.resize (that zoomed the world);
+ * Low still cuts particles / juice via the profile. Buffer helpers remain
+ * for tests and future safe downscale paths.
  * Requires Phaser.Scale.NONE (see main.ts).
  */
 export function applyGraphicsProfile(game: Phaser.Game): void {
@@ -112,9 +161,9 @@ export function applyGraphicsProfile(game: Phaser.Game): void {
     appliedScale = p.renderScale;
     const cssW = window.innerWidth;
     const cssH = window.innerHeight;
-    const w = Math.max(320, Math.floor(cssW * appliedScale));
-    const h = Math.max(180, Math.floor(cssH * appliedScale));
-    gameRef.scale.resize(w, h);
+    const logical = gameSizeForProfile(cssW, cssH, p.renderScale);
+    // Always CSS size — Low/High show the same tile span.
+    gameRef.scale.resize(logical.width, logical.height);
     if (gameRef.canvas) {
       gameRef.canvas.style.width = `${cssW}px`;
       gameRef.canvas.style.height = `${cssH}px`;

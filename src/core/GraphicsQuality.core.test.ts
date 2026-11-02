@@ -1,9 +1,12 @@
 import { describe, expect, test } from 'bun:test';
 import {
+  bufferSizeForProfile,
   cycleGraphicsQuality,
+  gameSizeForProfile,
   graphicsQualityLabel,
   profileForTier,
   resolveGraphicsTier,
+  visibleWorldTileSpan,
 } from './GraphicsQuality';
 
 describe('resolveGraphicsTier', () => {
@@ -26,6 +29,37 @@ describe('profileForTier', () => {
     expect(low.maxDamageNumbers).toBeLessThan(high.maxDamageNumbers);
     expect(low.particleCap).toBeLessThan(high.particleCap);
     expect(low.juiceScale).toBeLessThan(high.juiceScale);
+  });
+});
+
+describe('render scale vs world FOV', () => {
+  test('logical game size ignores renderScale (CSS only)', () => {
+    const cssW = 1024;
+    const cssH = 473;
+    const low = profileForTier('low');
+    const high = profileForTier('high');
+    const gLow = gameSizeForProfile(cssW, cssH, low.renderScale);
+    const gHigh = gameSizeForProfile(cssW, cssH, high.renderScale);
+    expect(gLow).toEqual(gHigh);
+    expect(gLow.width).toBe(cssW);
+    expect(gLow.height).toBe(cssH);
+  });
+
+  test('buffer shrinks on low; visible tile span stays equal', () => {
+    const cssW = 1024;
+    const cssH = 473;
+    const zoom = 1.05;
+    const low = profileForTier('low');
+    const high = profileForTier('high');
+    const bufLow = bufferSizeForProfile(cssW, cssH, low.renderScale);
+    const bufHigh = bufferSizeForProfile(cssW, cssH, high.renderScale);
+    expect(bufLow.width).toBeLessThan(bufHigh.width);
+
+    const gLow = gameSizeForProfile(cssW, cssH, low.renderScale);
+    const gHigh = gameSizeForProfile(cssW, cssH, high.renderScale);
+    expect(visibleWorldTileSpan(gLow.width, gLow.height, zoom)).toEqual(
+      visibleWorldTileSpan(gHigh.width, gHigh.height, zoom),
+    );
   });
 });
 
