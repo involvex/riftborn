@@ -31,3 +31,28 @@ Setting: **Graphics** = Auto / Low / High (Settings + title).
 1. `/?touch=1` → FPS HUD should stay closer to 50–60 in a pack.
 2. Settings → Graphics → High restores desktop look (heavier).
 3. `bun test src` covers tier resolve / caps.
+
+## M1g check (2026-11-02) — Auto/Low on touch vs ~32 fps
+
+Playwright phone viewport `1024×473` + `/?smoke=1&touch=1` with
+`graphicsQuality: 'auto'`:
+
+| Probe (`window.__RIFTBORN.graphicsProfile()`) | Result                           |
+| --------------------------------------------- | -------------------------------- |
+| `setting`                                     | `auto`                           |
+| `tier`                                        | `low` (Auto → touch → Low works) |
+| `renderScale` / `getAppliedRenderScale()`     | `0.65` recorded                  |
+| `particleCap`                                 | `4` (Low juice path active)      |
+
+**Verdict:** The Low _tier_ does apply on touch (particles / dmg-number
+cap / juiceScale). There is **no obvious “Auto ignored” bug**.
+
+Remaining fill-rate gap: `applyGraphicsProfile` still resizes the Phaser
+logical size to the full CSS viewport and only _records_ `renderScale`.
+The canvas backing store is **not** downscaled to 65% anymore (disabled
+earlier because shrinking `scale.resize` zoomed the world FOV). That
+matches continued ~32 fps reports on Android WebView even with Auto/Low —
+juice caps help, but pixel fill stays near native DPR.
+
+**No code fix in M1g** — restoring buffer downscale needs a FOV-safe path
+(separate from logical game size), not a one-liner.
