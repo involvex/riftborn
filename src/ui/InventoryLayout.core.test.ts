@@ -12,7 +12,8 @@ function namedRects(layout: InventoryLayout): { name: string; rect: Rect }[] {
     { name: 'title', rect: layout.title },
     { name: 'equipment', rect: layout.equipment },
     { name: 'hint', rect: layout.hint },
-    { name: 'bagHeader', rect: layout.bagHeader },
+    { name: 'bagLabel', rect: layout.bagLabel },
+    { name: 'sortBtn', rect: layout.sortBtn },
     { name: 'bagGrid', rect: layout.bagGrid },
     { name: 'detail', rect: layout.detail },
   ];
@@ -85,6 +86,17 @@ describe('computeInventoryLayout', () => {
         expect(layout.detailBeside || layout.scrollable).toBe(true);
       }
       expect(layout.close).toBeNull();
+
+      // Sort lives in the bag header band; hint stays above it.
+      expect(layout.sortBtn.y).toBeGreaterThanOrEqual(layout.bagHeader.y - 0.01);
+      expect(
+        layout.sortBtn.y + layout.sortBtn.h,
+      ).toBeLessThanOrEqual(layout.bagHeader.y + layout.bagHeader.h + 0.01);
+      expect(layout.hint.y + layout.hint.h).toBeLessThanOrEqual(
+        layout.bagHeader.y + 0.01,
+      );
+      expect(layout.eqNameMaxPx).toBeGreaterThan(40);
+      expect(layout.detail.w).toBeGreaterThan(100);
     });
   }
 

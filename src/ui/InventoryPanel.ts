@@ -230,11 +230,13 @@ export class InventoryPanel {
   private setDetailLines(lines: TooltipLine[]): void {
     this.detailRoot.removeAll(true);
     const layout = this.lastLayout;
-    const maxW = layout ? layout.detail.w - 16 : this.panelW - 56;
+    const maxW = layout ? Math.max(40, layout.detail.w - 16) : this.panelW - 56;
+    const maxH = layout ? Math.max(24, layout.detail.h - 12) : 72;
     const touch = shouldShowTouchControls();
     let y = 0;
     const maxLines = layout?.detailBeside ? (touch ? 8 : 10) : touch ? 4 : 6;
     for (const line of lines.slice(0, maxLines)) {
+      if (y >= maxH) break;
       const t = this.scene.add
         .text(0, y, line.text, {
           fontFamily: UI_FONT,
@@ -247,6 +249,10 @@ export class InventoryPanel {
         .setOrigin(layout?.detailBeside ? 0 : 0.5, 0);
       if (layout?.detailBeside) {
         t.setX(-maxW / 2);
+      }
+      // Clip lines that would spill past the detail box.
+      if (y + t.height > maxH) {
+        t.setCrop(0, 0, t.width, Math.max(0, maxH - y));
       }
       this.detailRoot.add(t);
       y += t.height + 1;
@@ -271,9 +277,21 @@ export class InventoryPanel {
     );
   }
 
-  private truncateName(name: string, max: number): string {
-    if (name.length <= max) return name;
-    return `${name.slice(0, Math.max(1, max - 1))}…`;
+  /** Fit name to equipment card width via word-wrap (no early char cut). */
+  private fitEqName(
+    name: string,
+    maxPx: number,
+    fontSize: string,
+  ): Phaser.GameObjects.Text {
+    return this.scene.add
+      .text(0, 0, name, {
+        fontFamily: UI_FONT,
+        fontSize,
+        color: '#f0ebe3',
+        resolution: 2,
+        wordWrap: { width: maxPx },
+      })
+      .setOrigin(0, 0.5);
   }
 
   refresh(): void {
@@ -335,8 +353,10 @@ export class InventoryPanel {
             ? (getItemDef(eq.tool)?.name ?? eq.tool)
             : '—'
           : (eq[s.key]?.name ?? '—');
-      const nameMax = touch ? 11 : 16;
-      const short = this.truncateName(fullName, nameMax);
+      const nameMaxPx = Math.min(
+        layout.eqNameMaxPx,
+        Math.floor(eqCellW - iconSize - 14),
+      );
       const text = this.scene.add
         .text(iconX + iconSize + 6, y - 6, s.label, {
           fontFamily: UI_FONT,
@@ -345,14 +365,12 @@ export class InventoryPanel {
           resolution: 2,
         })
         .setOrigin(0, 0.5);
-      const nameTxt = this.scene.add
-        .text(iconX + iconSize + 6, y + 8, short, {
-          fontFamily: UI_FONT,
-          fontSize: touch ? '10px' : '12px',
-          color: '#f0ebe3',
-          resolution: 2,
-        })
-        .setOrigin(0, 0.5);
+      const nameTxt = this.fitEqName(
+        fullName,
+        nameMaxPx,
+        touch ? '10px' : '12px',
+      );
+      nameTxt.setPosition(iconX + iconSize + 6, y + 8);
       cell.on('pointerup', () => this.onEquipClick(s.key));
       cell.on('pointerover', () => {
         if (s.key !== 'tool' && eq[s.key]) {
@@ -381,7 +399,7 @@ export class InventoryPanel {
         fontSize: touch ? '10px' : '11px',
         color: '#8a9aaa',
         resolution: 2,
-        wordWrap: { width: layout.hint.w },
+        wordWrap: { width: Math.max(40, layout.hint.w - 4) },
         align: 'center',
       })
       .setOrigin(0.5, 0);
@@ -390,21 +408,24 @@ export class InventoryPanel {
     // Bag header + grid live in gridRoot at panel origin for easier masking.
     this.gridRoot.setPosition(-this.panelW / 2, -this.panelH / 2);
 
-    const bagLabel = this.scene.add.text(
-      layout.bagHeader.x,
-      layout.bagHeader.y + 2,
-      `Bag ${gameState.inventory.slots.length}/${gameState.inventory.capacity}  ·  ${gameState.inventory.count('gold')}g`,
-      {
-        fontFamily: UI_FONT,
-        fontSize: touch ? '12px' : '14px',
-        color: '#e0c890',
-        resolution: 2,
-      },
-    );
+    const bagLabel = this.scene.add
+      .text(
+        layout.bagLabel.x,
+        layout.bagLabel.y + layout.bagLabel.h / 2,
+        `Bag ${gameState.inventory.slots.length}/${gameState.inventory.capacity}  ·  ${gameState.inventory.count('gold')}g`,
+        {
+          fontFamily: UI_FONT,
+          fontSize: touch ? '12px' : '14px',
+          color: '#e0c890',
+          resolution: 2,
+          wordWrap: { width: Math.max(40, layout.bagLabel.w - 4) },
+        },
+      )
+      .setOrigin(0, 0.5);
     const sortBtn = this.scene.add
       .text(
-        layout.bagHeader.x + layout.bagHeader.w,
-        layout.bagHeader.y + 2,
+        layout.sortBtn.x + layout.sortBtn.w / 2,
+        layout.sortBtn.y + layout.sortBtn.h / 2,
         'Sort',
         {
           fontFamily: UI_FONT,
@@ -415,7 +436,7 @@ export class InventoryPanel {
           resolution: 2,
         },
       )
-      .setOrigin(1, 0)
+      .setOrigin(0.5)
       .setInteractive({ useHandCursor: true });
     sortBtn.on('pointerup', () => {
       audioBus.uiClick();

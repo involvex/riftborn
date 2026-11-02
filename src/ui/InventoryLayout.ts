@@ -16,7 +16,12 @@ export type InventoryLayout = {
   title: Rect;
   equipment: Rect;
   hint: Rect;
+  /** Full bag header band (label + Sort). */
   bagHeader: Rect;
+  /** Capacity/gold label — left side of bagHeader. */
+  bagLabel: Rect;
+  /** Sort control — right side of bagHeader, no overlap with hint. */
+  sortBtn: Rect;
   bagGrid: Rect;
   detail: Rect;
   close: Rect | null;
@@ -32,6 +37,8 @@ export type InventoryLayout = {
   eqGap: number;
   bagGap: number;
   headerBand: number;
+  /** Max pixel width for equipment name text inside a card. */
+  eqNameMaxPx: number;
 };
 
 export function rectsOverlap(a: Rect, b: Rect): boolean {
@@ -69,8 +76,10 @@ export function computeInventoryLayout(
   const pad = touch ? (short ? 10 : 14) : 22;
   const gap = touch ? 6 : 8;
   const titleH = touch ? (short ? 22 : 28) : 34;
-  const hintH = touch ? (short ? 14 : 16) : 18;
-  const headerBand = short ? 18 : 22;
+  const hintH = touch ? (short ? 16 : 18) : 18;
+  const headerBand = short ? 22 : 24;
+  const sortW = touch ? 52 : 56;
+  const sortH = Math.min(headerBand - 2, touch ? 20 : 22);
   const bagGap = touch ? 4 : 6;
   const minCell = touch ? 36 : 24;
   const maxCell = touch ? 44 : 52;
@@ -139,15 +148,33 @@ export function computeInventoryLayout(
       }
     : null;
 
-  let bagHeader: Rect;
   let bagGrid: Rect;
   let detail: Rect;
   let cellSize: number;
   let visibleRows: number;
   let scrollable: boolean;
+  let bagHeader: Rect = { x: 0, y: 0, w: 0, h: 0 };
+  let bagLabel: Rect = { x: 0, y: 0, w: 0, h: 0 };
+  let sortBtn: Rect = { x: 0, y: 0, w: 0, h: 0 };
 
   const contentTop = y;
   const contentH = Math.max(80, bottomY - contentTop);
+
+  const placeBagHeader = (x: number, bandY: number, bandW: number): void => {
+    bagHeader = { x, y: bandY, w: bandW, h: headerBand };
+    sortBtn = {
+      x: x + bandW - sortW,
+      y: bandY + Math.max(0, Math.floor((headerBand - sortH) / 2)),
+      w: sortW,
+      h: sortH,
+    };
+    bagLabel = {
+      x,
+      y: bandY,
+      w: Math.max(40, bandW - sortW - gap),
+      h: headerBand,
+    };
+  };
 
   if (detailBeside) {
     const detailW = Math.min(
@@ -161,12 +188,7 @@ export function computeInventoryLayout(
       w: detailW,
       h: contentH,
     };
-    bagHeader = {
-      x: pad,
-      y: contentTop,
-      w: bagW,
-      h: headerBand,
-    };
+    placeBagHeader(pad, contentTop, bagW);
     const gridH = contentH - headerBand;
     bagGrid = {
       x: pad,
@@ -218,12 +240,7 @@ export function computeInventoryLayout(
     const bagBottom = detail.y - gap;
     const bagAreaH = Math.max(60, bagBottom - contentTop);
     const bagW = panelW - pad * 2;
-    bagHeader = {
-      x: pad,
-      y: contentTop,
-      w: bagW,
-      h: headerBand,
-    };
+    placeBagHeader(pad, contentTop, bagW);
     const gridH = bagAreaH - headerBand;
     bagGrid = {
       x: pad,
@@ -249,8 +266,14 @@ export function computeInventoryLayout(
     }
   }
 
-  // Ensure bagGrid height matches visible rows when not stretching empty space wrongly —
-  // keep the allocated region (scroll viewport); cells draw inside it.
+  // Equipment name column: card width minus icon + padding.
+  const eqCellW =
+    (equipment.w - eqGap * (eqCols - 1)) / eqCols;
+  const eqIconGuess = touch ? (short ? 24 : 28) : 36;
+  const eqNameMaxPx = Math.max(
+    48,
+    Math.floor(eqCellW - eqIconGuess - 14),
+  );
 
   return {
     panel: { x: 0, y: 0, w: panelW, h: panelH },
@@ -258,6 +281,8 @@ export function computeInventoryLayout(
     equipment,
     hint,
     bagHeader,
+    bagLabel,
+    sortBtn,
     bagGrid,
     detail,
     close,
@@ -273,5 +298,6 @@ export function computeInventoryLayout(
     eqGap,
     bagGap,
     headerBand,
+    eqNameMaxPx,
   };
 }
