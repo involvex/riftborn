@@ -58,3 +58,15 @@ All rows above are **ok**. No unbegrüdete `fehlt` entries remain.
 Co-op was the only keyboard action without a prior pad/chrome path; it is now
 Pause → Co-op (`ui:toggleCoop`). Hotkeys settings use a two-column layout on
 touch so the rebind list fits 1024×473.
+
+## M2b — readability & pad feedback (1024×473)
+
+| Issue                                               | Fix                                                                        | Status |
+| --------------------------------------------------- | -------------------------------------------------------------------------- | ------ |
+| Tiny HUD/overlay copy (slot labels, Layer, fps, D#) | `uiFontPx(role, profile)` with touch floor 12 CSS-px                       | ok     |
+| Skill labels clipped (`STRIK`)                      | `shortTouchSkillLabel` whole words + fit check                             | ok     |
+| Bag grid under-uses width / cells &lt;44            | `computeInventoryLayout` touch cells ≥44, fill bag width                   | ok     |
+| No visible skill cooldown                           | Radial sweep overlay on AbilityBar pads                                    | ok     |
+| Weak pad press feel                                 | Scale+brighten on press; optional `navigator.vibrate` (Settings → Haptics) | ok     |
+
+Playwright: `e2e/m2b.touch.spec.ts` → `artifacts/m2b-inventory.png`, `artifacts/m2b-rift.png` (cooldown forced via `__RIFTBORN.forceSkillCooldown`).
