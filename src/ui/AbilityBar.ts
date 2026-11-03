@@ -1,6 +1,8 @@
 import Phaser from 'phaser';
 import { gameEvents } from '../core/EventBus';
+import { hapticTap } from '../core/Haptics';
 import { formatHotkey } from '../core/Hotkeys';
+import { uiFontPx } from '../core/UiFont';
 import { gameState } from '../systems/GameState';
 import { ACTIVE_SLOTS, getAbilityDef } from '../systems/SkillSystem';
 import {
@@ -10,12 +12,14 @@ import {
   updateSkillAim,
   type SkillAimState,
 } from '../systems/SkillAim';
+import { cooldownSweepProgress } from './CooldownOverlay';
+import { shortTouchSkillLabel, touchSkillFontPx } from './SkillLabels';
 import { shouldShowTouchControls } from './TouchControls';
 import { computeTouchLayout } from './TouchLayout';
 
 /**
  * Desktop: bottom hotkey strip. Touch: round skill buttons with
- * hold-drag aim (preview line) + short-tap auto-target.
+ * hold-drag aim (preview line) + short-tap auto-target + radial CD.
  */
 export class AbilityBar {
   readonly root: Phaser.GameObjects.Container;
@@ -26,6 +30,8 @@ export class AbilityBar {
     cd: Phaser.GameObjects.Text;
     key: Phaser.GameObjects.Text;
     ring?: Phaser.GameObjects.Arc;
+    /** Filled pie covering remaining cooldown (touch). */
+    sweep?: Phaser.GameObjects.Arc;
     cx: number;
     cy: number;
     r: number;
@@ -47,6 +53,7 @@ export class AbilityBar {
       'skill2',
       'skill3',
     ];
+    const skillFont = `${uiFontPx('skill', this.touchMode ? 'touch' : 'desktop')}px`;
     for (let i = 0; i < ACTIVE_SLOTS; i++) {
       const slot = i;
       if (this.touchMode) {
@@ -55,13 +62,19 @@ export class AbilityBar {
           .setStrokeStyle(2.5, 0x4a6070, 0.95)
           .setInteractive({ useHandCursor: true });
         ring.on('pointerdown', (p: Phaser.Input.Pointer) => {
-          ring.setScale(0.92);
+          ring.setScale(0.88);
+          ring.setFillStyle(0x2a3848, 0.95);
+          hapticTap(10);
           this.startAim(slot, ring.x, ring.y, p);
         });
+        // Pie wedge: start/end angles updated in refresh().
+        const sweep = scene.add
+          .arc(0, 0, 30, -90, -90, false, 0x05080c, 0.78)
+          .setVisible(false);
         const name = scene.add
           .text(0, -2, '', {
             fontFamily: 'Segoe UI, sans-serif',
-            fontSize: '11px',
+            fontSize: skillFont,
             color: '#e8e4d8',
             fontStyle: 'bold',
             align: 'center',
@@ -70,13 +83,23 @@ export class AbilityBar {
         const cd = scene.add
           .text(0, 12, '', {
             fontFamily: 'Consolas, monospace',
-            fontSize: '10px',
+            fontSize: `${uiFontPx('caption', 'touch')}px`,
             color: '#8ab4d4',
           })
           .setOrigin(0.5);
         const key = scene.add.text(0, 0, '').setVisible(false);
-        this.slots.push({ bg: ring, name, cd, key, ring, cx: 0, cy: 0, r: 30 });
-        this.root.add([ring, name, cd]);
+        this.slots.push({
+          bg: ring,
+          name,
+          cd,
+          key,
+          ring,
+          sweep,
+          cx: 0,
+          cy: 0,
+          r: 30,
+        });
+        this.root.add([ring, sweep, name, cd]);
       } else {
         const bg = scene.add.rectangle(0, 0, 96, 52, 0x121820, 0.92);
         bg.setStrokeStyle(1, 0x4a6070, 0.9);
@@ -87,7 +110,7 @@ export class AbilityBar {
         const name = scene.add
           .text(0, -8, '', {
             fontFamily: 'Segoe UI, sans-serif',
-            fontSize: '11px',
+            fontSize: skillFont,
             color: '#e8e4d8',
             align: 'center',
             wordWrap: { width: 88 },
@@ -145,7 +168,10 @@ export class AbilityBar {
   private finishAim(x: number, y: number): void {
     const state = this.aimState;
     const slotInfo = state ? this.slots[state.slot] : null;
-    if (slotInfo?.ring) slotInfo.ring.setScale(1);
+    if (slotInfo?.ring) {
+      slotInfo.ring.setScale(1);
+      slotInfo.ring.setFillStyle(0x1a2230, 0.9);
+    }
     this.aimPointerId = null;
     this.aimPreview.clear();
     if (!state) return;
@@ -232,6 +258,7 @@ export class AbilityBar {
       this.scene.scale.height,
     );
     this.root.setPosition(0, 0);
+    const maxFont = uiFontPx('skill', 'touch');
     this.slots.forEach((s, i) => {
       const slot = m.skillSlots[i];
       if (!slot) return;
@@ -243,15 +270,22 @@ export class AbilityBar {
         s.ring.setRadius(r);
         s.ring.setPosition(x, y);
       }
-      s.name.setPosition(x, y - 4);
-      s.name.setFontSize(r > 26 ? '11px' : '9px');
-      s.cd.setPosition(x, y + Math.round(r * 0.42));
+      if (s.sweep) {
+        s.sweep.setPosition(x, y);
+        s.sweep.setRadius(r - 1);
+      }
+      s.name.setPosition(x, y - 2);
+      const label = s.name.text || 'XXXX';
+      s.name.setFontSize(touchSkillFontPx(label, r, maxFont));
+      s.cd.setPosition(x, y + Math.round(r * 0.38));
+      s.cd.setFontSize(uiFontPx('caption', 'touch'));
       s.key.setVisible(false);
     });
   }
 
   refresh(): void {
     const accent = classAccent(gameState.progression.classId);
+    const maxFont = uiFontPx('skill', this.touchMode ? 'touch' : 'desktop');
     for (let i = 0; i < ACTIVE_SLOTS; i++) {
       const id = gameState.skills.slotAbilityId(i);
       const def = id ? getAbilityDef(id) : undefined;
@@ -262,6 +296,7 @@ export class AbilityBar {
         slot.name.setText('—');
         slot.name.setColor('#5a6a7a');
         slot.cd.setText('');
+        slot.sweep?.setVisible(false);
         if (slot.ring) slot.ring.setStrokeStyle(2, 0x3a4a5a, 0.7);
         else if (slot.bg instanceof Phaser.GameObjects.Rectangle) {
           slot.bg.setStrokeStyle(1, 0x3a4a5a, 0.7);
@@ -269,14 +304,39 @@ export class AbilityBar {
         continue;
       }
       const label = this.touchMode
-        ? shortTouchName(def.name)
+        ? shortTouchSkillLabel(def.name)
         : shortAbilityName(def.name);
       slot.name.setText(label);
       slot.name.setColor('#e8e4d8');
+      if (this.touchMode) {
+        slot.name.setFontSize(touchSkillFontPx(label, slot.r, maxFont));
+      }
       slot.cd.setText(cd > 0 ? `${Math.ceil(cd)}` : '');
+      if (slot.sweep) {
+        const total = Math.max(0.01, def.cooldown);
+        const progress = cooldownSweepProgress(cd, total);
+        if (progress <= 0.001) {
+          slot.sweep.setVisible(false);
+        } else {
+          // Phaser Arc angles are degrees; -90 = 12 o'clock.
+          const start = -90;
+          const end = start + 360 * progress;
+          slot.sweep.setStartAngle(start);
+          slot.sweep.setEndAngle(end);
+          slot.sweep.setFillStyle(0x05080c, 0.55 + 0.3 * progress);
+          slot.sweep.setVisible(true);
+        }
+      }
       if (slot.ring) {
         slot.ring.setStrokeStyle(2.5, cd > 0 ? 0x5a7080 : accent, 0.95);
-        slot.ring.setFillStyle(cd > 0 ? 0x1a2430 : 0x1a2230, 0.9);
+        // Keep pressed fill if scaled down mid-aim.
+        if (slot.ring.scaleX >= 0.99) {
+          // Abdunkelnd while on CD so the remaining time reads clearly.
+          slot.ring.setFillStyle(
+            cd > 0 ? 0x0c1218 : 0x1a2230,
+            cd > 0 ? 0.96 : 0.9,
+          );
+        }
       } else if (slot.bg instanceof Phaser.GameObjects.Rectangle) {
         slot.bg.setStrokeStyle(1, cd > 0 ? 0x5a7080 : accent, 0.95);
       }
@@ -290,28 +350,11 @@ function shortAbilityName(name: string): string {
   return parts[parts.length - 1] ?? name;
 }
 
-/** Compact labels for round touch buttons. */
-function shortTouchName(name: string): string {
-  const known: Record<string, string> = {
-    'War Leap': 'LEAP',
-    Strike: 'STRIKE',
-    'Shield Bash': 'BASH',
-    'Spirit Pulse': 'PULSE',
-    'Rift Slash': 'SLASH',
-    'Ward Seal': 'SEAL',
-    'Arc Bolt': 'BOLT',
-    Nova: 'NOVA',
-    Barrier: 'WARD',
-    'Arc Barrier': 'WARD',
-  };
-  if (known[name]) return known[name]!;
-  const parts = name.split(' ');
-  const last = parts[parts.length - 1] ?? name;
-  return last.slice(0, 5).toUpperCase();
-}
-
 function classAccent(classId: string): number {
   if (classId === 'warrior') return 0xc45c3a;
   if (classId === 'mystic') return 0x6ec6a0;
   return 0x5a8fd4;
 }
+
+// Re-export for callers / tests that imported from AbilityBar before.
+export { shortTouchSkillLabel } from './SkillLabels';
