@@ -987,8 +987,13 @@ export class UIScene extends Phaser.Scene {
           this.renderMenuPage();
         },
       );
+      this.menuButton(row(7), `Haptics: ${s.haptics ? 'ON' : 'OFF'}`, () => {
+        settingsStore.save({ haptics: !s.haptics });
+        gameEvents.emit(Events.SETTINGS_CHANGED);
+        this.renderMenuPage();
+      });
       this.menuButton(
-        row(7),
+        row(8),
         `Shift FX: ${shiftFxIntensityLabel(s.shiftFxIntensity)}`,
         () => {
           settingsStore.save({
@@ -999,7 +1004,7 @@ export class UIScene extends Phaser.Scene {
         },
       );
       this.menuButton(
-        row(8),
+        row(9),
         `Graphics: ${graphicsQualityLabel(s.graphicsQuality)}`,
         () => {
           settingsStore.save({
@@ -1010,11 +1015,11 @@ export class UIScene extends Phaser.Scene {
           this.renderMenuPage();
         },
       );
-      this.menuButton(row(9), 'Hotkeys…', () => {
+      this.menuButton(row(10), 'Hotkeys…', () => {
         this.menuPage = 'hotkeys';
         this.renderMenuPage();
       });
-      this.menuButton(row(10), 'Back', () => {
+      this.menuButton(row(11), 'Back', () => {
         this.menuPage = 'root';
         this.renderMenuPage();
       });

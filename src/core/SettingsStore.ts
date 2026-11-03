@@ -31,6 +31,8 @@ export type GameSettings = {
   screenShake: boolean;
   /** Auto-convert common gear drops to gold. */
   autoSellJunk: boolean;
+  /** Touch pad vibration via navigator.vibrate when available. */
+  haptics: boolean;
   /** 0 / 0.5 / 1 — ash/shadow transition intensity. */
   shiftFxIntensity: number;
   /**
@@ -70,6 +72,7 @@ export const DEFAULT_SETTINGS: GameSettings = {
   showDamageNumbers: true,
   screenShake: true,
   autoSellJunk: false,
+  haptics: true,
   shiftFxIntensity: 1,
   graphicsQuality: 'auto',
   hotkeys: { ...DEFAULT_HOTKEYS },
@@ -121,6 +124,8 @@ export class SettingsStore {
         showDamageNumbers:
           parsed.showDamageNumbers ?? DEFAULT_SETTINGS.showDamageNumbers,
         screenShake: parsed.screenShake ?? DEFAULT_SETTINGS.screenShake,
+        autoSellJunk: parsed.autoSellJunk ?? DEFAULT_SETTINGS.autoSellJunk,
+        haptics: parsed.haptics ?? DEFAULT_SETTINGS.haptics,
         shiftFxIntensity: clamp01(
           parsed.shiftFxIntensity ?? DEFAULT_SETTINGS.shiftFxIntensity,
         ),

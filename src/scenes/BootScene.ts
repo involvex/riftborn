@@ -384,6 +384,14 @@ export class BootScene extends Phaser.Scene {
         },
       },
       {
+        label: `Haptics: ${s.haptics ? 'ON' : 'OFF'}`,
+        onClick: () => {
+          settingsStore.save({ haptics: !s.haptics });
+          gameEvents.emit(Events.SETTINGS_CHANGED);
+          this.renderTitleSettings();
+        },
+      },
+      {
         label: `Shift FX: ${shiftFxIntensityLabel(s.shiftFxIntensity)}`,
         onClick: () => {
           settingsStore.save({

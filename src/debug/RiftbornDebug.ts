@@ -4,6 +4,7 @@ import {
   getAppliedRenderScale,
 } from '../core/GraphicsQuality';
 import { settingsStore } from '../core/SettingsStore';
+import { gameState } from '../systems/GameState';
 import {
   circleRect,
   computeTouchLayout,
@@ -123,6 +124,8 @@ export type RiftbornApi = {
     renderScale: number;
     particleCap: number;
   };
+  /** Force a skill-slot cooldown (screenshot / cooldown overlay). */
+  forceSkillCooldown: (slot: number, sec: number) => void;
 };
 
 export type RiftbornSnapshotSource = {
@@ -342,6 +345,10 @@ export function installRiftbornDebug(
         particleCap: p.particleCap,
       };
     },
+    forceSkillCooldown: (slot: number, sec: number) => {
+      gameState.skills.forceCooldown(slot, sec);
+      gameEvents.emit(Events.SKILL_CAST, {});
+    },
   };
   window.__RIFTBORN = api;
 }
@@ -398,6 +405,7 @@ export function clearRiftbornDebug(): void {
         renderScale: 1,
         particleCap: 12,
       }),
+      forceSkillCooldown: () => {},
     };
   }
 }

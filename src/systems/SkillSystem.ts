@@ -136,6 +136,12 @@ export class SkillSystem {
     return this.cooldownLeft[slot] ?? 0;
   }
 
+  /** Debug / screenshots — force a remaining cooldown on a slot. */
+  forceCooldown(slot: number, sec: number): void {
+    if (slot < 0 || slot >= ACTIVE_SLOTS) return;
+    this.cooldownLeft[slot] = Math.max(0, sec);
+  }
+
   damageMultiplier(): number {
     if (this.now < this.damageBuffUntil) return this.damageBuffMult;
     return 1;

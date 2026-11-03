@@ -1,6 +1,8 @@
 import Phaser from 'phaser';
 import { gameEvents } from '../core/EventBus';
 import { audioBus } from '../core/AudioBus';
+import { hapticTap } from '../core/Haptics';
+import { uiFontPx } from '../core/UiFont';
 import {
   computeTouchLayout,
   TOUCH_CHROME_COUNT,
@@ -173,8 +175,13 @@ export class TouchControls {
   setInteractHint(label: string, dimmed: boolean): void {
     this.interactDimmed = dimmed;
     this.interact.label.setText(label);
+    const base = uiFontPx('pad', 'touch');
     const font =
-      label.length >= 5 ? '11px' : label.length >= 4 ? '12px' : '14px';
+      label.length >= 5
+        ? `${base}px`
+        : label.length >= 4
+          ? `${base + 1}px`
+          : `${base + 2}px`;
     this.interact.label.setFontSize(font);
     this.interact.root.setAlpha(dimmed ? 0.42 : 1);
   }
@@ -373,8 +380,10 @@ export class TouchControls {
       .setStrokeStyle(2.5, stroke, 0.95)
       .setInteractive({ useHandCursor: true });
     bg.on('pointerdown', () => {
-      bg.setScale(0.92);
-      bg.setFillStyle(0x243040, 0.95);
+      // Brighten + shrink so the press reads clearly on phones.
+      bg.setScale(0.86);
+      bg.setFillStyle(0x3a5070, 1);
+      hapticTap(10);
     });
     const release = () => {
       bg.setScale(1);
@@ -388,7 +397,7 @@ export class TouchControls {
     const t = this.scene.add
       .text(0, 0, label, {
         fontFamily: 'Segoe UI, sans-serif',
-        fontSize: '12px',
+        fontSize: `${uiFontPx('pad', 'touch')}px`,
         color: '#e8e4d8',
         fontStyle: 'bold',
       })
