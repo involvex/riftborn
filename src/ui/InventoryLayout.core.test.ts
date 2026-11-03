@@ -80,7 +80,16 @@ describe('computeInventoryLayout', () => {
       assertNoOverlaps(layout);
 
       if (vp.touch) {
-        expect(layout.cellSize).toBeGreaterThanOrEqual(36);
+        // M2b: phone bag cells stay ≥44px and use free bag width.
+        expect(layout.cellSize).toBeGreaterThanOrEqual(44);
+        const fitW = Math.floor(
+          (layout.bagGrid.w - layout.bagGap * (8 - 1)) / 8,
+        );
+        expect(layout.cellSize).toBeLessThanOrEqual(fitW + 0.01);
+        // Prefer filling width when room allows (not stuck at old 44 cap).
+        if (fitW >= 48) {
+          expect(layout.cellSize).toBeGreaterThanOrEqual(48);
+        }
       }
       if (vp.h <= 500) {
         expect(layout.detailBeside || layout.scrollable).toBe(true);
@@ -128,7 +137,7 @@ describe('computeInventoryLayout', () => {
     expect(layout.showCloseText).toBe(true);
   });
 
-  test('touch low-res buffer (0.65×1024x473): ≥2 bag rows, cell≥36', () => {
+  test('touch low-res buffer (0.65×1024x473): ≥2 bag rows, cell≥44', () => {
     const { panelW, panelH } = inventoryPanelFromViewport(
       Math.floor(1024 * 0.65),
       Math.floor(473 * 0.65),
@@ -144,8 +153,26 @@ describe('computeInventoryLayout', () => {
     });
     assertInsidePanel(layout);
     assertNoOverlaps(layout);
-    expect(layout.cellSize).toBeGreaterThanOrEqual(36);
+    expect(layout.cellSize).toBeGreaterThanOrEqual(44);
     expect(layout.visibleRows).toBeGreaterThanOrEqual(2);
     expect(layout.detailBeside || layout.scrollable).toBe(true);
+  });
+
+  test('1024x473 touch: bag cells ≥44 and fill unused width', () => {
+    const { panelW, panelH } = inventoryPanelFromViewport(1024, 473, true);
+    const layout = computeInventoryLayout({
+      panelW,
+      panelH,
+      touch: true,
+      bagCols: 8,
+      bagRows: 6,
+      showCloseX: true,
+    });
+    assertNoOverlaps(layout);
+    expect(layout.detailBeside).toBe(true);
+    expect(layout.cellSize).toBeGreaterThanOrEqual(44);
+    const usedW = layout.cellSize * 8 + layout.bagGap * 7;
+    // Integer fit leaves <1 cell of unused width.
+    expect(layout.bagGrid.w - usedW).toBeLessThan(8);
   });
 });

@@ -82,8 +82,9 @@ export function computeInventoryLayout(
   const sortW = touch ? 64 : 68;
   const sortH = Math.min(headerBand - 2, touch ? 20 : 22);
   const bagGap = touch ? 4 : 6;
-  const minCell = touch ? 36 : 24;
-  const maxCell = touch ? 44 : 52;
+  // M2b: phone bag cells ≥44px; touch fills bag width (no low max).
+  const minCell = touch ? 44 : 24;
+  const maxCell = touch ? 96 : 52;
   const eqCols = 3;
   const eqGap = touch ? (short ? 4 : 6) : 10;
   const showCloseText = !showCloseX;
@@ -199,35 +200,44 @@ export function computeInventoryLayout(
     };
 
     const fitW = Math.floor((bagW - bagGap * (bagCols - 1)) / bagCols);
-    const fitAllH = Math.floor((gridH - bagGap * (bagRows - 1)) / bagRows);
-    cellSize = Math.max(
-      minCell,
-      Math.min(maxCell, fitW, Math.max(fitAllH, minCell)),
-    );
-    // Cap by width always.
-    cellSize = Math.min(cellSize, fitW);
-    cellSize = Math.max(minCell, Math.min(maxCell, cellSize));
-
-    const rowPitch = cellSize + bagGap;
-    visibleRows = Math.max(
-      1,
-      Math.min(bagRows, Math.floor((gridH + bagGap) / rowPitch)),
-    );
-    // If min cell forces fewer rows than bagRows, scroll.
-    if (visibleRows < bagRows) {
-      scrollable = true;
+    // Touch: claim free width (up to maxCell), never shrink below minCell
+    // to squeeze rows — scroll instead. Desktop may shrink to fit height.
+    if (touch) {
+      cellSize = Math.max(minCell, Math.min(maxCell, fitW));
+      const rowPitch = cellSize + bagGap;
+      visibleRows = Math.max(
+        1,
+        Math.min(bagRows, Math.floor((gridH + bagGap) / rowPitch)),
+      );
+      scrollable = visibleRows < bagRows;
     } else {
-      // Prefer fitting all rows by shrinking cell (not below min).
-      const fitH = Math.floor((gridH - bagGap * (bagRows - 1)) / bagRows);
-      if (fitH >= minCell) {
-        cellSize = Math.min(
-          cellSize,
-          Math.max(minCell, Math.min(maxCell, fitW, fitH)),
-        );
-        visibleRows = bagRows;
-        scrollable = false;
-      } else {
+      const fitAllH = Math.floor((gridH - bagGap * (bagRows - 1)) / bagRows);
+      cellSize = Math.max(
+        minCell,
+        Math.min(maxCell, fitW, Math.max(fitAllH, minCell)),
+      );
+      cellSize = Math.min(cellSize, fitW);
+      cellSize = Math.max(minCell, Math.min(maxCell, cellSize));
+
+      const rowPitch = cellSize + bagGap;
+      visibleRows = Math.max(
+        1,
+        Math.min(bagRows, Math.floor((gridH + bagGap) / rowPitch)),
+      );
+      if (visibleRows < bagRows) {
         scrollable = true;
+      } else {
+        const fitH = Math.floor((gridH - bagGap * (bagRows - 1)) / bagRows);
+        if (fitH >= minCell) {
+          cellSize = Math.min(
+            cellSize,
+            Math.max(minCell, Math.min(maxCell, fitW, fitH)),
+          );
+          visibleRows = bagRows;
+          scrollable = false;
+        } else {
+          scrollable = true;
+        }
       }
     }
   } else {
