@@ -1,5 +1,7 @@
 import Phaser from 'phaser';
+import { uiFontSize } from '../core/UiFont';
 import { MiniMap } from './MiniMap';
+import { shouldShowTouchControls } from './TouchControls';
 
 /** Side progress bar for rift kill → boss → exit flow. */
 export class RiftProgressHud {
@@ -24,7 +26,10 @@ export class RiftProgressHud {
     this.label = scene.add
       .text(0, 12, 'Rift', {
         fontFamily: 'Segoe UI, sans-serif',
-        fontSize: '11px',
+        fontSize: uiFontSize(
+          'rift',
+          shouldShowTouchControls() ? 'touch' : 'desktop',
+        ),
         color: '#e8c0d0',
         align: 'center',
       })

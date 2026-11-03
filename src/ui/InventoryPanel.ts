@@ -244,7 +244,7 @@ export class InventoryPanel {
       const t = this.scene.add
         .text(0, y, line.text, {
           fontFamily: UI_FONT,
-          fontSize: touch ? '11px' : '12px',
+          fontSize: touch ? '12px' : '12px',
           color: line.color,
           align: layout?.detailBeside ? 'left' : 'center',
           resolution: 2,
@@ -364,7 +364,7 @@ export class InventoryPanel {
       const text = this.scene.add
         .text(iconX + iconSize + 6, y - 6, s.label, {
           fontFamily: UI_FONT,
-          fontSize: touch ? '9px' : '10px',
+          fontSize: touch ? '12px' : '10px',
           color: '#8a9aaa',
           resolution: 2,
         })
@@ -372,7 +372,7 @@ export class InventoryPanel {
       const nameTxt = this.fitEqName(
         fullName,
         nameMaxPx,
-        touch ? '10px' : '12px',
+        touch ? '12px' : '12px',
       );
       nameTxt.setPosition(iconX + iconSize + 6, y + 8);
       cell.on('pointerup', () => this.onEquipClick(s.key));
@@ -406,7 +406,7 @@ export class InventoryPanel {
     const hint = this.scene.add
       .text(0, 0, hintLine, {
         fontFamily: UI_FONT,
-        fontSize: touch ? '10px' : '11px',
+        fontSize: touch ? '12px' : '11px',
         color: '#8a9aaa',
         resolution: 2,
         wordWrap: { width: Math.max(40, layout.hint.w - 4) },
@@ -548,7 +548,7 @@ export class InventoryPanel {
             const qty = this.scene.add
               .text(x + cell - 3, y + cell - 3, `x${slot.qty}`, {
                 fontFamily: UI_FONT,
-                fontSize: `${Math.max(9, Math.floor(cell * 0.22))}px`,
+                fontSize: `${Math.max(touch ? 12 : 9, Math.floor(cell * 0.22))}px`,
                 color: '#f0ebe3',
                 stroke: '#0a0c10',
                 strokeThickness: 3,

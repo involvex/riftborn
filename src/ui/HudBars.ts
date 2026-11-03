@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { uiFontPx, uiFontSize } from '../core/UiFont';
 import { uiFont } from '../core/UiScale';
 import { gameState } from '../systems/GameState';
 import { MAX_LEVEL, xpForLevel } from '../systems/ProgressionSystem';
@@ -47,7 +48,10 @@ export class HudBars {
     this.hpText = scene.add
       .text(this.barW / 2, 30, '', {
         fontFamily: UI_FONT,
-        fontSize: '12px',
+        fontSize: uiFontSize(
+          'hud',
+          shouldShowTouchControls() ? 'touch' : 'desktop',
+        ),
         color: '#fff5f5',
         resolution: 2,
         stroke: '#2a0808',
@@ -69,7 +73,10 @@ export class HudBars {
     this.xpText = scene.add
       .text(this.barW / 2, 54, '', {
         fontFamily: UI_FONT,
-        fontSize: '11px',
+        fontSize: uiFontSize(
+          'caption',
+          shouldShowTouchControls() ? 'touch' : 'desktop',
+        ),
         color: '#e8f6fc',
         resolution: 2,
         stroke: '#0a1520',
@@ -79,7 +86,10 @@ export class HudBars {
 
     this.bounty = scene.add.text(0, 72, '', {
       fontFamily: UI_FONT,
-      fontSize: '12px',
+      fontSize: uiFontSize(
+        'label',
+        shouldShowTouchControls() ? 'touch' : 'desktop',
+      ),
       color: '#f0d090',
       resolution: 2,
       stroke: '#0a0c10',
@@ -122,12 +132,16 @@ export class HudBars {
     this.xpBg.width = this.barW;
     this.hpText.setX(this.barW / 2);
     this.xpText.setX(this.barW / 2);
-    this.meta.setFontSize(uiFont(this.scene, touch ? 11 : 15, 10, 18));
+    this.meta.setFontSize(
+      touch ? `${uiFontPx('meta', 'touch')}px` : uiFont(this.scene, 15, 12, 18),
+    );
     this.meta.setWordWrapWidth(
       Math.min(this.barW + 24, this.scene.scale.width * 0.4),
     );
     this.bounty.setY(touch ? 68 : 72);
-    this.bounty.setFontSize(touch ? 10 : 12);
+    this.bounty.setFontSize(uiFontPx('label', touch ? 'touch' : 'desktop'));
+    this.hpText.setFontSize(uiFontPx('hud', touch ? 'touch' : 'desktop'));
+    this.xpText.setFontSize(uiFontPx('caption', touch ? 'touch' : 'desktop'));
     this.refresh();
   }
 

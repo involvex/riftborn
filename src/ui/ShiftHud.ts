@@ -1,7 +1,9 @@
 import Phaser from 'phaser';
 import { gameEvents } from '../core/EventBus';
+import { uiFontSize } from '../core/UiFont';
 import { SHIFT_LAYERS, type ShiftLayerId } from '../data/shiftLayers';
 import { SHIFT_COST, SHIFT_MAX_ENERGY } from '../systems/ShiftSystem';
+import { shouldShowTouchControls } from './TouchControls';
 
 export type ShiftHudPayload = {
   active: boolean;
@@ -24,9 +26,10 @@ export class ShiftHud {
 
   constructor(scene: Phaser.Scene) {
     this.root = scene.add.container(16, 98).setScrollFactor(0).setDepth(10_000);
+    const profile = shouldShowTouchControls() ? 'touch' : 'desktop';
     this.label = scene.add.text(0, 0, '', {
       fontFamily: 'Consolas, "Courier New", monospace',
-      fontSize: '13px',
+      fontSize: uiFontSize('label', profile),
       color: '#c8a070',
       stroke: '#0a0c10',
       strokeThickness: 3,
@@ -41,7 +44,7 @@ export class ShiftHud {
       .setOrigin(0, 0.5);
     this.hint = scene.add.text(0, 32, 'Q Shift', {
       fontFamily: 'Consolas, "Courier New", monospace',
-      fontSize: '11px',
+      fontSize: uiFontSize('hint', profile),
       color: '#7a8090',
       stroke: '#0a0c10',
       strokeThickness: 2,

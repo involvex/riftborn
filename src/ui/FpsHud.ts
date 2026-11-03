@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { uiFontSize } from '../core/UiFont';
 import { shouldShowTouchControls } from './TouchControls';
 import { computeTouchLayout } from './TouchLayout';
 
@@ -20,7 +21,10 @@ export class FpsHud {
     this.label = scene.add
       .text(0, 0, '— fps', {
         fontFamily: 'Consolas, monospace',
-        fontSize: '11px',
+        fontSize: uiFontSize(
+          'fps',
+          shouldShowTouchControls() ? 'touch' : 'desktop',
+        ),
         color: '#8a9aaa',
         backgroundColor: '#0a0c10aa',
         padding: { x: 5, y: 2 },
