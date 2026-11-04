@@ -9,6 +9,11 @@ import {
   type TouchLayout,
   type TouchPoint,
 } from './TouchLayout';
+import {
+  getStickRestPosition,
+  isInStickHitArea,
+  stickToMove,
+} from './TouchStick';
 
 /** Detect whether on-screen controls should show. */
 export function shouldShowTouchControls(): boolean {
@@ -61,6 +66,8 @@ export class TouchControls {
   private stickPointerId: number | null = null;
   private stickCx = 0;
   private stickCy = 0;
+  private stickHomeX = 0;
+  private stickHomeY = 0;
   private stickR = 58;
   private atk!: Btn;
   private interact!: Btn;
@@ -78,6 +85,7 @@ export class TouchControls {
   private interactDimmed = true;
   /** Town button only outside hub (rift / wilderness). */
   private townVisible = false;
+  private stickMoveStartTime = 0;
 
   constructor(scene: Phaser.Scene) {
     this.scene = scene;
@@ -164,6 +172,8 @@ export class TouchControls {
     if (!on) {
       this.dx = 0;
       this.dy = 0;
+      this.stickPointerId = null;
+      this.stickMoveStartTime = 0;
       this.resetKnob();
       this.metrics = null;
       this.setChromeOpen(false);
@@ -211,13 +221,21 @@ export class TouchControls {
     this.metrics = m;
 
     this.stickR = m.stick.r;
-    this.stickCx = m.stick.x;
-    this.stickCy = m.stick.y;
+    const rest = getStickRestPosition(m);
+    this.stickHomeX = rest.x;
+    this.stickHomeY = rest.y;
+    this.stickCx = this.stickHomeX;
+    this.stickCy = this.stickHomeY;
     this.stickBase.setRadius(m.stick.r);
     this.stickKnob.setRadius(Math.round(m.stick.r * 0.4));
-    this.stickHit.setSize(m.stick.r * 2.8, m.stick.r * 2.8);
+    this.stickHit.setSize(this.scene.scale.width, this.scene.scale.height);
+    this.stickHit.setPosition(
+      this.scene.scale.width / 2,
+      this.scene.scale.height / 2,
+    );
     this.stickBase.setPosition(this.stickCx, this.stickCy);
-    this.stickHit.setPosition(this.stickCx, this.stickCy);
+    this.stickBase.setAlpha(0.6);
+    this.stickKnob.setAlpha(0.9);
     this.resetKnob();
 
     this.placeBtn(this.dash, m.dash.x, m.dash.y, m.dash.r, '11px');
@@ -314,17 +332,54 @@ export class TouchControls {
   private buildStick(): void {
     this.stickBase = this.scene.add
       .circle(0, 0, this.stickR, 0x121820, 0.45)
-      .setStrokeStyle(2, 0x4a6070, 0.75);
+      .setStrokeStyle(2, 0x4a6070, 0.75)
+      .setAlpha(0.6);
     this.stickKnob = this.scene.add
       .circle(0, 0, 24, 0xc4a574, 0.92)
-      .setStrokeStyle(2, 0xe8e4d8, 0.55);
+      .setStrokeStyle(2, 0xe8e4d8, 0.55)
+      .setAlpha(0.9);
     this.stickHit = this.scene.add
-      .zone(0, 0, this.stickR * 2.8, this.stickR * 2.8)
+      .zone(0, 0, this.scene.scale.width, this.scene.scale.height)
       .setOrigin(0.5)
       .setInteractive();
 
     this.stickHit.on('pointerdown', (p: Phaser.Input.Pointer) => {
+      if (!this.active) return;
+      if (this.stickPointerId !== null) return;
+      const m = this.metrics;
+      if (m) {
+        // Hit area is the whole lower left half of screen except SHIFT and DASH buttons
+        if (
+          !isInStickHitArea(
+            p.x,
+            p.y,
+            this.scene.scale.width,
+            this.scene.scale.height,
+            m.dash.x,
+            m.dash.y,
+            m.dash.r,
+            m.shift.x,
+            m.shift.y,
+            m.shift.r,
+          )
+        ) {
+          return;
+        }
+      } else {
+        // Fallback: lower left half
+        if (
+          p.x > this.scene.scale.width / 2 ||
+          p.y < this.scene.scale.height / 2
+        ) {
+          return;
+        }
+      }
       this.stickPointerId = p.id;
+      // Jump base to thumb position
+      this.stickCx = p.x;
+      this.stickCy = p.y;
+      this.stickBase.setPosition(this.stickCx, this.stickCy);
+      this.stickMoveStartTime = this.scene.time.now;
       this.updateStick(p.x, p.y);
     });
     this.scene.input.on('pointermove', (p: Phaser.Input.Pointer) => {
@@ -336,11 +391,13 @@ export class TouchControls {
       this.stickPointerId = null;
       this.dx = 0;
       this.dy = 0;
+      this.stickMoveStartTime = 0;
       this.resetKnob();
       gameEvents.emit('input:move', { dx: 0, dy: 0 });
     };
     this.scene.input.on('pointerup', end);
     this.scene.input.on('pointerupoutside', end);
+    this.scene.input.on('pointercancel', end);
 
     this.root.add([this.stickBase, this.stickKnob, this.stickHit]);
   }
@@ -350,27 +407,43 @@ export class TouchControls {
     let dy = py - this.stickCy;
     const len = Math.hypot(dx, dy) || 1;
     const max = this.stickR - 6;
+    // If finger goes outside radius, base follows
+    if (len > max * 1.2) {
+      this.stickCx = px - (dx / len) * max * 0.6;
+      this.stickCy = py - (dy / len) * max * 0.6;
+      this.stickBase.setPosition(this.stickCx, this.stickCy);
+      dx = px - this.stickCx;
+      dy = py - this.stickCy;
+    }
     if (len > max) {
       dx = (dx / len) * max;
       dy = (dy / len) * max;
     }
     this.stickKnob.setPosition(this.stickCx + dx, this.stickCy + dy);
-    const nx = dx / max;
-    const ny = dy / max;
-    const mag = Math.hypot(nx, ny);
-    const dead = 0.1;
-    if (mag < dead) {
+    const res = stickToMove(dx, dy, max);
+    if (res.speed01 === 0) {
       this.dx = 0;
       this.dy = 0;
+      if (this.stickMoveStartTime) {
+        this.stickMoveStartTime = 0;
+      }
     } else {
-      const t = Math.min(1, (mag - dead) / (1 - dead));
-      this.dx = (nx / mag) * t;
-      this.dy = (ny / mag) * t;
+      if (!this.stickMoveStartTime) {
+        this.stickMoveStartTime = this.scene.time.now;
+      }
+      const elapsed = this.scene.time.now - this.stickMoveStartTime;
+      const accel = Math.min(1, elapsed / 80); // accelerate over ~80ms
+      this.dx = res.worldDir.x * res.speed01 * accel;
+      this.dy = res.worldDir.y * res.speed01 * accel;
     }
     gameEvents.emit('input:move', { dx: this.dx, dy: this.dy });
   }
 
   private resetKnob(): void {
+    // Return to rest position
+    this.stickCx = this.stickHomeX;
+    this.stickCy = this.stickHomeY;
+    this.stickBase.setPosition(this.stickCx, this.stickCy);
     this.stickKnob.setPosition(this.stickCx, this.stickCy);
   }
 

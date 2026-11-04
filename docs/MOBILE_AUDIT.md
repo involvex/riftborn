@@ -70,3 +70,9 @@ touch so the rebind list fits 1024×473.
 | Weak pad press feel                                 | Scale+brighten on press; optional `navigator.vibrate` (Settings → Haptics) | ok     |
 
 Playwright: `e2e/m2b.touch.spec.ts` → `artifacts/m2b-inventory.png`, `artifacts/m2b-rift.png` (cooldown forced via `__RIFTBORN.forceSkillCooldown`).
+
+## M2c — stick feel (2026)
+
+**Ursache:** Bewegung mit dem linken Stick fühlte sich schwach/statisch an und lief teils in falsche Richtung, weil Touch-Input ohne korrekte Screen→World-Umrechnung direkt als Bewegungsvektor genutzt wurde. Zudem gab es Probleme mit Smoothing/Pointer-Handling.
+
+**Fix:** Analoger Stick mit `stickToMove` (Deadzone 0.12, volle Geschwindigkeit ab 0.5 Auslenkung), genau eine Screen→World-Umrechnung via `screenDirToWorldDelta` in `src/ui/TouchStick.ts`. Stick immer sichtbar in Ruheposition (unten links), leicht transparent; Trefferzone ganze linke untere Bildschirmhälfte außer SHIFT/DASH. Basis springt beim Aufsetzen zum Daumen, folgt bei Auslenkung über den Radius, kehrt beim Loslassen zur Ruheposition zurück. Richtung folgt dem Daumen sofort, Geschwindigkeit beschleunigt über ~80 ms.
