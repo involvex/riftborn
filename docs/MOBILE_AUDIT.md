@@ -76,3 +76,17 @@ Playwright: `e2e/m2b.touch.spec.ts` → `artifacts/m2b-inventory.png`, `artifact
 **Ursache:** Bewegung mit dem linken Stick fühlte sich schwach/statisch an und lief teils in falsche Richtung, weil Touch-Input ohne korrekte Screen→World-Umrechnung direkt als Bewegungsvektor genutzt wurde. Zudem gab es Probleme mit Smoothing/Pointer-Handling.
 
 **Fix:** Analoger Stick mit `stickToMove` (Deadzone 0.12, volle Geschwindigkeit ab 0.5 Auslenkung), genau eine Screen→World-Umrechnung via `screenDirToWorldDelta` in `src/ui/TouchStick.ts`. Stick immer sichtbar in Ruheposition (unten links), leicht transparent; Trefferzone ganze linke untere Bildschirmhälfte außer SHIFT/DASH. Basis springt beim Aufsetzen zum Daumen, folgt bei Auslenkung über den Radius, kehrt beim Loslassen zur Ruheposition zurück. Richtung folgt dem Daumen sofort, Geschwindigkeit beschleunigt über ~80 ms.
+
+## M2d — Wege und Strassen (Town roads)
+
+**Ziel:** Um und durch die Stadt klar sichtbare Wege/Strassen, Pflaster in der Stadt, Erdweg nach aussen, verbunden zu POIs und zum Rift-Obelisk.
+
+**Implementierung:**
+
+- `src/world/Roads.ts` generiert deterministische Straßen (Plaza-Ring + 2–3 Tiles breite, leicht geschwungene Wege zu POIs/Obelisk) via `generateRoads()` aus Stadtzentrum + POI-Positionen.
+- `src/world/Roads.core.test.ts`: Flood-Fill von Plaza erreicht jeden POI-Endpunkt, Roads in gültigen Bounds, deterministisches Ergebnis pro Seed.
+- `src/world/MapGen.ts` integriert Roads in `paths`; Straßen verbinden nun klarer zu allen POIs und zum Rift-Obelisk.
+- `src/scenes/WorldScene.ts` zeichnet Straßen deutlicher (Pflaster in Town-Nähe, Erdweg außerhalb) mit weichen Übergängen/Tint.
+- Wege sind begehbar, keine neuen Kollisionsobjekte.
+
+**Nachweis:** `artifacts/m2d-town-roads.png`, `artifacts/m2d-road-poi.png` (1024×473).

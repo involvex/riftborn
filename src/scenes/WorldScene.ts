@@ -1077,6 +1077,7 @@ export class WorldScene extends Phaser.Scene {
     key: string,
     fallbackColor: number,
     gate: ShiftLayerId | null = null,
+    tint?: number,
   ): void {
     if (hasArt(this, key)) {
       const { screenX, screenY } = worldToScreen(x, y);
@@ -1086,6 +1087,9 @@ export class WorldScene extends Phaser.Scene {
         .setScale(TILE_ART_SCALE)
         .setDepth(-1000);
       img.setData('gate', gate);
+      if (tint !== undefined) {
+        img.setTint(tint);
+      }
       // Gate tiles: cyan edge so layer locks are not confused with floor.
       if (gate) {
         img.setTint(gate === 'ash' ? 0xc8e8ff : 0x7ad4e8);
@@ -1107,6 +1111,8 @@ export class WorldScene extends Phaser.Scene {
         y,
         gate === 'ash' ? 0xa0d4ff : 0x40c8e0,
       );
+    } else if (tint !== undefined) {
+      // For non-art tiles, we can't easily tint graphics; just keep fallback
     }
   }
 
@@ -1169,12 +1175,21 @@ export class WorldScene extends Phaser.Scene {
         const plaza = inPlaza(x, y);
         let band: 'plaza' | 'road' | 'transition' | 'wild';
         let fallback: number;
+        let tint: number | undefined;
         if (plaza) {
           band = 'plaza';
           fallback = 0xd8d8d8;
         } else if (onPath) {
-          band = 'road';
-          fallback = 0xd8d8d8;
+          // Pflaster in der Stadt, Erdweg ausserhalb
+          if (nearTown(x, y, 16)) {
+            band = 'plaza'; // paved in town vicinity
+            fallback = 0xd8d8d8;
+            tint = 0xe8dcc8; // warm stone/pavement
+          } else {
+            band = 'road'; // dirt/earth road outside
+            fallback = 0xb8a080;
+            tint = 0xc8b090; // earth road
+          }
         } else if (nearTown(x, y, 14)) {
           band = 'transition';
           fallback = 0xd8d8d8;
@@ -1182,7 +1197,14 @@ export class WorldScene extends Phaser.Scene {
           band = 'wild';
           fallback = 0xd8d8d8;
         }
-        this.placeFloorTile(x, y, pickClusteredTile(x, y, band), fallback);
+        this.placeFloorTile(
+          x,
+          y,
+          pickClusteredTile(x, y, band),
+          fallback,
+          null,
+          tint,
+        );
         if (
           plaza &&
           (x === PLAZA.x0 || x === PLAZA.x1 || y === PLAZA.y0 || y === PLAZA.y1)

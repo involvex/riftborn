@@ -1,3 +1,5 @@
+import { generateRoads } from './Roads';
+
 /** Deterministic PRNG (mulberry32). */
 export function mulberry32(seed: number): () => number {
   let t = seed >>> 0;
@@ -250,6 +252,20 @@ export function generateHub(seed = 1): ZoneLayout {
   for (const poi of pois) {
     spur(paths, axis, axis, Math.floor(poi.x), Math.floor(poi.y));
     fillClearing(paths, Math.floor(poi.x), Math.floor(poi.y), poi.radius);
+  }
+  // Enhanced roads from Roads.ts
+  const roadCells = generateRoads({
+    seed,
+    townCenter: { x: axis, y: axis },
+    plaza: PLAZA,
+    pois: [
+      ...pois.map((p) => ({ x: p.x, y: p.y })),
+      { x: 32.5, y: 18.5 }, // rift obelisk
+    ],
+    size,
+  });
+  for (const rc of roadCells) {
+    paths.push({ x: Math.round(rc.x), y: Math.round(rc.y) });
   }
 
   // Plaza props (2–4 / 10×10 — keep walkways clear)
