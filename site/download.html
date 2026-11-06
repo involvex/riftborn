@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="de">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Download — Riftborn</title>
+    <meta
+      name="description"
+      content="Riftborn herunterladen: GitHub Releases, lokal bauen mit Bun/Vite oder Desktop/Portable."
+    />
+    <link rel="icon" href="../public/favicon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <header class="site-header">
+      <div class="container">
+        <div class="brand">
+          <span class="brand-mark">◆</span>
+          <h1>Riftborn</h1>
+        </div>
+        <nav class="nav">
+          <a href="index.html">Home</a>
+          <a href="controls.html">Steuerung</a>
+          <a href="download.html">Download</a>
+          <a
+            href="https://github.com/involvex/riftborn"
+            target="_blank"
+            rel="noopener"
+            >GitHub</a
+          >
+        </nav>
+      </div>
+    </header>
+
+    <main>
+      <section class="page-hero">
+        <div class="container">
+          <p class="eyebrow">Spielen</p>
+          <h2>Download &amp; Ausführung</h2>
+          <p>
+            Am einfachsten über GitHub. Builds für Desktop und Web sind in
+            Entwicklung.
+          </p>
+        </div>
+      </section>
+
+      <section class="panel-grid container">
+        <article class="panel">
+          <h3>Releases (empfohlen)</h3>
+          <p>
+            Fertige Builds erscheinen in den GitHub Releases. Schau dort nach
+            der aktuellsten Version.
+          </p>
+          <div class="cta-group" style="margin-top: 16px">
+            <a
+              class="btn btn-primary"
+              href="https://github.com/involvex/riftborn/releases"
+              target="_blank"
+              rel="noopener"
+              >Zu GitHub Releases</a
+            >
+          </div>
+        </article>
+
+        <article class="panel">
+          <h3>Web (lokal starten)</h3>
+          <p>
+            Riftborn läuft im Browser via Vite. Benötigt
+            <a href="https://bun.sh" target="_blank" rel="noopener">Bun</a>.
+          </p>
+          <ul class="list" style="margin-top: 16px">
+            <li><strong>Installieren:</strong> <code>bun install</code></li>
+            <li>
+              <strong>Entwickeln:</strong> <code>bun run dev</code> →
+              http://localhost:5173
+            </li>
+            <li>
+              <strong>Bauen:</strong> <code>bun run build</code> →
+              <code>dist/</code>
+            </li>
+          </ul>
+        </article>
+
+        <article class="panel panel-full">
+          <h3>Desktop (Electron)</h3>
+          <p>Native Desktop-App für Windows, macOS, Linux.</p>
+          <ul class="list" style="margin-top: 16px">
+            <li><strong>Dev:</strong> <code>bun run desktop</code></li>
+            <li>
+              <strong>Prod (aus dist/):</strong>
+              <code>bun run desktop:prod</code>
+            </li>
+            <li>
+              <strong>Portable EXE:</strong>
+              <code>bun run build:portable</code> → <code>release/</code>
+            </li>
+          </ul>
+        </article>
+
+        <article class="panel panel-full">
+          <h3>Co-op</h3>
+          <p>Server starten und im Spiel mit <strong>P</strong> verbinden.</p>
+          <ul class="list" style="margin-top: 16px">
+            <li>
+              <strong>Beides gemeinsam:</strong>
+              <code>bun run dev:all</code> (Client + WebSocket-Server)
+            </li>
+            <li><strong>Nur Server:</strong> <code>bun run server</code></li>
+          </ul>
+        </article>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <div class="container">
+        <div class="footer-row">
+          <p>© <span id="year"></span> Riftborn · Made for Game Off 2026</p>
+          <p>
+            <a href="index.html">Home</a> ·
+            <a
+              href="https://github.com/involvex/riftborn"
+              target="_blank"
+              rel="noopener"
+              >GitHub</a
+            >
+          </p>
+        </div>
+      </div>
+    </footer>
+
+    <script src="app.js"></script>
+  </body>
+</html>
