@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="de">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Steuerung — Riftborn</title>
+    <meta
+      name="description"
+      content="Steuerung für Riftborn: WASD, Maus, Skills, Inventar, Map, Rift, Co-op und Touch-HUD."
+    />
+    <link rel="icon" href="../public/favicon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <header class="site-header">
+      <div class="container">
+        <div class="brand">
+          <span class="brand-mark">◆</span>
+          <h1>Riftborn</h1>
+        </div>
+        <nav class="nav">
+          <a href="index.html">Home</a>
+          <a href="controls.html">Steuerung</a>
+          <a href="download.html">Download</a>
+          <a
+            href="https://github.com/involvex/riftborn"
+            target="_blank"
+            rel="noopener"
+            >GitHub</a
+          >
+        </nav>
+      </div>
+    </header>
+
+    <main>
+      <section class="page-hero">
+        <div class="container">
+          <p class="eyebrow">Spielsteuerung</p>
+          <h2>Steuerung</h2>
+          <p>Desktop (WASD + Maus) und Touch-Geräte mit virtualisiertem HUD.</p>
+        </div>
+      </section>
+
+      <section class="panel-grid container">
+        <article class="panel">
+          <h3>Bewegung &amp; Kampf</h3>
+          <div class="key-grid">
+            <div class="key-row">
+              <span class="key">WASD</span>
+              <span class="key-desc">Bewegen</span>
+            </div>
+            <div class="key-row">
+              <span class="key">LMB</span>
+              <span class="key-desc">Angreifen</span>
+            </div>
+            <div class="key-row">
+              <span class="key">Space</span>
+              <span class="key-desc">Dash</span>
+            </div>
+            <div class="key-row">
+              <span class="key">1 / 2 / 3</span>
+              <span class="key-desc">Klassen-Skills</span>
+            </div>
+          </div>
+        </article>
+
+        <article class="panel">
+          <h3>Interaktion &amp; UI</h3>
+          <div class="key-grid">
+            <div class="key-row">
+              <span class="key">E</span>
+              <span class="key-desc">Sammeln / Truhe / Schrein / Händler</span>
+            </div>
+            <div class="key-row">
+              <span class="key">F</span>
+              <span class="key-desc">Crafting (an Werkbank)</span>
+            </div>
+            <div class="key-row">
+              <span class="key">I</span>
+              <span class="key-desc">Inventar</span>
+            </div>
+            <div class="key-row">
+              <span class="key">C</span>
+              <span class="key-desc">Charakter / Attribute</span>
+            </div>
+            <div class="key-row">
+              <span class="key">K</span>
+              <span class="key-desc">Skillbaum</span>
+            </div>
+            <div class="key-row">
+              <span class="key">M</span>
+              <span class="key-desc">Kartenoverlay</span>
+            </div>
+            <div class="key-row">
+              <span class="key">Esc</span>
+              <span class="key-desc">Pause / Einstellungen</span>
+            </div>
+          </div>
+        </article>
+
+        <article class="panel panel-full">
+          <h3>Welt &amp; Co-op</h3>
+          <div class="key-grid">
+            <div class="key-row">
+              <span class="key">R</span>
+              <span class="key-desc">Rift betreten / verlassen</span>
+            </div>
+            <div class="key-row">
+              <span class="key">B</span>
+              <span class="key-desc">Zurück in den Hub</span>
+            </div>
+            <div class="key-row">
+              <span class="key">P</span>
+              <span class="key-desc">Co-op beitreten / verlassen (max. 4)</span>
+            </div>
+            <div class="key-row">
+              <span class="key">Touch</span>
+              <span class="key-desc"
+                >Virtueller Stick, ATK/E/DASH, Fähigkeitsleiste</span
+              >
+            </div>
+          </div>
+        </article>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <div class="container">
+        <div class="footer-row">
+          <p>© <span id="year"></span> Riftborn · Made for Game Off 2026</p>
+          <p>
+            <a href="index.html">Home</a> ·
+            <a
+              href="https://github.com/involvex/riftborn"
+              target="_blank"
+              rel="noopener"
+              >GitHub</a
+            >
+          </p>
+        </div>
+      </div>
+    </footer>
+
+    <script src="app.js"></script>
+  </body>
+</html>

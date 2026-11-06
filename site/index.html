@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="de">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Riftborn — 2.5D isometric ARPG</title>
+    <meta
+      name="description"
+      content="Riftborn — 2.5D isometrisches Hybrid-ARPG. Diablo-angelehnter Kampf, Sammeln/Basteln, prozedurale Rifts. Game Off 2026, Thema SHIFT / Weltenwechsel."
+    />
+    <link rel="icon" href="../public/favicon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <header class="site-header">
+      <div class="container">
+        <div class="brand">
+          <span class="brand-mark">◆</span>
+          <h1>Riftborn</h1>
+        </div>
+        <nav class="nav">
+          <a href="index.html">Home</a>
+          <a href="controls.html">Steuerung</a>
+          <a href="download.html">Download</a>
+          <a
+            href="https://github.com/involvex/riftborn"
+            target="_blank"
+            rel="noopener"
+            >GitHub</a
+          >
+        </nav>
+      </div>
+    </header>
+
+    <main>
+      <section class="hero">
+        <div class="container">
+          <div class="hero-content">
+            <p class="eyebrow">Game Off 2026 · SHIFT / Weltenwechsel</p>
+            <h2>2.5D isometrisches ARPG</h2>
+            <p class="lead">
+              Diablo-angelehnter Kampf, Gathering & Crafting, prozedurale Rifts.
+              Stapfe durch den Hub, erkunde gefährliche POIs und stürze dich in
+              wechselnde Welten.
+            </p>
+            <div class="cta-group">
+              <a class="btn btn-primary" href="download.html"
+                >Jetzt spielen &amp; herunterladen</a
+              >
+              <a class="btn btn-ghost" href="controls.html"
+                >Steuerung ansehen</a
+              >
+            </div>
+          </div>
+          <div class="hero-art" aria-hidden="true">
+            <div class="pixel-frame">
+              <div class="pixel-grid"></div>
+              <div class="pixel-hero"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="features">
+        <div class="container">
+          <h3>Features</h3>
+          <div class="feature-grid">
+            <article class="feature-card">
+              <h4>Isometrischer Kampf</h4>
+              <p>
+                Schnelles, knackiges ARPG-Combat mit Skills, Dash und taktischem
+                Positionieren.
+              </p>
+            </article>
+            <article class="feature-card">
+              <h4>Rifts &amp; Weltenwechsel</h4>
+              <p>
+                Prozedurale Rifts mit steigendem Schwierigkeitsgrad. Der SHIFT
+                führt dich zwischen Welten.
+              </p>
+            </article>
+            <article class="feature-card">
+              <h4>Hub, POIs &amp; Loot</h4>
+              <p>
+                Sicherer Hub, erkundbare Points of Interest, Truhen, Händler und
+                Crafting an der Werkbank.
+              </p>
+            </article>
+            <article class="feature-card">
+              <h4>Klassen &amp; Fortschritt</h4>
+              <p>
+                Warrior, Mystic, Mage. Attributspunkte, Ausrüstung, Sets und
+                Skillbäume.
+              </p>
+            </article>
+            <article class="feature-card">
+              <h4>Touch &amp; Desktop</h4>
+              <p>Spielbar am Desktop (WASD + Maus) und mobil mit Touch-HUD.</p>
+            </article>
+            <article class="feature-card">
+              <h4>Co-op</h4>
+              <p>
+                Lokales/Netzwerk-Co-op für bis zu 4 Spieler (WebSocket-Server).
+              </p>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <section class="cta-band">
+        <div class="container">
+          <div class="cta-band-inner">
+            <div>
+              <h3>Bereit für den Rift?</h3>
+              <p>
+                Riftborn ist Open Source. Schau dir den Code an, baue es selbst
+                oder lad dir die neuesten Builds.
+              </p>
+            </div>
+            <div class="cta-group">
+              <a
+                class="btn btn-primary"
+                href="https://github.com/involvex/riftborn"
+                target="_blank"
+                rel="noopener"
+                >Repository ansehen</a
+              >
+              <a class="btn btn-ghost" href="download.html">Downloads</a>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <div class="container">
+        <div class="footer-row">
+          <p>© <span id="year"></span> Riftborn · Made for Game Off 2026</p>
+          <p>
+            <a
+              href="https://github.com/involvex/riftborn"
+              target="_blank"
+              rel="noopener"
+              >GitHub</a
+            >
+            ·
+            <a href="https://involvex.github.io/riftborn/"
+              >involvex.github.io/riftborn/</a
+            >
+          </p>
+        </div>
+      </div>
+    </footer>
+
+    <script src="app.js"></script>
+  </body>
+</html>

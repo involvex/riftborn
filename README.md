@@ -52,4 +52,8 @@ bun run build:portable   # → release/Riftborn-*-portable.exe
 - Stats: Strength, Vitality, Intellect, Spirit
 - Gear sets: Ashen, Riftbound, Bone (2pc / 4pc bonuses)
 
+## Website
+
+[https://involvex.github.io/riftborn/](https://involvex.github.io/riftborn/) — statische Landingpage in [`site/`](site/), deployed via GitHub Actions. In den Repository-Settings unter **Pages** muss die Quelle auf **GitHub Actions** stehen.
+
 See [ROADMAP.md](ROADMAP.md) for what’s next.
