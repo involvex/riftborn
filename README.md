@@ -56,6 +56,12 @@ Prebuilt releases are published via GitHub Actions and include a Windows portabl
 - Stats: Strength, Vitality, Intellect, Spirit
 - Gear sets: Ashen, Riftbound, Bone (2pc / 4pc bonuses)
 
+## Screenshots
+
+![Riftborn Town](docs/screenshots/town.png)
+
+![Riftborn Rift](docs/screenshots/rift.png)
+
 ## Website
 
 [https://involvex.github.io/riftborn/](https://involvex.github.io/riftborn/) — statische Landingpage in [`site/`](site/), deployed via GitHub Actions. In den Repository-Settings unter **Pages** muss die Quelle auf **GitHub Actions** stehen.
