@@ -22,11 +22,14 @@ export class ShiftHud {
   private readonly barBg: Phaser.GameObjects.Rectangle;
   private readonly barFill: Phaser.GameObjects.Rectangle;
   private readonly hint: Phaser.GameObjects.Text;
+  private readonly actionLabel: string;
   private readonly unsub: () => void;
 
   constructor(scene: Phaser.Scene) {
     this.root = scene.add.container(16, 98).setScrollFactor(0).setDepth(10_000);
-    const profile = shouldShowTouchControls() ? 'touch' : 'desktop';
+    const touch = shouldShowTouchControls();
+    const profile = touch ? 'touch' : 'desktop';
+    this.actionLabel = touch ? 'SHIFT' : 'Q';
     this.label = scene.add.text(0, 0, '', {
       fontFamily: 'Consolas, "Courier New", monospace',
       fontSize: uiFontSize('label', profile),
@@ -42,7 +45,7 @@ export class ShiftHud {
     this.barFill = scene.add
       .rectangle(1, 20, 0, 8, 0xa090ff, 1)
       .setOrigin(0, 0.5);
-    this.hint = scene.add.text(0, 32, 'Q Shift', {
+    this.hint = scene.add.text(0, 32, `${this.actionLabel} Shift`, {
       fontFamily: 'Consolas, "Courier New", monospace',
       fontSize: uiFontSize('hint', profile),
       color: '#7a8090',
@@ -75,15 +78,16 @@ export class ShiftHud {
     );
     const cd =
       p.cooldownLeft > 0 ? ` · CD ${(p.cooldownLeft / 1000).toFixed(1)}s` : '';
+    const key = this.actionLabel;
     if (p.nearGate) {
       this.hint.setColor('#7ad4e8');
       this.hint.setText(
-        p.canShift ? 'Q Shift — gate ahead' : `Q Shift near gate${cd}`,
+        p.canShift ? `${key} — Gate!` : `${key} near gate${cd}`,
       );
     } else {
       this.hint.setColor('#7a8090');
       this.hint.setText(
-        p.canShift ? 'Q Shift ready' : `Q Shift${cd} · kills fill energy`,
+        p.canShift ? `${key} ready` : `${key}${cd} · kills fill energy`,
       );
     }
   }

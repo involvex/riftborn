@@ -364,6 +364,14 @@ export class UIScene extends Phaser.Scene {
         this.summaryOverlay.confirm();
         this.syncNavFlags();
       }),
+      gameEvents.on('ui:showTutorial', () => {
+        this.tutorial.show();
+        this.syncNavFlags();
+      }),
+      gameEvents.on('ui:dismissTutorial', () => {
+        this.tutorial.dismiss();
+        this.syncNavFlags();
+      }),
       gameEvents.on(Events.PLAYER_DIED, (p) => {
         const d = p as {
           kills: number;

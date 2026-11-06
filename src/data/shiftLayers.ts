@@ -26,7 +26,7 @@ export const SHIFT_LAYERS: Record<ShiftLayerId, ShiftLayerDef> = {
     name: 'Schatten',
     tileTint: 0x9a8cff,
     propTint: 0xb0a0ff,
-    overlayAlpha: 0.18,
+    overlayAlpha: 0.34,
     hudColor: '#a090ff',
   },
 };

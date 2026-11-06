@@ -96,6 +96,7 @@ import {
   layerTileTint,
 } from '../render/ShiftVisual';
 import { SHIFT_LAYERS, type ShiftLayerId } from '../data/shiftLayers';
+import { shiftLayerColor, shiftTransitionText } from '../systems/ShiftFeedback';
 import {
   resolveInteractAction,
   type InteractCandidate,
@@ -254,6 +255,9 @@ export class WorldScene extends Phaser.Scene {
       spawnLootNearPlayer: () => this.debugSpawnLootNearPlayer(),
       gotoNearestHostile: () => this.debugGotoNearestHostile(),
       interactHint: () => this.lastInteractHint,
+      setShiftLayer: (layer) => this.shiftSystem.forceLayer(layer),
+      showTutorial: () => gameEvents.emit('ui:showTutorial', {}),
+      dismissTutorial: () => gameEvents.emit('ui:dismissTutorial', {}),
     });
   }
 
@@ -550,7 +554,13 @@ export class WorldScene extends Phaser.Scene {
 
   private tryPlayerShift(): void {
     if (!gameState.inRift) return;
-    this.shiftSystem.tryShift();
+    const previous = this.shiftSystem.layer;
+    if (!this.shiftSystem.tryShift()) return;
+    const layer = this.shiftSystem.layer;
+    gameEvents.emit('ui:toast', {
+      text: shiftTransitionText(previous, layer),
+      color: shiftLayerColor(layer),
+    });
   }
 
   private syncEnemyShiftLayers(layer: ShiftLayerId): void {

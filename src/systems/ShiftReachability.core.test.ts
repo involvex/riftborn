@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import { generateDungeon } from '../world/DungeonGen';
+import { isWalkableOnLayer } from '../world/ShiftGateMap';
 import { canReachWithShift, pathRequiresShift } from './ShiftReachability';
 
 describe('ShiftReachability', () => {
@@ -41,5 +42,36 @@ describe('ShiftReachability', () => {
       }
     }
     expect(forced).toBe(true);
+  });
+
+  test('depth-1 dungeons have a layer gate that distinguishes layers', () => {
+    for (let seed = 1; seed <= 50; seed++) {
+      const map = generateDungeon(seed * 211, 1);
+      let found: { x: number; y: number; layer: 'ash' | 'shadow' } | null =
+        null;
+      for (let y = 0; y < map.height && !found; y++) {
+        for (let x = 0; x < map.width && !found; x++) {
+          const gate = map.layerGates[y]?.[x];
+          if (gate) found = { x, y, layer: gate };
+        }
+      }
+      expect(found, `seed ${seed} should have a gate`).not.toBeNull();
+      const g = found!;
+      expect(map.cells[g.y]?.[g.x]).toBe(1);
+      expect(
+        isWalkableOnLayer(map.cells, map.layerGates, g.x, g.y, g.layer),
+      ).toBe(true);
+      const other = g.layer === 'ash' ? 'shadow' : 'ash';
+      expect(
+        isWalkableOnLayer(map.cells, map.layerGates, g.x, g.y, other),
+      ).toBe(false);
+
+      const spawn = map.layout.spawn!;
+      const boss = map.layout.elite!;
+      expect(
+        canReachWithShift(map, spawn, boss, 'ash'),
+        `seed ${seed} depth-1 reachability`,
+      ).toBe(true);
+    }
   });
 });

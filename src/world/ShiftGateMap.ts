@@ -48,12 +48,12 @@ export function stampShiftGates(
   const by = Math.floor(boss.y + boss.h / 2);
 
   const path = bfsFloorPath(cells, sx, sy, bx, by);
-  if (path.length < 8) return gates;
+  if (path.length < 4) return gates;
 
-  const midStart = Math.floor(path.length * 0.35);
-  const midEnd = Math.floor(path.length * 0.7);
+  const midStart = Math.max(1, Math.floor(path.length * 0.3));
+  const midEnd = Math.min(path.length - 2, Math.floor(path.length * 0.75));
   let stamped = 0;
-  for (let i = midStart; i < midEnd; i += 2) {
+  for (let i = midStart; i <= midEnd; i += 2) {
     const p = path[i]!;
     // Skip room interiors near start/boss
     if (inRoom(p.x, p.y, start) || inRoom(p.x, p.y, boss)) continue;
@@ -62,6 +62,21 @@ export function stampShiftGates(
     stamped += 1;
     if (stamped >= 4 + Math.floor(rnd() * 3)) break;
   }
+
+  // Guarantee at least one gate on valid dungeons (depth-1 clarity).
+  if (stamped === 0) {
+    const fallbackIdx = Math.floor(path.length / 2);
+    for (let off = 0; off < path.length; off++) {
+      const i = fallbackIdx + (off % 2 === 0 ? off / 2 : -Math.ceil(off / 2));
+      if (i <= 0 || i >= path.length - 1) continue;
+      const p = path[i]!;
+      if (p.x === sx && p.y === sy) continue;
+      if (p.x === bx && p.y === by) continue;
+      stampGatePair(cells, gates, path, i, 'shadow');
+      if (gates[p.y]![p.x] !== null) break;
+    }
+  }
+
   // Ensure spawn & boss centers stay dual-layer
   gates[sy]![sx] = null;
   gates[by]![bx] = null;

@@ -126,6 +126,12 @@ export type RiftbornApi = {
   };
   /** Force a skill-slot cooldown (screenshot / cooldown overlay). */
   forceSkillCooldown: (slot: number, sec: number) => void;
+  /** Force world layer (rift screenshots / tests). Emits SHIFT_CHANGED. */
+  setShiftLayer: (layer: 'ash' | 'shadow') => void;
+  /** Show the first-run tutorial overlay (screenshot). */
+  showTutorial: () => void;
+  /** Dismiss tutorial if open. */
+  dismissTutorial: () => void;
 };
 
 export type RiftbornSnapshotSource = {
@@ -149,6 +155,9 @@ export type RiftbornDebugHooks = {
   spawnLootNearPlayer?: () => boolean;
   gotoNearestHostile?: () => boolean;
   interactHint?: () => { label: string; dimmed: boolean; kind: string };
+  setShiftLayer?: (layer: 'ash' | 'shadow') => void;
+  showTutorial?: () => void;
+  dismissTutorial?: () => void;
 };
 
 declare global {
@@ -233,6 +242,9 @@ let spawnLootHook: (() => boolean) | null = null;
 let gotoHostileHook: (() => boolean) | null = null;
 let interactHintHook:
   (() => { label: string; dimmed: boolean; kind: string }) | null = null;
+let setShiftLayerHook: ((layer: 'ash' | 'shadow') => void) | null = null;
+let showTutorialHook: (() => void) | null = null;
+let dismissTutorialHook: (() => void) | null = null;
 let touchChromeOpen = false;
 let touchChromeListening = false;
 
@@ -257,6 +269,9 @@ export function installRiftbornDebug(
     spawnLootHook = null;
     gotoHostileHook = null;
     interactHintHook = null;
+    setShiftLayerHook = null;
+    showTutorialHook = null;
+    dismissTutorialHook = null;
   } else {
     source = getSource.getSource;
     enterRiftHook = getSource.enterRift ?? null;
@@ -265,6 +280,9 @@ export function installRiftbornDebug(
     spawnLootHook = getSource.spawnLootNearPlayer ?? null;
     gotoHostileHook = getSource.gotoNearestHostile ?? null;
     interactHintHook = getSource.interactHint ?? null;
+    setShiftLayerHook = getSource.setShiftLayer ?? null;
+    showTutorialHook = getSource.showTutorial ?? null;
+    dismissTutorialHook = getSource.dismissTutorial ?? null;
   }
   const emptyHint = { label: 'E', dimmed: true, kind: 'none' };
   const api: RiftbornApi = {
@@ -349,6 +367,15 @@ export function installRiftbornDebug(
       gameState.skills.forceCooldown(slot, sec);
       gameEvents.emit(Events.SKILL_CAST, {});
     },
+    setShiftLayer: (layer: 'ash' | 'shadow') => {
+      setShiftLayerHook?.(layer);
+    },
+    showTutorial: () => {
+      showTutorialHook?.();
+    },
+    dismissTutorial: () => {
+      dismissTutorialHook?.();
+    },
   };
   window.__RIFTBORN = api;
 }
@@ -361,6 +388,9 @@ export function clearRiftbornDebug(): void {
   spawnLootHook = null;
   gotoHostileHook = null;
   interactHintHook = null;
+  setShiftLayerHook = null;
+  showTutorialHook = null;
+  dismissTutorialHook = null;
   touchChromeOpen = false;
   if (window.__RIFTBORN) {
     window.__RIFTBORN = {
@@ -406,6 +436,9 @@ export function clearRiftbornDebug(): void {
         particleCap: 12,
       }),
       forceSkillCooldown: () => {},
+      setShiftLayer: () => {},
+      showTutorial: () => {},
+      dismissTutorial: () => {},
     };
   }
 }

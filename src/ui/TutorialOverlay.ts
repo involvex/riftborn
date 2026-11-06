@@ -3,7 +3,7 @@ import { formatHotkey } from '../core/Hotkeys';
 import { audioBus } from '../core/AudioBus';
 import { shouldShowTouchControls } from './TouchControls';
 
-const STORAGE_KEY = 'riftborn.tutorial.v1';
+const STORAGE_KEY = 'riftborn.tutorial.v2';
 
 export function hasSeenTutorial(): boolean {
   try {
@@ -58,7 +58,7 @@ export class TutorialOverlay {
     this.root.removeAll(true);
     const { width, height } = this.scene.scale;
     const panelW = Math.min(420, width - 32);
-    const panelH = shouldShowTouchControls() ? 300 : 340;
+    const panelH = shouldShowTouchControls() ? 280 : 300;
 
     const dim = this.scene.add
       .rectangle(width / 2, height / 2, width, height, 0x05070a, 0.72)
@@ -79,22 +79,21 @@ export class TutorialOverlay {
 
     const lines = shouldShowTouchControls()
       ? [
-          'Stick — move',
-          'ATK — attack · E — interact',
-          'DASH — burst · SHIFT — Asche/Schatten',
-          '1/2/3 — skills · kills fill Shift energy',
+          'Gleiche Welt, zwei Schichten:',
+          'Asche & Schatten. Kills füllen Energie —',
+          'SHIFT wechselt die Schicht und öffnet Wege.',
           '',
-          'In rifts, SHIFT layers to open paths.',
+          'Stick — move · ATK — attack · E — interact',
+          'DASH — burst · 1/2/3 — skills',
         ]
       : [
-          `WASD — move · LMB — attack`,
-          `${formatHotkey('gather')} — interact / gather / chest`,
-          `${formatHotkey('shift')} — world shift (Asche ↔ Schatten)`,
-          `${formatHotkey('skill1')} / ${formatHotkey('skill2')} / ${formatHotkey('skill3')} — class skills`,
-          `${formatHotkey('dash')} — dash · ${formatHotkey('portal')} — rift · ${formatHotkey('town')} — town`,
-          `${formatHotkey('map')} map · ${formatHotkey('inventory')} bag · ${formatHotkey('character')} attrs`,
+          'Gleiche Welt, zwei Schichten: Asche & Schatten.',
+          'Kills füllen Energie — ' +
+            `${formatHotkey('shift')} wechselt die Schicht und öffnet Wege.`,
           '',
-          'Rifts: kill → energy → Q shift · follow the Lord.',
+          `WASD/LMB — move/attack · ${formatHotkey('gather')} — interact`,
+          `${formatHotkey('skill1')}/${formatHotkey('skill2')}/${formatHotkey('skill3')} — skills · ${formatHotkey('dash')} — dash`,
+          `${formatHotkey('portal')} — rift · ${formatHotkey('town')} — town · ${formatHotkey('map')}/${formatHotkey('inventory')} — map/bag`,
         ];
 
     const body = this.scene.add
