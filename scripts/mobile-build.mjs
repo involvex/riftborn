@@ -15,18 +15,30 @@ function run(cmd, args, cwd = root) {
   if (r.status !== 0) process.exit(r.status ?? 1);
 }
 
+const isCI = !!(process.env.CI || process.env.GITHUB_ACTIONS);
+
 console.log('1/4 Build Phaser …');
 run('bun', ['run', 'build']);
 
 console.log('2/4 Sync into Android assets …');
 run('bun', ['run', 'scripts/mobile-sync.mjs']);
 
-const www = join(mobile, 'android', 'app', 'src', 'main', 'assets', 'www');
+const androidDir = join(mobile, 'android');
+const www = join(androidDir, 'app', 'src', 'main', 'assets', 'www');
 if (!existsSync(www)) {
-  console.error(
-    'No android project yet. Run once: cd mobile && bunx expo prebuild --platform android',
-  );
-  process.exit(1);
+  if (isCI) {
+    console.log('No android project yet. Running prebuild in CI …');
+    run(
+      'bunx',
+      ['expo', 'prebuild', '--platform', 'android', '--non-interactive'],
+      mobile,
+    );
+  } else {
+    console.error(
+      'No android project yet. Run once: cd mobile && bunx expo prebuild --platform android',
+    );
+    process.exit(1);
+  }
 }
 
 writeFileSync(
@@ -38,7 +50,12 @@ writeFileSync(
 );
 
 console.log('3/4 Assemble release APK …');
-run('bunx', ['expo', 'run:android', '--variant', 'release'], mobile);
+if (isCI) {
+  const gradlew = process.platform === 'win32' ? 'gradlew.bat' : './gradlew';
+  run(gradlew, ['assembleRelease'], join(androidDir));
+} else {
+  run('bunx', ['expo', 'run:android', '--variant', 'release'], mobile);
+}
 
 const apkCandidates = [
   join(

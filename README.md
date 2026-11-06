@@ -29,6 +29,10 @@ bun run desktop:prod     # uses dist/ (no Vite needed)
 bun run build:portable   # → release/Riftborn-*-portable.exe
 ```
 
+### Releases
+
+Prebuilt releases are published via GitHub Actions and include a Windows portable `.exe` and an Android `.apk`. See [docs/RELEASE.md](docs/RELEASE.md) for details.
+
 ## Controls
 
 | Key   | Action                    |
