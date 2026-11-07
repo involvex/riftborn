@@ -6,6 +6,10 @@
 
 ## Play
 
+- **Im Browser:** [involvex.github.io/riftborn/play/](https://involvex.github.io/riftborn/play/)
+- **itch.io:** [involvex.itch.io/riftborn](https://involvex.itch.io/riftborn)
+- **Lokal entwickeln:**
+
 ```bash
 bun install
 bun run dev

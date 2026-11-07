@@ -5,6 +5,12 @@ on:
     branches: ['main']
     paths:
       - 'site/**'
+      - 'src/**'
+      - 'public/**'
+      - 'index.html'
+      - 'vite.config.ts'
+      - 'package.json'
+      - 'tsconfig*.json'
       - '.github/workflows/pages.yml'
   workflow_dispatch:
 
@@ -24,13 +30,31 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Build game for GitHub Pages (/play)
+        run: bunx vite build --base /riftborn/play/ --outDir dist-play
+
+      - name: Prepare site
+        run: |
+          mkdir -p _site
+          cp -r site/* _site/
+          mkdir -p _site/play
+          cp -r dist-play/* _site/play/
+
       - name: Setup Pages
         uses: actions/configure-pages@v5
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: './site'
+          path: './_site'
 
   deploy:
     environment:

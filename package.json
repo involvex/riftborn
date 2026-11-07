@@ -30,7 +30,8 @@
     "test:smoke:headed": "playwright test e2e/hub.smoke.spec.ts --headed",
     "mobile:dev": "bun run scripts/mobile-dev.mjs",
     "mobile:build": "bun run scripts/mobile-build.mjs",
-    "mobile:lan": "bun run scripts/mobile-lan.mjs"
+    "mobile:lan": "bun run scripts/mobile-lan.mjs",
+    "build:itch": "bun run scripts/build-itch.mjs"
   },
   "build": {
     "appId": "dev.riftborn.game",
