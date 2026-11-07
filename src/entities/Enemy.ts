@@ -21,6 +21,11 @@ import {
   type EnemyShiftLayer,
   type ShiftLayerId,
 } from '../data/shiftLayers';
+import {
+  createEnemyShot,
+  isRangedEnemy,
+  type EnemyShot,
+} from '../systems/EnemyRanged';
 
 const enemies = enemiesData as Record<string, EnemyDef>;
 
@@ -192,8 +197,8 @@ export class Enemy {
     dt: number,
     playerX: number,
     playerY: number,
-  ): { hitPlayer: boolean; damage: number } {
-    if (!this.alive) return { hitPlayer: false, damage: 0 };
+  ): { hitPlayer: boolean; damage: number; shot?: EnemyShot | null } {
+    if (!this.alive) return { hitPlayer: false, damage: 0, shot: null };
     this.attackTimer = Math.max(0, this.attackTimer - dt);
     this.slowTimer = Math.max(0, this.slowTimer - dt);
     this.stunTimer = Math.max(0, this.stunTimer - dt);
@@ -202,7 +207,7 @@ export class Enemy {
     if (this.ghosted) {
       this.playAnim('idle');
       this.syncScreen();
-      return { hitPlayer: false, damage: 0 };
+      return { hitPlayer: false, damage: 0, shot: null };
     }
 
     const dist = worldDistance(
@@ -213,13 +218,13 @@ export class Enemy {
     // Far packs: skip most frames (AI + sprite sync)
     if (dist > 18) {
       this.body.setVisible(false);
-      return { hitPlayer: false, damage: 0 };
+      return { hitPlayer: false, damage: 0, shot: null };
     }
     if (!this.body.visible) this.body.setVisible(true);
     if (dist > 12) {
       this.lodPhase = (this.lodPhase + 1) & 7;
       if (this.lodPhase !== 0) {
-        return { hitPlayer: false, damage: 0 };
+        return { hitPlayer: false, damage: 0, shot: null };
       }
     }
 
@@ -228,7 +233,7 @@ export class Enemy {
     if (this.stunTimer > 0) {
       this.playAnim('idle');
       this.syncScreen();
-      return { hitPlayer: false, damage: 0 };
+      return { hitPlayer: false, damage: 0, shot: null };
     }
 
     const aggro = this.def.isElite ? 7 : 5;
@@ -242,6 +247,7 @@ export class Enemy {
 
     let hitPlayer = false;
     let damage = 0;
+    let shot: EnemyShot | null = null;
 
     if (this.state === 'patrol') {
       this.patrolAngle += dt * 0.6;
@@ -270,16 +276,27 @@ export class Enemy {
     } else if (this.state === 'attack') {
       this.setFacingToward(playerX, playerY);
       if (this.attackTimer <= 0) {
-        hitPlayer = true;
-        damage = Math.floor(
+        const dealt = Math.floor(
           this.def.damage *
             this.levelMult *
             this.modDmgMult *
             (this.elitePack ? 1.45 : 1) *
             (this.isBoss ? 1.25 : 1),
         );
-        this.attackTimer = this.def.attackCooldown;
-        this.playAnim('attack', true);
+        if (isRangedEnemy(this.def.id)) {
+          this.attackTimer = this.def.attackCooldown;
+          this.playAnim('attack', true);
+          shot = createEnemyShot(
+            { x: this.worldX, y: this.worldY },
+            { x: playerX, y: playerY },
+            dealt,
+          );
+        } else {
+          hitPlayer = true;
+          damage = dealt;
+          this.attackTimer = this.def.attackCooldown;
+          this.playAnim('attack', true);
+        }
       } else if (this.animKind !== 'attack') {
         this.playAnim('idle');
       }
@@ -288,7 +305,7 @@ export class Enemy {
     this.worldX = Phaser.Math.Clamp(this.worldX, 0.5, this.maxBound);
     this.worldY = Phaser.Math.Clamp(this.worldY, 0.5, this.maxBound);
     this.syncScreen();
-    return { hitPlayer, damage };
+    return { hitPlayer, damage, shot };
   }
 
   private setFacingFromDelta(dx: number, dy: number): void {

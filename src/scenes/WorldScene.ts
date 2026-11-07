@@ -104,6 +104,7 @@ import {
 } from '../render/ShiftVisual';
 import { SHIFT_LAYERS, type ShiftLayerId } from '../data/shiftLayers';
 import { shiftLayerColor, shiftTransitionText } from '../systems/ShiftFeedback';
+import { advanceEnemyShot, type EnemyShot } from '../systems/EnemyRanged';
 import {
   resolveInteractAction,
   type InteractCandidate,
@@ -176,6 +177,10 @@ export class WorldScene extends Phaser.Scene {
   private dungeon: DungeonMap | null = null;
   /** Wall-clock ms — skip sim briefly for hitstop juice. */
   private hitstopUntil = 0;
+  private enemyShots: {
+    shot: EnemyShot;
+    graphic: Phaser.GameObjects.Graphics;
+  }[] = [];
   private remoteGhosts = new Map<string, Phaser.GameObjects.Container>();
   private unsubNet: (() => void) | null = null;
   private mapEmitAcc = 0;
@@ -387,6 +392,7 @@ export class WorldScene extends Phaser.Scene {
     this.shiftOverlay?.destroy();
     this.shiftOverlay = null;
     this.player?.destroy();
+    this.clearEnemyShots();
     for (const n of this.nodes) n.destroy();
     for (const e of this.enemies) e.destroy();
     for (const c of this.chests) c.destroy();
@@ -570,6 +576,7 @@ export class WorldScene extends Phaser.Scene {
 
   private loadZone(rift: boolean): void {
     cancelShiftTransition();
+    this.clearEnemyShots();
     this.mapCells = null;
     this.mapW = 0;
     this.mapH = 0;
@@ -1782,36 +1789,87 @@ export class WorldScene extends Phaser.Scene {
     gameEvents.emit('ui:mapSnapshot', snap);
   }
 
+  private clearEnemyShots(): void {
+    for (const s of this.enemyShots) s.graphic.destroy();
+    this.enemyShots = [];
+  }
+
+  private spawnEnemyShotGraphic(shot: EnemyShot): Phaser.GameObjects.Graphics {
+    const g = this.add.graphics();
+    g.fillStyle(0xc4b090, 1);
+    g.fillCircle(0, 0, 4);
+    g.lineStyle(1, 0xf4e4c8, 0.9);
+    g.strokeCircle(0, 0, 4);
+    const { screenX, screenY } = worldToScreen(shot.worldX, shot.worldY);
+    g.setPosition(screenX, screenY);
+    g.setDepth(depthFromWorld(shot.worldX, shot.worldY) + 8);
+    return g;
+  }
+
+  private damagePlayer(rawDamage: number): void {
+    const dealt = gameState.takeDamage(rawDamage);
+    const { screenX, screenY } = worldToScreen(
+      this.player.worldX,
+      this.player.worldY,
+    );
+    if (settingsStore.get().showDamageNumbers) {
+      gameState.combat.emitDamageNumber(screenX, screenY - 20, dealt, 'player');
+    }
+    this.player.flashHit();
+    audioBus.hit();
+    this.triggerCombatShake('playerHit');
+    this.triggerHitstop(false);
+    if (gameState.hp <= 0) this.onPlayerDeath();
+  }
+
   private updateEnemies(dt: number): void {
     if (netClient.connected) return;
     for (const enemy of this.enemies) {
       if (!enemy.alive) continue;
       const result = enemy.update(dt, this.player.worldX, this.player.worldY);
       if (result.hitPlayer) {
-        const dealt = gameState.takeDamage(result.damage);
-        const { screenX, screenY } = worldToScreen(
-          this.player.worldX,
-          this.player.worldY,
-        );
-        if (settingsStore.get().showDamageNumbers) {
-          gameState.combat.emitDamageNumber(
-            screenX,
-            screenY - 20,
-            dealt,
-            'player',
-          );
-        }
-        this.player.flashHit();
-        audioBus.hit();
-        this.triggerCombatShake('playerHit');
-        this.triggerHitstop(false);
-        if (gameState.hp <= 0) this.onPlayerDeath();
+        this.damagePlayer(result.damage);
+      }
+      if (result.shot) {
+        this.enemyShots.push({
+          shot: result.shot,
+          graphic: this.spawnEnemyShotGraphic(result.shot),
+        });
       }
     }
+
+    if (this.enemyShots.length === 0) return;
+    const target = { worldX: this.player.worldX, worldY: this.player.worldY };
+    const keep: {
+      shot: EnemyShot;
+      graphic: Phaser.GameObjects.Graphics;
+    }[] = [];
+    for (const s of this.enemyShots) {
+      const r = advanceEnemyShot(s.shot, dt, target);
+      if (r.hit) {
+        s.graphic.destroy();
+        this.damagePlayer(s.shot.damage);
+        if (this.deathPending) {
+          for (const rest of keep) rest.graphic.destroy();
+          return;
+        }
+        continue;
+      }
+      if (r.expired) {
+        s.graphic.destroy();
+        continue;
+      }
+      const { screenX, screenY } = worldToScreen(s.shot.worldX, s.shot.worldY);
+      s.graphic.setPosition(screenX, screenY);
+      s.graphic.setDepth(depthFromWorld(s.shot.worldX, s.shot.worldY) + 8);
+      keep.push(s);
+    }
+    this.enemyShots = keep;
   }
 
   private onPlayerDeath(): void {
     if (this.deathPending) return;
+    this.clearEnemyShots();
     this.deathPending = true;
     audioBus.death();
     this.safeCameraFlash(280, 120, 20, 30);
