@@ -58,7 +58,7 @@ export class TutorialOverlay {
     this.root.removeAll(true);
     const { width, height } = this.scene.scale;
     const panelW = Math.min(420, width - 32);
-    const panelH = shouldShowTouchControls() ? 280 : 300;
+    const panelH = shouldShowTouchControls() ? 300 : 320;
 
     const dim = this.scene.add
       .rectangle(width / 2, height / 2, width, height, 0x05070a, 0.72)
@@ -82,6 +82,7 @@ export class TutorialOverlay {
           'Gleiche Welt, zwei Schichten:',
           'Asche & Schatten. Kills füllen Energie —',
           'SHIFT wechselt die Schicht und öffnet Wege.',
+          'Kernloop: Town → Rift → Kampf → Beute.',
           '',
           'Stick — move · ATK — attack · E — interact',
           'DASH — burst · 1/2/3 — skills',
@@ -90,6 +91,7 @@ export class TutorialOverlay {
           'Gleiche Welt, zwei Schichten: Asche & Schatten.',
           'Kills füllen Energie — ' +
             `${formatHotkey('shift')} wechselt die Schicht und öffnet Wege.`,
+          'Kernloop: Town → Rift → Kampf → Beute.',
           '',
           `WASD/LMB — move/attack · ${formatHotkey('gather')} — interact`,
           `${formatHotkey('skill1')}/${formatHotkey('skill2')}/${formatHotkey('skill3')} — skills · ${formatHotkey('dash')} — dash`,
@@ -97,7 +99,7 @@ export class TutorialOverlay {
         ];
 
     const body = this.scene.add
-      .text(width / 2, height / 2 - 18, lines.join('\n'), {
+      .text(width / 2, height / 2 - 12, lines.join('\n'), {
         fontFamily: 'Segoe UI, sans-serif',
         fontSize: '14px',
         color: '#a8b8c8',
@@ -129,6 +131,7 @@ export class TutorialOverlay {
     audioBus.uiClick();
     this.root.setVisible(false);
     this.root.removeAll(true);
+    this.scene.events.emit('tutorial:dismissed');
   }
 
   destroy(): void {

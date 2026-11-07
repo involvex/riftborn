@@ -45,6 +45,13 @@ import { HotkeyDock } from '../ui/HotkeyDock';
 import { FpsHud } from '../ui/FpsHud';
 import { shouldShowTouchControls, TouchControls } from '../ui/TouchControls';
 import { TutorialOverlay } from '../ui/TutorialOverlay';
+import { FirstSessionHint } from '../ui/FirstSessionHint';
+import {
+  hasCompletedFirstSession,
+  markFirstSessionCompleted,
+  nextFirstSessionHint,
+  type FirstSessionStep,
+} from '../systems/FirstSession';
 import { formatPlayTime, SummaryOverlay } from '../ui/SummaryOverlay';
 import { uiPanelSize } from '../core/UiScale';
 import {
@@ -83,6 +90,10 @@ export class UIScene extends Phaser.Scene {
   private miniMap!: MiniMap;
   private mapOverlay!: MapOverlay;
   private tutorial!: TutorialOverlay;
+  private firstSessionHint!: FirstSessionHint;
+  private firstSessionMoved = false;
+  private firstSessionKilled = false;
+  private firstSessionDebugStep: FirstSessionStep | null = null;
   private summaryOverlay!: SummaryOverlay;
   private lastMapSnap: MapSnapshot | null = null;
   private unsubs: (() => void)[] = [];
@@ -151,6 +162,7 @@ export class UIScene extends Phaser.Scene {
     this.miniMap = new MiniMap(this);
     this.mapOverlay = new MapOverlay(this);
     this.tutorial = new TutorialOverlay(this);
+    this.firstSessionHint = new FirstSessionHint(this);
     this.summaryOverlay = new SummaryOverlay(this);
     this.buildCraftPanel();
     this.buildCharPanel();
@@ -158,6 +170,9 @@ export class UIScene extends Phaser.Scene {
     this.refresh();
     // Defer so HUD layout settles before the modal dim.
     this.time.delayedCall(350, () => this.tutorial.maybeShow());
+    this.events.on('tutorial:dismissed', () => this.maybeShowFirstSession());
+    // If tutorial was already seen/skipped, start after the same settle delay.
+    this.time.delayedCall(380, () => this.maybeShowFirstSession());
 
     this.input.keyboard?.on('keydown', (event: KeyboardEvent) => {
       if (!this.awaitingRebind) return;
@@ -372,6 +387,28 @@ export class UIScene extends Phaser.Scene {
         this.tutorial.dismiss();
         this.syncNavFlags();
       }),
+      gameEvents.on('ui:showFirstSession', (p) => {
+        const d = p as { step?: FirstSessionStep | null };
+        this.firstSessionDebugStep = d.step ?? null;
+        if (this.firstSessionDebugStep) {
+          this.firstSessionHint.setStep(this.firstSessionDebugStep);
+        } else {
+          this.maybeShowFirstSession();
+        }
+      }),
+      gameEvents.on(Events.PLAYER_MOVED, () => {
+        if (this.firstSessionMoved) return;
+        this.firstSessionMoved = true;
+        this.maybeShowFirstSession();
+      }),
+      gameEvents.on(Events.ENEMY_DIED, () => {
+        if (this.firstSessionKilled) return;
+        this.firstSessionKilled = true;
+        this.maybeShowFirstSession();
+      }),
+      gameEvents.on(Events.RIFT_ENTERED, () => {
+        this.maybeShowFirstSession();
+      }),
       gameEvents.on(Events.PLAYER_DIED, (p) => {
         const d = p as {
           kills: number;
@@ -503,7 +540,38 @@ export class UIScene extends Phaser.Scene {
       if (this.skillPanel.open) this.skillPanel.layout();
       if (this.mapOverlay.open) this.mapOverlay.layout();
       if (this.summaryOverlay.open) this.summaryOverlay.layout();
+      this.firstSessionHint.layout();
     });
+  }
+
+  private isSmokeBoot(): boolean {
+    try {
+      return new URLSearchParams(window.location.search).has('smoke');
+    } catch {
+      return false;
+    }
+  }
+
+  private maybeShowFirstSession(): void {
+    if (this.firstSessionDebugStep) return;
+    const step = nextFirstSessionHint({
+      tutorialOpen: this.tutorial.open,
+      smoke: this.isSmokeBoot(),
+      completed: hasCompletedFirstSession(),
+      moved: this.firstSessionMoved,
+      inRift: gameState.inRift,
+      killed: this.firstSessionKilled,
+    });
+    if (step === null) {
+      this.firstSessionHint.setStep(null);
+      return;
+    }
+    if (step === 'done') {
+      markFirstSessionCompleted();
+      this.firstSessionHint.setStep(null);
+      return;
+    }
+    this.firstSessionHint.setStep(step);
   }
 
   /** Close inventory / map / shops / pause before a blocking summary. */
@@ -1414,6 +1482,7 @@ export class UIScene extends Phaser.Scene {
     for (const u of this.unsubs) u();
     this.unsubs = [];
     this.tutorial?.destroy();
+    this.firstSessionHint?.destroy();
     this.summaryOverlay?.destroy();
   }
 }

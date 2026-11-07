@@ -1493,6 +1493,9 @@ export class WorldScene extends Phaser.Scene {
         skill: false,
       });
     }
+    if (dx !== 0 || dy !== 0) {
+      gameEvents.emit(Events.PLAYER_MOVED, { dx, dy });
+    }
 
     if (gameState.inRift) {
       const near = this.playerNearShiftGate();

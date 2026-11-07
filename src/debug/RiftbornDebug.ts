@@ -132,6 +132,8 @@ export type RiftbornApi = {
   showTutorial: () => void;
   /** Dismiss tutorial if open. */
   dismissTutorial: () => void;
+  /** Show a first-session hint step for screenshots/debug (`null` resumes). */
+  showFirstSession: (step: 'move' | 'rift' | 'attack' | null) => void;
 };
 
 export type RiftbornSnapshotSource = {
@@ -376,6 +378,9 @@ export function installRiftbornDebug(
     dismissTutorial: () => {
       dismissTutorialHook?.();
     },
+    showFirstSession: (step) => {
+      gameEvents.emit('ui:showFirstSession', { step });
+    },
   };
   window.__RIFTBORN = api;
 }
@@ -439,6 +444,7 @@ export function clearRiftbornDebug(): void {
       setShiftLayer: () => {},
       showTutorial: () => {},
       dismissTutorial: () => {},
+      showFirstSession: () => {},
     };
   }
 }
