@@ -11,6 +11,11 @@ import {
   clearRiftbornDebug,
   installRiftbornDebug,
 } from '../debug/RiftbornDebug';
+import {
+  DECOR_CULL_PAD,
+  isScreenPointVisible,
+  TILE_CULL_PAD,
+} from '../core/ViewCull';
 import { Enemy } from '../entities/Enemy';
 import { GroundLoot } from '../entities/GroundLoot';
 import { LootChest } from '../entities/LootChest';
@@ -188,6 +193,7 @@ export class WorldScene extends Phaser.Scene {
   private onWebglLost: ((e: Event) => void) | null = null;
   private onWebglRestored: ((e: Event) => void) | null = null;
   private updateErrorAt = 0;
+  private tileCullAcc = 0;
 
   constructor() {
     super('WorldScene');
@@ -628,6 +634,8 @@ export class WorldScene extends Phaser.Scene {
     this.applyShiftVisuals(this.shiftSystem.layer);
     this.emitShiftHud();
     this.emitMapSnapshot();
+    this.tileCullAcc = 0;
+    this.cullWorldSprites();
     // Touch town affordance — only outside the hub.
     gameEvents.emit('ui:townButton', { visible: rift });
   }
@@ -1185,6 +1193,19 @@ export class WorldScene extends Phaser.Scene {
     this.tileSprites = [];
   }
 
+  /** Hide offscreen floor tiles/decor to cut mobile overdraw (P1). */
+  private cullWorldSprites(): void {
+    const view = this.cameras.main?.worldView;
+    if (!view) return;
+    const vr = { x: view.x, y: view.y, width: view.width, height: view.height };
+    for (const img of this.tileSprites) {
+      img.setVisible(isScreenPointVisible(img.x, img.y, vr, TILE_CULL_PAD));
+    }
+    for (const d of this.decor) {
+      d.setVisible(isScreenPointVisible(d.x, d.y, vr, DECOR_CULL_PAD));
+    }
+  }
+
   private placeFloorTile(
     x: number,
     y: number,
@@ -1330,6 +1351,7 @@ export class WorldScene extends Phaser.Scene {
       }
     }
     this.tiles.setDepth(-999);
+    this.cullWorldSprites();
   }
 
   private drawDungeonTiles(map: DungeonMap): void {
@@ -1381,6 +1403,7 @@ export class WorldScene extends Phaser.Scene {
       }
     }
     this.tiles.setDepth(-999);
+    this.cullWorldSprites();
   }
 
   /** Iso diamond outline for shift-gate tiles. */
@@ -1555,6 +1578,12 @@ export class WorldScene extends Phaser.Scene {
     if (this.mapEmitAcc >= 0.15 || this.exploredDirty) {
       this.mapEmitAcc = 0;
       this.emitMapSnapshot();
+    }
+
+    this.tileCullAcc += dt;
+    if (this.tileCullAcc >= 0.1) {
+      this.tileCullAcc = 0;
+      this.cullWorldSprites();
     }
   }
 
