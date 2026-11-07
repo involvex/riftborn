@@ -6,6 +6,8 @@ import type { ZoneLayout } from './MapGen';
 
 export type ReachKey = string; // "x,y,layer"
 
+export type RiftEnemyMixEntry = { enemyId: string; weight: number };
+
 /** Guaranteed floor for packs — depth 1 → 6, scales gently. */
 export function minRiftEnemyCount(depth: number): number {
   const d = Math.max(1, Math.min(10, depth));
@@ -95,6 +97,25 @@ export function uniqueTileCenters(reachable: Set<ReachKey>): {
 
 const PACK_TYPES = ['shade', 'crawler', 'wisp'] as const;
 
+function pickEnemyId(
+  rnd: () => number,
+  enemyMix?: RiftEnemyMixEntry[] | null,
+): string {
+  if (enemyMix && enemyMix.length > 0) {
+    let total = 0;
+    for (const e of enemyMix) total += Math.max(0, e.weight || 0);
+    if (total > 0) {
+      let r = rnd() * total;
+      for (const e of enemyMix) {
+        r -= Math.max(0, e.weight || 0);
+        if (r <= 0) return e.enemyId;
+      }
+      return enemyMix[enemyMix.length - 1]!.enemyId;
+    }
+  }
+  return PACK_TYPES[Math.floor(rnd() * PACK_TYPES.length)]!;
+}
+
 function nearestReachable(
   candidates: { x: number; y: number }[],
   x: number,
@@ -124,6 +145,7 @@ export function placeRiftEnemyPacks(
   depth: number,
   rnd: () => number,
   minDistFromSpawn = 3,
+  enemyMix?: RiftEnemyMixEntry[] | null,
 ): ZoneLayout['packs'] {
   const spawn = map.layout.spawn ?? { x: 1.5, y: 1.5 };
   const reachable = reachableFloorCells(map, spawn, 'ash');
@@ -139,7 +161,7 @@ export function placeRiftEnemyPacks(
   if (candidates.length === 0) {
     for (let i = 0; i < target; i++) {
       packs.push({
-        enemyId: PACK_TYPES[i % PACK_TYPES.length]!,
+        enemyId: pickEnemyId(rnd, enemyMix),
         count: 1,
         x: spawn.x + 3 + (i % 3) * 0.01,
         y: spawn.y + 3 + Math.floor(i / 3) * 0.01,
@@ -162,7 +184,7 @@ export function placeRiftEnemyPacks(
     }
     const count = 3 + Math.floor(rnd() * 4) + countBonus;
     packs.push({
-      enemyId: PACK_TYPES[Math.floor(rnd() * PACK_TYPES.length)]!,
+      enemyId: pickEnemyId(rnd, enemyMix),
       count,
       x: snapped.x,
       y: snapped.y,
@@ -189,7 +211,7 @@ export function placeRiftEnemyPacks(
     if (tooClose && packs.length > 0) continue;
     used.add(k);
     packs.push({
-      enemyId: PACK_TYPES[Math.floor(rnd() * PACK_TYPES.length)]!,
+      enemyId: pickEnemyId(rnd, enemyMix),
       count: 1,
       x: c.x,
       y: c.y,
@@ -199,7 +221,7 @@ export function placeRiftEnemyPacks(
   while (total < target) {
     const c = candidates[total % candidates.length]!;
     packs.push({
-      enemyId: PACK_TYPES[total % PACK_TYPES.length]!,
+      enemyId: pickEnemyId(rnd, enemyMix),
       count: 1,
       x: c.x,
       y: c.y,

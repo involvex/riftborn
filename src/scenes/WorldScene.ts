@@ -835,6 +835,7 @@ export class WorldScene extends Phaser.Scene {
       this.announcedPois.clear();
       for (const poi of this.wildernessPois) this.makePoiMarker(poi);
     } else {
+      for (const d of layout.decor ?? []) this.makeHubDecor(d);
       this.wildernessPois = [];
       this.announcedPois.clear();
     }
@@ -1380,24 +1381,45 @@ export class WorldScene extends Phaser.Scene {
       return nx0 * (1 - v) + nx1 * v;
     };
 
+    const biome = map.biome;
+    const w0 = biome.tileWeights.tile_dungeon_0 ?? 0.6;
+    const w1 = biome.tileWeights.tile_dungeon_1 ?? 0.3;
+    const w2 = biome.tileWeights.tile_dungeon_2 ?? 0.1;
+    const wSum = Math.max(0.0001, w0 + w1 + w2);
+    const t0 = w0 / wSum;
+    const t1 = t0 + w1 / wSum;
+    const fallbackTint =
+      biome.id === 'crystal_cavern'
+        ? 0xc8e8ff
+        : biome.id === 'shattered_woods'
+          ? 0xd8e8d0
+          : biome.id === 'ashen_crypt'
+            ? 0xe8d8c0
+            : 0xd8d8d8;
+    const accent =
+      biome.id === 'crystal_cavern'
+        ? 0x80c0ff
+        : biome.id === 'shattered_woods'
+          ? 0x80a080
+          : 0x3a6088;
+
     for (let y = 0; y < map.height; y++) {
       for (let x = 0; x < map.width; x++) {
         if (map.cells[y][x] !== 1) continue;
-        const shade = 0xd8d8d8;
         const n = valueNoise(x, y, 4);
         let key: string;
-        if (n < 0.85) {
+        if (n < t0) {
           key = 'tile_dungeon_0';
-        } else if (n < 0.93) {
+        } else if (n < t1) {
           key = 'tile_dungeon_1';
         } else {
           key = 'tile_dungeon_2';
         }
         const gate = map.layerGates[y]![x] ?? null;
-        this.placeFloorTile(x, y, key, shade, gate);
+        this.placeFloorTile(x, y, key, fallbackTint, gate);
         if ((x * 17 + y * 31) % 19 === 0 && !gate) {
           const { screenX, screenY } = worldToScreen(x, y);
-          this.tiles.fillStyle(0x3a6088, 0.4);
+          this.tiles.fillStyle(accent, 0.4);
           this.tiles.fillCircle(screenX, screenY, 3);
         }
       }
