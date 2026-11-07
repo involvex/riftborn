@@ -95,6 +95,7 @@ import {
 import { ShiftSystem } from '../systems/ShiftSystem';
 import { BossShiftBrain } from '../systems/BossShift';
 import { cancelShiftTransition, playShiftTransition } from '../render/ShiftFx';
+import { shiftShakeParams } from '../render/ShiftFeel';
 import {
   blendTint,
   layerOverlayAlpha,
@@ -542,6 +543,8 @@ export class WorldScene extends Phaser.Scene {
         const d = p as { layer: ShiftLayerId };
         this.applyShiftVisuals(d.layer);
         playShiftTransition(this, d.layer, this.shiftFxIntensity);
+        const punch = shiftShakeParams(this.shiftFxIntensity);
+        this.triggerHitShake(punch.ms, punch.intensity);
         this.emitShiftHud();
       }),
       gameEvents.on('combat:shift', () => this.tryPlayerShift()),
