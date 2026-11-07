@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import {
   bufferSizeForProfile,
+  computeGraphicsResize,
   cycleGraphicsQuality,
   gameSizeForProfile,
   graphicsQualityLabel,
@@ -57,9 +58,37 @@ describe('render scale vs world FOV', () => {
 
     const gLow = gameSizeForProfile(cssW, cssH, low.renderScale);
     const gHigh = gameSizeForProfile(cssW, cssH, high.renderScale);
+    // M3c: buffer is smaller than logical CSS size at 0.65, game size stays CSS.
+    expect(bufLow.width).toBeLessThan(gLow.width);
+    expect(bufLow.height).toBeLessThan(gLow.height);
+    expect(gLow.width).toBe(cssW);
+    expect(gLow.height).toBe(cssH);
+    expect(gHigh.width).toBe(cssW);
+    expect(gHigh.height).toBe(cssH);
     expect(visibleWorldTileSpan(gLow.width, gLow.height, zoom)).toEqual(
       visibleWorldTileSpan(gHigh.width, gHigh.height, zoom),
     );
+  });
+
+  test('computeGraphicsResize splits logical (CSS) from buffer (CSS*scale)', () => {
+    const cssW = 1024;
+    const cssH = 473;
+    const scale = 0.65;
+    const r = computeGraphicsResize(cssW, cssH, scale);
+    expect(r.logical).toEqual({ width: 1024, height: 473 });
+    expect(r.css).toEqual({ width: 1024, height: 473 });
+    expect(r.buffer).toEqual({
+      width: Math.floor(cssW * scale),
+      height: Math.floor(cssH * scale),
+    });
+    expect(r.buffer.width).toBeLessThan(r.logical.width);
+  });
+
+  test('computeGraphicsResize keeps buffer == logical at scale 1 (high/desktop)', () => {
+    const r = computeGraphicsResize(1280, 720, 1);
+    expect(r.logical).toEqual({ width: 1280, height: 720 });
+    expect(r.buffer).toEqual({ width: 1280, height: 720 });
+    expect(r.css).toEqual({ width: 1280, height: 720 });
   });
 });
 
