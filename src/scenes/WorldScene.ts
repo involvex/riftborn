@@ -48,6 +48,7 @@ import {
   generateDungeon,
   type DungeonMap,
 } from '../world/DungeonGen';
+import { hubPoiFloorOverride } from '../world/HubPoiFloors';
 import { isWalkableOnLayer } from '../world/ShiftGateMap';
 import { netClient } from '../net/NetClient';
 import { bindAction } from '../core/Hotkeys';
@@ -1309,38 +1310,53 @@ export class WorldScene extends Phaser.Scene {
       for (let x = 0; x < size; x++) {
         const onPath = pathSet.has(`${x},${y}`);
         const plaza = inPlaza(x, y);
-        let band: 'plaza' | 'road' | 'transition' | 'wild';
-        let fallback: number;
-        let tint: number | undefined;
-        if (plaza) {
-          band = 'plaza';
-          fallback = 0xd8d8d8;
-        } else if (onPath) {
-          // Pflaster in der Stadt, Erdweg ausserhalb
-          if (nearTown(x, y, 16)) {
-            band = 'plaza'; // paved in town vicinity
-            fallback = 0xd8d8d8;
-            tint = 0xe8dcc8; // warm stone/pavement
-          } else {
-            band = 'road'; // dirt/earth road outside
-            fallback = 0xb8a080;
-            tint = 0xc8b090; // earth road
-          }
-        } else if (nearTown(x, y, 14)) {
-          band = 'transition';
-          fallback = 0xd8d8d8;
+        const poiOverride =
+          !plaza && !onPath
+            ? hubPoiFloorOverride({
+                x,
+                y,
+                plaza,
+                onPath,
+                pois: this.hubLayout?.pois ?? [],
+                noise: valueNoise(x, y, 3.5),
+              })
+            : null;
+        if (poiOverride) {
+          this.placeFloorTile(x, y, poiOverride, 0xd8d8d8, null);
         } else {
-          band = 'wild';
-          fallback = 0xd8d8d8;
+          let band: 'plaza' | 'road' | 'transition' | 'wild';
+          let fallback: number;
+          let tint: number | undefined;
+          if (plaza) {
+            band = 'plaza';
+            fallback = 0xd8d8d8;
+          } else if (onPath) {
+            // Pflaster in der Stadt, Erdweg ausserhalb
+            if (nearTown(x, y, 16)) {
+              band = 'plaza'; // paved in town vicinity
+              fallback = 0xd8d8d8;
+              tint = 0xe8dcc8; // warm stone/pavement
+            } else {
+              band = 'road'; // dirt/earth road outside
+              fallback = 0xb8a080;
+              tint = 0xc8b090; // earth road
+            }
+          } else if (nearTown(x, y, 14)) {
+            band = 'transition';
+            fallback = 0xd8d8d8;
+          } else {
+            band = 'wild';
+            fallback = 0xd8d8d8;
+          }
+          this.placeFloorTile(
+            x,
+            y,
+            pickClusteredTile(x, y, band),
+            fallback,
+            null,
+            tint,
+          );
         }
-        this.placeFloorTile(
-          x,
-          y,
-          pickClusteredTile(x, y, band),
-          fallback,
-          null,
-          tint,
-        );
         if (
           plaza &&
           (x === PLAZA.x0 || x === PLAZA.x1 || y === PLAZA.y0 || y === PLAZA.y1)
