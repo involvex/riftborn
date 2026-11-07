@@ -26,6 +26,16 @@ import {
   isRangedEnemy,
   type EnemyShot,
 } from '../systems/EnemyRanged';
+import {
+  POUNCE_COOLDOWN,
+  POUNCE_MIN_RANGE,
+  POUNCE_TRIGGER_RANGE,
+  POUNCE_WINDUP,
+  advancePounce,
+  createPounce,
+  isPounceEnemy,
+  type PounceState,
+} from '../systems/EnemyPounce';
 
 const enemies = enemiesData as Record<string, EnemyDef>;
 
@@ -57,6 +67,8 @@ export class Enemy {
   private slowMult = 1;
   private slowTimer = 0;
   private stunTimer = 0;
+  private pounceWindup = 0;
+  private pounce: PounceState | null = null;
   /** Runtime elite (random pack upgrade), distinct from boss defs. */
   readonly elitePack: boolean;
   /** Boss flag for rift progress / exit portal. */
@@ -193,6 +205,16 @@ export class Enemy {
     this.attackTimer = Math.max(this.attackTimer, duration);
   }
 
+  private meleeDamage(): number {
+    return Math.floor(
+      this.def.damage *
+        this.levelMult *
+        this.modDmgMult *
+        (this.elitePack ? 1.45 : 1) *
+        (this.isBoss ? 1.25 : 1),
+    );
+  }
+
   update(
     dt: number,
     playerX: number,
@@ -204,7 +226,12 @@ export class Enemy {
     this.stunTimer = Math.max(0, this.stunTimer - dt);
     if (this.slowTimer <= 0) this.slowMult = 1;
 
+    const pouncing = !!this.pounce || this.pounceWindup > 0;
+
     if (this.ghosted) {
+      this.pounceWindup = 0;
+      this.pounce = null;
+      this.applyBaseTint();
       this.playAnim('idle');
       this.syncScreen();
       return { hitPlayer: false, damage: 0, shot: null };
@@ -215,23 +242,71 @@ export class Enemy {
       { x: playerX, y: playerY },
     );
 
-    // Far packs: skip most frames (AI + sprite sync)
-    if (dist > 18) {
-      this.body.setVisible(false);
-      return { hitPlayer: false, damage: 0, shot: null };
-    }
-    if (!this.body.visible) this.body.setVisible(true);
-    if (dist > 12) {
-      this.lodPhase = (this.lodPhase + 1) & 7;
-      if (this.lodPhase !== 0) {
+    // Far packs: skip most frames (AI + sprite sync). Never skip mid-pounce.
+    if (!pouncing) {
+      if (dist > 18) {
+        this.body.setVisible(false);
         return { hitPlayer: false, damage: 0, shot: null };
       }
+      if (!this.body.visible) this.body.setVisible(true);
+      if (dist > 12) {
+        this.lodPhase = (this.lodPhase + 1) & 7;
+        if (this.lodPhase !== 0) {
+          return { hitPlayer: false, damage: 0, shot: null };
+        }
+      }
+    } else if (!this.body.visible) {
+      this.body.setVisible(true);
     }
 
     const spd = this.def.speed * this.slowMult;
 
     if (this.stunTimer > 0) {
+      this.pounceWindup = 0;
+      this.pounce = null;
+      this.applyBaseTint();
       this.playAnim('idle');
+      this.syncScreen();
+      return { hitPlayer: false, damage: 0, shot: null };
+    }
+
+    if (this.pounce) {
+      const res = advancePounce(this.pounce, this, dt, {
+        worldX: playerX,
+        worldY: playerY,
+      });
+      this.setFacingFromDelta(this.pounce.vx, this.pounce.vy);
+      this.playAnim('attack');
+      let hitPlayer = false;
+      let damage = 0;
+      if (res.hit) {
+        hitPlayer = true;
+        damage = this.meleeDamage();
+      }
+      if (res.landed) {
+        this.pounce = null;
+        this.attackTimer = POUNCE_COOLDOWN;
+        this.applyBaseTint();
+      }
+      this.worldX = Phaser.Math.Clamp(this.worldX, 0.5, this.maxBound);
+      this.worldY = Phaser.Math.Clamp(this.worldY, 0.5, this.maxBound);
+      this.syncScreen();
+      return { hitPlayer, damage, shot: null };
+    }
+
+    if (this.pounceWindup > 0) {
+      this.pounceWindup = Math.max(0, this.pounceWindup - dt);
+      this.setFacingToward(playerX, playerY);
+      this.playAnim('attack');
+      this.sprite.setTint(0xe8a0a0);
+      if (this.pounceWindup <= 0) {
+        this.pounce = createPounce(
+          { x: this.worldX, y: this.worldY },
+          { x: playerX, y: playerY },
+        );
+      }
+      this.worldX = Phaser.Math.Clamp(this.worldX, 0.5, this.maxBound);
+      this.worldY = Phaser.Math.Clamp(this.worldY, 0.5, this.maxBound);
       this.syncScreen();
       return { hitPlayer: false, damage: 0, shot: null };
     }
@@ -243,6 +318,23 @@ export class Enemy {
       this.state = 'chase';
     } else if (dist > aggro + 2) {
       this.state = 'patrol';
+    }
+
+    if (
+      this.state === 'chase' &&
+      isPounceEnemy(this.def.id) &&
+      dist >= POUNCE_MIN_RANGE &&
+      dist <= POUNCE_TRIGGER_RANGE &&
+      this.attackTimer <= 0 &&
+      !this.pounce &&
+      this.pounceWindup <= 0
+    ) {
+      this.pounceWindup = POUNCE_WINDUP;
+      this.setFacingToward(playerX, playerY);
+      this.playAnim('attack', true);
+      this.sprite.setTint(0xe8a0a0);
+      this.syncScreen();
+      return { hitPlayer: false, damage: 0, shot: null };
     }
 
     let hitPlayer = false;
@@ -276,13 +368,7 @@ export class Enemy {
     } else if (this.state === 'attack') {
       this.setFacingToward(playerX, playerY);
       if (this.attackTimer <= 0) {
-        const dealt = Math.floor(
-          this.def.damage *
-            this.levelMult *
-            this.modDmgMult *
-            (this.elitePack ? 1.45 : 1) *
-            (this.isBoss ? 1.25 : 1),
-        );
+        const dealt = this.meleeDamage();
         if (isRangedEnemy(this.def.id)) {
           this.attackTimer = this.def.attackCooldown;
           this.playAnim('attack', true);
