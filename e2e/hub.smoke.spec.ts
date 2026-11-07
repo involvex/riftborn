@@ -50,4 +50,40 @@ test.describe('hub smoke', () => {
     await page.locator('canvas').first().screenshot({ path: shotPath });
     expect(fs.existsSync(shotPath)).toBe(true);
   });
+
+  test('M3d: low/touch 1024x473 shows wide town FOV', async ({ page }) => {
+    await page.setViewportSize({ width: 1024, height: 473 });
+    await page.addInitScript(() => {
+      const key = 'riftborn.settings.v1';
+      const raw = localStorage.getItem(key);
+      const base = raw ? JSON.parse(raw) : {};
+      localStorage.setItem(
+        key,
+        JSON.stringify({ ...base, graphicsQuality: 'low' }),
+      );
+    });
+    await page.goto('/?smoke=1&touch=1');
+
+    await page.waitForFunction(
+      () =>
+        typeof window.__RIFTBORN !== 'undefined' &&
+        window.__RIFTBORN?.ready === true,
+      null,
+      { timeout: 45_000 },
+    );
+    await page.waitForTimeout(600);
+
+    const snap = await page.evaluate(() => {
+      const api = window.__RIFTBORN!;
+      return api.snapshot() as RiftbornSnap;
+    });
+    expect(snap.ready).toBe(true);
+    expect(snap.inRift).toBe(false);
+
+    const outDir = path.resolve('artifacts');
+    fs.mkdirSync(outDir, { recursive: true });
+    const shotPath = path.join(outDir, 'm3d-town-fov.png');
+    await page.locator('canvas').first().screenshot({ path: shotPath });
+    expect(fs.existsSync(shotPath)).toBe(true);
+  });
 });

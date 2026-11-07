@@ -46,25 +46,26 @@ describe('render scale vs world FOV', () => {
     expect(gLow.height).toBe(cssH);
   });
 
-  test('buffer shrinks on low; visible tile span stays equal', () => {
+  test('low profile (renderScale 0.65) resize target is CSS viewport, not buffer', () => {
     const cssW = 1024;
     const cssH = 473;
     const zoom = 1.05;
     const low = profileForTier('low');
     const high = profileForTier('high');
-    const bufLow = bufferSizeForProfile(cssW, cssH, low.renderScale);
-    const bufHigh = bufferSizeForProfile(cssW, cssH, high.renderScale);
-    expect(bufLow.width).toBeLessThan(bufHigh.width);
+    expect(low.renderScale).toBe(0.65);
 
+    // Live path must pass CSS/logical to scale.resize (never floor(CSS*scale)).
     const gLow = gameSizeForProfile(cssW, cssH, low.renderScale);
     const gHigh = gameSizeForProfile(cssW, cssH, high.renderScale);
-    // M3c: buffer is smaller than logical CSS size at 0.65, game size stays CSS.
+    expect(gLow).toEqual({ width: cssW, height: cssH });
+    expect(gHigh).toEqual({ width: cssW, height: cssH });
+    expect(gLow.width).not.toBe(Math.floor(cssW * low.renderScale));
+
+    // Pure helper documents split; live path must not apply buffer to game size.
+    const bufLow = bufferSizeForProfile(cssW, cssH, low.renderScale);
     expect(bufLow.width).toBeLessThan(gLow.width);
     expect(bufLow.height).toBeLessThan(gLow.height);
-    expect(gLow.width).toBe(cssW);
-    expect(gLow.height).toBe(cssH);
-    expect(gHigh.width).toBe(cssW);
-    expect(gHigh.height).toBe(cssH);
+
     expect(visibleWorldTileSpan(gLow.width, gLow.height, zoom)).toEqual(
       visibleWorldTileSpan(gHigh.width, gHigh.height, zoom),
     );
