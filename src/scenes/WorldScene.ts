@@ -88,7 +88,7 @@ import {
 } from '../render/WorldArt';
 import { ShiftSystem } from '../systems/ShiftSystem';
 import { BossShiftBrain } from '../systems/BossShift';
-import { playShiftTransition } from '../render/ShiftFx';
+import { cancelShiftTransition, playShiftTransition } from '../render/ShiftFx';
 import {
   blendTint,
   layerOverlayAlpha,
@@ -184,6 +184,10 @@ export class WorldScene extends Phaser.Scene {
   private mapH = 0;
   private explored: boolean[] = [];
   private exploredDirty = true;
+  private webglCanvas: HTMLCanvasElement | null = null;
+  private onWebglLost: ((e: Event) => void) | null = null;
+  private onWebglRestored: ((e: Event) => void) | null = null;
+  private updateErrorAt = 0;
 
   constructor() {
     super('WorldScene');
@@ -203,6 +207,7 @@ export class WorldScene extends Phaser.Scene {
 
     this.loadZone(gameState.inRift);
     this.setupInput();
+    this.bindWebglRecovery();
     // Tighter follow on touch — soft lerp reads as input lag
     const camLerp = shouldShowTouchControls() ? 0.38 : 0.14;
     this.cameras.main.startFollow(this.player.body, true, camLerp, camLerp);
@@ -364,10 +369,13 @@ export class WorldScene extends Phaser.Scene {
 
   private cleanup(): void {
     clearRiftbornDebug();
+    cancelShiftTransition();
+    this.resetCameraFx();
     this.unsubNet?.();
     this.unsubNet = null;
     for (const u of this.inputUnsubs) u();
     this.inputUnsubs = [];
+    this.unbindWebglRecovery();
     this.shiftOverlay?.destroy();
     this.shiftOverlay = null;
     this.player?.destroy();
@@ -381,6 +389,101 @@ export class WorldScene extends Phaser.Scene {
     this.groundLoot = [];
     for (const g of this.remoteGhosts.values()) g.destroy(true);
     this.remoteGhosts.clear();
+  }
+
+  private resetCameraFx(): void {
+    try {
+      const cam = this.cameras?.main as unknown as {
+        resetFX?: () => void;
+        flashEffect?: { isRunning?: boolean; reset?: () => void };
+        fadeEffect?: { isRunning?: boolean; reset?: () => void };
+      };
+      if (cam?.flashEffect?.isRunning) cam.flashEffect.reset?.();
+      if (cam?.fadeEffect?.isRunning) cam.fadeEffect.reset?.();
+    } catch {
+      /* ignore — camera may be unavailable during teardown */
+    }
+  }
+
+  private safeCameraFlash(
+    duration: number,
+    red: number,
+    green: number,
+    blue: number,
+    force = false,
+  ): void {
+    try {
+      // Prevent a stuck/stacked flash from permanently tinting the world.
+      this.resetCameraFx();
+      this.cameras.main.flash(
+        duration,
+        red,
+        green,
+        blue,
+        force,
+        undefined,
+        this,
+      );
+    } catch (err) {
+      console.warn('[WorldScene] camera flash failed', err);
+      this.resetCameraFx();
+    }
+  }
+
+  private bindWebglRecovery(): void {
+    try {
+      const canvas = this.game?.canvas as HTMLCanvasElement | undefined;
+      if (!canvas || this.webglCanvas === canvas) return;
+      this.unbindWebglRecovery();
+      this.webglCanvas = canvas;
+      this.onWebglLost = (e: Event) => {
+        e.preventDefault();
+        console.warn('[WorldScene] webglcontextlost');
+        cancelShiftTransition();
+        this.resetCameraFx();
+        gameEvents.emit('ui:toast', {
+          text: 'Graphics context lost — recovering…',
+        });
+      };
+      this.onWebglRestored = () => {
+        console.warn('[WorldScene] webglcontextrestored');
+        this.resetCameraFx();
+        gameEvents.emit('ui:toast', { text: 'Graphics restored' });
+      };
+      canvas.addEventListener('webglcontextlost', this.onWebglLost, false);
+      canvas.addEventListener(
+        'webglcontextrestored',
+        this.onWebglRestored,
+        false,
+      );
+    } catch (err) {
+      console.warn('[WorldScene] webgl recovery bind failed', err);
+    }
+  }
+
+  private unbindWebglRecovery(): void {
+    if (!this.webglCanvas) return;
+    try {
+      if (this.onWebglLost) {
+        this.webglCanvas.removeEventListener(
+          'webglcontextlost',
+          this.onWebglLost,
+          false,
+        );
+      }
+      if (this.onWebglRestored) {
+        this.webglCanvas.removeEventListener(
+          'webglcontextrestored',
+          this.onWebglRestored,
+          false,
+        );
+      }
+    } catch {
+      /* ignore */
+    }
+    this.webglCanvas = null;
+    this.onWebglLost = null;
+    this.onWebglRestored = null;
   }
 
   private setupInput(): void {
@@ -456,6 +559,7 @@ export class WorldScene extends Phaser.Scene {
   }
 
   private loadZone(rift: boolean): void {
+    cancelShiftTransition();
     this.mapCells = null;
     this.mapW = 0;
     this.mapH = 0;
@@ -1350,6 +1454,18 @@ export class WorldScene extends Phaser.Scene {
       this.player.syncScreen();
       return;
     }
+    try {
+      this.updateWorld(delta);
+    } catch (err) {
+      const now = Date.now();
+      if (now - this.updateErrorAt > 3000) {
+        this.updateErrorAt = now;
+        console.error('[WorldScene] update failed; keeping scene alive', err);
+      }
+    }
+  }
+
+  private updateWorld(delta: number): void {
     const dt = Math.min(0.05, delta / 1000);
     gameState.playTimeSec += dt;
     this.player.tick(dt);
@@ -1625,7 +1741,7 @@ export class WorldScene extends Phaser.Scene {
     if (this.deathPending) return;
     this.deathPending = true;
     audioBus.death();
-    this.cameras.main.flash(280, 120, 20, 30, false, undefined, this);
+    this.safeCameraFlash(280, 120, 20, 30);
     this.triggerCombatShake('boss');
     this.triggerHitstop(true);
     this.player.resetCombatPose();
@@ -1820,7 +1936,7 @@ export class WorldScene extends Phaser.Scene {
       this.riftCleared = true;
       this.spawnBossChest(enemy.worldX, enemy.worldY);
       this.openExitPortal();
-      this.cameras.main.flash(220, 80, 160, 220, false, undefined, this);
+      this.safeCameraFlash(220, 80, 160, 220);
       this.emitRiftProgress();
       gameEvents.emit(Events.RIFT_BOSS_SUMMARY, {
         depth: this.riftDepth,
@@ -1865,7 +1981,7 @@ export class WorldScene extends Phaser.Scene {
     gameEvents.emit('ui:toast', {
       text: `Rift Lord emerges! (${riftDepthLabel(this.riftDepth)})`,
     });
-    this.cameras.main.flash(160, 120, 40, 80, false, undefined, this);
+    this.safeCameraFlash(160, 120, 40, 80);
     this.emitRiftProgress();
   }
 
@@ -1912,14 +2028,11 @@ export class WorldScene extends Phaser.Scene {
           : rarity === 'magic'
             ? [80, 200, 140]
             : [200, 200, 200];
-    this.cameras.main.flash(
+    this.safeCameraFlash(
       rarity === 'common' ? 60 : 140,
       flash[0],
       flash[1],
       flash[2],
-      false,
-      undefined,
-      this,
     );
   }
 
@@ -2216,7 +2329,7 @@ export class WorldScene extends Phaser.Scene {
             ? 'magic'
             : 'common',
     );
-    this.cameras.main.flash(80, 220, 220, 200, false, undefined, this);
+    this.safeCameraFlash(80, 220, 220, 200);
     gameState.persist();
     gameEvents.emit('ui:toast', {
       text: `Picked up · ${g.name}`,
@@ -2271,7 +2384,7 @@ export class WorldScene extends Phaser.Scene {
     this.shrineReadyAt = now + 90_000;
     const heal = Math.floor(gameState.maxHp * 0.15);
     gameState.hp = Math.min(gameState.maxHp, gameState.hp + heal);
-    this.cameras.main.flash(180, 220, 100, 60, false, undefined, this);
+    this.safeCameraFlash(180, 220, 100, 60);
     gameEvents.emit('ui:toast', {
       text: `Ember blessing — +${Math.round((bless.mult - 1) * 100)}% damage ${bless.duration}s`,
     });
@@ -2444,7 +2557,7 @@ export class WorldScene extends Phaser.Scene {
       playCombatBurst(this, enemy.worldX, enemy.worldY, 'burn');
       if (enemy.applyDamage(dmg)) this.onEnemyKilled(enemy);
     }
-    this.cameras.main.flash(80, 110, 160, 200, false, undefined, this);
+    this.safeCameraFlash(80, 110, 160, 200);
   }
 
   private updateNpcProximity(): void {
