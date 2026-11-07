@@ -30,6 +30,10 @@ const SHEET_KEYS = [
   'spr_wisp',
   'spr_bat',
   'spr_rift_lord',
+  'spr_enemy_rift_goblin',
+  'spr_enemy_shadow_wolf',
+  'spr_enemy_bone_archer',
+  'spr_enemy_rift_wraith',
 ] as const;
 
 const NODE_KEYS = ['spr_tree', 'spr_vein'] as const;
@@ -81,6 +85,14 @@ export function ensureGameSprites(scene: Phaser.Scene): void {
       generateEnemy(scene, key, '#5A3A7A', '#A080C0', 'wisp');
     } else if (key === 'spr_rift_lord') {
       generateEnemy(scene, key, '#2A80C0', '#6EC6FF', 'lord');
+    } else if (key === 'spr_enemy_rift_goblin') {
+      generateEnemy(scene, key, '#6A4A3A', '#8A5A4A', 'shade');
+    } else if (key === 'spr_enemy_shadow_wolf') {
+      generateEnemy(scene, key, '#3A3A4A', '#5A5A6A', 'wisp');
+    } else if (key === 'spr_enemy_bone_archer') {
+      generateEnemy(scene, key, '#9A8A7A', '#C4B090', 'shade');
+    } else if (key === 'spr_enemy_rift_wraith') {
+      generateEnemy(scene, key, '#7A9AA0', '#A0C8D0', 'wisp');
     } else {
       generateEnemy(scene, key, '#5A3A6A', '#8A5A9A', 'shade');
     }
@@ -119,6 +131,10 @@ export function enemySpriteKey(defId: string): string {
   if (defId === 'crawler') return 'spr_crawler';
   if (defId === 'wisp') return 'spr_wisp';
   if (defId === 'rift_lord') return 'spr_rift_lord';
+  if (defId === 'enemy_rift_goblin') return 'spr_enemy_rift_goblin';
+  if (defId === 'enemy_shadow_wolf') return 'spr_enemy_shadow_wolf';
+  if (defId === 'enemy_bone_archer') return 'spr_enemy_bone_archer';
+  if (defId === 'enemy_rift_wraith') return 'spr_enemy_rift_wraith';
   return 'spr_shade';
 }
 

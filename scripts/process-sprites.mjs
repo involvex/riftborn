@@ -71,6 +71,30 @@ const MAP = [
     out: 'spr_rift_lord.png',
     synthOnly: true,
   },
+  {
+    base: 'enemy_rift_goblin',
+    idle: 'enemy_rift_goblin.png',
+    out: 'spr_enemy_rift_goblin.png',
+    synthOnly: true,
+  },
+  {
+    base: 'enemy_shadow_wolf',
+    idle: 'enemy_shadow_wolf.png',
+    out: 'spr_enemy_shadow_wolf.png',
+    synthOnly: true,
+  },
+  {
+    base: 'enemy_bone_archer',
+    idle: 'enemy_bone_archer.png',
+    out: 'spr_enemy_bone_archer.png',
+    synthOnly: true,
+  },
+  {
+    base: 'enemy_rift_wraith',
+    idle: 'enemy_rift_wraith.png',
+    out: 'spr_enemy_rift_wraith.png',
+    synthOnly: true,
+  },
 ];
 
 async function exists(p) {

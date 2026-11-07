@@ -9,7 +9,11 @@ export type EnemyId =
   | 'ash_scamp'
   | 'ash_bat'
   | 'ash_scout'
-  | 'rift_lord';
+  | 'rift_lord'
+  | 'enemy_rift_goblin'
+  | 'enemy_shadow_wolf'
+  | 'enemy_bone_archer'
+  | 'enemy_rift_wraith';
 
 export type BiomeId = 'ashen_crypt' | 'crystal_cavern' | 'shattered_woods';
 
@@ -56,6 +60,8 @@ export const ASHEN_CRYPT_BIOME: BiomeDef = {
     { enemyId: 'shade', weight: 0.35, minCount: 2, maxCount: 4 },
     { enemyId: 'crawler', weight: 0.45, minCount: 3, maxCount: 5 },
     { enemyId: 'wisp', weight: 0.2, minCount: 1, maxCount: 2 },
+    { enemyId: 'enemy_rift_goblin', weight: 0.15, minCount: 1, maxCount: 3 },
+    { enemyId: 'enemy_bone_archer', weight: 0.12, minCount: 1, maxCount: 2 },
   ],
   roomTypeRules: [
     'rectangular_halls',
@@ -92,6 +98,8 @@ export const CRYSTAL_CAVERN_BIOME: BiomeDef = {
     { enemyId: 'wisp', weight: 0.35, minCount: 2, maxCount: 3 },
     { enemyId: 'ash_bat', weight: 0.4, minCount: 2, maxCount: 4 },
     { enemyId: 'crawler', weight: 0.25, minCount: 2, maxCount: 4 },
+    { enemyId: 'enemy_rift_wraith', weight: 0.15, minCount: 1, maxCount: 3 },
+    { enemyId: 'enemy_shadow_wolf', weight: 0.12, minCount: 1, maxCount: 2 },
   ],
   roomTypeRules: [
     'organic_caverns',
@@ -127,6 +135,8 @@ export const SHATTERED_WOODS_BIOME: BiomeDef = {
     { enemyId: 'ash_scamp', weight: 0.35, minCount: 3, maxCount: 5 },
     { enemyId: 'wisp', weight: 0.35, minCount: 2, maxCount: 4 },
     { enemyId: 'shade', weight: 0.3, minCount: 2, maxCount: 3 },
+    { enemyId: 'enemy_shadow_wolf', weight: 0.15, minCount: 1, maxCount: 3 },
+    { enemyId: 'enemy_rift_goblin', weight: 0.12, minCount: 1, maxCount: 2 },
   ],
   roomTypeRules: [
     'forest_clearings',
