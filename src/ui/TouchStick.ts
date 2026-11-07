@@ -5,6 +5,23 @@ export type StickMoveResult = {
   speed01: number;
 };
 
+/** Layout/resize must not snap the knob home while the thumb is dragging. */
+export function shouldResetStickOnLayout(pointerId: number | null): boolean {
+  return pointerId === null;
+}
+
+/** Clamp a knob offset (from stick center) to the visual stick radius. */
+export function clampStickKnobOffset(
+  dx: number,
+  dy: number,
+  max: number,
+): { dx: number; dy: number } {
+  if (max <= 0) return { dx: 0, dy: 0 };
+  const len = Math.hypot(dx, dy);
+  if (len <= max || len === 0) return { dx, dy };
+  return { dx: (dx / len) * max, dy: (dy / len) * max };
+}
+
 /**
  * Pure function to convert stick input to world movement.
  * dx, dy are screen-space offsets from stick center.

@@ -10,8 +10,10 @@ import {
   type TouchPoint,
 } from './TouchLayout';
 import {
+  clampStickKnobOffset,
   getStickRestPosition,
   isInStickHitArea,
+  shouldResetStickOnLayout,
   stickToMove,
 } from './TouchStick';
 
@@ -224,8 +226,6 @@ export class TouchControls {
     const rest = getStickRestPosition(m);
     this.stickHomeX = rest.x;
     this.stickHomeY = rest.y;
-    this.stickCx = this.stickHomeX;
-    this.stickCy = this.stickHomeY;
     this.stickBase.setRadius(m.stick.r);
     this.stickKnob.setRadius(Math.round(m.stick.r * 0.4));
     this.stickHit.setSize(this.scene.scale.width, this.scene.scale.height);
@@ -233,10 +233,13 @@ export class TouchControls {
       this.scene.scale.width / 2,
       this.scene.scale.height / 2,
     );
-    this.stickBase.setPosition(this.stickCx, this.stickCy);
     this.stickBase.setAlpha(0.6);
     this.stickKnob.setAlpha(0.9);
-    this.resetKnob();
+    if (shouldResetStickOnLayout(this.stickPointerId)) {
+      this.stickCx = this.stickHomeX;
+      this.stickCy = this.stickHomeY;
+      this.resetKnob();
+    }
 
     this.placeBtn(this.dash, m.dash.x, m.dash.y, m.dash.r, '11px');
     this.placeBtn(this.shiftBtn, m.shift.x, m.shift.y, m.shift.r, '10px');
@@ -375,6 +378,7 @@ export class TouchControls {
         }
       }
       this.stickPointerId = p.id;
+      this.captureStickPointer(p);
       // Jump base to thumb position
       this.stickCx = p.x;
       this.stickCy = p.y;
@@ -388,6 +392,7 @@ export class TouchControls {
     });
     const end = (p: Phaser.Input.Pointer) => {
       if (this.stickPointerId !== p.id) return;
+      this.releaseStickPointer(p);
       this.stickPointerId = null;
       this.dx = 0;
       this.dy = 0;
@@ -400,6 +405,32 @@ export class TouchControls {
     this.scene.input.on('pointercancel', end);
 
     this.root.add([this.stickBase, this.stickKnob, this.stickHit]);
+  }
+
+  private captureStickPointer(p: Phaser.Input.Pointer): void {
+    try {
+      const ev = p.event as PointerEvent | undefined;
+      const target = ev?.target as Element | null | undefined;
+      const id = ev?.pointerId ?? p.id;
+      if (target?.setPointerCapture && id != null) {
+        target.setPointerCapture(id);
+      }
+    } catch {
+      /* pointer capture unsupported in this environment */
+    }
+  }
+
+  private releaseStickPointer(p: Phaser.Input.Pointer): void {
+    try {
+      const ev = p.event as PointerEvent | undefined;
+      const target = ev?.target as Element | null | undefined;
+      const id = ev?.pointerId ?? p.id;
+      if (target?.releasePointerCapture && id != null) {
+        target.releasePointerCapture(id);
+      }
+    } catch {
+      /* ignore */
+    }
   }
 
   private updateStick(px: number, py: number): void {
@@ -415,10 +446,9 @@ export class TouchControls {
       dx = px - this.stickCx;
       dy = py - this.stickCy;
     }
-    if (len > max) {
-      dx = (dx / len) * max;
-      dy = (dy / len) * max;
-    }
+    const clamped = clampStickKnobOffset(dx, dy, max);
+    dx = clamped.dx;
+    dy = clamped.dy;
     this.stickKnob.setPosition(this.stickCx + dx, this.stickCy + dy);
     const res = stickToMove(dx, dy, max);
     if (res.speed01 === 0) {
