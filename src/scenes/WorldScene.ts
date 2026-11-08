@@ -26,6 +26,11 @@ import { describeGear, gearDropChance, rollGearDrop } from '../systems/ItemGen';
 import { rarityCss } from '../systems/RarityVisual';
 import { gameState } from '../systems/GameState';
 import {
+  ASSIST_RANGE,
+  directionTo,
+  pickNearestEnemyIndex,
+} from '../systems/AutoTarget';
+import {
   generateHub,
   HUB_SIZE,
   HUB_SPAWN,
@@ -188,6 +193,7 @@ export class WorldScene extends Phaser.Scene {
   private corpseAcc = 0;
   private touchDx = 0;
   private touchDy = 0;
+  private assistChase = false;
   private lastNearGate = false;
   private inputUnsubs: (() => void)[] = [];
   /** Cached terrain for minimap — rebuilt only on zone change. */
@@ -1553,6 +1559,42 @@ export class WorldScene extends Phaser.Scene {
       dy = this.touchDy;
     }
 
+    if (dx !== 0 || dy !== 0) {
+      this.assistChase = false;
+    } else if (this.assistChase && !netClient.connected) {
+      const targetables = this.enemies.map((e) => ({
+        x: e.worldX,
+        y: e.worldY,
+        alive: e.alive && !e.isGhosted,
+      }));
+      const nearestIdx = pickNearestEnemyIndex(
+        targetables,
+        this.player.worldX,
+        this.player.worldY,
+        ASSIST_RANGE,
+      );
+      if (nearestIdx < 0) {
+        this.assistChase = false;
+      } else {
+        const nearest = this.enemies[nearestIdx]!;
+        const dist = worldDistance(
+          { x: this.player.worldX, y: this.player.worldY },
+          { x: nearest.worldX, y: nearest.worldY },
+        );
+        const weaponRange = gameState.inventory.weaponRange();
+        if (dist <= weaponRange) {
+          this.tryAttack();
+        } else {
+          const dir = directionTo(
+            { x: this.player.worldX, y: this.player.worldY },
+            { x: nearest.worldX, y: nearest.worldY },
+          );
+          dx = dir.x;
+          dy = dir.y;
+        }
+      }
+    }
+
     if (!netClient.connected) {
       this.player.move(dx, dy, dt);
     } else {
@@ -1943,62 +1985,105 @@ export class WorldScene extends Phaser.Scene {
 
   private tryAttack(): void {
     if (this.player.attackCooldown > 0) return;
-    this.player.attackCooldown = gameState.progression.attackCooldown();
 
     const pointer = this.input.activePointer;
-    let aimX = this.player.worldX + 1;
-    let aimY = this.player.worldY;
-    let best = Infinity;
     const range = gameState.inventory.weaponRange();
-    const inRange: Enemy[] = [];
-    const dmg = Math.max(
-      1,
-      Math.floor(
-        gameState.combat.playerAttackDamage() *
-          gameState.skills.damageMultiplier(),
-      ),
+    const targetables = this.enemies.map((e) => ({
+      x: e.worldX,
+      y: e.worldY,
+      alive: e.alive && !e.isGhosted,
+    }));
+    const nearestIdx = pickNearestEnemyIndex(
+      targetables,
+      this.player.worldX,
+      this.player.worldY,
+      ASSIST_RANGE,
     );
 
-    for (const enemy of this.enemies) {
-      if (!enemy.alive || enemy.isGhosted) continue;
+    if (nearestIdx >= 0) {
+      const nearest = this.enemies[nearestIdx]!;
       const dist = worldDistance(
         { x: this.player.worldX, y: this.player.worldY },
-        { x: enemy.worldX, y: enemy.worldY },
+        { x: nearest.worldX, y: nearest.worldY },
       );
-      if (dist > range) continue;
-      inRange.push(enemy);
-      if (dist < best) {
-        best = dist;
-        aimX = enemy.worldX;
-        aimY = enemy.worldY;
+      if (dist > range && dist <= ASSIST_RANGE) {
+        this.player.faceToward(nearest.worldX, nearest.worldY);
+        this.assistChase = true;
+        return;
+      }
+      if (dist <= range) {
+        this.assistChase = false;
+        this.player.attackCooldown = gameState.progression.attackCooldown();
+        this.player.faceToward(nearest.worldX, nearest.worldY);
+        this.player.playAttack();
+        audioBus.swing();
+
+        const dmg = Math.max(
+          1,
+          Math.floor(
+            gameState.combat.playerAttackDamage() *
+              gameState.skills.damageMultiplier(),
+          ),
+        );
+        let hit = false;
+        let anyCrit = false;
+        let anyBoss = false;
+        for (const enemy of this.enemies) {
+          if (!enemy.alive || enemy.isGhosted) continue;
+          const d = worldDistance(
+            { x: this.player.worldX, y: this.player.worldY },
+            { x: enemy.worldX, y: enemy.worldY },
+          );
+          if (d > range) continue;
+          hit = true;
+          const crit = isCombatCrit(dmg);
+          if (crit) anyCrit = true;
+          if (enemy.isBoss) anyBoss = true;
+          const { screenX, screenY } = worldToScreen(
+            enemy.worldX,
+            enemy.worldY,
+          );
+          gameState.combat.emitDamageNumber(
+            screenX,
+            screenY - 18,
+            dmg,
+            'enemy',
+          );
+          playCombatBurst(
+            this,
+            enemy.worldX,
+            enemy.worldY,
+            crit ? 'crit' : 'hit',
+          );
+          if (enemy.applyDamage(dmg)) this.onEnemyKilled(enemy);
+        }
+        if (hit) {
+          audioBus.hit();
+          this.triggerCombatShake(anyBoss ? 'boss' : anyCrit ? 'crit' : 'hit');
+          this.triggerHitstop(anyCrit || anyBoss);
+        }
+        if (netClient.connected) {
+          netClient.sendInput({
+            dx: 0,
+            dy: 0,
+            attack: true,
+            gather: false,
+            skill: false,
+          });
+        }
+        return;
       }
     }
-    if (best === Infinity) {
-      const { screenX } = worldToScreen(this.player.worldX, this.player.worldY);
-      aimX = this.player.worldX + (pointer.worldX >= screenX ? 1 : -1);
-    }
+
+    // No enemy in assist range: pointer fallback + whiff
+    this.assistChase = false;
+    this.player.attackCooldown = gameState.progression.attackCooldown();
+    const { screenX } = worldToScreen(this.player.worldX, this.player.worldY);
+    const aimX = this.player.worldX + (pointer.worldX >= screenX ? 1 : -1);
+    const aimY = this.player.worldY;
     this.player.faceToward(aimX, aimY);
     this.player.playAttack();
     audioBus.swing();
-
-    let hit = false;
-    let anyCrit = false;
-    let anyBoss = false;
-    for (const enemy of inRange) {
-      hit = true;
-      const crit = isCombatCrit(dmg);
-      if (crit) anyCrit = true;
-      if (enemy.isBoss) anyBoss = true;
-      const { screenX, screenY } = worldToScreen(enemy.worldX, enemy.worldY);
-      gameState.combat.emitDamageNumber(screenX, screenY - 18, dmg, 'enemy');
-      playCombatBurst(this, enemy.worldX, enemy.worldY, crit ? 'crit' : 'hit');
-      if (enemy.applyDamage(dmg)) this.onEnemyKilled(enemy);
-    }
-    if (hit) {
-      audioBus.hit();
-      this.triggerCombatShake(anyBoss ? 'boss' : anyCrit ? 'crit' : 'hit');
-      this.triggerHitstop(anyCrit || anyBoss);
-    }
     if (netClient.connected) {
       netClient.sendInput({
         dx: 0,

@@ -7,6 +7,7 @@ import type { AbilityDef, CharacterClassId, SkillNodeDef } from '../types/game';
 import skillsData from '../data/skills.json';
 import type { CombatSystem } from './CombatSystem';
 import { pickAimedEnemyIndex } from './SkillAim';
+import { ASSIST_RANGE, pickEnemiesAround } from './AutoTarget';
 
 const abilities = skillsData.abilities as Record<string, AbilityDef>;
 const trees = skillsData.trees as Record<CharacterClassId, SkillNodeDef[]>;
@@ -294,13 +295,28 @@ export class SkillSystem {
       return list.slice(0, cap).map((x) => x.e);
     };
 
-    const moveBy = (dist: number): void => {
+    const moveBy = (
+      dist: number,
+      toward?: { x: number; y: number } | null,
+    ): void => {
       let dx: number;
       let dy: number;
       if (ctx.aim) {
         dx = ctx.aim.dirX * dist;
         dy = ctx.aim.dirY * dist;
         ctx.player.faceToward(px + dx, py + dy);
+      } else if (toward) {
+        const vx = toward.x - px;
+        const vy = toward.y - py;
+        const len = Math.hypot(vx, vy);
+        if (len < 1e-6) {
+          dx = dist;
+          dy = 0;
+        } else {
+          dx = (vx / len) * dist;
+          dy = (vy / len) * dist;
+        }
+        ctx.player.faceToward(toward.x, toward.y);
       } else {
         const facing = ctx.player.getFacing();
         dx = facing * dist * 0.75;
@@ -319,13 +335,31 @@ export class SkillSystem {
     };
 
     let targetPos: { x: number; y: number } | undefined;
+    let originPos = { x: px, y: py };
 
     switch (def.kind) {
       case 'cleave':
       case 'slow_nova':
       case 'pulse': {
-        const targets = enemiesInRange(range, def.maxTargets ?? 6);
-        for (const e of targets) {
+        const focus = nearestInRange(range);
+        const center = focus
+          ? { x: focus.worldX, y: focus.worldY }
+          : { x: px, y: py };
+        if (focus) ctx.player.faceToward(focus.worldX, focus.worldY);
+        const targetIdxs = pickEnemiesAround(
+          ctx.enemies.map((e) => ({
+            x: e.worldX,
+            y: e.worldY,
+            alive: e.alive && !e.isGhosted,
+          })),
+          center.x,
+          center.y,
+          def.range ?? range,
+          def.maxTargets ?? 6,
+        );
+        for (const idx of targetIdxs) {
+          const e = ctx.enemies[idx];
+          if (!e) continue;
           hitEnemy(e, base);
           if (
             (def.kind === 'slow_nova' || def.kind === 'pulse') &&
@@ -335,6 +369,8 @@ export class SkillSystem {
             e.applySlow(def.slow, def.duration + (rank - 1) * 0.4);
           }
         }
+        originPos = center;
+        targetPos = center;
         break;
       }
       case 'strike': {
@@ -355,14 +391,26 @@ export class SkillSystem {
         break;
       }
       case 'leap': {
-        moveBy(def.dash ?? 3.4);
+        const dashToward = ctx.aim
+          ? null
+          : nearestInRange(Math.max(ASSIST_RANGE, (def.dash ?? 2) + range));
+        moveBy(
+          def.dash ?? 3.4,
+          dashToward ? { x: dashToward.worldX, y: dashToward.worldY } : null,
+        );
         const after = enemiesInRange(range, def.maxTargets ?? 5);
         for (const e of after) hitEnemy(e, Math.floor(base * 1.05));
         break;
       }
       case 'dash_strike':
       case 'blink': {
-        moveBy(def.dash ?? 2);
+        const dashToward = ctx.aim
+          ? null
+          : nearestInRange(Math.max(ASSIST_RANGE, (def.dash ?? 2) + range));
+        moveBy(
+          def.dash ?? 2,
+          dashToward ? { x: dashToward.worldX, y: dashToward.worldY } : null,
+        );
         const after = enemiesInRange(range, def.maxTargets ?? 3);
         for (const e of after) hitEnemy(e, base);
         break;
@@ -390,7 +438,7 @@ export class SkillSystem {
       ok: true,
       abilityName: def.name,
       vfx: def.kind,
-      origin: { x: ctx.player.worldX, y: ctx.player.worldY },
+      origin: originPos,
       target: targetPos,
       range: def.range,
     };
