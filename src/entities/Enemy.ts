@@ -36,6 +36,13 @@ import {
   isPounceEnemy,
   type PounceState,
 } from '../systems/EnemyPounce';
+import {
+  WAIL_RANGE,
+  WAIL_WINDUP,
+  isWraithEnemy,
+  kiteDirection,
+  wailHits,
+} from '../systems/EnemyWraith';
 
 const enemies = enemiesData as Record<string, EnemyDef>;
 
@@ -69,6 +76,8 @@ export class Enemy {
   private stunTimer = 0;
   private pounceWindup = 0;
   private pounce: PounceState | null = null;
+  private wailWindup = 0;
+  private readonly kiteStrafeSign: 1 | -1;
   /** Runtime elite (random pack upgrade), distinct from boss defs. */
   readonly elitePack: boolean;
   /** Boss flag for rift progress / exit portal. */
@@ -114,6 +123,7 @@ export class Enemy {
     this.maxHp = Math.max(1, Math.floor(this.def.hp * hpMult));
     this.hp = this.maxHp;
     this.patrolAngle = Math.random() * Math.PI * 2;
+    this.kiteStrafeSign = Math.random() < 0.5 ? 1 : -1;
     this.textureKey = enemySpriteKey(this.def.id);
     this.sprite = scene.add.sprite(0, -2, this.textureKey, 0);
     this.sprite.setOrigin(0.5, 0.88);
@@ -231,6 +241,7 @@ export class Enemy {
     if (this.ghosted) {
       this.pounceWindup = 0;
       this.pounce = null;
+      this.wailWindup = 0;
       this.applyBaseTint();
       this.playAnim('idle');
       this.syncScreen();
@@ -242,8 +253,8 @@ export class Enemy {
       { x: playerX, y: playerY },
     );
 
-    // Far packs: skip most frames (AI + sprite sync). Never skip mid-pounce.
-    if (!pouncing) {
+    // Far packs: skip most frames (AI + sprite sync). Never skip mid-action.
+    if (!pouncing && this.wailWindup <= 0) {
       if (dist > 18) {
         this.body.setVisible(false);
         return { hitPlayer: false, damage: 0, shot: null };
@@ -264,6 +275,7 @@ export class Enemy {
     if (this.stunTimer > 0) {
       this.pounceWindup = 0;
       this.pounce = null;
+      this.wailWindup = 0;
       this.applyBaseTint();
       this.playAnim('idle');
       this.syncScreen();
@@ -311,6 +323,32 @@ export class Enemy {
       return { hitPlayer: false, damage: 0, shot: null };
     }
 
+    if (this.wailWindup > 0) {
+      this.wailWindup = Math.max(0, this.wailWindup - dt);
+      this.setFacingToward(playerX, playerY);
+      this.playAnim('attack');
+      this.sprite.setTint(0xa8e0e8);
+      let hitPlayer = false;
+      let damage = 0;
+      if (this.wailWindup <= 0) {
+        if (
+          wailHits(
+            { x: this.worldX, y: this.worldY },
+            { x: playerX, y: playerY },
+          )
+        ) {
+          hitPlayer = true;
+          damage = this.meleeDamage();
+        }
+        this.attackTimer = this.def.attackCooldown;
+        this.applyBaseTint();
+      }
+      this.worldX = Phaser.Math.Clamp(this.worldX, 0.5, this.maxBound);
+      this.worldY = Phaser.Math.Clamp(this.worldY, 0.5, this.maxBound);
+      this.syncScreen();
+      return { hitPlayer, damage, shot: null };
+    }
+
     const aggro = this.def.isElite ? 7 : 5;
     if (dist < this.def.attackRange) {
       this.state = 'attack';
@@ -337,6 +375,21 @@ export class Enemy {
       return { hitPlayer: false, damage: 0, shot: null };
     }
 
+    if (
+      this.state === 'chase' &&
+      isWraithEnemy(this.def.id) &&
+      dist <= WAIL_RANGE &&
+      this.attackTimer <= 0 &&
+      this.wailWindup <= 0
+    ) {
+      this.wailWindup = WAIL_WINDUP;
+      this.setFacingToward(playerX, playerY);
+      this.sprite.setTint(0xa8e0e8);
+      this.playAnim('attack', true);
+      this.syncScreen();
+      return { hitPlayer: false, damage: 0, shot: null };
+    }
+
     let hitPlayer = false;
     let damage = 0;
     let shot: EnemyShot | null = null;
@@ -358,12 +411,23 @@ export class Enemy {
       }
       this.playAnim('walk');
     } else if (this.state === 'chase') {
-      const dx = playerX - this.worldX;
-      const dy = playerY - this.worldY;
-      const len = Math.hypot(dx, dy) || 1;
-      this.worldX += (dx / len) * spd * dt;
-      this.worldY += (dy / len) * spd * dt;
-      this.setFacingFromDelta(dx, dy);
+      if (isWraithEnemy(this.def.id)) {
+        const dir = kiteDirection(
+          { x: this.worldX, y: this.worldY },
+          { x: playerX, y: playerY },
+          this.kiteStrafeSign,
+        );
+        this.worldX += dir.x * spd * dt;
+        this.worldY += dir.y * spd * dt;
+        this.setFacingFromDelta(dir.x, dir.y);
+      } else {
+        const dx = playerX - this.worldX;
+        const dy = playerY - this.worldY;
+        const len = Math.hypot(dx, dy) || 1;
+        this.worldX += (dx / len) * spd * dt;
+        this.worldY += (dy / len) * spd * dt;
+        this.setFacingFromDelta(dx, dy);
+      }
       this.playAnim('walk');
     } else if (this.state === 'attack') {
       this.setFacingToward(playerX, playerY);
