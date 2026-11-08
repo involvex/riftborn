@@ -43,6 +43,13 @@ import {
   kiteDirection,
   wailHits,
 } from '../systems/EnemyWraith';
+import {
+  RUSH_COOLDOWN,
+  RUSH_DURATION,
+  isRushEnemy,
+  rushSpeed,
+  shouldStartRush,
+} from '../systems/EnemyRush';
 
 const enemies = enemiesData as Record<string, EnemyDef>;
 
@@ -77,6 +84,8 @@ export class Enemy {
   private pounceWindup = 0;
   private pounce: PounceState | null = null;
   private wailWindup = 0;
+  private rushRemaining = 0;
+  private rushReadyIn = 0;
   private readonly kiteStrafeSign: 1 | -1;
   /** Runtime elite (random pack upgrade), distinct from boss defs. */
   readonly elitePack: boolean;
@@ -234,14 +243,17 @@ export class Enemy {
     this.attackTimer = Math.max(0, this.attackTimer - dt);
     this.slowTimer = Math.max(0, this.slowTimer - dt);
     this.stunTimer = Math.max(0, this.stunTimer - dt);
+    this.rushReadyIn = Math.max(0, this.rushReadyIn - dt);
     if (this.slowTimer <= 0) this.slowMult = 1;
 
     const pouncing = !!this.pounce || this.pounceWindup > 0;
+    const rushing = this.rushRemaining > 0;
 
     if (this.ghosted) {
       this.pounceWindup = 0;
       this.pounce = null;
       this.wailWindup = 0;
+      this.rushRemaining = 0;
       this.applyBaseTint();
       this.playAnim('idle');
       this.syncScreen();
@@ -254,7 +266,7 @@ export class Enemy {
     );
 
     // Far packs: skip most frames (AI + sprite sync). Never skip mid-action.
-    if (!pouncing && this.wailWindup <= 0) {
+    if (!pouncing && this.wailWindup <= 0 && !rushing) {
       if (dist > 18) {
         this.body.setVisible(false);
         return { hitPlayer: false, damage: 0, shot: null };
@@ -276,6 +288,7 @@ export class Enemy {
       this.pounceWindup = 0;
       this.pounce = null;
       this.wailWindup = 0;
+      this.rushRemaining = 0;
       this.applyBaseTint();
       this.playAnim('idle');
       this.syncScreen();
@@ -358,6 +371,12 @@ export class Enemy {
       this.state = 'patrol';
     }
 
+    if (this.state === 'attack' && this.rushRemaining > 0) {
+      this.rushRemaining = 0;
+      this.rushReadyIn = RUSH_COOLDOWN;
+      this.applyBaseTint();
+    }
+
     if (
       this.state === 'chase' &&
       isPounceEnemy(this.def.id) &&
@@ -420,6 +439,30 @@ export class Enemy {
         this.worldX += dir.x * spd * dt;
         this.worldY += dir.y * spd * dt;
         this.setFacingFromDelta(dir.x, dir.y);
+        this.playAnim('walk');
+      } else if (isRushEnemy(this.def.id)) {
+        let moveSpd = spd;
+        if (this.rushRemaining > 0) {
+          this.rushRemaining -= dt;
+          moveSpd = rushSpeed(this.def.speed);
+          this.sprite.setTint(0xe0a070);
+          if (this.rushRemaining <= 0) {
+            this.rushRemaining = 0;
+            this.rushReadyIn = RUSH_COOLDOWN;
+            this.applyBaseTint();
+          }
+        } else if (this.rushReadyIn <= 0 && shouldStartRush(dist)) {
+          this.rushRemaining = RUSH_DURATION;
+          this.sprite.setTint(0xe0a070);
+          moveSpd = rushSpeed(this.def.speed);
+        }
+        const dx = playerX - this.worldX;
+        const dy = playerY - this.worldY;
+        const len = Math.hypot(dx, dy) || 1;
+        this.worldX += (dx / len) * moveSpd * dt;
+        this.worldY += (dy / len) * moveSpd * dt;
+        this.setFacingFromDelta(dx, dy);
+        this.playAnim('walk');
       } else {
         const dx = playerX - this.worldX;
         const dy = playerY - this.worldY;
@@ -427,8 +470,8 @@ export class Enemy {
         this.worldX += (dx / len) * spd * dt;
         this.worldY += (dy / len) * spd * dt;
         this.setFacingFromDelta(dx, dy);
+        this.playAnim('walk');
       }
-      this.playAnim('walk');
     } else if (this.state === 'attack') {
       this.setFacingToward(playerX, playerY);
       if (this.attackTimer <= 0) {
