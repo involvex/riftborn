@@ -44,6 +44,17 @@ Für [itch.io](https://involvex.itch.io/riftborn) als Browser-Spiel:
 4. Unter **Embed options** kann **Embed in page** genutzt werden. Als **shared files** einfach das ZIP hochladen.
 5. SharedArrayBuffer wird nicht benötigt. Viewport/Mobile-Verhalten bleibt wie bisher.
 
+## Submission-Paket (Game Off 2026)
+
+- Web-ZIP: `release/riftborn-web.zip` via `bun run build:itch` (letzter Lauf **3/3** Smoke-Tests grün; HTML lädt ohne Fehler).
+- Itch-Titelbild: `docs/screenshots/shift-ash.png` + `shift-shadow.png` zeigen das
+  SHIFT-Thema (Layer-Wechsel inkl. HUD + „Q · kills till energy“);
+  `touch-rift.png` zeigt das Touch-HUD.
+- Steuerung/SHIFT erklärt: `site/controls.html` (SHIFT-Panel mit
+  Energie/Gates/Phasen-Regel), `README.md` (SHIFT im Control-Table
+  plus Hinweis auf Rebinding).
+- Audio: prozedural erzeugt, CC0 — siehe `public/assets/ATTRIBUTION.md`.
+
 ## GitHub Pages (Play in Browser)
 
 Der Landingpage-Workflow baut zusätzlich das Spiel unter [`/play/`](https://involvex.github.io/riftborn/play/). Über die Website kann direkt im Browser gespielt werden.

@@ -39,20 +39,28 @@ Prebuilt releases are published via GitHub Actions and include a Windows portabl
 
 ## Controls
 
-| Key   | Action                    |
-| ----- | ------------------------- |
-| WASD  | Move                      |
-| LMB   | Attack                    |
-| E     | Gather                    |
-| F     | Craft (at bench)          |
-| C     | Character / spend stats   |
-| I     | Inventory (big bag)       |
-| M     | Map overlay               |
-| 3     | Equip tool                |
-| Space | Dash                      |
-| R     | Enter / exit rift dungeon |
-| P     | Co-op join/leave          |
-| Esc   | Pause / settings menu     |
+| Key       | Action                   |
+| --------- | ------------------------ |
+| WASD      | Move                     |
+| LMB       | Attack (hold to repeat)  |
+| 1 / 2 / 3 | Class skills             |
+| E         | Gather / open / interact |
+| F         | Craft (at bench)         |
+| C         | Character / spend stats  |
+| I         | Inventory (big bag)      |
+| K         | Skill tree               |
+| M         | Map overlay              |
+| 3         | Equip tool               |
+| Space     | Dash                     |
+| R         | Enter / exit rift        |
+| B         | Return to town           |
+| Q         | SHIFT — world shift      |
+| P         | Co-op join/leave         |
+| Esc       | Pause / settings menu    |
+
+Keys are rebindable in **Esc → Settings**. **Q (SHIFT)** is the Game Off 2026
+theme hook: kills fill shift energy, then SHIFT swaps the world layer —
+phase through foes on the other layer and open layer-locked gates.
 
 ## Progression
 
@@ -65,6 +73,12 @@ Prebuilt releases are published via GitHub Actions and include a Windows portabl
 ![Riftborn Town](docs/screenshots/town.png)
 
 ![Riftborn Rift](docs/screenshots/rift.png)
+
+![SHIFT — Ash layer](docs/screenshots/shift-ash.png)
+
+![SHIFT — Shadow layer](docs/screenshots/shift-shadow.png)
+
+Touch/mobile gameplay: [docs/screenshots/touch-rift.png](docs/screenshots/touch-rift.png)
 
 ## Website
 
