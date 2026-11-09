@@ -14,6 +14,7 @@ import {
   getStickRestPosition,
   isInStickHitArea,
   shouldResetStickOnLayout,
+  stickAccelFactor,
   stickToMove,
 } from './TouchStick';
 
@@ -463,7 +464,7 @@ export class TouchControls {
         this.stickMoveStartTime = this.scene.time.now;
       }
       const elapsed = this.scene.time.now - this.stickMoveStartTime;
-      const accel = Math.min(1, elapsed / 80); // accelerate over ~80ms
+      const accel = stickAccelFactor(elapsed);
       this.dx = res.worldDir.x * res.speed01 * accel;
       this.dy = res.worldDir.y * res.speed01 * accel;
     }

@@ -54,7 +54,7 @@ export function stickToMove(
   // Full speed at 0.5 magnitude, analogue in between
   let speed01: number;
   if (mag >= 0.5) {
-    speed01 = Math.min(1, mag);
+    speed01 = 1;
   } else {
     // Scale from deadzone to full speed at 0.5
     speed01 = (mag - 0.12) / (0.5 - 0.12);
@@ -78,6 +78,20 @@ export function getStickRestPosition(layout: {
   stick: { x: number; y: number; r: number };
 }): { x: number; y: number } {
   return { x: layout.stick.x, y: layout.stick.y };
+}
+
+/** Total stick accel ramp duration — soft start, full speed at the end. */
+export const STICK_ACCEL_MS = 80;
+
+/**
+ * Accel ramp curve, front-loaded: sqrt keeps the 80 ms ease-in from a
+ * standstill but reaches usable speed far earlier — a straight linear ramp
+ * makes taps and micro-corrections feel sluggish (25 % at 20 ms).
+ */
+export function stickAccelFactor(elapsedMs: number): number {
+  if (!(elapsedMs > 0)) return 0;
+  const t = Math.min(1, elapsedMs / STICK_ACCEL_MS);
+  return Math.sqrt(t);
 }
 
 /**
