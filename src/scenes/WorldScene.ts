@@ -68,6 +68,7 @@ import { playCombatBurst } from '../render/CombatVfx';
 import { screenDirToWorldDelta } from '../systems/SkillAim';
 import type { SkillAimHint } from '../systems/SkillSystem';
 import { shouldShowRangeHint } from '../systems/SkillRangeGate';
+import { isRiftBossKill } from '../systems/RiftBoss';
 import {
   combatHitstopMs,
   combatShakeParams,
@@ -167,6 +168,8 @@ export class WorldScene extends Phaser.Scene {
   private riftKillGoal = 18;
   private riftBossSpawned = false;
   private riftBossDead = false;
+  /** Entity id of the Rift Lord this rift spawned (elite fauna excluded). */
+  private riftBossId: string | null = null;
   private riftDepth = 1;
   /** Kills since last death / spawn (shown on death screen). */
   private lifeKills = 0;
@@ -791,6 +794,7 @@ export class WorldScene extends Phaser.Scene {
     this.riftKills = 0;
     this.riftBossSpawned = false;
     this.riftBossDead = false;
+    this.riftBossId = null;
     this.riftKillGoal = layout.killGoal ?? 18;
     this.bossAnchor = layout.elite ? { ...layout.elite } : null;
     this.shrineReadyAt = 0;
@@ -2216,8 +2220,11 @@ export class WorldScene extends Phaser.Scene {
     this.triggerCombatShake(enemy.isBoss ? 'boss' : 'hit');
     if (!gameState.inRift) return;
 
-    if (enemy.isBoss) {
+    if (
+      isRiftBossKill({ id: enemy.id, defId: enemy.def.id }, this.riftBossId)
+    ) {
       this.riftBossDead = true;
+      this.riftBossId = null;
       this.riftCleared = true;
       this.spawnBossChest(enemy.worldX, enemy.worldY);
       this.openExitPortal();
@@ -2263,6 +2270,7 @@ export class WorldScene extends Phaser.Scene {
     boss.setCombatLayer(this.bossShift.layer);
     boss.syncShiftLayer(this.shiftSystem.layer);
     this.enemies.push(boss);
+    this.riftBossId = boss.id;
     gameEvents.emit('ui:toast', {
       text: `Rift Lord emerges! (${riftDepthLabel(this.riftDepth)})`,
     });
@@ -2276,7 +2284,11 @@ export class WorldScene extends Phaser.Scene {
     }
     const next = this.bossShift.tick(dtMs);
     if (!next) return;
-    const boss = this.enemies.find((e) => e.alive && e.isBoss);
+    const boss = this.enemies.find(
+      (e) =>
+        e.alive &&
+        (this.riftBossId !== null ? e.id === this.riftBossId : e.isBoss),
+    );
     if (!boss) return;
     boss.setCombatLayer(next);
     boss.syncShiftLayer(this.shiftSystem.layer);
