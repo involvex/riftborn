@@ -8,6 +8,7 @@ import skillsData from '../data/skills.json';
 import type { CombatSystem } from './CombatSystem';
 import { pickAimedEnemyIndex } from './SkillAim';
 import { ASSIST_RANGE, pickEnemiesAround } from './AutoTarget';
+import { decideSkillRangeGate, skillRangeKind } from './SkillRangeGate';
 
 const abilities = skillsData.abilities as Record<string, AbilityDef>;
 const trees = skillsData.trees as Record<CharacterClassId, SkillNodeDef[]>;
@@ -244,6 +245,7 @@ export class SkillSystem {
       ),
     );
     const range = def.range ?? 2;
+    const rangeKind = skillRangeKind(def.kind);
     const px = ctx.player.worldX;
     const py = ctx.player.worldY;
 
@@ -293,6 +295,16 @@ export class SkillSystem {
         .filter((x) => x.d <= r)
         .sort((a, b) => a.d - b.d);
       return list.slice(0, cap).map((x) => x.e);
+    };
+
+    /** Targeted cast without a foe in range: no cast, no cooldown spent. */
+    const targetedSkipReason = (): 'no_target' | 'out_of_range' => {
+      const gate = decideSkillRangeGate({
+        kind: rangeKind,
+        hasTargetInRange: false,
+        hasTargetInAssistRange: nearestInRange(ASSIST_RANGE) !== null,
+      });
+      return gate.action === 'skip' ? gate.reason : 'no_target';
     };
 
     const moveBy = (
@@ -375,7 +387,7 @@ export class SkillSystem {
       }
       case 'strike': {
         const target = nearestInRange(range);
-        if (!target) return { ok: false, reason: 'No target in range' };
+        if (!target) return { ok: false, reason: targetedSkipReason() };
         hitEnemy(target, base);
         if (def.stun) target.applyStun(def.stun + (rank - 1) * 0.25);
         ctx.player.faceToward(target.worldX, target.worldY);
@@ -384,7 +396,7 @@ export class SkillSystem {
       }
       case 'bolt': {
         const target = nearestInRange(range);
-        if (!target) return { ok: false, reason: 'No target in range' };
+        if (!target) return { ok: false, reason: targetedSkipReason() };
         hitEnemy(target, base);
         ctx.player.faceToward(target.worldX, target.worldY);
         targetPos = { x: target.worldX, y: target.worldY };

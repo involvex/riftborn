@@ -67,6 +67,7 @@ import { playSkillVfx } from '../render/SkillVfx';
 import { playCombatBurst } from '../render/CombatVfx';
 import { screenDirToWorldDelta } from '../systems/SkillAim';
 import type { SkillAimHint } from '../systems/SkillSystem';
+import { shouldShowRangeHint } from '../systems/SkillRangeGate';
 import {
   combatHitstopMs,
   combatShakeParams,
@@ -203,6 +204,7 @@ export class WorldScene extends Phaser.Scene {
     this.clearAttackHold();
   };
   private lastNearGate = false;
+  private lastRangeHintAt = Number.NEGATIVE_INFINITY;
   private inputUnsubs: (() => void)[] = [];
   /** Cached terrain for minimap — rebuilt only on zone change. */
   private mapCells: MapCellKind[] | null = null;
@@ -2375,7 +2377,15 @@ export class WorldScene extends Phaser.Scene {
       aim,
     });
     if (!result.ok) {
-      if (result.reason) gameEvents.emit('ui:toast', { text: result.reason });
+      if (result.reason === 'out_of_range') {
+        const now = this.time.now;
+        if (shouldShowRangeHint(now, this.lastRangeHintAt)) {
+          this.lastRangeHintAt = now;
+          gameEvents.emit('ui:toast', { text: 'Move closer' });
+        }
+      } else if (result.reason) {
+        gameEvents.emit('ui:toast', { text: result.reason });
+      }
       return;
     }
     audioBus.skill();
