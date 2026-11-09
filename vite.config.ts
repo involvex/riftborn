@@ -8,6 +8,12 @@ export default defineConfig({
     port: 5173,
     strictPort: true,
   },
+  optimizeDeps: {
+    // Pre-bundle with the dev server instead of on the first page request:
+    // otherwise every cold smoke run stalls in Vite's optimizer before the
+    // game can boot (hub smoke flaked on that ~60s window).
+    include: ['phaser'],
+  },
   preview: {
     host: true,
     port: 4173,

@@ -14,9 +14,14 @@ type RiftbornSnap = {
 };
 
 test.describe('hub smoke', () => {
+  // Cold start: Playwright boots `vite` itself, and the first page load waits
+  // for Vite's dependency optimization (Phaser + app chunks) before the game
+  // can reach the ready flag. Slow-marked so the boot test has real headroom.
   test('boots hub, town is clear of hostiles, writes artifacts/hub.png', async ({
     page,
   }) => {
+    test.slow();
+
     await page.goto('/?smoke=1');
 
     await page.waitForFunction(
@@ -24,7 +29,7 @@ test.describe('hub smoke', () => {
         typeof window.__RIFTBORN !== 'undefined' &&
         window.__RIFTBORN?.ready === true,
       null,
-      { timeout: 45_000 },
+      { timeout: 90_000 },
     );
 
     // Let a couple frames settle after spawn.
