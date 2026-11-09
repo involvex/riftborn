@@ -85,6 +85,7 @@ import {
 } from '../systems/RiftDepth';
 import {
   getRiftModifier,
+  riftModLayerLock,
   rollRiftModifier,
   type RiftModifier,
 } from '../systems/RiftModifiers';
@@ -596,6 +597,15 @@ export class WorldScene extends Phaser.Scene {
         const punch = shiftShakeParams(this.shiftFxIntensity);
         this.triggerHitShake(punch.ms, punch.intensity);
         this.emitShiftHud();
+        // Layer-locked mods: tell the player why nothing is hittable.
+        const lock = gameState.inRift ? riftModLayerLock(this.riftMod) : null;
+        if (lock && d.layer !== lock) {
+          gameEvents.emit('ui:toast', {
+            text: `${this.riftMod.name}: foes only on ${
+              SHIFT_LAYERS[lock].name
+            }`,
+          });
+        }
       }),
       gameEvents.on('combat:shift', () => this.tryPlayerShift()),
       gameEvents.on('ui:returnToTown', () => this.returnToTown()),
@@ -845,8 +855,13 @@ export class WorldScene extends Phaser.Scene {
             levelScale: gameState.progression.level,
             hpMult: gameState.inRift ? this.riftMod.hpMult : 1,
             dmgMult: gameState.inRift ? this.riftMod.dmgMult : 1,
+            speedMult: gameState.inRift ? this.riftMod.speedMult : 1,
           },
         );
+        const layerLock = gameState.inRift
+          ? riftModLayerLock(this.riftMod)
+          : null;
+        if (layerLock) enemy.setCombatLayer(layerLock);
         enemy.maxBound = gameState.inRift
           ? (this.dungeon?.width ?? 22) - 1.5
           : this.hubSize - 0.5;
@@ -2270,7 +2285,8 @@ export class WorldScene extends Phaser.Scene {
       },
     );
     boss.maxBound = 22;
-    boss.setCombatLayer(this.bossShift.layer);
+    const bossLock = riftModLayerLock(this.riftMod);
+    boss.setCombatLayer(bossLock ?? this.bossShift.layer);
     boss.syncShiftLayer(this.shiftSystem.layer);
     this.enemies.push(boss);
     this.riftBossId = boss.id;
@@ -2285,6 +2301,8 @@ export class WorldScene extends Phaser.Scene {
     if (!gameState.inRift || !this.riftBossSpawned || this.riftBossDead) {
       return;
     }
+    // Layer-locked mods pin the boss — no free shifting.
+    if (riftModLayerLock(this.riftMod)) return;
     const next = this.bossShift.tick(dtMs);
     if (!next) return;
     const boss = this.enemies.find(
@@ -2297,7 +2315,7 @@ export class WorldScene extends Phaser.Scene {
     boss.syncShiftLayer(this.shiftSystem.layer);
     const name = SHIFT_LAYERS[next].name;
     gameEvents.emit('ui:toast', {
-      text: `Rift Lord shifts to ${name}!`,
+      text: `${boss.def.name} shifts to ${name}!`,
     });
   }
 

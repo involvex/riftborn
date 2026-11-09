@@ -96,6 +96,7 @@ export class Enemy {
   /** Multiplier from player level / rift depth (HP + damage). */
   private readonly levelMult: number;
   private readonly modDmgMult: number;
+  private readonly modSpeedMult: number;
   private lodPhase = 0;
   /** Bumps so stale attack ANIMATION_COMPLETE handlers no-op. */
   private attackGen = 0;
@@ -114,6 +115,7 @@ export class Enemy {
       levelScale?: number;
       hpMult?: number;
       dmgMult?: number;
+      speedMult?: number;
     } = {},
   ) {
     ensureGameSprites(scene);
@@ -129,6 +131,7 @@ export class Enemy {
     this.isBoss = !!opts.boss || this.def.isElite;
     this.levelMult = 1 + Math.max(0, (opts.levelScale ?? 1) - 1) * 0.12;
     this.modDmgMult = opts.dmgMult ?? 1;
+    this.modSpeedMult = opts.speedMult ?? 1;
     let hpMult = this.levelMult * (opts.hpMult ?? 1);
     if (this.elitePack) hpMult *= 2.1;
     if (opts.boss) hpMult *= 1.35;
@@ -285,7 +288,7 @@ export class Enemy {
       this.body.setVisible(true);
     }
 
-    const spd = this.def.speed * this.slowMult;
+    const spd = this.def.speed * this.slowMult * this.modSpeedMult;
 
     if (this.stunTimer > 0) {
       this.pounceWindup = 0;
