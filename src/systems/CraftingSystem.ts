@@ -1,5 +1,6 @@
 import { Events, gameEvents } from '../core/EventBus';
 import type { RecipeDef } from '../types/game';
+import type { CharacterClassId } from '../types/game';
 import recipesData from '../data/recipes.json';
 import type { InventorySystem } from './InventorySystem';
 import { createStarterWeapon, rollGearDrop } from './ItemGen';
@@ -25,12 +26,17 @@ export class CraftingSystem {
     );
   }
 
-  craft(recipeId: string, itemLevel = 1): boolean {
+  craft(recipeId: string, itemLevel = 1, forClass?: CharacterClassId): boolean {
     const recipe = recipes[recipeId];
     if (!recipe || !this.canCraft(recipeId)) return false;
+    // Crafted gear rolls for the crafter (default matches the starter weapon).
+    const crafter: CharacterClassId = forClass ?? 'warrior';
 
     const isGearCraft =
-      recipe.resultId === 'iron_blade' || recipe.resultId === 'leather_vest';
+      recipe.resultId === 'iron_blade' ||
+      recipe.resultId === 'leather_vest' ||
+      recipe.resultId === 'rift_blade' ||
+      recipe.resultId === 'rift_mail';
 
     if (isGearCraft && !this.inventory.canAddGear()) return false;
     if (
@@ -48,6 +54,15 @@ export class CraftingSystem {
       this.inventory.addGear(createStarterWeapon('warrior', 8 + itemLevel), {
         allowAutosell: false,
       });
+    } else if (recipe.resultId === 'rift_blade') {
+      const blade = rollGearDrop(itemLevel, {
+        preferArmor: false,
+        forClass: crafter,
+        lootTier: 3,
+      });
+      blade.name = 'Rift Blade';
+      blade.baseId = 'rift_blade';
+      this.inventory.addGear(blade, { allowAutosell: false });
     } else if (recipe.resultId === 'leather_vest') {
       const gear = rollGearDrop(itemLevel, {
         preferArmor: true,
@@ -59,6 +74,16 @@ export class CraftingSystem {
       gear.name = 'Crafted Ashen Vest';
       gear.baseId = 'ashen_chest';
       this.inventory.addGear(gear, { allowAutosell: false });
+    } else if (recipe.resultId === 'rift_mail') {
+      const mail = rollGearDrop(itemLevel, {
+        preferArmor: true,
+        forClass: crafter,
+        lootTier: 3,
+      });
+      mail.slot = 'chest';
+      mail.name = 'Rift Mail';
+      mail.baseId = 'rift_mail';
+      this.inventory.addGear(mail, { allowAutosell: false });
     } else {
       this.inventory.add(recipe.resultId, recipe.resultQty);
     }

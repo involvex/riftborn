@@ -226,6 +226,47 @@ function drawStackFallback(
       g.fillStyle(0xb0b8c0, 1);
       g.fillTriangle(cx + 2, cy - s, cx + s * 1.2, cy - s * 0.2, cx + 2, cy);
       break;
+    case 'ashen_bone':
+      // Pale bone shard — two knuckles on a shaft.
+      g.fillStyle(0xc8cdd2, 1);
+      g.fillCircle(cx, cy - s * 0.45, s * 0.55);
+      g.fillCircle(cx, cy + s * 0.55, s * 0.55);
+      g.fillRect(cx - 1, cy - s * 0.45, 2, s);
+      break;
+    case 'rift_crystal':
+      // Blue crystal shard with a highlight facet.
+      g.fillStyle(0x7fd8ff, 1);
+      g.fillTriangle(
+        cx,
+        cy - s * 1.1,
+        cx + s * 0.7,
+        cy + s,
+        cx - s * 0.7,
+        cy + s,
+      );
+      g.fillStyle(0xd8f4ff, 0.9);
+      g.fillTriangle(
+        cx,
+        cy - s * 1.1,
+        cx + s * 0.25,
+        cy + s * 0.1,
+        cx - s * 0.2,
+        cy + s * 0.1,
+      );
+      break;
+    case 'grove_sap':
+      // Green sap droplet.
+      g.fillStyle(0x6abf5a, 1);
+      g.fillCircle(cx, cy + s * 0.3, s * 0.7);
+      g.fillTriangle(
+        cx,
+        cy - s * 1.1,
+        cx + s * 0.62,
+        cy + s * 0.15,
+        cx - s * 0.62,
+        cy + s * 0.15,
+      );
+      break;
     default:
       g.fillStyle(0xc4b59a, 1);
       g.fillCircle(cx, cy, s * 0.9);

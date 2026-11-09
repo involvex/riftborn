@@ -732,7 +732,13 @@ export class UIScene extends Phaser.Scene {
         .setOrigin(0.5)
         .setInteractive({ useHandCursor: true });
       btn.on('pointerup', () => {
-        if (!gameState.crafting.craft(recipe.id, gameState.progression.level)) {
+        if (
+          !gameState.crafting.craft(
+            recipe.id,
+            gameState.progression.level,
+            gameState.progression.classId,
+          )
+        ) {
           this.toast('Missing materials or inventory full');
         }
         gameState.persist();

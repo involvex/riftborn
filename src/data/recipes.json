@@ -28,5 +28,26 @@
       { "itemId": "scrap", "qty": 8 },
       { "itemId": "wood", "qty": 2 }
     ]
+  },
+  "rift_blade": {
+    "id": "rift_blade",
+    "name": "Rift Blade",
+    "resultId": "rift_blade",
+    "resultQty": 1,
+    "ingredients": [
+      { "itemId": "rift_crystal", "qty": 4 },
+      { "itemId": "ore", "qty": 3 }
+    ]
+  },
+  "rift_mail": {
+    "id": "rift_mail",
+    "name": "Rift Mail",
+    "resultId": "rift_mail",
+    "resultQty": 1,
+    "ingredients": [
+      { "itemId": "ashen_bone", "qty": 5 },
+      { "itemId": "grove_sap", "qty": 3 },
+      { "itemId": "ore", "qty": 4 }
+    ]
   }
 }

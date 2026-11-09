@@ -38,6 +38,8 @@ export type BiomeDef = {
   enemyMix: BiomeEnemyMixEntry[];
   /** Rift boss def id for this biome (defaults to 'rift_lord'). */
   bossId?: EnemyId | string;
+  /** Material this biome's rift kills feed (crafting sink). */
+  lootMaterial?: string;
   roomTypeRules?: string[];
   decorRules?: string[];
 };
@@ -46,6 +48,7 @@ export const ASHEN_CRYPT_BIOME: BiomeDef = {
   id: 'ashen_crypt',
   name: 'Aschen-Krypta',
   bossId: 'rift_lord',
+  lootMaterial: 'ashen_bone',
   tileWeights: {
     tile_dungeon_0: 0.5,
     tile_dungeon_1: 0.35,
@@ -86,6 +89,7 @@ export const CRYSTAL_CAVERN_BIOME: BiomeDef = {
   id: 'crystal_cavern',
   name: 'Kristallhöhle',
   bossId: 'crystal_lord',
+  lootMaterial: 'rift_crystal',
   tileWeights: {
     tile_dungeon_0: 0.25,
     tile_dungeon_1: 0.35,
@@ -124,6 +128,7 @@ export const SHATTERED_WOODS_BIOME: BiomeDef = {
   id: 'shattered_woods',
   name: 'Schattenwald',
   bossId: 'grove_alpha',
+  lootMaterial: 'grove_sap',
   tileWeights: {
     tile_dungeon_0: 0.4,
     tile_dungeon_1: 0.4,

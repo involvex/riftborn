@@ -2200,6 +2200,7 @@ export class WorldScene extends Phaser.Scene {
     if (gameState.inRift && this.riftMod.goldOnKill > 0) {
       gameState.inventory.add('gold', this.riftMod.goldOnKill);
     }
+    this.grantBiomeMaterial(enemy);
     const scoutKill = enemy.def.id === 'ash_scout';
     const batKill = enemy.def.id === 'ash_bat';
     const namedElite = scoutKill || batKill;
@@ -2263,6 +2264,20 @@ export class WorldScene extends Phaser.Scene {
     if (!this.riftBossSpawned && this.riftKills >= this.riftKillGoal) {
       this.spawnRiftBoss();
     }
+  }
+
+  /**
+   * Biome material on rift kills — the crafting sink that makes each biome
+   * worth re-running (Nix pays 1.4x, recipes need all three).
+   */
+  private grantBiomeMaterial(enemy: Enemy): void {
+    if (!gameState.inRift || !this.dungeon) return;
+    const itemId = this.dungeon.biome.lootMaterial;
+    if (!itemId) return;
+    const elite = enemy.awardsEliteLoot;
+    if (Math.random() > (elite ? 0.85 : 0.35)) return;
+    const qty = elite ? 2 + Math.floor(Math.random() * 2) : 1;
+    gameState.inventory.add(itemId, qty);
   }
 
   private spawnRiftBoss(): void {

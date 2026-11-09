@@ -1,5 +1,8 @@
 import { describe, expect, test } from 'bun:test';
 import { pickRiftBiome, RIFT_BIOMES, type BiomeDef } from './biomes';
+import itemsData from './items.json';
+
+const idDefs = itemsData as Record<string, { kind: string }>;
 
 const BIOME_IDS = ['ashen_crypt', 'crystal_cavern', 'shattered_woods'] as const;
 const TILE_KEYS = [
@@ -106,5 +109,18 @@ describe('biomes', () => {
     expect(allIds.has('enemy_shadow_wolf')).toBe(true);
     expect(allIds.has('enemy_bone_archer')).toBe(true);
     expect(allIds.has('enemy_rift_wraith')).toBe(true);
+  });
+
+  test('each rift biome feeds one unique, real material', () => {
+    const seen = new Set<string>();
+    for (const b of RIFT_BIOMES) {
+      const id = b.lootMaterial;
+      expect(id, `${b.id} lootMaterial`).toBeDefined();
+      expect(idDefs[id!], `${b.id} material ${id}`).toBeDefined();
+      expect(idDefs[id!]!.kind).toBe('material');
+      expect(seen.has(id!)).toBe(false);
+      seen.add(id!);
+    }
+    expect(seen.size).toBe(RIFT_BIOMES.length);
   });
 });

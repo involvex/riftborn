@@ -119,5 +119,29 @@
     "kind": "material",
     "color": "#C04060",
     "sellValue": 2
+  },
+  "ashen_bone": {
+    "id": "ashen_bone",
+    "name": "Ashen Bone",
+    "stack": 50,
+    "kind": "material",
+    "color": "#C8CDD2",
+    "sellValue": 4
+  },
+  "rift_crystal": {
+    "id": "rift_crystal",
+    "name": "Rift Crystal",
+    "stack": 30,
+    "kind": "material",
+    "color": "#7FD8FF",
+    "sellValue": 9
+  },
+  "grove_sap": {
+    "id": "grove_sap",
+    "name": "Grove Sap",
+    "stack": 30,
+    "kind": "material",
+    "color": "#6ABF5A",
+    "sellValue": 6
   }
 }
