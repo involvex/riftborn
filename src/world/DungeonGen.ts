@@ -204,10 +204,14 @@ export function generateDungeon(seed: number, depth = 1): DungeonMap {
   layout.packs = placeRiftEnemyPacks(map, d, rnd, 3, biome.enemyMix);
   const expectedKills = layout.packs.reduce((s, p) => s + p.count, 0);
   const fillRatio = Math.min(0.85, 0.68 + d * 0.015);
-  layout.killGoal = Math.max(
+  // The goal must stay reachable: never ask for more kills than the rift
+  // actually spawned, or the boss can never appear and the run can only be
+  // abandoned. Mod pack bonuses only add foes, so this stays conservative.
+  const supplyCap = Math.max(
     minRiftEnemyCount(d),
-    Math.max(12 + d, Math.floor(expectedKills * fillRatio)),
+    Math.floor(expectedKills * fillRatio),
   );
+  layout.killGoal = Math.min(12 + d, Math.min(supplyCap, expectedKills));
 
   // Room decor (not start/boss): walkable floor, 1-tile margin, no key cells.
   const blocked = new Set<string>();

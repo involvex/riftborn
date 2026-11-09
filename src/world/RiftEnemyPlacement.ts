@@ -1,4 +1,5 @@
 import type { ShiftLayerId } from '../data/shiftLayers';
+import { ENEMY_SHIFT_LAYER, enemyShiftLayer } from '../data/shiftLayers';
 import { FIGURE_COLLISION_RADIUS, footprintFits } from '../core/FigureScale';
 import type { DungeonMap } from './DungeonGen';
 import { isWalkableOnLayer } from './ShiftGateMap';
@@ -13,6 +14,12 @@ export function minRiftEnemyCount(depth: number): number {
   const d = Math.max(1, Math.min(10, depth));
   return Math.max(6, 6 + Math.floor((d - 1) / 2));
 }
+
+/**
+ * Kills needed on the starting layer to afford the first world shift
+ * (2 kills × SHIFT_ENERGY_PER_KILL = SHIFT_COST).
+ */
+export const SHIFT_START_KILLS = 2;
 
 function cellFits(
   map: DungeonMap,
@@ -133,6 +140,97 @@ function nearestReachable(
   return best;
 }
 
+/** Enemy ids from the mix that live on the given layer. */
+function layerEnemyIds(
+  layer: ShiftLayerId,
+  enemyMix?: RiftEnemyMixEntry[] | null,
+): string[] {
+  const ids = (enemyMix ?? [])
+    .map((e) => e.enemyId)
+    .filter((id) => enemyShiftLayer(id) === layer);
+  if (ids.length > 0) return ids;
+  return Object.entries(ENEMY_SHIFT_LAYER)
+    .filter(([, l]) => l === layer)
+    .map(([id]) => id);
+}
+
+function layerPackCount(
+  packs: ZoneLayout['packs'],
+  layer: ShiftLayerId,
+): number {
+  let total = 0;
+  for (const p of packs) {
+    if (enemyShiftLayer(p.enemyId) === layer) total += p.count;
+  }
+  return total;
+}
+
+function nextLayerId(ids: string[], rnd: () => number): string {
+  return ids[Math.floor(rnd() * ids.length)] ?? ids[0]!;
+}
+
+/**
+ * Guarantee at least `need` foes on each layer. A rift starts on ash with
+ * zero shift energy, so a rift without ash packs (or without any way to pay
+ * one shift) would dead-end the run: layer-locked foes stay ghosted and the
+ * kill goal can never be filled.
+ */
+function ensureLayerSupply(
+  packs: ZoneLayout['packs'],
+  layer: ShiftLayerId,
+  need: number,
+  candidates: { x: number; y: number }[],
+  spawn: { x: number; y: number },
+  enemyMix: RiftEnemyMixEntry[] | null | undefined,
+  rnd: () => number,
+): void {
+  let missing = need - layerPackCount(packs, layer);
+  if (missing <= 0) return;
+  const ids = layerEnemyIds(layer, enemyMix);
+  if (ids.length === 0) return;
+
+  const used = new Set(
+    packs.map((p) => `${Math.floor(p.x)},${Math.floor(p.y)}`),
+  );
+  let guard = 0;
+  const maxGuard = Math.max(16, candidates.length * 2);
+  while (missing > 0 && guard++ < maxGuard) {
+    const fromCandidates = candidates.length
+      ? candidates[Math.floor(rnd() * candidates.length)]!
+      : { x: spawn.x + 3, y: spawn.y + 3 };
+    const k = `${Math.floor(fromCandidates.x)},${Math.floor(fromCandidates.y)}`;
+    if (used.has(k) && candidates.length > 0) continue;
+    used.add(k);
+    packs.push({
+      enemyId: nextLayerId(ids, rnd),
+      count: 1,
+      x: fromCandidates.x,
+      y: fromCandidates.y,
+    });
+    missing -= 1;
+  }
+
+  // Fallback: top up on an existing pack tile (keeps the layer guarantee).
+  while (missing > 0) {
+    const host = packs[packs.length - 1];
+    if (!host) {
+      packs.push({
+        enemyId: nextLayerId(ids, rnd),
+        count: 1,
+        x: spawn.x,
+        y: spawn.y,
+      });
+      missing -= 1;
+      continue;
+    }
+    if (enemyShiftLayer(host.enemyId) !== layer) {
+      host.enemyId = nextLayerId(ids, rnd);
+    }
+    host.count += 1;
+    missing -= 1;
+  }
+}
+
 /**
  * Rebuild rift packs on footprint-reachable tiles, min distance from
  * spawn, and at least minRiftEnemyCount(depth) foes.
@@ -228,5 +326,24 @@ export function placeRiftEnemyPacks(
     });
     total += 1;
   }
+  // Both layers must be enterable from a fresh rift (see ensureLayerSupply).
+  ensureLayerSupply(
+    packs,
+    'ash',
+    SHIFT_START_KILLS,
+    candidates,
+    spawn,
+    enemyMix,
+    rnd,
+  );
+  ensureLayerSupply(
+    packs,
+    'shadow',
+    SHIFT_START_KILLS,
+    candidates,
+    spawn,
+    enemyMix,
+    rnd,
+  );
   return packs;
 }
