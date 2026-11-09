@@ -58,7 +58,7 @@ export class TutorialOverlay {
     this.root.removeAll(true);
     const { width, height } = this.scene.scale;
     const panelW = Math.min(420, width - 32);
-    const panelH = shouldShowTouchControls() ? 300 : 320;
+    const panelH = shouldShowTouchControls() ? 320 : 340;
 
     const dim = this.scene.add
       .rectangle(width / 2, height / 2, width, height, 0x05070a, 0.72)
@@ -81,7 +81,8 @@ export class TutorialOverlay {
       ? [
           'Gleiche Welt, zwei Schichten:',
           'Asche & Schatten. Kills füllen Energie —',
-          'SHIFT wechselt die Schicht und öffnet Wege.',
+          'SHIFT phast Gegner der anderen Schicht',
+          'und öffnet Gates. Rift-Ziel: Kills bis Boss/Exit.',
           'Kernloop: Town → Rift → Kampf → Beute.',
           '',
           'Stick — move · ATK — attack · E — interact',
@@ -89,8 +90,9 @@ export class TutorialOverlay {
         ]
       : [
           'Gleiche Welt, zwei Schichten: Asche & Schatten.',
-          'Kills füllen Energie — ' +
-            `${formatHotkey('shift')} wechselt die Schicht und öffnet Wege.`,
+          'Kills füllen Energie.',
+          `${formatHotkey('shift')} phast Gegner der anderen Schicht,`,
+          'öffnet Gates. Rift-Ziel: Kills bis Boss/Exit.',
           'Kernloop: Town → Rift → Kampf → Beute.',
           '',
           `WASD/LMB — move/attack · ${formatHotkey('gather')} — interact`,

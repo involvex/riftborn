@@ -51,7 +51,7 @@ export function firstSessionHintText(
     case 'move':
       return touch ? 'Stick - move' : 'WASD - move';
     case 'rift':
-      return 'Finde den Rift vor der Stadt und tritt ein.';
+      return 'Betritt den Rift: Kills bis Boss/Exit. SHIFT oeffnet Gates.';
     case 'attack':
       return touch
         ? 'ATK - attack. Kills fuellen SHIFT-Energie.'

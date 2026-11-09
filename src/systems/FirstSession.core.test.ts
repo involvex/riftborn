@@ -96,10 +96,12 @@ describe('firstSessionHintText', () => {
     expect(firstSessionHintText('move', false)).toBe('WASD - move');
   });
 
-  test('rift text is shared', () => {
-    const text = 'Finde den Rift vor der Stadt und tritt ein.';
+  test('rift text names the goal and shift gates, shared by input mode', () => {
+    const text = 'Betritt den Rift: Kills bis Boss/Exit. SHIFT oeffnet Gates.';
     expect(firstSessionHintText('rift', true)).toBe(text);
     expect(firstSessionHintText('rift', false)).toBe(text);
+    expect(text).toContain('Kills bis Boss/Exit');
+    expect(text).toContain('SHIFT');
   });
 
   test('attack text mentions SHIFT-Energie and differs by input', () => {

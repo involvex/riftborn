@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
-import { gameEvents } from '../core/EventBus';
+import { Events, gameEvents } from '../core/EventBus';
+import { formatHotkey } from '../core/Hotkeys';
 import { uiFontSize } from '../core/UiFont';
 import { SHIFT_LAYERS, type ShiftLayerId } from '../data/shiftLayers';
 import { SHIFT_COST, SHIFT_MAX_ENERGY } from '../systems/ShiftSystem';
@@ -22,14 +23,16 @@ export class ShiftHud {
   private readonly barBg: Phaser.GameObjects.Rectangle;
   private readonly barFill: Phaser.GameObjects.Rectangle;
   private readonly hint: Phaser.GameObjects.Text;
-  private readonly actionLabel: string;
-  private readonly unsub: () => void;
+  private readonly touch: boolean;
+  private actionLabel: string;
+  private lastPayload: ShiftHudPayload | null = null;
+  private readonly unsubs: (() => void)[] = [];
 
   constructor(scene: Phaser.Scene) {
     this.root = scene.add.container(16, 98).setScrollFactor(0).setDepth(10_000);
-    const touch = shouldShowTouchControls();
-    const profile = touch ? 'touch' : 'desktop';
-    this.actionLabel = touch ? 'SHIFT' : 'Q';
+    this.touch = shouldShowTouchControls();
+    const profile = this.touch ? 'touch' : 'desktop';
+    this.actionLabel = this.touch ? 'SHIFT' : formatHotkey('shift');
     this.label = scene.add.text(0, 0, '', {
       fontFamily: 'Consolas, "Courier New", monospace',
       fontSize: uiFontSize('label', profile),
@@ -56,12 +59,23 @@ export class ShiftHud {
     this.root.add([this.label, this.barBg, this.barFill, this.hint]);
     this.root.setVisible(false);
 
-    this.unsub = gameEvents.on('ui:shiftHud', (p) => {
-      this.apply(p as ShiftHudPayload);
-    });
+    this.unsubs.push(
+      gameEvents.on('ui:shiftHud', (p) => {
+        this.apply(p as ShiftHudPayload);
+      }),
+    );
+    // Desktop hint must follow hotkey rebinding (touch keeps the SHIFT label).
+    this.unsubs.push(
+      gameEvents.on(Events.SETTINGS_CHANGED, () => {
+        if (this.touch) return;
+        this.actionLabel = formatHotkey('shift');
+        if (this.lastPayload) this.apply(this.lastPayload);
+      }),
+    );
   }
 
   apply(p: ShiftHudPayload): void {
+    this.lastPayload = p;
     if (!p.active) {
       this.root.setVisible(false);
       return;
@@ -93,7 +107,7 @@ export class ShiftHud {
   }
 
   destroy(): void {
-    this.unsub();
+    for (const unsub of this.unsubs) unsub();
     this.root.destroy(true);
   }
 }
