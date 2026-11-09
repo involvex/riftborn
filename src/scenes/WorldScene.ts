@@ -2076,6 +2076,20 @@ export class WorldScene extends Phaser.Scene {
 
   private tryAttack(): void {
     if (this.player.attackCooldown > 0) return;
+    if (netClient.connected) {
+      // Co-op is server-authoritative: the mouse press is an input event,
+      // not local damage. Send it and let the server resolve the hit.
+      netClient.sendInput({
+        dx: 0,
+        dy: 0,
+        attack: true,
+        gather: false,
+        skill: false,
+      });
+      this.player.attackCooldown = gameState.progression.attackCooldown();
+      this.player.playAttack();
+      return;
+    }
 
     const pointer = this.input.activePointer;
     const range = gameState.inventory.weaponRange();
@@ -2932,12 +2946,14 @@ export class WorldScene extends Phaser.Scene {
   private toggleCoop(): void {
     if (netClient.connected) {
       netClient.requestLeave();
-      netClient.disconnect();
+      gameEvents.emit('ui:toast', { text: 'Left co-op session' });
       this.unsubNet?.();
       this.unsubNet = null;
       for (const g of this.remoteGhosts.values()) g.destroy(true);
       this.remoteGhosts.clear();
-      gameEvents.emit('ui:toast', { text: 'Left co-op session' });
+      // The server answers `leave` with session_rewards — keep the socket
+      // open briefly or the reply is lost with the close.
+      window.setTimeout(() => netClient.disconnect(), 900);
       return;
     }
     this.unsubNet = netClient.onMessage((msg) => {
@@ -2990,6 +3006,10 @@ export class WorldScene extends Phaser.Scene {
           .setOrigin(0.5);
         ghost = this.add.container(0, 0, [g, label]);
         this.remoteGhosts.set(p.id, ghost);
+      } else {
+        // The first state can land before the join sets the server name.
+        const label = ghost.getAt(1) as Phaser.GameObjects.Text | undefined;
+        if (label && label.text !== p.name) label.setText(p.name);
       }
       const { screenX, screenY } = worldToScreen(p.x, p.y);
       ghost.setPosition(screenX, screenY);
