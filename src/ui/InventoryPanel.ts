@@ -277,6 +277,7 @@ export class InventoryPanel {
       buildGearTooltipLines(item, equipped, {
         sellGold: gearSellValue(item),
         hint,
+        equipment: gameState.inventory.equipment,
       }),
     );
   }

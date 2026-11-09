@@ -8,6 +8,7 @@ const sets = setsData as Record<string, ArmorSetDef>;
 export type ActiveSetBonus = {
   setId: string;
   name: string;
+  color: string;
   pieces: number;
   labels: string[];
   stats: GearStats & { maxHp: number };
@@ -46,6 +47,7 @@ export function resolveSetBonuses(equipment: EquipmentSlots): ActiveSetBonus[] {
     active.push({
       setId,
       name: def.name,
+      color: def.color,
       pieces,
       labels,
       stats,

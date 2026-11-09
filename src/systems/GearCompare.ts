@@ -1,5 +1,55 @@
 import type { GearInstance, GearStats } from '../types/game';
+import type { EquipmentSlots } from '../types/save';
 import { rarityCss } from './RarityVisual';
+import { countSetPieces } from './SetBonus';
+import setsData from '../data/sets.json';
+
+const sets = setsData as Record<
+  string,
+  {
+    name: string;
+    color: string;
+    twoPiece: { label: string };
+    fourPiece: { label: string };
+  }
+>;
+
+/**
+ * Set name + progress if this item is worn. `equipment` is the full loadout,
+ * so the count reflects the swap (candidate replaces its own slot).
+ */
+export function setTooltipLines(
+  item: GearInstance,
+  equipment?: EquipmentSlots | null,
+): { text: string; color: string }[] {
+  if (!item.setId) return [];
+  const def = sets[item.setId];
+  if (!def) return [];
+  const next: EquipmentSlots = { ...(equipment ?? emptyEquipment()) };
+  (next as Record<string, unknown>)[item.slot] = item;
+  const after = countSetPieces(next).get(item.setId) ?? 1;
+  const before = equipment
+    ? (countSetPieces(equipment).get(item.setId) ?? 0)
+    : 0;
+  const out = [{ text: `Set ${def.name} · ${after}/4`, color: def.color }];
+  if (after >= 4 && before < 4) {
+    out.push({ text: `4pc: ${def.fourPiece.label}`, color: '#f0d090' });
+  } else if (after >= 2 && before < 2) {
+    out.push({ text: `2pc: ${def.twoPiece.label}`, color: '#f0d090' });
+  }
+  return out;
+}
+
+function emptyEquipment(): EquipmentSlots {
+  return {
+    weapon: null,
+    hat: null,
+    chest: null,
+    legs: null,
+    feet: null,
+    tool: null,
+  };
+}
 
 export type CompareTone = 'better' | 'worse' | 'same';
 
@@ -86,18 +136,25 @@ export type TooltipLine = { text: string; color: string };
 export function buildGearTooltipLines(
   item: GearInstance,
   equipped: GearInstance | null | undefined,
-  opts: { sellGold?: number; hint?: string } = {},
+  opts: {
+    sellGold?: number;
+    hint?: string;
+    equipment?: EquipmentSlots | null;
+  } = {},
 ): TooltipLine[] {
   const lines: TooltipLine[] = [
     {
       text: `[${item.rarity}] ${item.name}`,
       color: rarityCss(item.rarity),
     },
-    {
-      text: `ilvl ${item.itemLevel}${item.setId ? ` · Set ${item.setId}` : ''}`,
-      color: '#a8b0bc',
-    },
   ];
+  for (const setLine of setTooltipLines(item, opts.equipment)) {
+    lines.push(setLine);
+  }
+  lines.push({
+    text: `ilvl ${item.itemLevel}`,
+    color: '#a8b0bc',
+  });
 
   const stats = item.stats;
   const baseRows: { label: string; value: number }[] = [

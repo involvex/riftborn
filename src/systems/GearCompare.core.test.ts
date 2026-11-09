@@ -1,11 +1,30 @@
 import { describe, expect, test } from 'bun:test';
 import type { GearInstance, GearStats } from '../types/game';
+import type { EquipmentSlots } from '../types/save';
 import {
   buildGearTooltipLines,
   compareGearStats,
   formatCompareDelta,
   summarizeCompare,
 } from './GearCompare';
+
+function piece(
+  setId: string | null,
+  slot: 'hat' | 'chest' | 'legs' | 'feet',
+): GearInstance {
+  return { ...gear({ slot, setId }), uid: `${slot}-${setId}` };
+}
+
+function equipment(pieces: (GearInstance | null)[]): EquipmentSlots {
+  return {
+    weapon: null,
+    hat: pieces[0] ?? null,
+    chest: pieces[1] ?? null,
+    legs: pieces[2] ?? null,
+    feet: pieces[3] ?? null,
+    tool: null,
+  };
+}
 
 function gear(
   partial: Partial<GearInstance> & { stats: GearStats },
@@ -97,5 +116,48 @@ describe('GearCompare', () => {
     expect(dmg?.color).toBe('#6ecf7a');
     expect(str?.color).toBe('#e07070');
     expect(lines.some((l) => l.text.includes('Sell 12g'))).toBe(true);
+  });
+
+  test('tooltip shows set name, progress and the next tier', () => {
+    const cand = gear({
+      name: 'Ashen Hood',
+      slot: 'hat',
+      setId: 'ashen',
+      rarity: 'rare',
+      stats: { ...empty, dexterity: 3 },
+    });
+    const eq = equipment([null, piece('ashen', 'chest'), null, null]);
+    const lines = buildGearTooltipLines(cand, null, { equipment: eq });
+    expect(lines[1]?.text).toBe('Set Ashen · 2/4');
+    expect(lines[1]?.color).toBe('#8B5A2B');
+    expect(lines[2]?.text).toBe('2pc: +6 DEX, +5% skill power');
+    expect(lines.some((l) => l.text.startsWith('Set ashen'))).toBe(false);
+    expect(lines.some((l) => l.text.includes('ilvl 1'))).toBe(true);
+  });
+
+  test('no set line for gear without a set', () => {
+    const cand = gear({ stats: { ...empty, damage: 4 } });
+    const lines = buildGearTooltipLines(cand, null, {
+      equipment: equipment([null, null, null, null]),
+    });
+    expect(lines.some((l) => l.text.startsWith('Set'))).toBe(false);
+  });
+
+  test('equipping the last piece announces the 4pc bonus', () => {
+    const cand = gear({
+      name: 'Ashen Boots',
+      slot: 'feet',
+      setId: 'ashen',
+      stats: { ...empty },
+    });
+    const eq = equipment([
+      piece('ashen', 'hat'),
+      piece('ashen', 'chest'),
+      piece('ashen', 'legs'),
+      null,
+    ]);
+    const lines = buildGearTooltipLines(cand, null, { equipment: eq });
+    expect(lines[1]?.text).toBe('Set Ashen · 4/4');
+    expect(lines[2]?.text).toContain('4pc:');
   });
 });

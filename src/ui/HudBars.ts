@@ -3,6 +3,7 @@ import { uiFontPx, uiFontSize } from '../core/UiFont';
 import { uiFont } from '../core/UiScale';
 import { gameState } from '../systems/GameState';
 import { MAX_LEVEL, xpForLevel } from '../systems/ProgressionSystem';
+import { resolveSetBonuses } from '../systems/SetBonus';
 import { shouldShowTouchControls } from './TouchControls';
 import { computeTouchLayout } from './TouchLayout';
 
@@ -20,6 +21,9 @@ export class HudBars {
   private readonly xpText: Phaser.GameObjects.Text;
   private readonly meta: Phaser.GameObjects.Text;
   private readonly bounty: Phaser.GameObjects.Text;
+  /** One text per active set; rebuilt only when the set state changes. */
+  private setTexts: Phaser.GameObjects.Text[] = [];
+  private setKey = '';
   private readonly xpFlash: Phaser.GameObjects.Rectangle;
   private barW = 220;
   private readonly barH = 18;
@@ -140,9 +144,42 @@ export class HudBars {
     );
     this.bounty.setY(touch ? 68 : 72);
     this.bounty.setFontSize(uiFontPx('label', touch ? 'touch' : 'desktop'));
+    this.refreshSets();
     this.hpText.setFontSize(uiFontPx('hud', touch ? 'touch' : 'desktop'));
     this.xpText.setFontSize(uiFontPx('caption', touch ? 'touch' : 'desktop'));
     this.refresh();
+  }
+
+  /**
+   * Active set readout (2pc+) below the bounty line. Rebuilds only when the
+   * set composition changes; hides itself without any active bonus.
+   */
+  private refreshSets(): void {
+    const active = resolveSetBonuses(gameState.inventory.equipment);
+    const key = active.map((s) => `${s.setId}:${s.pieces}`).join(',');
+    if (key === this.setKey) return;
+    this.setKey = key;
+    for (const t of this.setTexts) t.destroy();
+    this.setTexts = [];
+    if (active.length === 0) return;
+    const touch = shouldShowTouchControls();
+    const y = touch ? 90 : 94;
+    let x = 0;
+    for (const s of active) {
+      const t = this.scene.add
+        .text(x, y, `${s.name} ${s.pieces}/4`, {
+          fontFamily: UI_FONT,
+          fontSize: uiFontPx('caption', touch ? 'touch' : 'desktop'),
+          color: s.color,
+          resolution: 2,
+          stroke: '#0a0c10',
+          strokeThickness: 3,
+        })
+        .setScrollFactor(0);
+      this.root.add(t);
+      this.setTexts.push(t);
+      x += t.width + 16;
+    }
   }
 
   /** Pulse XP bar + floating +N when XP is gained. */
@@ -247,6 +284,9 @@ export class HudBars {
     const bountyLine = gameState.bounties.statusLine();
     this.bounty.setText(bountyLine ? `★ ${bountyLine}` : '');
     this.bounty.setVisible(!!bountyLine);
+
+    // Active set bonuses: "Ashen 2/4 · Bone 4/4", one text per set.
+    this.refreshSets();
 
     const hpRatio = Phaser.Math.Clamp(
       gameState.hp / Math.max(1, gameState.maxHp),
