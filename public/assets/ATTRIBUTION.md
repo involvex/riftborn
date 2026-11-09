@@ -1,5 +1,16 @@
 # Third-party art attribution
 
+## Audio
+
+All SFX and music loops in `public/assets/audio/` are procedurally
+synthesized by `scripts/gen-placeholder-sfx.mjs` (original work, released
+as CC0 / public domain). No third-party samples are bundled — regenerate
+with:
+
+```bash
+bun run scripts/gen-placeholder-sfx.mjs
+```
+
 ## Liberated Pixel Cup monsters
 
 - **Author:** Charles Sanchez (CharlesGabriel)
