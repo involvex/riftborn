@@ -93,9 +93,10 @@ export class TouchControls {
     this.scene = scene;
     this.root = scene.add.container(0, 0).setScrollFactor(0).setDepth(10_006);
     this.buildStick();
-    this.atk = this.makeBtn('ATK', 0xc45c3a, () =>
-      gameEvents.emit('combat:attack', {}),
-    );
+    this.atk = this.makeBtn('ATK', 0xc45c3a, {
+      onDown: () => gameEvents.emit('combat:attackDown', {}),
+      onUp: () => gameEvents.emit('combat:attackUp', {}),
+    });
     this.interact = this.makeBtn('E', 0x6ec6a0, () =>
       gameEvents.emit('ui:interact', {}),
     );
@@ -477,26 +478,52 @@ export class TouchControls {
     this.stickKnob.setPosition(this.stickCx, this.stickCy);
   }
 
-  private makeBtn(label: string, stroke: number, onClick: () => void): Btn {
+  private makeBtn(
+    label: string,
+    stroke: number,
+    onClickOrOpts:
+      | (() => void)
+      | {
+          onClick?: () => void;
+          onDown?: () => void;
+          onUp?: () => void;
+        },
+  ): Btn {
+    const opts =
+      typeof onClickOrOpts === 'function'
+        ? { onClick: onClickOrOpts }
+        : onClickOrOpts;
     const bg = this.scene.add
       .circle(0, 0, 28, 0x1a2230, 0.88)
       .setStrokeStyle(2.5, stroke, 0.95)
       .setInteractive({ useHandCursor: true });
-    bg.on('pointerdown', () => {
-      // Brighten + shrink so the press reads clearly on phones.
-      bg.setScale(0.86);
-      bg.setFillStyle(0x3a5070, 1);
-      hapticTap(10);
-    });
     const release = () => {
       bg.setScale(1);
       bg.setFillStyle(0x1a2230, 0.88);
     };
-    bg.on('pointerup', () => {
+    let pressed = false;
+    const press = () => {
+      pressed = true;
+      bg.setScale(0.86);
+      bg.setFillStyle(0x3a5070, 1);
+      hapticTap(10);
+      opts.onDown?.();
+    };
+    const unpress = (fireClick: boolean) => {
+      if (!pressed) return;
+      pressed = false;
       release();
-      onClick();
+      opts.onUp?.();
+      if (fireClick) opts.onClick?.();
+    };
+    bg.on('pointerdown', press);
+    bg.on('pointerup', () => unpress(true));
+    bg.on('pointerupoutside', () => unpress(false));
+    bg.on('pointercancel', () => unpress(false));
+    bg.on('pointerout', () => {
+      if (pressed) unpress(false);
+      else release();
     });
-    bg.on('pointerout', release);
     const t = this.scene.add
       .text(0, 0, label, {
         fontFamily: 'Segoe UI, sans-serif',

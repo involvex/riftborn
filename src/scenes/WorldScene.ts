@@ -31,6 +31,10 @@ import {
   pickNearestEnemyIndex,
 } from '../systems/AutoTarget';
 import {
+  canRepeatBasicAttack,
+  shouldStartDesktopAttack,
+} from '../systems/AttackHold';
+import {
   generateHub,
   HUB_SIZE,
   HUB_SPAWN,
@@ -193,7 +197,11 @@ export class WorldScene extends Phaser.Scene {
   private corpseAcc = 0;
   private touchDx = 0;
   private touchDy = 0;
+  private attackHeld = false;
   private assistChase = false;
+  private onWindowBlur = (): void => {
+    this.clearAttackHold();
+  };
   private lastNearGate = false;
   private inputUnsubs: (() => void)[] = [];
   /** Cached terrain for minimap — rebuilt only on zone change. */
@@ -514,11 +522,26 @@ export class WorldScene extends Phaser.Scene {
 
     this.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
       // Touch mode uses ATK button — avoid double-fire from UI taps
-      if (shouldShowTouchControls()) return;
-      if (!pointer.leftButtonDown()) return;
+      if (
+        !shouldStartDesktopAttack({
+          touchControlsActive: shouldShowTouchControls(),
+          leftButtonDown: pointer.leftButtonDown(),
+          pointerOverUi: this.isPointerOverUi(pointer),
+        })
+      ) {
+        return;
+      }
       if (this.tryClickLoot(pointer.worldX, pointer.worldY)) return;
-      this.tryAttack();
+      this.startBasicAttackHold();
     });
+    const releaseAttack = () => this.clearAttackHold();
+    this.input.on('pointerup', releaseAttack);
+    this.input.on('pointerupoutside', releaseAttack);
+    this.input.on('pointercancel', releaseAttack);
+    if (typeof window !== 'undefined') {
+      window.addEventListener('blur', this.onWindowBlur);
+    }
+    this.events.on(Phaser.Scenes.Events.PAUSE, this.onWindowBlur);
 
     this.inputUnsubs.push(
       gameEvents.on(Events.SETTINGS_CHANGED, () => {
@@ -545,12 +568,20 @@ export class WorldScene extends Phaser.Scene {
         this.touchDx = d.dx;
         this.touchDy = d.dy;
       }),
+      gameEvents.on('combat:attackDown', () => this.startBasicAttackHold()),
+      gameEvents.on('combat:attackUp', () => this.clearAttackHold()),
       gameEvents.on('combat:attack', () => this.tryAttack()),
       gameEvents.on('ui:interact', () => this.tryInteract()),
       gameEvents.on('combat:dash', () => {
         this.tryDash(this.touchDx || 0, this.touchDy || 0);
       }),
       gameEvents.on(Events.RESOLVE_DEATH, () => this.finishDeath()),
+      // Modals/overlays pause or block combat; don't keep repeating.
+      gameEvents.on('ui:openInventory', () => this.clearAttackHold()),
+      gameEvents.on('ui:openCharacter', () => this.clearAttackHold()),
+      gameEvents.on('ui:openSkills', () => this.clearAttackHold()),
+      gameEvents.on('ui:toggleMenu', () => this.clearAttackHold()),
+      gameEvents.on('ui:toggleMap', () => this.clearAttackHold()),
       gameEvents.on(Events.SHIFT_CHANGED, (p) => {
         const d = p as { layer: ShiftLayerId };
         this.applyShiftVisuals(d.layer);
@@ -1559,9 +1590,20 @@ export class WorldScene extends Phaser.Scene {
       dy = this.touchDy;
     }
 
-    if (dx !== 0 || dy !== 0) {
+    const manualMove = dx !== 0 || dy !== 0;
+    if (manualMove) {
       this.assistChase = false;
-    } else if (this.assistChase && !netClient.connected) {
+    }
+    if (
+      canRepeatBasicAttack({
+        held: this.attackHeld,
+        uiBlocked: false,
+      })
+    ) {
+      this.tryAttack();
+      if (manualMove) this.assistChase = false;
+    }
+    if (!manualMove && this.assistChase && !netClient.connected) {
       const targetables = this.enemies.map((e) => ({
         x: e.worldX,
         y: e.worldY,
@@ -1981,6 +2023,31 @@ export class WorldScene extends Phaser.Scene {
       gameEvents.emit('ui:toast', { text: 'Already in town' });
     }
     this.emitRiftProgress();
+  }
+
+  private isPointerOverUi(pointer: Phaser.Input.Pointer): boolean {
+    const ui = this.game.scene.getScene('UIScene') as
+      | (Phaser.Scene & {
+          input?: { hitTestPointer?: (p: unknown) => unknown };
+        })
+      | undefined;
+    if (!ui?.input?.hitTestPointer) return false;
+    try {
+      const hits = ui.input.hitTestPointer(pointer);
+      return Array.isArray(hits) ? hits.length > 0 : false;
+    } catch {
+      return false;
+    }
+  }
+
+  private clearAttackHold(): void {
+    this.attackHeld = false;
+  }
+
+  private startBasicAttackHold(): void {
+    if (this.deathPending) return;
+    this.attackHeld = true;
+    this.tryAttack();
   }
 
   private tryAttack(): void {
