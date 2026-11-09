@@ -78,6 +78,8 @@ phase through foes on the other layer and open layer-locked gates.
 
 ![SHIFT — Shadow layer](docs/screenshots/shift-shadow.png)
 
+![SHIFT — layer switch in a rift](docs/screenshots/shift-rift.gif)
+
 Touch/mobile gameplay: [docs/screenshots/touch-rift.png](docs/screenshots/touch-rift.png)
 
 ## Website
