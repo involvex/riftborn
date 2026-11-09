@@ -46,6 +46,12 @@ export const ENEMY_SHIFT_LAYER: Record<string, EnemyShiftLayer> = {
   crawler: 'shadow',
   wisp: 'both',
   rift_lord: 'both',
+  // Rift biome foes (E1–E4): theme split keeps both layers dangerous.
+  // Goblin + archer read as ash-side raiders; wolf + wraith as shadow stalkers.
+  enemy_rift_goblin: 'ash',
+  enemy_bone_archer: 'ash',
+  enemy_shadow_wolf: 'shadow',
+  enemy_rift_wraith: 'shadow',
 };
 
 export function enemyShiftLayer(defId: string): EnemyShiftLayer {
