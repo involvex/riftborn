@@ -10,7 +10,7 @@ import path from 'node:path';
 import sharp from 'sharp';
 
 const ROOT = path.resolve(import.meta.dirname, '..');
-const SRC = path.join(ROOT, 'public/assets/sprites');
+const SRC = path.join(ROOT, 'assets-src/sprites');
 
 const BASES = [
   'hero_warrior',

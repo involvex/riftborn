@@ -13,7 +13,7 @@ if (!outName || !url) {
 }
 
 const ROOT = path.resolve(import.meta.dirname, '..');
-const dest = path.join(ROOT, 'public/assets/sprites', outName);
+const dest = path.join(ROOT, 'assets-src/sprites', outName);
 await mkdir(path.dirname(dest), { recursive: true });
 
 const res = await fetch(url);

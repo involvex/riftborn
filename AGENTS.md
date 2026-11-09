@@ -107,10 +107,13 @@ Touch (`/?touch=1` or coarse/small): virtual stick · ATK · E · DASH · INV/MA
 
 - **Reuse first:** recolor existing sprites in `public/assets/sprites/game/`
   and icons in `public/assets/icons/` (Libresprite).
-- **Character poses:** put sources in `public/assets/sprites/` as
+- **Character poses:** put sources in `assets-src/sprites/` as
   `{base}_idle.png`, `{base}_walk_0..n.png`, `{base}_attack_0..n.png`
-  (prompts in `_prompts/poses.json`). Run `bun run sprites:process` →
-  14-frame sheets in `game/spr_*.png`. Numbered walks beat idle-only bob.
+  (prompts in `public/assets/sprites/_prompts/poses.json`). Run
+  `bun run sprites:process` →
+  14-frame sheets in `public/assets/sprites/game/spr_*.png`. Numbered walks
+  beat idle-only bob. Only `game/` ships — everything under `assets-src/`
+  stays out of the web build (sources, ~42 MB).
 - **Gen tools:** HF Qwen MCP, `D:\repos\involvex\image-worker`
   (`bun run src/index.ts generate …`), `D:\repos\image-wizard-cli` (Bing).
   Fill gaps: `bun run scripts/synth-extra-walk-poses.mjs`.
@@ -119,7 +122,7 @@ Touch (`/?touch=1` or coarse/small): virtual stick · ATK · E · DASH · INV/MA
 - **Music:** [BeepBox](https://www.beepbox.co/) / JummBox loops →
   `public/assets/audio/music/`.
 - Prefer **CC0** packs (Kenney, OpenGameArt). No paid assets for jam builds.
-- **LPC enemies** (Charles Sanchez): `sprites/lpc/` → `spr_shade` /
+- **LPC enemies** (Charles Sanchez): `assets-src/sprites/lpc/` → `spr_shade` /
   `spr_crawler` / `spr_wisp` / `spr_bat` (Nightwing elite) via
   `process-lpc-enemies.mjs` (**CC-BY-SA 3.0** — see
   `public/assets/ATTRIBUTION.md`).

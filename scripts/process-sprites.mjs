@@ -24,7 +24,7 @@ import {
 } from './lib/combat-frames.mjs';
 
 const ROOT = path.resolve(import.meta.dirname, '..');
-const SRC = path.join(ROOT, 'public/assets/sprites');
+const SRC = path.join(ROOT, 'assets-src/sprites');
 const OUT = path.join(ROOT, 'public/assets/sprites/game');
 const FRAMES = TOTAL_FRAMES;
 

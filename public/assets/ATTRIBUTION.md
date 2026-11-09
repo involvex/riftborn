@@ -17,7 +17,7 @@ bun run scripts/gen-placeholder-sfx.mjs
 - **Source:** Liberated Pixel Cup / OpenGameArt (`lpc-monsters`)
 - **License:** [CC-BY-SA 3.0](https://creativecommons.org/licenses/by-sa/3.0/)
   and/or [GNU GPL 3.0](https://www.gnu.org/licenses/gpl-3.0.html)
-- **Used as:** `sprites/lpc/*.png` → processed into
+- **Used as:** `assets-src/sprites/lpc/*.png` → processed into
   `sprites/game/spr_shade.png`, `spr_crawler.png`, `spr_wisp.png`,
   `spr_bat.png`
 
