@@ -55,6 +55,11 @@ import {
 import { formatPlayTime, SummaryOverlay } from '../ui/SummaryOverlay';
 import { uiPanelSize } from '../core/UiScale';
 import {
+  computeCraftPanelLayout,
+  craftPanelFromViewport,
+  craftRectCenter,
+} from '../ui/CraftPanelLayout';
+import {
   navEnterPlay,
   navSetOverlay,
   navSetPaused,
@@ -69,6 +74,10 @@ export class UIScene extends Phaser.Scene {
   private touchControls!: TouchControls;
   private toastText!: Phaser.GameObjects.Text;
   private craftPanel!: Phaser.GameObjects.Container;
+  private craftBg!: Phaser.GameObjects.Rectangle;
+  private craftTitle!: Phaser.GameObjects.Text;
+  private craftClose!: Phaser.GameObjects.Text;
+  private craftRowBtns: Phaser.GameObjects.Text[] = [];
   private charPanel!: Phaser.GameObjects.Container;
   private charBg!: Phaser.GameObjects.Rectangle;
   private charTitle!: Phaser.GameObjects.Text;
@@ -115,8 +124,6 @@ export class UIScene extends Phaser.Scene {
   private charDismiss!: OverlayDismissHandles;
   private menuDismiss!: OverlayDismissHandles;
   private craftDismiss!: OverlayDismissHandles;
-  private craftPanelW = 420;
-  private craftPanelH = 280;
 
   constructor() {
     super('UIScene');
@@ -535,6 +542,7 @@ export class UIScene extends Phaser.Scene {
       this.fpsHud.layout();
       this.layoutCharPanel();
       this.layoutMenuPanel();
+      this.layoutCraftPanel();
       if (this.inventoryPanel.open) this.inventoryPanel.layout();
       if (this.shopPanel.open) this.shopPanel.layout();
       if (this.traderPanel.open) this.traderPanel.layout();
@@ -703,10 +711,10 @@ export class UIScene extends Phaser.Scene {
   }
 
   private buildCraftPanel(): void {
-    const bg = this.add.rectangle(0, 0, 320, 260, 0x0e1218, 0.94);
-    bg.setStrokeStyle(1, 0xc4a574, 0.7);
-    makePanelHitBlock(bg);
-    const title = this.add
+    this.craftBg = this.add.rectangle(0, 0, 320, 260, 0x0e1218, 0.94);
+    this.craftBg.setStrokeStyle(1, 0xc4a574, 0.7);
+    makePanelHitBlock(this.craftBg);
+    this.craftTitle = this.add
       .text(0, -110, 'Crafting Bench', {
         fontFamily: 'Georgia, serif',
         fontSize: '20px',
@@ -714,16 +722,16 @@ export class UIScene extends Phaser.Scene {
       })
       .setOrigin(0.5);
 
-    const rows: Phaser.GameObjects.GameObject[] = [bg, title];
-    listRecipes().forEach((recipe, i) => {
-      const y = -60 + i * 48;
+    this.craftRowBtns = [];
+    const recipes = listRecipes();
+    for (const recipe of recipes) {
       const label = `${recipe.name}  (${recipe.ingredients
         .map(
           (ing) => `${ing.qty} ${getItemDef(ing.itemId)?.name ?? ing.itemId}`,
         )
         .join(', ')})`;
       const btn = this.add
-        .text(0, y, label, {
+        .text(0, 0, label, {
           fontFamily: 'Segoe UI, sans-serif',
           fontSize: '13px',
           color: '#0a0c10',
@@ -745,10 +753,10 @@ export class UIScene extends Phaser.Scene {
         gameState.persist();
         this.refresh();
       });
-      rows.push(btn);
-    });
+      this.craftRowBtns.push(btn);
+    }
 
-    const close = this.add
+    this.craftClose = this.add
       .text(0, 110, 'Close (Esc)', {
         fontFamily: 'Segoe UI, sans-serif',
         fontSize: '14px',
@@ -756,20 +764,64 @@ export class UIScene extends Phaser.Scene {
       })
       .setOrigin(0.5)
       .setInteractive({ useHandCursor: true });
-    close.on('pointerup', () => this.hideCraft());
-    rows.push(close);
+    this.craftClose.on('pointerup', () => this.hideCraft());
 
     this.craftPanel = this.add
-      .container(this.scale.width / 2, this.scale.height / 2, rows)
+      .container(this.scale.width / 2, this.scale.height / 2, [
+        this.craftBg,
+        this.craftTitle,
+        ...this.craftRowBtns,
+        this.craftClose,
+      ])
       .setScrollFactor(0)
       .setDepth(10_010)
       .setVisible(false);
-    this.craftPanelW = 320;
-    this.craftPanelH = 260;
     this.craftDismiss = attachOverlayDismiss(this, this.craftPanel, () =>
       this.hideCraft(),
     );
-    this.craftDismiss.layout(this.craftPanelW, this.craftPanelH);
+    this.layoutCraftPanel();
+  }
+
+  private layoutCraftPanel(): void {
+    const touch = shouldShowTouchControls();
+    const { panelW, panelH } = craftPanelFromViewport(
+      this.scale.width,
+      this.scale.height,
+      touch,
+    );
+    const layout = computeCraftPanelLayout({
+      panelW,
+      panelH,
+      recipeCount: this.craftRowBtns.length,
+      touch,
+    });
+    this.craftBg.setSize(panelW, panelH);
+
+    const titlePos = craftRectCenter(panelW, panelH, layout.title);
+    this.craftTitle.setPosition(titlePos.x, titlePos.y);
+    this.craftTitle.setFontSize(touch ? '18px' : '20px');
+
+    this.craftRowBtns.forEach((btn, i) => {
+      const row = layout.rows[i];
+      if (!row) return;
+      const pos = craftRectCenter(panelW, panelH, row);
+      btn.setPosition(pos.x, pos.y);
+      btn.setStyle({
+        fontFamily: 'Segoe UI, sans-serif',
+        fontSize: touch ? '14px' : '13px',
+        color: '#0a0c10',
+        backgroundColor: '#c4a574',
+        padding: { x: 10, y: 6 },
+      });
+    });
+
+    const closePos = craftRectCenter(panelW, panelH, layout.close);
+    this.craftClose.setPosition(closePos.x, closePos.y);
+    this.craftClose.setFontSize(touch ? '15px' : '14px');
+    this.craftDismiss?.layout(panelW, panelH);
+    if (this.craftOpen) {
+      this.craftPanel.setPosition(this.scale.width / 2, this.scale.height / 2);
+    }
   }
 
   private buildCharPanel(): void {
@@ -1259,6 +1311,7 @@ export class UIScene extends Phaser.Scene {
 
   private showCraft(): void {
     if (this.menuOpen) return;
+    this.layoutCraftPanel();
     this.craftPanel.setPosition(this.scale.width / 2, this.scale.height / 2);
     this.craftPanel.setVisible(true);
     this.craftOpen = true;
