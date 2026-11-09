@@ -131,6 +131,9 @@ export function enemySpriteKey(defId: string): string {
   if (defId === 'crawler') return 'spr_crawler';
   if (defId === 'wisp') return 'spr_wisp';
   if (defId === 'rift_lord') return 'spr_rift_lord';
+  // P2 boss variants — reskinned on existing sheets (no new art).
+  if (defId === 'crystal_lord') return 'spr_enemy_rift_wraith';
+  if (defId === 'grove_alpha') return 'spr_enemy_shadow_wolf';
   if (defId === 'enemy_rift_goblin') return 'spr_enemy_rift_goblin';
   if (defId === 'enemy_shadow_wolf') return 'spr_enemy_shadow_wolf';
   if (defId === 'enemy_bone_archer') return 'spr_enemy_bone_archer';

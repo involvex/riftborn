@@ -10,6 +10,8 @@ export type EnemyId =
   | 'ash_bat'
   | 'ash_scout'
   | 'rift_lord'
+  | 'crystal_lord'
+  | 'grove_alpha'
   | 'enemy_rift_goblin'
   | 'enemy_shadow_wolf'
   | 'enemy_bone_archer'
@@ -34,6 +36,8 @@ export type BiomeDef = {
   propsPer10x10: { min: number; max: number };
   /** Existing enemy IDs only (no enemy_rift_*). */
   enemyMix: BiomeEnemyMixEntry[];
+  /** Rift boss def id for this biome (defaults to 'rift_lord'). */
+  bossId?: EnemyId | string;
   roomTypeRules?: string[];
   decorRules?: string[];
 };
@@ -41,6 +45,7 @@ export type BiomeDef = {
 export const ASHEN_CRYPT_BIOME: BiomeDef = {
   id: 'ashen_crypt',
   name: 'Aschen-Krypta',
+  bossId: 'rift_lord',
   tileWeights: {
     tile_dungeon_0: 0.5,
     tile_dungeon_1: 0.35,
@@ -80,6 +85,7 @@ export const ASHEN_CRYPT_BIOME: BiomeDef = {
 export const CRYSTAL_CAVERN_BIOME: BiomeDef = {
   id: 'crystal_cavern',
   name: 'Kristallhöhle',
+  bossId: 'crystal_lord',
   tileWeights: {
     tile_dungeon_0: 0.25,
     tile_dungeon_1: 0.35,
@@ -117,6 +123,7 @@ export const CRYSTAL_CAVERN_BIOME: BiomeDef = {
 export const SHATTERED_WOODS_BIOME: BiomeDef = {
   id: 'shattered_woods',
   name: 'Schattenwald',
+  bossId: 'grove_alpha',
   tileWeights: {
     tile_dungeon_0: 0.4,
     tile_dungeon_1: 0.4,

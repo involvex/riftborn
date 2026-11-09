@@ -170,6 +170,8 @@ export class WorldScene extends Phaser.Scene {
   private riftBossDead = false;
   /** Entity id of the Rift Lord this rift spawned (elite fauna excluded). */
   private riftBossId: string | null = null;
+  /** Boss def for the current biome (reskinned variants). */
+  private riftBossDefId = 'rift_lord';
   private riftDepth = 1;
   /** Kills since last death / spawn (shown on death screen). */
   private lifeKills = 0;
@@ -795,6 +797,7 @@ export class WorldScene extends Phaser.Scene {
     this.riftBossSpawned = false;
     this.riftBossDead = false;
     this.riftBossId = null;
+    this.riftBossDefId = layout.bossId ?? 'rift_lord';
     this.riftKillGoal = layout.killGoal ?? 18;
     this.bossAnchor = layout.elite ? { ...layout.elite } : null;
     this.shrineReadyAt = 0;
@@ -2258,7 +2261,7 @@ export class WorldScene extends Phaser.Scene {
     const boss = new Enemy(
       this,
       `enemy_${this.enemySeq++}`,
-      'rift_lord',
+      this.riftBossDefId,
       p.x,
       p.y,
       {
@@ -2272,7 +2275,7 @@ export class WorldScene extends Phaser.Scene {
     this.enemies.push(boss);
     this.riftBossId = boss.id;
     gameEvents.emit('ui:toast', {
-      text: `Rift Lord emerges! (${riftDepthLabel(this.riftDepth)})`,
+      text: `${boss.def.name} emerges! (${riftDepthLabel(this.riftDepth)})`,
     });
     this.safeCameraFlash(160, 120, 40, 80);
     this.emitRiftProgress();

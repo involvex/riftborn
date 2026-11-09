@@ -32,6 +32,15 @@ describe('isRiftBossKill', () => {
     ).toBe(false);
   });
 
+  test('biome boss variants clear only when spawned by the rift', () => {
+    expect(
+      isRiftBossKill({ id: 'enemy_11', defId: 'crystal_lord' }, 'enemy_11'),
+    ).toBe(true);
+    expect(
+      isRiftBossKill({ id: 'enemy_12', defId: 'grove_alpha' }, 'enemy_11'),
+    ).toBe(false);
+  });
+
   test('elite packs are regular pack kills', () => {
     expect(isRiftBossKill({ id: 'enemy_5', defId: 'shade' }, 'enemy_42')).toBe(
       false,

@@ -104,6 +104,36 @@
     "isElite": true,
     "lootTier": 4
   },
+  "crystal_lord": {
+    "id": "crystal_lord",
+    "name": "Crystal Revenant",
+    "hp": 260,
+    "damage": 14,
+    "speed": 2.4,
+    "attackRange": 1.6,
+    "attackCooldown": 1.1,
+    "xp": 110,
+    "color": "#4DB6FF",
+    "radius": 18,
+    "lootTable": "elite_loot",
+    "isElite": true,
+    "lootTier": 4
+  },
+  "grove_alpha": {
+    "id": "grove_alpha",
+    "name": "Grove Alpha",
+    "hp": 300,
+    "damage": 16,
+    "speed": 2.6,
+    "attackRange": 1.5,
+    "attackCooldown": 0.9,
+    "xp": 120,
+    "color": "#6ABF5A",
+    "radius": 19,
+    "lootTable": "elite_loot",
+    "isElite": true,
+    "lootTier": 4
+  },
   "enemy_rift_goblin": {
     "id": "enemy_rift_goblin",
     "name": "Rift Goblin",

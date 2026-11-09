@@ -183,6 +183,7 @@ export function generateDungeon(seed: number, depth = 1): DungeonMap {
       y: Math.floor(start.y + start.h / 2) + 0.5,
     },
     killGoal: 12 + d,
+    bossId: biome.bossId ?? 'rift_lord',
     decor: [],
   };
 

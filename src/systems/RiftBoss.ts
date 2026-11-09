@@ -13,5 +13,5 @@ export function isRiftBossKill(
   riftBossId: string | null,
 ): boolean {
   if (riftBossId === null) return false;
-  return enemy.id === riftBossId && enemy.defId === RIFT_LORD_DEF_ID;
+  return enemy.id === riftBossId;
 }

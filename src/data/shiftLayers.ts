@@ -46,6 +46,9 @@ export const ENEMY_SHIFT_LAYER: Record<string, EnemyShiftLayer> = {
   crawler: 'shadow',
   wisp: 'both',
   rift_lord: 'both',
+  // P2 biome boss variants (reskinned rift lords).
+  crystal_lord: 'both',
+  grove_alpha: 'both',
   // Rift biome foes (E1–E4): theme split keeps both layers dangerous.
   // Goblin + archer read as ash-side raiders; wolf + wraith as shadow stalkers.
   enemy_rift_goblin: 'ash',

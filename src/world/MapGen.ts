@@ -71,6 +71,8 @@ export type ZoneLayout = {
   paths?: SpawnPoint[];
   /** Kill goal for rift progress bar. */
   killGoal?: number;
+  /** Rift boss def id (defaults to rift_lord). */
+  bossId?: string;
   /** Atmospheric props (hub). */
   decor?: HubDecor[];
   /** Named wilderness points of interest. */
