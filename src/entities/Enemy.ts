@@ -13,6 +13,7 @@ import {
   ensureGameSprites,
   isPaintedSprite,
 } from '../render/SpriteAtlas';
+import { playEnemyTelegraph } from '../render/EnemyTelegraphVfx';
 import type { EnemyDef } from '../types/game';
 import enemiesData from '../data/enemies.json';
 import {
@@ -70,6 +71,7 @@ export class Enemy {
   /** True when player is on another layer — ghosted. */
   private ghosted = false;
   readonly body: Phaser.GameObjects.Container;
+  private readonly scene: Phaser.Scene;
   private readonly sprite: Phaser.GameObjects.Sprite;
   private readonly bar: Phaser.GameObjects.Graphics;
   private patrolAngle: number;
@@ -115,6 +117,7 @@ export class Enemy {
     } = {},
   ) {
     ensureGameSprites(scene);
+    this.scene = scene;
     this.id = id;
     this.def = enemies[defId] ?? enemies.shade;
     this.shiftLayer = enemyShiftLayer(this.def.id);
@@ -308,6 +311,15 @@ export class Enemy {
         hitPlayer = true;
         damage = this.meleeDamage();
       }
+      if (res.hit || res.landed) {
+        playEnemyTelegraph(
+          this.scene,
+          'pounce',
+          'impact',
+          this.worldX,
+          this.worldY,
+        );
+      }
       if (res.landed) {
         this.pounce = null;
         this.attackTimer = POUNCE_COOLDOWN;
@@ -355,6 +367,13 @@ export class Enemy {
         }
         this.attackTimer = this.def.attackCooldown;
         this.applyBaseTint();
+        playEnemyTelegraph(
+          this.scene,
+          'wail',
+          'impact',
+          this.worldX,
+          this.worldY,
+        );
       }
       this.worldX = Phaser.Math.Clamp(this.worldX, 0.5, this.maxBound);
       this.worldY = Phaser.Math.Clamp(this.worldY, 0.5, this.maxBound);
@@ -375,6 +394,13 @@ export class Enemy {
       this.rushRemaining = 0;
       this.rushReadyIn = RUSH_COOLDOWN;
       this.applyBaseTint();
+      playEnemyTelegraph(
+        this.scene,
+        'rush',
+        'impact',
+        this.worldX,
+        this.worldY,
+      );
     }
 
     if (
@@ -390,6 +416,13 @@ export class Enemy {
       this.setFacingToward(playerX, playerY);
       this.playAnim('attack', true);
       this.sprite.setTint(0xe8a0a0);
+      playEnemyTelegraph(
+        this.scene,
+        'pounce',
+        'windup',
+        this.worldX,
+        this.worldY,
+      );
       this.syncScreen();
       return { hitPlayer: false, damage: 0, shot: null };
     }
@@ -405,6 +438,13 @@ export class Enemy {
       this.setFacingToward(playerX, playerY);
       this.sprite.setTint(0xa8e0e8);
       this.playAnim('attack', true);
+      playEnemyTelegraph(
+        this.scene,
+        'wail',
+        'windup',
+        this.worldX,
+        this.worldY,
+      );
       this.syncScreen();
       return { hitPlayer: false, damage: 0, shot: null };
     }
@@ -450,11 +490,25 @@ export class Enemy {
             this.rushRemaining = 0;
             this.rushReadyIn = RUSH_COOLDOWN;
             this.applyBaseTint();
+            playEnemyTelegraph(
+              this.scene,
+              'rush',
+              'impact',
+              this.worldX,
+              this.worldY,
+            );
           }
         } else if (this.rushReadyIn <= 0 && shouldStartRush(dist)) {
           this.rushRemaining = RUSH_DURATION;
           this.sprite.setTint(0xe0a070);
           moveSpd = rushSpeed(this.def.speed);
+          playEnemyTelegraph(
+            this.scene,
+            'rush',
+            'windup',
+            this.worldX,
+            this.worldY,
+          );
         }
         const dx = playerX - this.worldX;
         const dy = playerY - this.worldY;
@@ -479,6 +533,13 @@ export class Enemy {
         if (isRangedEnemy(this.def.id)) {
           this.attackTimer = this.def.attackCooldown;
           this.playAnim('attack', true);
+          playEnemyTelegraph(
+            this.scene,
+            'shot',
+            'windup',
+            this.worldX,
+            this.worldY,
+          );
           shot = createEnemyShot(
             { x: this.worldX, y: this.worldY },
             { x: playerX, y: playerY },
