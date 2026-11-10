@@ -1,4 +1,5 @@
 import { generateRoads } from './Roads';
+import type { AmbushDef } from './Ambush';
 
 /** Deterministic PRNG (mulberry32). */
 export function mulberry32(seed: number): () => number {
@@ -40,7 +41,15 @@ export type HubDecorKind =
 export type HubDecor = SpawnPoint & { kind: HubDecorKind };
 
 export type PoiKind =
-  'camp' | 'ruin' | 'scout' | 'shrine' | 'warren' | 'grove' | 'watch' | 'cairn';
+  | 'camp'
+  | 'ruin'
+  | 'scout'
+  | 'shrine'
+  | 'warren'
+  | 'grove'
+  | 'watch'
+  | 'cairn'
+  | 'ambush';
 
 /** Named wilderness landmark with mid-tier packs. */
 export type WildernessPoi = SpawnPoint & {
@@ -77,6 +86,8 @@ export type ZoneLayout = {
   decor?: HubDecor[];
   /** Named wilderness points of interest. */
   pois?: WildernessPoi[];
+  /** Surprise packs that wake up when the player approaches a POI. */
+  ambushes?: AmbushDef[];
   /** Lootable chests (often next to tough packs). */
   chests?: ChestSpawn[];
   /** World size for open hub. */
@@ -232,6 +243,14 @@ export function generateHub(seed = 1): ZoneLayout {
       y: 56.5,
       radius: 2.7,
     },
+    {
+      id: 'sunken_rift',
+      kind: 'ambush',
+      name: 'Sunken Rift',
+      x: 20.5,
+      y: 56.5,
+      radius: 2.6,
+    },
   ];
 
   // Plaza floor
@@ -358,6 +377,13 @@ export function generateHub(seed = 1): ZoneLayout {
   decor.push({ kind: 'rock', x: 39.5, y: 57.5 });
   decor.push({ kind: 'rock', x: 41.5, y: 55.5 });
   decor.push({ kind: 'pillar', x: 41.5, y: 54.5 });
+
+  // —— Sunken Rift (SW edge) ——
+  decor.push({ kind: 'crystal_vein', x: 20.5, y: 56.5 });
+  decor.push({ kind: 'crystal_vein', x: 19.5, y: 57.5 });
+  decor.push({ kind: 'rubble', x: 21.5, y: 57.5 });
+  decor.push({ kind: 'rock', x: 19.5, y: 55.5 });
+  decor.push({ kind: 'rock', x: 22.5, y: 55.5 });
 
   // Extra POI clutter so clearings read as places, not empty circles
   decor.push({ kind: 'crate', x: 10.5, y: 52.5 });
@@ -527,6 +553,23 @@ export function generateHub(seed = 1): ZoneLayout {
     { enemyId: 'shade', count: 3, x: 39.5, y: 55.5 },
     { enemyId: 'crawler', count: 1, x: 41.5, y: 57.5 },
   );
+  // Sunken Rift — light guard; the real threat wakes up on approach.
+  packs.push(
+    { enemyId: 'crawler', count: 1, x: 19.5, y: 55.5 },
+    { enemyId: 'shade', count: 1, x: 21.5, y: 55.5 },
+  );
+
+  // Surprise packs: spawn when the player walks close to the POI.
+  const ambushes: AmbushDef[] = [
+    {
+      id: 'sunken_rift',
+      enemyId: 'enemy_rift_wraith',
+      count: 2,
+      x: 21.5,
+      y: 56.5,
+      radius: 5,
+    },
+  ];
 
   chests.push(
     { id: 'chest_camp', x: 12.5, y: 53.5, lootTier: 2 },
@@ -581,6 +624,7 @@ export function generateHub(seed = 1): ZoneLayout {
     decor,
     pois,
     chests,
+    ambushes,
   };
 }
 

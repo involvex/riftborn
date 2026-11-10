@@ -6,6 +6,7 @@ import {
   worldToScreen,
 } from '../core/IsoMath';
 import { FIGURE_COLLISION_RADIUS, footprintFits } from '../core/FigureScale';
+import { shouldTriggerAmbush } from '../world/Ambush';
 import { Events, gameEvents } from '../core/EventBus';
 import {
   clearRiftbornDebug,
@@ -181,6 +182,8 @@ export class WorldScene extends Phaser.Scene {
   private riftMod: RiftModifier = getRiftModifier('none');
   private bossAnchor: { x: number; y: number } | null = null;
   private hubLayout: ZoneLayout | null = null;
+  /** POI ambushes already triggered this visit. */
+  private ambushFired = new Set<string>();
   private hubSize = DEFAULT_HUB_SIZE;
   private wildernessPois: WildernessPoi[] = [];
   private announcedPois = new Set<string>();
@@ -656,6 +659,8 @@ export class WorldScene extends Phaser.Scene {
     this.exploredDirty = true;
     this.shiftSystem.reset();
     this.shiftSystem.setEnabled(rift);
+    // Ambushes re-arm on every zone change (hub visits).
+    this.ambushFired.clear();
     this.bossShift.reset();
     audioBus.playMusic(rift ? 'combat' : 'hub');
     if (rift) {
@@ -1623,6 +1628,7 @@ export class WorldScene extends Phaser.Scene {
     gameState.playTimeSec += dt;
     this.player.tick(dt);
     gameState.tickRegen(dt);
+    this.checkAmbushTriggers();
 
     let dx = 0;
     let dy = 0;
@@ -1950,6 +1956,45 @@ export class WorldScene extends Phaser.Scene {
     this.triggerCombatShake('playerHit');
     this.triggerHitstop(false);
     if (gameState.hp <= 0) this.onPlayerDeath();
+  }
+
+  /**
+   * Surprise packs wake up when the player walks into a POI — the ambush
+   * fires once per visit and announces itself.
+   */
+  private checkAmbushTriggers(): void {
+    if (gameState.inRift) return;
+    const ambushes = this.hubLayout?.ambushes;
+    if (!ambushes || ambushes.length === 0) return;
+    for (const ambush of ambushes) {
+      if (this.ambushFired.has(ambush.id)) continue;
+      const trigger = shouldTriggerAmbush({
+        ambush,
+        playerX: this.player.worldX,
+        playerY: this.player.worldY,
+        fired: false,
+      });
+      if (!trigger) continue;
+      this.ambushFired.add(ambush.id);
+      const base = snapToTile(ambush.x, ambush.y);
+      for (let i = 0; i < ambush.count; i++) {
+        const ox = i === 0 ? 0 : i % 2 === 0 ? 0.7 : -0.7;
+        const oy = i === 0 ? 0 : i % 2 === 0 ? -0.7 : 0.7;
+        const p = snapToTile(base.x + ox, base.y + oy);
+        const enemy = new Enemy(
+          this,
+          `enemy_ambush_${this.enemySeq++}`,
+          ambush.enemyId,
+          p.x,
+          p.y,
+          { levelScale: gameState.progression.level },
+        );
+        enemy.maxBound = this.hubSize - 0.5;
+        this.enemies.push(enemy);
+      }
+      gameEvents.emit('ui:toast', { text: 'Ambush — rift shades rise!' });
+      audioBus.hit();
+    }
   }
 
   private updateEnemies(dt: number): void {
