@@ -53,6 +53,8 @@ Für [itch.io](https://involvex.itch.io/riftborn) als Browser-Spiel:
 - Steuerung/SHIFT erklärt: `site/controls.html` (SHIFT-Panel mit
   Energie/Gates/Phasen-Regel), `README.md` (SHIFT im Control-Table
   plus Hinweis auf Rebinding).
+- Spielstand: vier Fähigkeiten pro Klasse (Battle Cry / Rift Step / Chain Surge),
+  Rift Mender (heilt seine Gruppe) und die Sunken-Rift-POI mit Hinterhalt.
 - Audio: prozedural erzeugt, CC0 — siehe `public/assets/ATTRIBUTION.md`.
 
 ## GitHub Pages (Play in Browser)
