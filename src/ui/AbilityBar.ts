@@ -48,10 +48,11 @@ export class AbilityBar {
     this.root = scene.add.container(0, 0).setScrollFactor(0).setDepth(10_005);
     this.aimPreview = scene.add.graphics().setScrollFactor(0).setDepth(10_007);
     this.touchMode = shouldShowTouchControls();
-    const keys: Array<'skill1' | 'skill2' | 'skill3'> = [
+    const keys: Array<'skill1' | 'skill2' | 'skill3' | 'skill4'> = [
       'skill1',
       'skill2',
       'skill3',
+      'skill4',
     ];
     const skillFont = `${uiFontPx('skill', this.touchMode ? 'touch' : 'desktop')}px`;
     for (let i = 0; i < ACTIVE_SLOTS; i++) {
@@ -247,7 +248,7 @@ export class AbilityBar {
       s.key.setFontSize(compact ? 9 : 10);
       s.key.setPosition(x + w / 2 - 8, compact ? -16 : -18);
       s.key.setText(
-        formatHotkey((['skill1', 'skill2', 'skill3'] as const)[i]!),
+        formatHotkey((['skill1', 'skill2', 'skill3', 'skill4'] as const)[i]!),
       );
     });
   }

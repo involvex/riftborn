@@ -155,7 +155,8 @@ export type AbilityKind =
   | 'pulse'
   | 'leap'
   | 'bolt'
-  | 'barrier';
+  | 'barrier'
+  | 'chain';
 
 export type AbilityDef = {
   id: string;
@@ -175,6 +176,8 @@ export type AbilityDef = {
   slow?: number;
   barrierHp?: number;
   rankBarrier?: number;
+  /** Chain kind: world-tile jump distance between linked foes. */
+  chainRange?: number;
 };
 
 export type SkillNodeDef = {

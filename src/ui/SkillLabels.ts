@@ -19,6 +19,9 @@ const KNOWN: Record<string, string> = {
   'Rift Barrier': 'WARD',
   Barrier: 'WARD',
   'Arc Barrier': 'WARD',
+  'Battle Cry': 'CRY',
+  'Rift Step': 'STEP',
+  'Chain Surge': 'SURGE',
 };
 
 /** Approximate painted width for bold sans caps (CSS-px). */

@@ -39,24 +39,24 @@ Prebuilt releases are published via GitHub Actions and include a Windows portabl
 
 ## Controls
 
-| Key       | Action                   |
-| --------- | ------------------------ |
-| WASD      | Move                     |
-| LMB       | Attack (hold to repeat)  |
-| 1 / 2 / 3 | Class skills             |
-| E         | Gather / open / interact |
-| F         | Craft (at bench)         |
-| C         | Character / spend stats  |
-| I         | Inventory (big bag)      |
-| K         | Skill tree               |
-| M         | Map overlay              |
-| 3         | Equip tool               |
-| Space     | Dash                     |
-| R         | Enter / exit rift        |
-| B         | Return to town           |
-| Q         | SHIFT — world shift      |
-| P         | Co-op join/leave         |
-| Esc       | Pause / settings menu    |
+| Key           | Action                     |
+| ------------- | -------------------------- |
+| WASD          | Move                       |
+| LMB           | Attack (hold to repeat)    |
+| 1 / 2 / 3 / 4 | Class skills (4 per class) |
+| E             | Gather / open / interact   |
+| F             | Craft (at bench)           |
+| C             | Character / spend stats    |
+| I             | Inventory (big bag)        |
+| K             | Skill tree                 |
+| M             | Map overlay                |
+| 3             | Equip tool                 |
+| Space         | Dash                       |
+| R             | Enter / exit rift          |
+| B             | Return to town             |
+| Q             | SHIFT — world shift        |
+| P             | Co-op join/leave           |
+| Esc           | Pause / settings menu      |
 
 Keys are rebindable in **Esc → Settings**. **Q (SHIFT)** is the Game Off 2026
 theme hook: kills fill shift energy, then SHIFT swaps the world layer —

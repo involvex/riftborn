@@ -10,6 +10,12 @@ import {
   type OverlayDismissHandles,
 } from './OverlayDismiss';
 
+/** Grid metrics for the skill tree nodes (row 0 = top node). */
+const CELL_W = 140;
+const CELL_H = 76;
+const NODE_W = 124;
+const NODE_H = 62;
+
 /** Class skill tree — spend skill points to unlock / rank abilities. */
 export class SkillTreePanel {
   readonly root: Phaser.GameObjects.Container;
@@ -82,7 +88,11 @@ export class SkillTreePanel {
     this.title.setStyle({ fontSize: uiFont(this.scene, 22, 16, 26) });
     this.points.setPosition(0, -h / 2 + 48);
     this.nodesRoot.setPosition(0, -20);
-    this.detail.setPosition(0, h / 2 - 88);
+    // Detail line sits below the lowest node row, never on top of it.
+    const tree = getClassTree(gameState.progression.classId);
+    const maxRow = tree.reduce((m, n) => Math.max(m, n.row), 0);
+    const lowestNodeY = (maxRow - 0.6) * CELL_H - 20 + NODE_H / 2;
+    this.detail.setPosition(0, Math.min(lowestNodeY + 10, h / 2 - 44));
     this.detail.setWordWrapWidth(w - 48);
     const close = this.root.getData('closeBtn') as Phaser.GameObjects.Text;
     close.setPosition(0, h / 2 - 20);
@@ -116,12 +126,12 @@ export class SkillTreePanel {
     this.title.setText(`${cls.name} Skills`);
     this.points.setText(
       `Skill points: ${gameState.skills.unspentSkillPoints}` +
-        `   ·   Active keys ${formatHotkey('skill1')}/${formatHotkey('skill2')}/${formatHotkey('skill3')}`,
+        `   ·   Active keys ${formatHotkey('skill1')}/${formatHotkey('skill2')}/${formatHotkey('skill3')}/${formatHotkey('skill4')}`,
     );
 
     const tree = getClassTree(gameState.progression.classId);
-    const cellW = 150;
-    const cellH = 88;
+    const cellW = CELL_W;
+    const cellH = CELL_H;
     for (const node of tree) {
       const x = node.col * cellW;
       const y = (node.row - 0.6) * cellH;
@@ -135,8 +145,8 @@ export class SkillTreePanel {
       const box = this.scene.add.rectangle(
         x,
         y,
-        132,
-        72,
+        NODE_W,
+        NODE_H,
         locked ? 0x1a222c : 0x16241c,
         0.95,
       );
@@ -146,16 +156,16 @@ export class SkillTreePanel {
         0.9,
       );
       const label = this.scene.add
-        .text(x, y - 14, node.name, {
+        .text(x, y - 12, node.name, {
           fontFamily: 'Segoe UI, sans-serif',
           fontSize: '12px',
           color: locked && rank < 1 ? '#6a7a8a' : '#e8e4d8',
           align: 'center',
-          wordWrap: { width: 120 },
+          wordWrap: { width: 114 },
         })
         .setOrigin(0.5);
       const rankTxt = this.scene.add
-        .text(x, y + 18, `Rank ${rank}/${max}`, {
+        .text(x, y + 15, `Rank ${rank}/${max}`, {
           fontFamily: 'Consolas, monospace',
           fontSize: '11px',
           color: canSpend ? '#6ec6a0' : '#8a9aaa',
@@ -188,7 +198,7 @@ export class SkillTreePanel {
     }
 
     this.detail.setText(
-      'Click a node to unlock or improve. 3 actives on 1 / 2 / 3.',
+      'Click a node to unlock or improve. 4 actives on 1 / 2 / 3 / 4.',
     );
   }
 }

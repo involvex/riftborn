@@ -71,6 +71,7 @@ describe('computeTouchLayout', () => {
       const layout = computeTouchLayout(width, height);
 
       expect(layout.chromeButtons.length).toBe(5);
+      expect(layout.skillSlots.length).toBe(4);
       for (const btn of layout.chromeButtons) {
         expect(btn.r * 2).toBeGreaterThanOrEqual(44);
       }

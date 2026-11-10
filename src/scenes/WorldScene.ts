@@ -147,6 +147,7 @@ export class WorldScene extends Phaser.Scene {
   private keySkill1!: Phaser.Input.Keyboard.Key;
   private keySkill2!: Phaser.Input.Keyboard.Key;
   private keySkill3!: Phaser.Input.Keyboard.Key;
+  private keySkill4!: Phaser.Input.Keyboard.Key;
   private keyShift!: Phaser.Input.Keyboard.Key;
   private readonly shiftSystem = new ShiftSystem(gameEvents);
   private readonly bossShift = new BossShiftBrain();
@@ -641,6 +642,7 @@ export class WorldScene extends Phaser.Scene {
     this.keySkill1 = bindAction(this.input.keyboard, 'skill1');
     this.keySkill2 = bindAction(this.input.keyboard, 'skill2');
     this.keySkill3 = bindAction(this.input.keyboard, 'skill3');
+    this.keySkill4 = bindAction(this.input.keyboard, 'skill4');
     this.keyShift = bindAction(this.input.keyboard, 'shift');
   }
 
@@ -1715,6 +1717,7 @@ export class WorldScene extends Phaser.Scene {
     if (Phaser.Input.Keyboard.JustDown(this.keySkill1)) this.tryCastSkill(0);
     if (Phaser.Input.Keyboard.JustDown(this.keySkill2)) this.tryCastSkill(1);
     if (Phaser.Input.Keyboard.JustDown(this.keySkill3)) this.tryCastSkill(2);
+    if (Phaser.Input.Keyboard.JustDown(this.keySkill4)) this.tryCastSkill(3);
     if (this.keyShift && Phaser.Input.Keyboard.JustDown(this.keyShift)) {
       this.tryPlayerShift();
     }

@@ -7,29 +7,17 @@ import type { AbilityDef, CharacterClassId, SkillNodeDef } from '../types/game';
 import skillsData from '../data/skills.json';
 import type { CombatSystem } from './CombatSystem';
 import { pickAimedEnemyIndex } from './SkillAim';
+import { pickChainTargetIds } from './SkillChain';
 import { ASSIST_RANGE, pickEnemiesAround } from './AutoTarget';
 import { decideSkillRangeGate, skillRangeKind } from './SkillRangeGate';
+import { ACTIVE_SLOTS, classAbilityIds, getClassTree } from './SkillSlots';
+
+export { ACTIVE_SLOTS, classAbilityIds, getClassTree };
 
 const abilities = skillsData.abilities as Record<string, AbilityDef>;
-const trees = skillsData.trees as Record<CharacterClassId, SkillNodeDef[]>;
-
-export const ACTIVE_SLOTS = 3;
 
 export function getAbilityDef(id: string): AbilityDef | undefined {
   return abilities[id];
-}
-
-export function getClassTree(classId: CharacterClassId): SkillNodeDef[] {
-  return trees[classId] ?? trees.warrior;
-}
-
-export function classAbilityIds(classId: CharacterClassId): string[] {
-  const nodes = getClassTree(classId);
-  const ids: string[] = [];
-  for (const n of nodes) {
-    if (!ids.includes(n.abilityId)) ids.push(n.abilityId);
-  }
-  return ids.slice(0, ACTIVE_SLOTS);
 }
 
 export type SkillAimHint = {
@@ -65,14 +53,14 @@ export type SkillCastResult = {
 };
 
 /**
- * Active abilities (3 per class) + skill-point ranks.
+ * Active abilities (4 per class) + skill-point ranks.
  * Slot order follows the class tree definition order.
  */
 export class SkillSystem {
   unspentSkillPoints = 0;
   ranks: Record<string, number> = {};
   private classId: CharacterClassId = 'warrior';
-  private readonly cooldownLeft = [0, 0, 0];
+  private readonly cooldownLeft = [0, 0, 0, 0];
   private damageBuffUntil = 0;
   private damageBuffMult = 1;
   private barrierHp = 0;
@@ -425,6 +413,29 @@ export class SkillSystem {
         );
         const after = enemiesInRange(range, def.maxTargets ?? 3);
         for (const e of after) hitEnemy(e, base);
+        break;
+      }
+      case 'chain': {
+        // First link from the player, then hop foe to foe.
+        const first = nearestInRange(range);
+        if (!first) return { ok: false, reason: targetedSkipReason() };
+        const linkedIds = pickChainTargetIds(
+          ctx.enemies.map((e) => ({
+            id: e.id,
+            x: e.worldX,
+            y: e.worldY,
+            alive: e.alive && !e.isGhosted,
+          })),
+          first.id,
+          def.chainRange ?? 3,
+          def.maxTargets ?? 4,
+        );
+        for (const id of linkedIds) {
+          const e = ctx.enemies.find((x) => x.id === id);
+          if (e) hitEnemy(e, base);
+        }
+        ctx.player.faceToward(first.worldX, first.worldY);
+        targetPos = { x: first.worldX, y: first.worldY };
         break;
       }
       case 'buff': {

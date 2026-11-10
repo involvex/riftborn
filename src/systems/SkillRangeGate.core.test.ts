@@ -19,6 +19,7 @@ const ALL_KINDS: AbilityKind[] = [
   'leap',
   'bolt',
   'barrier',
+  'chain',
 ];
 
 const RANGE_KINDS: SkillRangeKind[] = ['targeted', 'aoe', 'mobility'];
@@ -30,9 +31,9 @@ describe('skillRangeKind', () => {
     }
   });
 
-  test('targeted casts are strike and bolt only', () => {
+  test('targeted casts are strike, bolt and chain', () => {
     for (const kind of ALL_KINDS) {
-      const targeted = kind === 'strike' || kind === 'bolt';
+      const targeted = kind === 'strike' || kind === 'bolt' || kind === 'chain';
       expect(skillRangeKind(kind) === 'targeted').toBe(targeted);
     }
   });

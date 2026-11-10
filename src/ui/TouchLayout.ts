@@ -20,7 +20,7 @@ export type TouchLayout = {
   shift: TouchPoint;
   atk: TouchPoint;
   interact: TouchPoint;
-  /** [0]=top, [1]=mid, [2]=bottom — column left of E. */
+  /** [0]=top, [1]=mid, [2]=bottom, [3]=lowest — column left of E. */
   skillSlots: TouchPoint[];
   /** BAG / CHAR / SKILL / MAP / MENU — ≥44px diameter. */
   chromeButtons: TouchPoint[];
@@ -117,19 +117,22 @@ export function computeTouchLayout(width: number, height: number): TouchLayout {
 
   const skillsX = interact.x - eR - skillR - gap;
   const skillPitch = skillR * 2 + gap;
-  let midY = atk.y;
-  const bottomY = midY + skillPitch;
-  if (bottomY + skillR > height - pad) {
-    midY = height - pad - skillR - skillPitch;
-  }
-  const topY = midY - skillPitch;
-  const topFloor = minimap.y + minimap.h + skillR + 16;
-  const shift = topY < topFloor ? topFloor - topY : 0;
 
+  // Four ability pads stacked from the bottom edge; the column tightens
+  // its pitch when the viewport is too short to clear the minimap.
+  const skillBottom = height - pad - skillR;
+  const skillTopFloor = minimap.y + minimap.h + skillR + 16;
+  const skillAvail = skillBottom - skillTopFloor;
+  const skillMaxPitch = Math.max(
+    skillR * 2 + 2,
+    Math.floor((skillAvail - skillR * 2) / 3),
+  );
+  const pitch = Math.min(skillPitch, skillMaxPitch);
   const skillSlots: TouchPoint[] = [
-    { x: skillsX, y: midY - skillPitch + shift, r: skillR },
-    { x: skillsX, y: midY + shift, r: skillR },
-    { x: skillsX, y: midY + skillPitch + shift, r: skillR },
+    { x: skillsX, y: skillBottom, r: skillR },
+    { x: skillsX, y: skillBottom - pitch, r: skillR },
+    { x: skillsX, y: skillBottom - pitch * 2, r: skillR },
+    { x: skillsX, y: skillBottom - pitch * 3, r: skillR },
   ];
 
   // ≥44px diameter chrome — row under minimap, right-aligned (clears status).

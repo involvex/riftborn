@@ -18,6 +18,7 @@ export function skillRangeKind(kind: AbilityKind): SkillRangeKind {
   switch (kind) {
     case 'strike':
     case 'bolt':
+    case 'chain':
       return 'targeted';
     case 'leap':
     case 'dash_strike':

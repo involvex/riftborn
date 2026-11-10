@@ -186,9 +186,10 @@ export class UIScene extends Phaser.Scene {
       if (event.key === '1') name = 'ONE';
       if (event.key === '2') name = 'TWO';
       if (event.key === '3') name = 'THREE';
+      if (event.key === '4') name = 'FOUR';
       if (
         name.length === 1 ||
-        ['SPACE', 'ESC', 'ONE', 'TWO', 'THREE'].includes(name)
+        ['SPACE', 'ESC', 'ONE', 'TWO', 'THREE', 'FOUR'].includes(name)
       ) {
         settingsStore.setHotkey(action, name);
         gameEvents.emit(Events.SETTINGS_CHANGED);

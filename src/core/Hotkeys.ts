@@ -39,6 +39,7 @@ export function formatHotkey(action: HotkeyAction): string {
   if (raw === 'ONE') return '1';
   if (raw === 'TWO') return '2';
   if (raw === 'THREE') return '3';
+  if (raw === 'FOUR') return '4';
   if (raw === 'SPACE') return 'Space';
   if (raw === 'ESC') return 'Esc';
   return raw;
@@ -53,6 +54,7 @@ export const HOTKEY_LABELS: Record<HotkeyAction, string> = {
   skill1: 'Ability 1',
   skill2: 'Ability 2',
   skill3: 'Ability 3',
+  skill4: 'Ability 4',
   portal: 'Rift portal',
   town: 'Return to town',
   dash: 'Dash',

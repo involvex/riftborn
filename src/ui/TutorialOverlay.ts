@@ -86,7 +86,7 @@ export class TutorialOverlay {
           'Kernloop: Town → Rift → Kampf → Beute.',
           '',
           'Stick — move · ATK — attack · E — interact',
-          'DASH — burst · 1/2/3 — skills',
+          'DASH — burst · 1/2/3/4 — skills',
         ]
       : [
           'Gleiche Welt, zwei Schichten: Asche & Schatten.',
@@ -96,7 +96,7 @@ export class TutorialOverlay {
           'Kernloop: Town → Rift → Kampf → Beute.',
           '',
           `WASD/LMB — move/attack · ${formatHotkey('gather')} — interact`,
-          `${formatHotkey('skill1')}/${formatHotkey('skill2')}/${formatHotkey('skill3')} — skills · ${formatHotkey('dash')} — dash`,
+          `${formatHotkey('skill1')}/${formatHotkey('skill2')}/${formatHotkey('skill3')}/${formatHotkey('skill4')} — skills · ${formatHotkey('dash')} — dash`,
           `${formatHotkey('portal')} — rift · ${formatHotkey('town')} — town · ${formatHotkey('map')}/${formatHotkey('inventory')} — map/bag`,
         ];
 

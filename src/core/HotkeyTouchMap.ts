@@ -56,6 +56,11 @@ export const HOTKEY_TOUCH_PATHS: Record<HotkeyAction, HotkeyTouchPath> = {
     path: 'Right skill column slot 3',
     kind: 'ability',
   },
+  skill4: {
+    action: 'skill4',
+    path: 'Right skill column slot 4',
+    kind: 'ability',
+  },
   portal: {
     action: 'portal',
     path: 'E near Obelisk / Exit (label Rift / Exit)',

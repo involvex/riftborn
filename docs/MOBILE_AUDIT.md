@@ -15,7 +15,7 @@ in-viewport with ≥44px interactive hits.
 | Character         | C           | Chrome CHAR (☰ / minimap tray)          | ok     |
 | Inventory         | I           | Chrome BAG                               | ok     |
 | Skill tree        | K           | Chrome SKILL                             | ok     |
-| Ability 1/2/3     | 1/2/3       | Right skill column (AbilityBar)          | ok     |
+| Ability 1/2/3/4   | 1/2/3/4     | Right skill column (AbilityBar)          | ok     |
 | Rift portal       | R           | E near Obelisk / Exit (label Rift/Exit)  | ok     |
 | Return to town    | B           | Town ⌂ left of minimap (rift/wilderness) | ok     |
 | Dash              | Space       | DASH pad                                 | ok     |

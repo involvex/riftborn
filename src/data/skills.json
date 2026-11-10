@@ -124,6 +124,46 @@
       "barrierHp": 35,
       "rankBarrier": 20,
       "duration": 8
+    },
+    "war_battlecry": {
+      "id": "war_battlecry",
+      "classId": "warrior",
+      "name": "Battle Cry",
+      "blurb": "Roar out — +45% damage for 5s. Open a damage window.",
+      "maxRank": 3,
+      "cooldown": 16,
+      "kind": "buff",
+      "damageMult": 1.45,
+      "rankBonus": 0.12,
+      "duration": 5
+    },
+    "mys_riftstep": {
+      "id": "mys_riftstep",
+      "classId": "mystic",
+      "name": "Rift Step",
+      "blurb": "Blink forward through foes — escape a pack or close in.",
+      "maxRank": 3,
+      "cooldown": 7,
+      "kind": "blink",
+      "range": 1.9,
+      "dash": 3.4,
+      "damageMult": 0.6,
+      "rankBonus": 0.1,
+      "maxTargets": 3
+    },
+    "mag_chain": {
+      "id": "mag_chain",
+      "classId": "mage",
+      "name": "Chain Surge",
+      "blurb": "Arc that leaps from foe to foe — shreds whole packs.",
+      "maxRank": 3,
+      "cooldown": 8,
+      "kind": "chain",
+      "range": 5,
+      "chainRange": 3.2,
+      "damageMult": 1.1,
+      "rankBonus": 0.18,
+      "maxTargets": 4
     }
   },
   "trees": {
@@ -155,6 +195,16 @@
         "blurb": "Starter stun strike. Rank up for longer stuns.",
         "col": 1,
         "row": 1,
+        "requires": [],
+        "starter": true
+      },
+      {
+        "id": "w_cry",
+        "abilityId": "war_battlecry",
+        "name": "Battle Cry",
+        "blurb": "Starter roar. Rank up for a wider damage window.",
+        "col": 0,
+        "row": 2,
         "requires": [],
         "starter": true
       }
@@ -189,6 +239,16 @@
         "row": 1,
         "requires": [],
         "starter": true
+      },
+      {
+        "id": "m_step",
+        "abilityId": "mys_riftstep",
+        "name": "Rift Step",
+        "blurb": "Starter blink. Rank up for a longer step.",
+        "col": 0,
+        "row": 2,
+        "requires": [],
+        "starter": true
       }
     ],
     "mage": [
@@ -219,6 +279,16 @@
         "blurb": "Starter shield. Rank up for more absorb HP.",
         "col": 1,
         "row": 1,
+        "requires": [],
+        "starter": true
+      },
+      {
+        "id": "g_chain",
+        "abilityId": "mag_chain",
+        "name": "Chain Surge",
+        "blurb": "Starter chain. Rank up for more links.",
+        "col": 0,
+        "row": 2,
         "requires": [],
         "starter": true
       }

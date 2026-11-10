@@ -188,6 +188,35 @@ export function playSkillVfx(scene: Phaser.Scene, req: SkillVfxRequest): void {
       });
       break;
     }
+    case 'chain': {
+      // Jagged arc from the caster to the first linked foe + impact burst.
+      const tx = req.targetX ?? req.worldX;
+      const ty = req.targetY ?? req.worldY;
+      const t = worldToScreen(tx, ty);
+      const steps = 6;
+      g.lineStyle(3, color, 0.95);
+      g.beginPath();
+      g.moveTo(screenX, screenY - 10);
+      for (let i = 1; i < steps; i++) {
+        const k = i / steps;
+        const jitter = (i % 2 === 0 ? 1 : -1) * 7;
+        g.lineTo(
+          screenX + (t.screenX - screenX) * k + jitter * 0.6,
+          screenY + (t.screenY - screenY) * k - 10 + jitter * 0.4,
+        );
+      }
+      g.lineTo(t.screenX, t.screenY - 10);
+      g.strokePath();
+      g.lineStyle(2, 0xffffff, 0.85);
+      g.strokeCircle(t.screenX, t.screenY - 10, 9);
+      scene.tweens.add({
+        targets: g,
+        alpha: 0,
+        duration: 260,
+        onComplete: () => g.destroy(),
+      });
+      break;
+    }
     case 'buff':
     case 'barrier': {
       const tint = req.kind === 'barrier' ? 0x6ec6ff : 0xffc107;
