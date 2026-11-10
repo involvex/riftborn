@@ -61,9 +61,14 @@ import {
 import { hubPoiFloorOverride } from '../world/HubPoiFloors';
 import { isWalkableOnLayer } from '../world/ShiftGateMap';
 import { netClient } from '../net/NetClient';
-import { bindAction } from '../core/Hotkeys';
+import { bindAction, formatHotkey } from '../core/Hotkeys';
 import { audioBus } from '../core/AudioBus';
 import { settingsStore } from '../core/SettingsStore';
+import { getItemDef } from '../systems/InventorySystem';
+import {
+  biomeMatDropToast,
+  type BiomeMatFeedbackState,
+} from '../systems/BiomeMatFeedback';
 import { playSkillVfx } from '../render/SkillVfx';
 import { playCombatBurst } from '../render/CombatVfx';
 import { screenDirToWorldDelta } from '../systems/SkillAim';
@@ -195,6 +200,10 @@ export class WorldScene extends Phaser.Scene {
   private chestSeq = 0;
   private lootSeq = 0;
   private dungeon: DungeonMap | null = null;
+  /** Session flag: craft-bench hint shown on first biome-mat toast. */
+  private biomeMatFeedback: BiomeMatFeedbackState = {
+    benchHintShown: false,
+  };
   /** Wall-clock ms — skip sim briefly for hitstop juice. */
   private hitstopUntil = 0;
   private enemyShots: {
@@ -2364,7 +2373,17 @@ export class WorldScene extends Phaser.Scene {
     const elite = enemy.awardsEliteLoot;
     if (Math.random() > (elite ? 0.85 : 0.35)) return;
     const qty = elite ? 2 + Math.floor(Math.random() * 2) : 1;
-    gameState.inventory.add(itemId, qty);
+    if (!gameState.inventory.add(itemId, qty)) return;
+    const itemName = getItemDef(itemId)?.name ?? itemId;
+    const toast = biomeMatDropToast({
+      itemName,
+      qty,
+      touch: shouldShowTouchControls(),
+      craftKey: formatHotkey('craft'),
+      state: this.biomeMatFeedback,
+    });
+    this.biomeMatFeedback = toast.state;
+    gameEvents.emit('ui:toast', { text: toast.text });
   }
 
   private spawnRiftBoss(): void {
