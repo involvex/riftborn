@@ -67,6 +67,10 @@ phase through foes on the other layer and open layer-locked gates.
 - Max level **50** · **2** unspent points per level
 - Stats: Strength, Vitality, Intellect, Spirit
 - Gear sets: Ashen, Riftbound, Bone (2pc / 4pc bonuses)
+- Four active abilities per class (keys 1-4): Warrior Battle Cry, Mystic Rift Step,
+  Mage Chain Surge
+- Rift Mender support foes heal their pack — kill them first
+- Hub POIs include the Sunken Rift, whose ambush wakes up on approach
 - Rift crafting: each rift biome feeds its own material (Ashen Bone, Rift
   Crystal, Grove Sap) — Nix pays 1.4×, the bench turns crystals + ore into a
   Rift Blade and bones + sap + ore into Rift Mail
