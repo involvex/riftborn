@@ -55,6 +55,8 @@ export const ENEMY_SHIFT_LAYER: Record<string, EnemyShiftLayer> = {
   enemy_bone_archer: 'ash',
   enemy_shadow_wolf: 'shadow',
   enemy_rift_wraith: 'shadow',
+  // Rift Mender heals on any layer — priority target, not a layer puzzle.
+  rift_mender: 'both',
 };
 
 export function enemyShiftLayer(defId: string): EnemyShiftLayer {

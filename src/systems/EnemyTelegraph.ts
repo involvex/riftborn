@@ -46,6 +46,9 @@ export function enemyTelegraphKind(defId: string): EnemyTelegraphKind | null {
       return 'shot';
     case 'enemy_rift_goblin':
       return 'rush';
+    case 'rift_mender':
+      // Green ring channel reads as "support incoming" (wail styling).
+      return 'wail';
     default:
       return null;
   }

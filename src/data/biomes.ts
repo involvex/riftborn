@@ -110,6 +110,8 @@ export const CRYSTAL_CAVERN_BIOME: BiomeDef = {
     { enemyId: 'crawler', weight: 0.25, minCount: 2, maxCount: 4 },
     { enemyId: 'enemy_rift_wraith', weight: 0.15, minCount: 1, maxCount: 3 },
     { enemyId: 'enemy_shadow_wolf', weight: 0.12, minCount: 1, maxCount: 2 },
+    // Support foe: kill the Mender before the pack regroups.
+    { enemyId: 'rift_mender', weight: 0.1, minCount: 1, maxCount: 1 },
   ],
   roomTypeRules: [
     'organic_caverns',
@@ -149,6 +151,8 @@ export const SHATTERED_WOODS_BIOME: BiomeDef = {
     { enemyId: 'shade', weight: 0.3, minCount: 2, maxCount: 3 },
     { enemyId: 'enemy_shadow_wolf', weight: 0.15, minCount: 1, maxCount: 3 },
     { enemyId: 'enemy_rift_goblin', weight: 0.12, minCount: 1, maxCount: 2 },
+    // Support foe: kill the Mender before the pack regroups.
+    { enemyId: 'rift_mender', weight: 0.1, minCount: 1, maxCount: 1 },
   ],
   roomTypeRules: [
     'forest_clearings',

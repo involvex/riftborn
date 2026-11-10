@@ -49,6 +49,9 @@ export type EnemyDef = {
   lootTable: string;
   isElite: boolean;
   lootTier: LootTier;
+  /** Support foes (Rift Mender): heal radius instead of an attack. */
+  healRange?: number;
+  healFrac?: number;
 };
 
 export type LootRoll = {

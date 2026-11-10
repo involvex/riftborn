@@ -23,6 +23,7 @@ const ALLOWED_ENEMY_IDS = new Set([
   'enemy_shadow_wolf',
   'enemy_bone_archer',
   'enemy_rift_wraith',
+  'rift_mender',
 ]);
 
 function assertBiomeShape(b: BiomeDef): void {

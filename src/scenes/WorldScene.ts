@@ -266,6 +266,8 @@ export class WorldScene extends Phaser.Scene {
           x: e.worldX,
           y: e.worldY,
           alive: e.alive,
+          hp: e.hp,
+          maxHp: e.maxHp,
         })),
         pois: this.wildernessPois.map((p) => ({
           id: p.id,
@@ -294,6 +296,7 @@ export class WorldScene extends Phaser.Scene {
         this.debugWalkDiagonalCorridor(steps ?? 45),
       spawnLootNearPlayer: () => this.debugSpawnLootNearPlayer(),
       gotoNearestHostile: () => this.debugGotoNearestHostile(),
+      gotoEnemy: (id: string) => this.debugGotoEnemy(id),
       interactHint: () => this.lastInteractHint,
       setShiftLayer: (layer) => this.shiftSystem.forceLayer(layer),
       showTutorial: () => gameEvents.emit('ui:showTutorial', {}),
@@ -318,23 +321,8 @@ export class WorldScene extends Phaser.Scene {
     return true;
   }
 
-  /** Warp ~2 tiles from the nearest living foe for rift screenshots. */
-  private debugGotoNearestHostile(): boolean {
-    if (!gameState.inRift) return false;
-    let best: Enemy | null = null;
-    let bestD = Infinity;
-    for (const e of this.enemies) {
-      if (!e.alive) continue;
-      const d = worldDistance(
-        { x: this.player.worldX, y: this.player.worldY },
-        { x: e.worldX, y: e.worldY },
-      );
-      if (d < bestD) {
-        bestD = d;
-        best = e;
-      }
-    }
-    if (!best) return false;
+  /** Warp ~2 tiles from a foe (screenshot stance), fallback onto its tile. */
+  private warpNear(best: Enemy): void {
     const dx = this.player.worldX - best.worldX;
     const dy = this.player.worldY - best.worldY;
     const len = Math.hypot(dx, dy) || 1;
@@ -351,6 +339,34 @@ export class WorldScene extends Phaser.Scene {
     this.player.syncScreen();
     this.revealFogAroundPlayer();
     this.emitMapSnapshot();
+  }
+
+  /** Agent / Playwright — warp next to a specific living foe by id. */
+  private debugGotoEnemy(id: string): boolean {
+    const target = this.enemies.find((e) => e.alive && e.id === id);
+    if (!target) return false;
+    this.warpNear(target);
+    return true;
+  }
+
+  /** Agent / Playwright — warp ~2 tiles from the nearest living foe for rift screenshots. */
+  private debugGotoNearestHostile(): boolean {
+    if (!gameState.inRift) return false;
+    let best: Enemy | null = null;
+    let bestD = Infinity;
+    for (const e of this.enemies) {
+      if (!e.alive) continue;
+      const d = worldDistance(
+        { x: this.player.worldX, y: this.player.worldY },
+        { x: e.worldX, y: e.worldY },
+      );
+      if (d < bestD) {
+        bestD = d;
+        best = e;
+      }
+    }
+    if (!best) return false;
+    this.warpNear(best);
     return true;
   }
 
@@ -824,8 +840,11 @@ export class WorldScene extends Phaser.Scene {
     // keep them on their tile; hub still jitters around the pack center.
     for (const pack of layout.packs) {
       if (!gameState.inRift && inPlaza(pack.x, pack.y)) continue;
+      // Support foes stay lone priority targets — mods never clone them.
+      const isSupport = pack.enemyId === 'rift_mender';
       const count =
-        pack.count + (gameState.inRift ? this.riftMod.packCountBonus : 0);
+        pack.count +
+        (gameState.inRift && !isSupport ? this.riftMod.packCountBonus : 0);
       for (let i = 0; i < count; i++) {
         let p = snapToTile(pack.x, pack.y);
         if (!gameState.inRift) {
@@ -1934,7 +1953,13 @@ export class WorldScene extends Phaser.Scene {
     if (netClient.connected) return;
     for (const enemy of this.enemies) {
       if (!enemy.alive) continue;
-      const result = enemy.update(dt, this.player.worldX, this.player.worldY);
+      // Allies are passed for support behavior (Rift Mender heals).
+      const result = enemy.update(
+        dt,
+        this.player.worldX,
+        this.player.worldY,
+        this.enemies,
+      );
       if (result.hitPlayer) {
         this.damagePlayer(result.damage);
       }

@@ -138,6 +138,8 @@ export function enemySpriteKey(defId: string): string {
   if (defId === 'enemy_shadow_wolf') return 'spr_enemy_shadow_wolf';
   if (defId === 'enemy_bone_archer') return 'spr_enemy_bone_archer';
   if (defId === 'enemy_rift_wraith') return 'spr_enemy_rift_wraith';
+  // Support foe: wisp sheet recolored (no new art).
+  if (defId === 'rift_mender') return 'spr_wisp';
   return 'spr_shade';
 }
 

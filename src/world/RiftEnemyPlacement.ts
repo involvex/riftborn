@@ -104,20 +104,24 @@ export function uniqueTileCenters(reachable: Set<ReachKey>): {
 
 const PACK_TYPES = ['shade', 'crawler', 'wisp'] as const;
 
+/** Support foes never come out of random picks — placed deliberately. */
+const SUPPORT_FOE_IDS = new Set(['rift_mender']);
+
 function pickEnemyId(
   rnd: () => number,
   enemyMix?: RiftEnemyMixEntry[] | null,
 ): string {
-  if (enemyMix && enemyMix.length > 0) {
+  const mix = (enemyMix ?? []).filter((e) => !SUPPORT_FOE_IDS.has(e.enemyId));
+  if (mix.length > 0) {
     let total = 0;
-    for (const e of enemyMix) total += Math.max(0, e.weight || 0);
+    for (const e of mix) total += Math.max(0, e.weight || 0);
     if (total > 0) {
       let r = rnd() * total;
-      for (const e of enemyMix) {
+      for (const e of mix) {
         r -= Math.max(0, e.weight || 0);
         if (r <= 0) return e.enemyId;
       }
-      return enemyMix[enemyMix.length - 1]!.enemyId;
+      return mix[mix.length - 1]!.enemyId;
     }
   }
   return PACK_TYPES[Math.floor(rnd() * PACK_TYPES.length)]!;
@@ -152,6 +156,62 @@ function layerEnemyIds(
   return Object.entries(ENEMY_SHIFT_LAYER)
     .filter(([, l]) => l === layer)
     .map(([id]) => id);
+}
+
+/**
+ * Guarantee the biome's support foe (Rift Mender) as exactly one lone pack,
+ * positioned beside the largest existing pack so his heals always land while
+ * he still sits back out of the player's first reach.
+ */
+function ensureSupportFoe(
+  packs: ZoneLayout['packs'],
+  enemyMix: RiftEnemyMixEntry[] | null | undefined,
+  candidates: { x: number; y: number }[],
+  spawn: { x: number; y: number },
+): void {
+  const SUPPORT_ID = 'rift_mender';
+  if (!enemyMix?.some((e) => e.enemyId === SUPPORT_ID)) return;
+  if (packs.some((p) => p.enemyId === SUPPORT_ID)) return;
+  if (candidates.length === 0) return;
+  // Companion distance to the biggest pack: close enough to heal, far
+  // enough that the player fights the pack first.
+  const NEAR = 2.0;
+  const FAR = 4.5;
+  let best: { x: number; y: number } | null = null;
+  let bestScore = Infinity;
+  for (const c of candidates) {
+    if (Math.hypot(c.x - spawn.x, c.y - spawn.y) < 3) continue;
+    let nearestPack = Infinity;
+    for (const p of packs) {
+      const d = Math.hypot(p.x - c.x, p.y - c.y);
+      if (d < nearestPack) nearestPack = d;
+    }
+    if (nearestPack < NEAR || nearestPack > FAR) continue;
+    // Prefer the closest valid spot to a pack (heals reliably).
+    if (nearestPack < bestScore) {
+      bestScore = nearestPack;
+      best = c;
+    }
+  }
+  // Fallback: farthest reachable tile (healRange covers the approach).
+  if (!best) {
+    let bestD = -1;
+    for (const c of candidates) {
+      const d = Math.hypot(c.x - spawn.x, c.y - spawn.y);
+      if (d < 3) continue;
+      if (d > bestD) {
+        bestD = d;
+        best = c;
+      }
+    }
+  }
+  const spot = best ?? candidates[candidates.length - 1]!;
+  packs.push({
+    enemyId: SUPPORT_ID,
+    count: 1,
+    x: spot.x,
+    y: spot.y,
+  });
 }
 
 function layerPackCount(
@@ -345,5 +405,6 @@ export function placeRiftEnemyPacks(
     enemyMix,
     rnd,
   );
+  ensureSupportFoe(packs, enemyMix, candidates, spawn);
   return packs;
 }

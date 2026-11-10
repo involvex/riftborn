@@ -51,6 +51,16 @@ import {
   rushSpeed,
   shouldStartRush,
 } from '../systems/EnemyRush';
+import {
+  MENDER_SIGHT,
+  MENDER_WINDUP,
+  isMenderEnemy,
+  menderHealPlan,
+  menderMoveDir,
+  menderShouldChannel,
+  menderWoundedAllies,
+  type MenderAlly,
+} from '../systems/EnemyMender';
 
 const enemies = enemiesData as Record<string, EnemyDef>;
 
@@ -88,6 +98,7 @@ export class Enemy {
   private wailWindup = 0;
   private rushRemaining = 0;
   private rushReadyIn = 0;
+  private menderWindup = 0;
   private readonly kiteStrafeSign: 1 | -1;
   /** Runtime elite (random pack upgrade), distinct from boss defs. */
   readonly elitePack: boolean;
@@ -244,6 +255,7 @@ export class Enemy {
     dt: number,
     playerX: number,
     playerY: number,
+    allies?: readonly Enemy[],
   ): { hitPlayer: boolean; damage: number; shot?: EnemyShot | null } {
     if (!this.alive) return { hitPlayer: false, damage: 0, shot: null };
     this.attackTimer = Math.max(0, this.attackTimer - dt);
@@ -260,6 +272,7 @@ export class Enemy {
       this.pounce = null;
       this.wailWindup = 0;
       this.rushRemaining = 0;
+      this.menderWindup = 0;
       this.applyBaseTint();
       this.playAnim('idle');
       this.syncScreen();
@@ -295,10 +308,16 @@ export class Enemy {
       this.pounce = null;
       this.wailWindup = 0;
       this.rushRemaining = 0;
+      this.menderWindup = 0;
       this.applyBaseTint();
       this.playAnim('idle');
       this.syncScreen();
       return { hitPlayer: false, damage: 0, shot: null };
+    }
+
+    // Support foe: never fights — channels a heal pulse for its pack.
+    if (isMenderEnemy(this.def.id)) {
+      return this.updateMender(dt, playerX, playerY, allies);
     }
 
     if (this.pounce) {
@@ -565,6 +584,102 @@ export class Enemy {
     return { hitPlayer, damage, shot };
   }
 
+  /**
+   * Rift Mender: stands off from the player, channels a 1.1s green ring
+   * (counterplay window), then heals wounded allies in healRange. Never
+   * damages the player — killing it first is the answer.
+   */
+  private updateMender(
+    dt: number,
+    playerX: number,
+    playerY: number,
+    allies?: readonly Enemy[],
+  ): { hitPlayer: false; damage: 0; shot: null } {
+    const dist = worldDistance(
+      { x: this.worldX, y: this.worldY },
+      { x: playerX, y: playerY },
+    );
+    if (dist > MENDER_SIGHT) {
+      this.body.setVisible(false);
+      this.playAnim('idle');
+      return { hitPlayer: false, damage: 0, shot: null };
+    }
+    this.body.setVisible(true);
+
+    this.attackTimer = Math.max(0, this.attackTimer - dt);
+    const spd = this.def.speed * this.slowMult * this.modSpeedMult;
+    const dir = menderMoveDir(
+      { x: this.worldX, y: this.worldY },
+      { x: playerX, y: playerY },
+    );
+    if (dir.x !== 0 || dir.y !== 0) {
+      this.worldX += dir.x * spd * dt;
+      this.worldY += dir.y * spd * dt;
+      this.setFacingFromDelta(dir.x, dir.y);
+      this.playAnim('walk');
+    } else {
+      this.playAnim('idle');
+    }
+
+    const healRange = this.def.healRange ?? 0;
+    const allAllies: MenderAlly[] = (allies ?? []).map((e) => ({
+      id: e.id,
+      x: e.worldX,
+      y: e.worldY,
+      hp: e.hp,
+      maxHp: e.maxHp,
+      alive: e.alive,
+    }));
+    const self: MenderAlly = {
+      id: this.id,
+      x: this.worldX,
+      y: this.worldY,
+      hp: this.hp,
+      maxHp: this.maxHp,
+      alive: this.alive,
+    };
+    const wounded = menderWoundedAllies(self, allAllies, healRange);
+
+    if (this.menderWindup > 0) {
+      this.menderWindup = Math.max(0, this.menderWindup - dt);
+      this.setFacingToward(playerX, playerY);
+      this.playAnim('attack', true);
+      this.sprite.setTint(0x5ac08a);
+      if (this.menderWindup <= 0) {
+        for (const step of menderHealPlan(self, allAllies, this.def)) {
+          const target = (allies ?? []).find((a) => a.id === step.allyId);
+          target?.heal(step.amount);
+        }
+        this.attackTimer = this.def.attackCooldown;
+        this.applyBaseTint();
+        playEnemyTelegraph(
+          this.scene,
+          'wail',
+          'impact',
+          this.worldX,
+          this.worldY,
+        );
+      }
+    } else if (menderShouldChannel(this.attackTimer, wounded.length, dist)) {
+      this.menderWindup = MENDER_WINDUP;
+      this.setFacingToward(playerX, playerY);
+      this.playAnim('attack', true);
+      this.sprite.setTint(0x5ac08a);
+      playEnemyTelegraph(
+        this.scene,
+        'wail',
+        'windup',
+        this.worldX,
+        this.worldY,
+      );
+    }
+
+    this.worldX = Phaser.Math.Clamp(this.worldX, 0.5, this.maxBound);
+    this.worldY = Phaser.Math.Clamp(this.worldY, 0.5, this.maxBound);
+    this.syncScreen();
+    return { hitPlayer: false, damage: 0, shot: null };
+  }
+
   private setFacingFromDelta(dx: number, dy: number): void {
     const facing = spriteFacingFromDelta(dx, dy, this.facing);
     this.facing = facing.sign;
@@ -621,6 +736,14 @@ export class Enemy {
       return true;
     }
     return false;
+  }
+
+  /** Support heal — clamps to max and refreshes the bar (no hit feedback). */
+  heal(amount: number): void {
+    if (!this.alive || amount <= 0) return;
+    const before = this.hp;
+    this.hp = Math.min(this.maxHp, this.hp + amount);
+    if (this.hp !== before) this.redrawBar();
   }
 
   /** Hit frames when available; tint + nudge as fallback. */

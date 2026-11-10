@@ -29,6 +29,9 @@ export type RiftbornEnemySnap = {
   x: number;
   y: number;
   alive: boolean;
+  /** Current / max HP — lets agents verify heals and damage ticks. */
+  hp: number;
+  maxHp: number;
 };
 
 export type RiftbornPoiSnap = {
@@ -111,6 +114,8 @@ export type RiftbornApi = {
   spawnLootNearPlayer: () => boolean;
   /** Warp near the closest living foe (rift screenshot framing). */
   gotoNearestHostile: () => boolean;
+  /** Warp near a specific living foe by id (targeted agent checks). */
+  gotoEnemy: (id: string) => boolean;
   /** Current context E-button hint. */
   interactHint: () => { label: string; dimmed: boolean; kind: string };
   /** Expand / collapse the touch chrome tray (BAG/CHAR/…). */
@@ -156,6 +161,7 @@ export type RiftbornDebugHooks = {
   walkDiagonalCorridor?: (steps?: number) => number;
   spawnLootNearPlayer?: () => boolean;
   gotoNearestHostile?: () => boolean;
+  gotoEnemy?: (id: string) => boolean;
   interactHint?: () => { label: string; dimmed: boolean; kind: string };
   setShiftLayer?: (layer: 'ash' | 'shadow') => void;
   showTutorial?: () => void;
@@ -242,6 +248,7 @@ let gotoDiagonalHook: (() => boolean) | null = null;
 let walkDiagonalHook: ((steps?: number) => number) | null = null;
 let spawnLootHook: (() => boolean) | null = null;
 let gotoHostileHook: (() => boolean) | null = null;
+let gotoEnemyHook: ((id: string) => boolean) | null = null;
 let interactHintHook:
   (() => { label: string; dimmed: boolean; kind: string }) | null = null;
 let setShiftLayerHook: ((layer: 'ash' | 'shadow') => void) | null = null;
@@ -281,6 +288,7 @@ export function installRiftbornDebug(
     walkDiagonalHook = getSource.walkDiagonalCorridor ?? null;
     spawnLootHook = getSource.spawnLootNearPlayer ?? null;
     gotoHostileHook = getSource.gotoNearestHostile ?? null;
+    gotoEnemyHook = getSource.gotoEnemy ?? null;
     interactHintHook = getSource.interactHint ?? null;
     setShiftLayerHook = getSource.setShiftLayer ?? null;
     showTutorialHook = getSource.showTutorial ?? null;
@@ -349,6 +357,7 @@ export function installRiftbornDebug(
       walkDiagonalHook ? walkDiagonalHook(steps) : 0,
     spawnLootNearPlayer: () => (spawnLootHook ? spawnLootHook() : false),
     gotoNearestHostile: () => (gotoHostileHook ? gotoHostileHook() : false),
+    gotoEnemy: (id: string) => (gotoEnemyHook ? gotoEnemyHook(id) : false),
     interactHint: () => (interactHintHook ? interactHintHook() : emptyHint),
     setTouchChrome: (open: boolean) => {
       gameEvents.emit('ui:setTouchChrome', { open });
@@ -431,6 +440,7 @@ export function clearRiftbornDebug(): void {
       walkDiagonalCorridor: () => 0,
       spawnLootNearPlayer: () => false,
       gotoNearestHostile: () => false,
+      gotoEnemy: () => false,
       interactHint: () => ({ label: 'E', dimmed: true, kind: 'none' }),
       setTouchChrome: () => {},
       touchChromeOpen: () => false,
