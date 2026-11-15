@@ -6,6 +6,7 @@ import {
   worldToScreen,
 } from '../core/IsoMath';
 import { FIGURE_COLLISION_RADIUS, footprintFits } from '../core/FigureScale';
+import { getAppliedCameraZoom } from '../core/GraphicsQuality';
 import { shouldTriggerAmbush } from '../world/Ambush';
 import { Events, gameEvents } from '../core/EventBus';
 import {
@@ -285,10 +286,10 @@ export class WorldScene extends Phaser.Scene {
     this.setupInput();
     this.bindWebglRecovery();
     // Tighter follow on touch — soft lerp reads as input lag
-    const camLerp = shouldShowTouchControls() ? 0.38 : 0.14;
+    const camLerp = shouldShowTouchControls() ? 0.28 : 0.14;
     this.cameras.main.startFollow(this.player.body, true, camLerp, camLerp);
-    // Same FOV on phone and desktop — Low graphics must not zoom via renderScale.
-    this.cameras.main.setZoom(1.1);
+    // Low buffer downscale pairs with a matching zoom so FOV stays desktop-like.
+    this.cameras.main.setZoom(getAppliedCameraZoom(1.1));
     this.publishDebugApi();
 
     this.events.on(Phaser.Scenes.Events.SHUTDOWN, () => this.cleanup());
@@ -614,6 +615,7 @@ export class WorldScene extends Phaser.Scene {
         this.rebindActionKeys();
         audioBus.applyMusicVolume();
         this.shiftFxIntensity = settingsStore.get().shiftFxIntensity;
+        this.cameras.main.setZoom(getAppliedCameraZoom(1.1));
       }),
       gameEvents.on('combat:castSkill', (p) => {
         const d = p as {

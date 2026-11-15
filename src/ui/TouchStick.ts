@@ -51,13 +51,13 @@ export function stickToMove(
   // Convert screen direction to world direction (exactly one conversion)
   const worldDir = screenDirToWorldDelta(dirX, dirY);
 
-  // Full speed at 0.5 magnitude, analogue in between
+  // Full speed at ~0.42 magnitude — tighter analog band for thumbs.
+  const FULL_AT = 0.42;
   let speed01: number;
-  if (mag >= 0.5) {
+  if (mag >= FULL_AT) {
     speed01 = 1;
   } else {
-    // Scale from deadzone to full speed at 0.5
-    speed01 = (mag - 0.12) / (0.5 - 0.12);
+    speed01 = (mag - 0.12) / (FULL_AT - 0.12);
   }
   if (speed01 < 0) speed01 = 0;
   if (speed01 > 1) speed01 = 1;
@@ -81,7 +81,7 @@ export function getStickRestPosition(layout: {
 }
 
 /** Total stick accel ramp duration — soft start, full speed at the end. */
-export const STICK_ACCEL_MS = 80;
+export const STICK_ACCEL_MS = 60;
 
 /**
  * Accel ramp curve, front-loaded: sqrt keeps the 80 ms ease-in from a

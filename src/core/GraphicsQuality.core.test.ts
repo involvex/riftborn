@@ -4,6 +4,7 @@ import {
   computeGraphicsResize,
   cycleGraphicsQuality,
   gameSizeForProfile,
+  getAppliedCameraZoom,
   graphicsQualityLabel,
   profileForTier,
   resolveGraphicsTier,
@@ -90,6 +91,36 @@ describe('render scale vs world FOV', () => {
     expect(r.logical).toEqual({ width: 1280, height: 720 });
     expect(r.buffer).toEqual({ width: 1280, height: 720 });
     expect(r.css).toEqual({ width: 1280, height: 720 });
+  });
+
+  test('FOV-safe Low: buffer + zoom*scale matches High tile span', () => {
+    const cssW = 1024;
+    const cssH = 473;
+    const baseZoom = 1.1;
+    const low = profileForTier('low');
+    const high = profileForTier('high');
+    const sizes = computeGraphicsResize(cssW, cssH, low.renderScale);
+    const lowZoom = baseZoom * low.renderScale;
+    const highSpan = visibleWorldTileSpan(
+      cssW,
+      cssH,
+      baseZoom * high.renderScale,
+    );
+    const lowSpan = visibleWorldTileSpan(
+      sizes.buffer.width,
+      sizes.buffer.height,
+      lowZoom,
+    );
+    // floor() on buffer shrinks a pixel or two — stay within ~1%.
+    expect(lowSpan.tilesX / highSpan.tilesX).toBeCloseTo(1, 2);
+    expect(lowSpan.tilesY / highSpan.tilesY).toBeCloseTo(1, 2);
+  });
+});
+
+describe('getAppliedCameraZoom', () => {
+  test('defaults to base when scale is full', () => {
+    // Before applyGraphicsProfile, scale is 1 → identity.
+    expect(getAppliedCameraZoom(1.1)).toBeCloseTo(1.1, 5);
   });
 });
 

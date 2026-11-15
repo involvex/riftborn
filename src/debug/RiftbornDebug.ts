@@ -1,6 +1,7 @@
 import { Events, gameEvents } from '../core/EventBus';
 import {
   currentGraphicsProfile,
+  getAppliedGraphicsSizes,
   getAppliedRenderScale,
 } from '../core/GraphicsQuality';
 import { settingsStore } from '../core/SettingsStore';
@@ -128,6 +129,10 @@ export type RiftbornApi = {
     tier: string;
     renderScale: number;
     particleCap: number;
+    logicalWidth?: number;
+    logicalHeight?: number;
+    bufferWidth?: number;
+    bufferHeight?: number;
   };
   /** Force a skill-slot cooldown (screenshot / cooldown overlay). */
   forceSkillCooldown: (slot: number, sec: number) => void;
@@ -367,11 +372,16 @@ export function installRiftbornDebug(
     graphicsProfile: () => {
       const setting = settingsStore.get().graphicsQuality;
       const p = currentGraphicsProfile();
+      const sizes = getAppliedGraphicsSizes();
       return {
         setting,
         tier: p.tier,
         renderScale: getAppliedRenderScale(),
         particleCap: p.particleCap,
+        logicalWidth: sizes.logical.width,
+        logicalHeight: sizes.logical.height,
+        bufferWidth: sizes.buffer.width,
+        bufferHeight: sizes.buffer.height,
       };
     },
     forceSkillCooldown: (slot: number, sec: number) => {
@@ -449,6 +459,10 @@ export function clearRiftbornDebug(): void {
         tier: 'high',
         renderScale: 1,
         particleCap: 12,
+        logicalWidth: 0,
+        logicalHeight: 0,
+        bufferWidth: 0,
+        bufferHeight: 0,
       }),
       forceSkillCooldown: () => {},
       setShiftLayer: () => {},

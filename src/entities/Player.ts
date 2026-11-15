@@ -137,8 +137,10 @@ export class Player {
     this.applyFacing();
 
     const len = Math.hypot(dx, dy) || 1;
-    const stepX = (dx / len) * this.speed * dt;
-    const stepY = (dy / len) * this.speed * dt;
+    // Touch stick encodes 0..1 speed in vector length; WASD stays unit-length.
+    const speedMul = Math.min(1, len);
+    const stepX = (dx / len) * this.speed * speedMul * dt;
+    const stepY = (dy / len) * this.speed * speedMul * dt;
     if (this.walkCheck) {
       const res = slideMove(
         this.walkCheck,

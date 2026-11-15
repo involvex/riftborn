@@ -9,7 +9,7 @@ describe('stickToMove', () => {
   });
 
   test('half deflection reaches full speed (analog band is tight)', () => {
-    const r = stickToMove(25, 0, 50); // mag 0.5
+    const r = stickToMove(21, 0, 50); // mag 0.42
     expect(r.speed01).toBeCloseTo(1, 5);
   });
 
@@ -21,11 +21,11 @@ describe('stickToMove', () => {
   });
 
   test('linear ramp inside the analog band', () => {
-    const mid = stickToMove(31, 0, 50); // mag 0.62 > 0.5 => full
+    const mid = stickToMove(31, 0, 50); // mag 0.62 > 0.42 => full
     expect(mid.speed01).toBe(1);
     const low = stickToMove(15, 0, 50); // mag 0.3
-    // (0.3 - 0.12) / (0.5 - 0.12) = 0.4737
-    expect(low.speed01).toBeCloseTo((0.3 - 0.12) / 0.38, 4);
+    // (0.3 - 0.12) / (0.42 - 0.12) = 0.6
+    expect(low.speed01).toBeCloseTo((0.3 - 0.12) / 0.3, 4);
   });
 
   test('zero radius never moves', () => {
@@ -69,7 +69,7 @@ describe('stickAccelFactor', () => {
 
   test('sqrt curve is front-loaded vs a linear ramp', () => {
     const linear = (ms: number) => Math.min(1, ms / STICK_ACCEL_MS);
-    for (const ms of [20, 30, 45, 60]) {
+    for (const ms of [15, 20, 30, 45]) {
       expect(stickAccelFactor(ms)).toBeGreaterThan(linear(ms));
     }
     // Half ramp speed by a quarter of the duration.

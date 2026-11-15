@@ -103,8 +103,7 @@ const HIGH: GraphicsProfile = {
 
 const LOW: GraphicsProfile = {
   tier: 'low',
-  // renderScale is recorded for probes; live path keeps CSS FOV and cuts
-  // juice/particles instead (FOV-safe buffer downscale still deferred).
+  // Buffer resize + camera zoom×scale keep FOV; juice/particles also cut.
   renderScale: 0.65,
   maxDamageNumbers: 8,
   particleCap: 3,
@@ -166,14 +165,15 @@ export function cycleGraphicsQuality(
 }
 
 let appliedScale = 1;
+let appliedBuffer: Size2 = { width: 0, height: 0 };
+let appliedLogical: Size2 = { width: 0, height: 0 };
 let resizeHooked = false;
 let gameRef: Phaser.Game | null = null;
 
 /**
- * M7 (Game Off): keep logical game size = CSS viewport (same FOV at
- * Low/High). Shrinking `scale.resize` by renderScale zooms the world —
- * do not re-enable that. Low cuts particles / juice / damage numbers.
- * `computeGraphicsResize` still documents a future FOV-safe buffer split.
+ * M7b: FOV-safe Low fillrate. Resize the Phaser canvas/game to the
+ * *buffer* size, stretch CSS back to the viewport, and ask cameras to
+ * use `getAppliedCameraZoom(base)` so tile span matches High.
  * Requires Phaser.Scale.NONE (see main.ts).
  */
 export function applyGraphicsProfile(game: Phaser.Game): void {
@@ -190,12 +190,15 @@ export function applyGraphicsProfile(game: Phaser.Game): void {
     appliedScale = p.renderScale;
     const cssW = window.innerWidth;
     const cssH = window.innerHeight;
-    const logical = gameSizeForProfile(cssW, cssH, p.renderScale);
-    // Always CSS size — Low/High show the same tile span.
-    gameRef.scale.resize(logical.width, logical.height);
+    const sizes = computeGraphicsResize(cssW, cssH, p.renderScale);
+    appliedLogical = sizes.logical;
+    appliedBuffer = sizes.buffer;
+    // Low: smaller backing store (fill-rate). High: full CSS pixels.
+    const target = p.renderScale < 1 ? sizes.buffer : sizes.logical;
+    gameRef.scale.resize(target.width, target.height);
     if (gameRef.canvas) {
-      gameRef.canvas.style.width = `${cssW}px`;
-      gameRef.canvas.style.height = `${cssH}px`;
+      gameRef.canvas.style.width = `${sizes.css.width}px`;
+      gameRef.canvas.style.height = `${sizes.css.height}px`;
     }
   };
 
@@ -216,4 +219,26 @@ export function refreshGraphicsProfile(): void {
 
 export function getAppliedRenderScale(): number {
   return appliedScale;
+}
+
+/**
+ * Camera zoom that keeps world FOV stable when Low uses a smaller buffer.
+ * Pair with `cameras.main.setZoom(getAppliedCameraZoom(1.1))`.
+ */
+export function getAppliedCameraZoom(baseZoom: number): number {
+  if (!(appliedScale > 0) || appliedScale >= 1) return baseZoom;
+  return baseZoom * appliedScale;
+}
+
+/** Live sizes for probes / Playwright (FOV + fillrate checks). */
+export function getAppliedGraphicsSizes(): {
+  logical: Size2;
+  buffer: Size2;
+  renderScale: number;
+} {
+  return {
+    logical: { ...appliedLogical },
+    buffer: { ...appliedBuffer },
+    renderScale: appliedScale,
+  };
 }
