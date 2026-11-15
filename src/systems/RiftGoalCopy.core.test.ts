@@ -2,6 +2,8 @@ import { describe, expect, test } from 'bun:test';
 import {
   RIFT_GOAL_LINE,
   bossPhaseToastText,
+  bossShiftHopToastText,
+  bossShiftWarnToastText,
   riftEnterToastText,
   riftGoalHint,
   veiledWrongLayerToast,
@@ -46,5 +48,22 @@ describe('RiftGoalCopy', () => {
     expect(text).toContain('Rift Lord');
     expect(text).toContain('Exit');
     expect(text).toContain('D1');
+  });
+
+  test('boss shift warn names the next layer', () => {
+    const text = bossShiftWarnToastText({
+      bossName: 'Rift Lord',
+      nextLayerName: 'Schatten',
+    });
+    expect(text).toContain('Rift Lord');
+    expect(text).toContain('Schatten');
+  });
+
+  test('boss shift hop names the landed layer', () => {
+    const text = bossShiftHopToastText({
+      bossName: 'Rift Lord',
+      layerName: 'Asche',
+    });
+    expect(text).toContain('shifts to Asche');
   });
 });

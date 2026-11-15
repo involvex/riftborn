@@ -108,6 +108,8 @@ import {
 } from '../systems/RiftModifiers';
 import {
   bossPhaseToastText,
+  bossShiftHopToastText,
+  bossShiftWarnToastText,
   riftEnterToastText,
   veiledWrongLayerToast,
 } from '../systems/RiftGoalCopy';
@@ -135,6 +137,7 @@ import { ShiftSystem } from '../systems/ShiftSystem';
 import { BossShiftBrain } from '../systems/BossShift';
 import { cancelShiftTransition, playShiftTransition } from '../render/ShiftFx';
 import { shiftShakeParams } from '../render/ShiftFeel';
+import { playEnemyTelegraph } from '../render/EnemyTelegraphVfx';
 import {
   blendTint,
   layerOverlayAlpha,
@@ -2505,7 +2508,11 @@ export class WorldScene extends Phaser.Scene {
         depthLabel: riftDepthLabel(this.riftDepth),
       }),
     });
-    this.safeCameraFlash(160, 120, 40, 80);
+    // W1: emerge reads as a setpiece, not a quiet spawn flash.
+    this.safeCameraFlash(220, 160, 60, 120);
+    this.triggerCombatShake('boss');
+    audioBus.skill();
+    playEnemyTelegraph(this, 'wail', 'impact', boss.worldX, boss.worldY);
     this.emitRiftProgress();
   }
 
@@ -2515,19 +2522,40 @@ export class WorldScene extends Phaser.Scene {
     }
     // Layer-locked mods pin the boss — no free shifting.
     if (riftModLayerLock(this.riftMod)) return;
-    const next = this.bossShift.tick(dtMs);
-    if (!next) return;
+    const ev = this.bossShift.tick(dtMs);
+    if (!ev) return;
     const boss = this.enemies.find(
       (e) =>
         e.alive &&
         (this.riftBossId !== null ? e.id === this.riftBossId : e.isBoss),
     );
     if (!boss) return;
-    boss.setCombatLayer(next);
+
+    if (ev.phase === 'warn') {
+      const nextName = SHIFT_LAYERS[ev.nextLayer].name;
+      gameEvents.emit('ui:toast', {
+        text: bossShiftWarnToastText({
+          bossName: boss.def.name,
+          nextLayerName: nextName,
+        }),
+      });
+      playEnemyTelegraph(this, 'wail', 'windup', boss.worldX, boss.worldY);
+      audioBus.open();
+      return;
+    }
+
+    boss.setCombatLayer(ev.layer);
     boss.syncShiftLayer(this.shiftSystem.layer);
-    const name = SHIFT_LAYERS[next].name;
+    playShiftTransition(this, ev.layer, this.shiftFxIntensity);
+    const punch = shiftShakeParams(this.shiftFxIntensity);
+    this.triggerHitShake(punch.ms, punch.intensity);
+    playEnemyTelegraph(this, 'wail', 'impact', boss.worldX, boss.worldY);
+    audioBus.skill();
     gameEvents.emit('ui:toast', {
-      text: `${boss.def.name} shifts to ${name}!`,
+      text: bossShiftHopToastText({
+        bossName: boss.def.name,
+        layerName: SHIFT_LAYERS[ev.layer].name,
+      }),
     });
   }
 

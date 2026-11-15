@@ -35,3 +35,19 @@ export function bossPhaseToastText(opts: {
 }): string {
   return `${opts.bossName} emerges! (${opts.depthLabel}) — beat it to open Exit`;
 }
+
+/** Toast ~800 ms before the boss hops layers. */
+export function bossShiftWarnToastText(opts: {
+  bossName: string;
+  nextLayerName: string;
+}): string {
+  return `${opts.bossName} gathering… → ${opts.nextLayerName}!`;
+}
+
+/** Toast when the boss completes a layer hop. */
+export function bossShiftHopToastText(opts: {
+  bossName: string;
+  layerName: string;
+}): string {
+  return `${opts.bossName} shifts to ${opts.layerName}!`;
+}
