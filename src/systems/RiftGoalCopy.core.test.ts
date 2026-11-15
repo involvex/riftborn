@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import {
   RIFT_GOAL_LINE,
+  bossPhaseToastText,
   riftEnterToastText,
   riftGoalHint,
   veiledWrongLayerToast,
@@ -35,5 +36,15 @@ describe('RiftGoalCopy', () => {
   test('rift goal hint uses the live shift label', () => {
     expect(riftGoalHint('Q')).toContain('Q');
     expect(riftGoalHint('SHIFT')).toContain(RIFT_GOAL_LINE);
+  });
+
+  test('boss phase toast ties the emerge to Exit', () => {
+    const text = bossPhaseToastText({
+      bossName: 'Rift Lord',
+      depthLabel: 'D1',
+    });
+    expect(text).toContain('Rift Lord');
+    expect(text).toContain('Exit');
+    expect(text).toContain('D1');
   });
 });

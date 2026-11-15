@@ -321,7 +321,7 @@ export class UIScene extends Phaser.Scene {
         this.showTrader();
       }),
       gameEvents.on(Events.RIFT_ENTERED, () => {
-        this.toast('Procedural rift dungeon opened');
+        // WorldScene already toasts O2 Kill→Boss→Exit — avoid duplicate.
         this.riftHud.show();
       }),
       gameEvents.on(Events.RIFT_CLEARED, (p) => {
@@ -410,7 +410,8 @@ export class UIScene extends Phaser.Scene {
         this.maybeShowFirstSession();
       }),
       gameEvents.on(Events.ENEMY_DIED, () => {
-        if (this.firstSessionKilled) return;
+        // Hub wilderness kills must not end the first-session coach.
+        if (this.firstSessionKilled || !gameState.inRift) return;
         this.firstSessionKilled = true;
         this.maybeShowFirstSession();
       }),
@@ -569,7 +570,7 @@ export class UIScene extends Phaser.Scene {
       completed: hasCompletedFirstSession(),
       moved: this.firstSessionMoved,
       inRift: gameState.inRift,
-      killed: this.firstSessionKilled,
+      killedInRift: this.firstSessionKilled,
     });
     if (step === null) {
       this.firstSessionHint.setStep(null);

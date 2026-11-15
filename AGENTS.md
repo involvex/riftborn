@@ -131,7 +131,7 @@ Touch (`/?touch=1` or coarse/small): virtual stick · ATK · E · DASH · SHIFT 
   `CombatVfx.ts` (`process-particles.mjs`).
 - `bun run sprites:process` runs AI sheets, then LPC enemies, then particles.
 - First-run tutorial: `TutorialOverlay` (`localStorage` key
-  `riftborn.tutorial.v1`); skipped on `/?smoke=1`.
+  `riftborn.tutorial.v2`); skipped on `/?smoke=1`.
 
 ## Coding conventions
 

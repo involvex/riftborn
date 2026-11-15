@@ -6,7 +6,8 @@ export type FirstSessionState = {
   completed: boolean;
   moved: boolean;
   inRift: boolean;
-  killed: boolean;
+  /** True only after a kill *inside* a rift (hub packs must not finish the flow). */
+  killedInRift: boolean;
 };
 
 export const FIRST_SESSION_KEY = 'riftborn.firstsession.v1';
@@ -37,7 +38,7 @@ export function nextFirstSessionHint(
 ): FirstSessionStep | 'done' | null {
   if (state.smoke || state.tutorialOpen) return null;
   if (state.completed) return 'done';
-  if (state.killed) return 'done';
+  if (state.killedInRift) return 'done';
   if (!state.moved && !state.inRift) return 'move';
   if (!state.inRift) return 'rift';
   return 'attack';
@@ -48,15 +49,19 @@ export function firstSessionHintText(
   touch: boolean,
   /** Live shift bind label (`Q`) or `SHIFT` on touch. */
   shiftLabel = touch ? 'SHIFT' : 'Q',
+  /** Live portal bind (`R`). */
+  portalLabel = 'R',
 ): string {
   switch (step) {
     case 'move':
       return touch ? 'Stick - move' : 'WASD - move';
     case 'rift':
-      return `Rift: Kill → Boss → Exit. ${shiftLabel} opens layer gates.`;
+      return touch
+        ? `Walk to the Obelisk · enter rift · Kill → Boss → Exit`
+        : `${portalLabel} at Obelisk · Kill → Boss → Exit · ${shiftLabel} opens gates`;
     case 'attack':
       return touch
-        ? `ATK - attack. Kills fill ${shiftLabel} energy.`
-        : `LMB - attack. Kills fill ${shiftLabel} energy.`;
+        ? `ATK - attack. 2 kills → ${shiftLabel} ready`
+        : `LMB - attack. 2 kills → ${shiftLabel} ready`;
   }
 }

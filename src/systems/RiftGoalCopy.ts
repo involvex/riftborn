@@ -27,3 +27,11 @@ export function veiledWrongLayerToast(opts: {
 export function riftGoalHint(shiftLabel: string): string {
   return `Rift: ${RIFT_GOAL_LINE}. ${shiftLabel} opens layer gates.`;
 }
+
+/** Toast when the Rift Lord / biome boss first appears. */
+export function bossPhaseToastText(opts: {
+  bossName: string;
+  depthLabel: string;
+}): string {
+  return `${opts.bossName} emerges! (${opts.depthLabel}) — beat it to open Exit`;
+}

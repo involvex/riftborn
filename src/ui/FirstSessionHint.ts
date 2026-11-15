@@ -53,7 +53,10 @@ export class FirstSessionHint {
     }
     const touch = shouldShowTouchControls();
     const shiftLabel = touch ? 'SHIFT' : formatHotkey('shift');
-    this.text.setText(firstSessionHintText(step, touch, shiftLabel));
+    const portalLabel = formatHotkey('portal');
+    this.text.setText(
+      firstSessionHintText(step, touch, shiftLabel, portalLabel),
+    );
     this.bg.setSize(this.text.width + 4, this.text.height + 2);
     this.layout();
     this.root.setVisible(true);

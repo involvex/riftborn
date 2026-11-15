@@ -104,6 +104,7 @@ import {
   type RiftModifier,
 } from '../systems/RiftModifiers';
 import {
+  bossPhaseToastText,
   riftEnterToastText,
   veiledWrongLayerToast,
 } from '../systems/RiftGoalCopy';
@@ -138,7 +139,13 @@ import {
   layerTileTint,
 } from '../render/ShiftVisual';
 import { SHIFT_LAYERS, type ShiftLayerId } from '../data/shiftLayers';
-import { shiftLayerColor, shiftTransitionText } from '../systems/ShiftFeedback';
+import {
+  shiftFailToastText,
+  shiftLayerColor,
+  shiftReadyToastText,
+  shiftTransitionText,
+  shouldAnnounceShiftReady,
+} from '../systems/ShiftFeedback';
 import { advanceEnemyShot, type EnemyShot } from '../systems/EnemyRanged';
 import {
   resolveInteractAction,
@@ -177,6 +184,8 @@ export class WorldScene extends Phaser.Scene {
   private shiftOverlay: Phaser.GameObjects.Rectangle | null = null;
   private shiftFxIntensity = settingsStore.get().shiftFxIntensity;
   private shiftHudAcc = 0;
+  private shiftWasReady = false;
+  private shiftReadyAnnounced = false;
   /** Floor diamonds (fallback when tile art missing). */
   private tiles!: Phaser.GameObjects.Graphics;
   /** Painted floor tile sprites (cleared on zone reload). */
@@ -691,6 +700,8 @@ export class WorldScene extends Phaser.Scene {
     this.exploredDirty = true;
     this.shiftSystem.reset();
     this.shiftSystem.setEnabled(rift);
+    this.shiftWasReady = false;
+    this.shiftReadyAnnounced = false;
     // Ambushes re-arm on every zone change (hub visits).
     this.ambushFired.clear();
     this.bossShift.reset();
@@ -761,12 +772,30 @@ export class WorldScene extends Phaser.Scene {
   }
 
   private emitShiftHud(): void {
+    const canShift = this.shiftSystem.canShift();
+    if (
+      gameState.inRift &&
+      shouldAnnounceShiftReady(
+        this.shiftWasReady,
+        canShift,
+        this.shiftReadyAnnounced,
+      )
+    ) {
+      this.shiftReadyAnnounced = true;
+      const shiftLabel = shouldShowTouchControls()
+        ? 'SHIFT'
+        : formatHotkey('shift');
+      gameEvents.emit('ui:toast', {
+        text: shiftReadyToastText(shiftLabel),
+      });
+    }
+    this.shiftWasReady = canShift;
     gameEvents.emit('ui:shiftHud', {
       active: gameState.inRift,
       layer: this.shiftSystem.layer,
       energy: this.shiftSystem.energy,
       cooldownLeft: this.shiftSystem.cooldownLeft,
-      canShift: this.shiftSystem.canShift(),
+      canShift,
       nearGate: this.playerNearShiftGate(),
     });
   }
@@ -787,7 +816,16 @@ export class WorldScene extends Phaser.Scene {
   private tryPlayerShift(): void {
     if (!gameState.inRift) return;
     const previous = this.shiftSystem.layer;
-    if (!this.shiftSystem.tryShift()) return;
+    const shiftLabel = shouldShowTouchControls()
+      ? 'SHIFT'
+      : formatHotkey('shift');
+    if (!this.shiftSystem.tryShift()) {
+      const reason = this.shiftSystem.cooldownLeft > 0 ? 'cooldown' : 'energy';
+      gameEvents.emit('ui:toast', {
+        text: shiftFailToastText(reason, shiftLabel),
+      });
+      return;
+    }
     const layer = this.shiftSystem.layer;
     gameEvents.emit('ui:toast', {
       text: shiftTransitionText(previous, layer),
@@ -2456,7 +2494,10 @@ export class WorldScene extends Phaser.Scene {
     this.enemies.push(boss);
     this.riftBossId = boss.id;
     gameEvents.emit('ui:toast', {
-      text: `${boss.def.name} emerges! (${riftDepthLabel(this.riftDepth)})`,
+      text: bossPhaseToastText({
+        bossName: boss.def.name,
+        depthLabel: riftDepthLabel(this.riftDepth),
+      }),
     });
     this.safeCameraFlash(160, 120, 40, 80);
     this.emitRiftProgress();

@@ -11,7 +11,7 @@ const base = (): FirstSessionState => ({
   completed: false,
   moved: false,
   inRift: false,
-  killed: false,
+  killedInRift: false,
 });
 
 describe('nextFirstSessionHint', () => {
@@ -45,31 +45,32 @@ describe('nextFirstSessionHint', () => {
     );
   });
 
-  test('returns done after first kill', () => {
+  test('hub kills alone do not finish the flow', () => {
+    expect(
+      nextFirstSessionHint({
+        ...base(),
+        moved: true,
+        inRift: false,
+        killedInRift: false,
+      }),
+    ).toBe('rift');
+  });
+
+  test('returns done after first rift kill', () => {
     expect(
       nextFirstSessionHint({
         ...base(),
         moved: true,
         inRift: true,
-        killed: true,
+        killedInRift: true,
       }),
     ).toBe('done');
   });
 
-  test('already killed goes directly to done', () => {
-    expect(nextFirstSessionHint({ ...base(), killed: true })).toBe('done');
-  });
-
-  test('completed stays completed regardless of progress', () => {
-    expect(
-      nextFirstSessionHint({
-        ...base(),
-        completed: true,
-        moved: true,
-        inRift: true,
-        killed: true,
-      }),
-    ).toBe('done');
+  test('already killed in rift goes directly to done', () => {
+    expect(nextFirstSessionHint({ ...base(), killedInRift: true })).toBe(
+      'done',
+    );
   });
 
   test('smoke overrides other state', () => {
@@ -82,12 +83,6 @@ describe('nextFirstSessionHint', () => {
       }),
     ).toBeNull();
   });
-
-  test('tutorial open overrides progress', () => {
-    expect(
-      nextFirstSessionHint({ ...base(), tutorialOpen: true, moved: true }),
-    ).toBeNull();
-  });
 });
 
 describe('firstSessionHintText', () => {
@@ -96,23 +91,16 @@ describe('firstSessionHintText', () => {
     expect(firstSessionHintText('move', false)).toBe('WASD - move');
   });
 
-  test('rift text names Kill → Boss → Exit and the live shift bind', () => {
-    expect(firstSessionHintText('rift', true, 'SHIFT')).toContain(
+  test('rift text names the portal and Kill → Boss → Exit', () => {
+    expect(firstSessionHintText('rift', false, 'Q', 'R')).toContain('R');
+    expect(firstSessionHintText('rift', false, 'Q', 'R')).toContain(
       'Kill → Boss → Exit',
     );
-    expect(firstSessionHintText('rift', true, 'SHIFT')).toContain('SHIFT');
-    expect(firstSessionHintText('rift', false, 'Q')).toContain('Q');
+    expect(firstSessionHintText('rift', true)).toContain('Obelisk');
   });
 
-  test('attack text mentions shift energy and differs by input', () => {
-    expect(firstSessionHintText('attack', true, 'SHIFT')).toContain(
-      'Kills fill SHIFT energy.',
-    );
-    expect(firstSessionHintText('attack', true, 'SHIFT')).toContain(
-      'ATK - attack',
-    );
-    expect(firstSessionHintText('attack', false, 'Q')).toContain(
-      'LMB - attack',
-    );
+  test('attack text teases shift energy from kills', () => {
+    expect(firstSessionHintText('attack', true, 'SHIFT')).toContain('SHIFT');
+    expect(firstSessionHintText('attack', false, 'Q')).toContain('2 kills');
   });
 });
