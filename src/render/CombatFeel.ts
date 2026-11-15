@@ -8,15 +8,19 @@ import { settingsStore } from '../core/SettingsStore';
  * Mobile Low quality scales durations via GraphicsQuality.juiceScale.
  */
 
+export type CombatHitstopKind = 'light' | 'hit' | 'crit';
+
 export const COMBAT_FEEL = {
   /** Master switch — disables hitstop + extra shake (numbers still respect settings). */
   enabled: true,
 
   hitstopEnabled: true,
-  /** Brief freeze on a solid enemy hit (ms, wall-clock). */
-  hitstopMs: 55,
-  /** Stronger freeze on crit / boss kill. */
-  hitstopCritMs: 75,
+  /** Short freeze on a normal pack connect (ms, wall-clock). */
+  hitstopLightMs: 28,
+  /** Freeze when taking a hit / multi-cleave. */
+  hitstopMs: 48,
+  /** Stronger freeze on crit / boss / death. */
+  hitstopCritMs: 72,
 
   shakeEnabled: true,
   shakeHitMs: 55,
@@ -29,7 +33,9 @@ export const COMBAT_FEEL = {
   shakePlayerHitIntensity: 0.004,
 
   /** Absolute damage ≥ this reads as a crit for juice (matches burst VFX). */
-  critDamageThreshold: 20,
+  critDamageThreshold: 15,
+  /** Hitting this many foes in one swing upgrades juice to multi-cleave. */
+  multiHitJuiceCount: 2,
 
   damageNumbers: {
     enemyColor: '#ffe08a',
@@ -77,14 +83,43 @@ export function combatShakeParams(kind: CombatShakeKind): {
   };
 }
 
-export function combatHitstopMs(crit: boolean): number {
+export function combatHitstopMs(kind: CombatHitstopKind = 'hit'): number {
   const c = COMBAT_FEEL;
   if (!c.enabled || !c.hitstopEnabled) return 0;
   const juice = currentGraphicsProfile().juiceScale;
-  const base = crit ? c.hitstopCritMs : c.hitstopMs;
+  const base =
+    kind === 'crit'
+      ? c.hitstopCritMs
+      : kind === 'light'
+        ? c.hitstopLightMs
+        : c.hitstopMs;
   return Math.round(base * juice);
 }
 
 export function isCombatCrit(damage: number): boolean {
   return damage >= COMBAT_FEEL.critDamageThreshold;
+}
+
+/** Pure: pick hitstop tier for a basic-attack swing that connected. */
+export function basicAttackHitstopKind(opts: {
+  anyCrit: boolean;
+  anyBoss: boolean;
+  hitCount: number;
+}): CombatHitstopKind {
+  if (opts.anyCrit || opts.anyBoss) return 'crit';
+  if (opts.hitCount >= COMBAT_FEEL.multiHitJuiceCount) return 'hit';
+  return 'light';
+}
+
+/** Pure: shake kind for a connecting basic-attack swing. */
+export function basicAttackShakeKind(opts: {
+  anyCrit: boolean;
+  anyBoss: boolean;
+  hitCount: number;
+}): CombatShakeKind {
+  if (opts.anyBoss) return 'boss';
+  if (opts.anyCrit || opts.hitCount >= COMBAT_FEEL.multiHitJuiceCount) {
+    return 'crit';
+  }
+  return 'hit';
 }

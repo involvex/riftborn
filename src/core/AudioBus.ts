@@ -76,13 +76,13 @@ class AudioBus {
     osc.stop(now + durationSec + 0.02);
   }
 
-  private playSfx(key: string, fallback: () => void): void {
+  private playSfx(key: string, fallback: () => void, rate = 1): void {
     const gainAmt = settingsStore.sfxGain();
     if (gainAmt <= 0.001) return;
     const scene = this.scene;
     if (scene?.cache?.audio?.exists(key)) {
       try {
-        scene.sound.play(key, { volume: gainAmt });
+        scene.sound.play(key, { volume: gainAmt, rate });
         return;
       } catch {
         // fall through to beep
@@ -96,11 +96,22 @@ class AudioBus {
   }
 
   hit(): void {
-    this.playSfx(SFX_KEYS.hit, () => this.playTone(180, 0.08, 'square'));
+    // Slight pitch variance so pack multi-hits don't sound identical.
+    const rate = 0.94 + Math.random() * 0.12;
+    this.playSfx(
+      SFX_KEYS.hit,
+      () => this.playTone(180 * rate, 0.08, 'square'),
+      rate,
+    );
   }
 
   swing(): void {
-    this.playSfx(SFX_KEYS.swing, () => this.playTone(220, 0.06, 'sawtooth'));
+    const rate = 0.96 + Math.random() * 0.08;
+    this.playSfx(
+      SFX_KEYS.swing,
+      () => this.playTone(220 * rate, 0.06, 'sawtooth'),
+      rate,
+    );
   }
 
   open(): void {

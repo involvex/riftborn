@@ -194,10 +194,10 @@ export class Player {
     this.sprite.setRotation(0);
     const dir = this.facing;
     const base = figureDrawScale();
-    this.sprite.setScale(base * 1.12);
-    this.sprite.x = dir * 7;
-    this.sprite.y = -6;
-    this.scene.time.delayedCall(110, () => {
+    this.sprite.setScale(base * 1.16);
+    this.sprite.x = dir * 9;
+    this.sprite.y = -7;
+    this.scene.time.delayedCall(95, () => {
       this.applyScale();
       this.sprite.x = 0;
       this.sprite.y = -4;
@@ -266,7 +266,7 @@ export class Player {
       this.slash.fillStyle(0xffffff, 0.75);
       this.slash.fillCircle(ox + dir * 26, oy + 8, 3);
     }
-    this.slashUntil = this.scene.time.now + 200;
+    this.slashUntil = this.scene.time.now + 170;
   }
 
   private playAnim(kind: AnimKind, force = false): void {

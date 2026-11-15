@@ -35,11 +35,15 @@ export class DamageNumberPool {
         ? style.fontCrit
         : style.fontEnemy;
     const drift = (Math.random() - 0.5) * (profile.tier === 'low' ? 10 : 18);
+    // Stacked cleave numbers fan out so packs stay readable.
+    const stack = this.activeCount;
+    const staggerX = (stack % 3) * 8 - 8;
+    const staggerY = Math.floor(stack / 3) * 7;
     const label = crit ? `${amount}!` : String(amount);
 
     const t = this.acquire();
     t.setText(label);
-    t.setPosition(x + drift, y);
+    t.setPosition(x + drift + staggerX, y - staggerY);
     t.setStyle({
       fontFamily: 'Segoe UI, sans-serif',
       fontSize,
@@ -54,14 +58,16 @@ export class DamageNumberPool {
     t.setVisible(true);
     this.activeCount += 1;
 
+    const startX = x + drift + staggerX;
+    const startY = y - staggerY;
     this.scene.tweens.killTweensOf(t);
     this.scene.tweens.add({
       targets: t,
-      y: y - (toPlayer ? 36 : crit ? 52 : 44),
-      x: x + drift * 1.4,
+      y: startY - (toPlayer ? 36 : crit ? 52 : 44),
+      x: startX + drift * 1.4,
       alpha: 0,
       scale: toPlayer ? 0.85 : crit ? 1.05 : 0.95,
-      duration: toPlayer ? 700 : crit ? 780 : 650,
+      duration: toPlayer ? 640 : crit ? 700 : 560,
       ease: 'Cubic.easeOut',
       onComplete: () => this.release(t),
     });

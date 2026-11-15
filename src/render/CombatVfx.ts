@@ -57,12 +57,16 @@ export function playCombatBurst(
     .setBlendMode(Phaser.BlendModes.ADD);
   if (facing < 0) img.setFlipX(true);
   liveBursts += 1;
+  // Routine hits clear fast so pack cleaves don't saturate particleCap.
+  const duration =
+    kind === 'slash' ? 170 : kind === 'crit' ? 220 : kind === 'hit' ? 160 : 180;
+  const endScale = kind === 'crit' ? 1.12 : kind === 'hit' ? 0.85 : 0.95;
   scene.tweens.add({
     targets: img,
     alpha: 0,
-    scale: kind === 'crit' ? 1.15 : 0.95,
-    y: img.y - 16,
-    duration: kind === 'slash' ? 180 : 260,
+    scale: endScale,
+    y: img.y - (kind === 'hit' ? 12 : 16),
+    duration,
     ease: 'Cubic.Out',
     onComplete: () => {
       liveBursts = Math.max(0, liveBursts - 1);

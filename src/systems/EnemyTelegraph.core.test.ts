@@ -46,6 +46,12 @@ describe('enemyTelegraphStyle', () => {
     expect(enemyTelegraphStyle('pounce', 'windup').radius).toBeLessThan(1);
     expect(enemyTelegraphStyle('rush', 'windup').radius).toBeLessThan(1);
   });
+
+  it('gives archers a readable shot windup in melee packs', () => {
+    const windup = enemyTelegraphStyle('shot', 'windup');
+    expect(windup.durationMs).toBeGreaterThanOrEqual(180);
+    expect(windup.radius).toBeGreaterThanOrEqual(0.4);
+  });
 });
 
 describe('telegraphCap', () => {

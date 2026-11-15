@@ -76,9 +76,12 @@ import type { SkillAimHint } from '../systems/SkillSystem';
 import { shouldShowRangeHint } from '../systems/SkillRangeGate';
 import { isRiftBossKill } from '../systems/RiftBoss';
 import {
+  basicAttackHitstopKind,
+  basicAttackShakeKind,
   combatHitstopMs,
   combatShakeParams,
   isCombatCrit,
+  type CombatHitstopKind,
   type CombatShakeKind,
 } from '../render/CombatFeel';
 import classesData from '../data/classes.json';
@@ -1805,8 +1808,10 @@ export class WorldScene extends Phaser.Scene {
     this.triggerHitShake(ms, intensity);
   }
 
-  private triggerHitstop(crit = false): void {
-    const ms = combatHitstopMs(crit);
+  private triggerHitstop(kind: CombatHitstopKind | boolean = 'hit'): void {
+    const tier: CombatHitstopKind =
+      typeof kind === 'boolean' ? (kind ? 'crit' : 'hit') : kind;
+    const ms = combatHitstopMs(tier);
     if (ms <= 0) return;
     this.hitstopUntil = Math.max(this.hitstopUntil, performance.now() + ms);
   }
@@ -2227,7 +2232,7 @@ export class WorldScene extends Phaser.Scene {
               gameState.skills.damageMultiplier(),
           ),
         );
-        let hit = false;
+        let hitCount = 0;
         let anyCrit = false;
         let anyBoss = false;
         for (const enemy of this.enemies) {
@@ -2237,7 +2242,7 @@ export class WorldScene extends Phaser.Scene {
             { x: enemy.worldX, y: enemy.worldY },
           );
           if (d > range) continue;
-          hit = true;
+          hitCount += 1;
           const crit = isCombatCrit(dmg);
           if (crit) anyCrit = true;
           if (enemy.isBoss) anyBoss = true;
@@ -2259,10 +2264,15 @@ export class WorldScene extends Phaser.Scene {
           );
           if (enemy.applyDamage(dmg)) this.onEnemyKilled(enemy);
         }
-        if (hit) {
+        if (hitCount > 0) {
           audioBus.hit();
-          this.triggerCombatShake(anyBoss ? 'boss' : anyCrit ? 'crit' : 'hit');
-          this.triggerHitstop(anyCrit || anyBoss);
+          const juice = {
+            anyCrit,
+            anyBoss,
+            hitCount,
+          };
+          this.triggerCombatShake(basicAttackShakeKind(juice));
+          this.triggerHitstop(basicAttackHitstopKind(juice));
         }
         if (netClient.connected) {
           netClient.sendInput({

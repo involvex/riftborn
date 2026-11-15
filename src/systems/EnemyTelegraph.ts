@@ -27,8 +27,8 @@ const STYLES: Record<
     impact: { radius: 3.0, durationMs: 300, color: 0xc8f4f8, shape: 'burst' },
   },
   shot: {
-    windup: { radius: 0.35, durationMs: 120, color: 0xf4e4c8, shape: 'muzzle' },
-    impact: { radius: 0.5, durationMs: 200, color: 0xf4e4c8, shape: 'burst' },
+    windup: { radius: 0.45, durationMs: 190, color: 0xf4e4c8, shape: 'muzzle' },
+    impact: { radius: 0.55, durationMs: 200, color: 0xf4e4c8, shape: 'burst' },
   },
   rush: {
     windup: { radius: 0.7, durationMs: 240, color: 0xe0a070, shape: 'ring' },
