@@ -38,7 +38,7 @@ export default {
   web: {
     favicon: './assets/favicon.png',
   },
-  plugins: ['expo-screen-orientation'],
+  plugins: ['expo-screen-orientation', 'expo-status-bar'],
   extra: {
     gameUrl,
     gameBundle: bundled,
