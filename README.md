@@ -50,7 +50,7 @@ Prebuilt releases are published via GitHub Actions and include a Windows portabl
 | I             | Inventory (big bag)        |
 | K             | Skill tree                 |
 | M             | Map overlay                |
-| 3             | Equip tool                 |
+| T             | Equip tool                 |
 | Space         | Dash                       |
 | R             | Enter / exit rift          |
 | B             | Return to town             |
@@ -87,7 +87,11 @@ phase through foes on the other layer and open layer-locked gates.
 
 ![SHIFT — layer switch in a rift](docs/screenshots/shift-rift.gif)
 
+![SHIFT — combat](docs/screenshots/shift-combat.png)
+
 Touch/mobile gameplay: [docs/screenshots/touch-rift.png](docs/screenshots/touch-rift.png)
+
+Jam itch copy + credits: [docs/ITCH_PAGE.md](docs/ITCH_PAGE.md)
 
 ## Website
 

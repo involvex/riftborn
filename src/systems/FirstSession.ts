@@ -46,15 +46,17 @@ export function nextFirstSessionHint(
 export function firstSessionHintText(
   step: FirstSessionStep,
   touch: boolean,
+  /** Live shift bind label (`Q`) or `SHIFT` on touch. */
+  shiftLabel = touch ? 'SHIFT' : 'Q',
 ): string {
   switch (step) {
     case 'move':
       return touch ? 'Stick - move' : 'WASD - move';
     case 'rift':
-      return 'Betritt den Rift: Kills bis Boss/Exit. SHIFT oeffnet Gates.';
+      return `Rift: Kill → Boss → Exit. ${shiftLabel} opens layer gates.`;
     case 'attack':
       return touch
-        ? 'ATK - attack. Kills fuellen SHIFT-Energie.'
-        : 'LMB - attack. Kills fuellen SHIFT-Energie.';
+        ? `ATK - attack. Kills fill ${shiftLabel} energy.`
+        : `LMB - attack. Kills fill ${shiftLabel} energy.`;
   }
 }

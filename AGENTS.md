@@ -34,7 +34,7 @@ bun run lint
 bun run format
 bun run format:check
 bun run build
-bun run test:smoke       # Playwright hub smoke → artifacts/hub.png
+bun run test:smoke       # Playwright hub + SHIFT specs → artifacts/
 bunx playwright install chromium   # once per machine
 ```
 
@@ -62,7 +62,7 @@ Phaser draws on a canvas — DOM selectors won’t see enemies or POIs.
 2. Read live state via `window.__RIFTBORN` (`src/debug/RiftbornDebug.ts`):
    - `ready`, `snapshot()`, `hostilesNearTown(margin?)`, `nearestHostileDistToPlaza()`
    - Snapshot includes plaza bounds, player, enemies, POIs, chests, hub size.
-3. Run `bun run test:smoke` — asserts hub size 64, ≥8 POIs, **no hostiles in town soft buffer (margin 10)**, writes `artifacts/hub.png`.
+3. Run `bun run test:smoke` — hub size 64, ≥8 POIs, **no hostiles in town soft buffer (margin 10)**, plus SHIFT ash/shadow layer shots; writes `artifacts/hub.png` / `j1-*.png`.
 4. Agents can **Read** `artifacts/hub.png` after smoke for a visual check.
 
 Do not rely on paste-a-screenshot alone after map/POI edits — prefer smoke + `__RIFTBORN`.
@@ -81,7 +81,7 @@ Do not rely on paste-a-screenshot alone after map/POI edits — prefer smoke + `
 - **Vendor:** Mira shop Buy/Sell tabs; item `sellValue` + `gearSellValue()`; **Sort** in bag; Esc → Settings → Auto-sell junk (common gear → gold on loot).
 - **Nix (trader):** plaza west of spawn — Buy supplies/tonics, sell mats at 1.4×, Repair patch-up (`TraderSystem` / `TraderPanel`).
 - **Attack feel:** sprite attack frames (sheet 10–13) + class-colored slash VFX in `Player.showSlash`. New swing art needs new frames in `public/assets/sprites/game/`.
-- **Class skills (1/2/3):** all three unlocked at create — Warrior Leap/Cleave/Bash, Mystic Pulse/Slash/Seal, Mage Bolt/Nova/Barrier. Cast VFX in `SkillVfx.ts`; ranks via skill points (`K`).
+- **Class skills (1/2/3/4):** all four unlocked at create — Warrior Leap/Cleave/Bash/Battle Cry, Mystic Pulse/Slash/Seal/Rift Step, Mage Bolt/Nova/Barrier/Chain Surge. Cast VFX in `SkillVfx.ts`; ranks via skill points (`K`).
 - **Rifts:** depth 1–10 from player level (`RiftDepth.ts`); packs/HP/dmg/loot scale; Rift Lord + boss chest; HUD shows `D#`. Random run mods (`RiftModifiers.ts`: Dense / Glass / Gilded).
 - **Saves:** 3 character slots on boot (`SaveStore`); legacy single save migrates to slot 1.
 - **Bounty Board:** plaza NPC south of spawn — **E** accept (scout / chests / cull); HUD ★ line; progress + cooldown persist on character save.
@@ -89,9 +89,9 @@ Do not rely on paste-a-screenshot alone after map/POI edits — prefer smoke + `
 
 ## Controls (player)
 
-WASD move · LMB attack · E interact/gather/chest/shrine · F craft · 1/2/3 skills · M map · R rift · B town · I inventory · C character · K skill tree · Esc settings.
+WASD move · LMB attack · E interact/gather/chest/shrine · F craft · 1/2/3/4 skills · Q SHIFT · T equip tool · M map · R rift · B town · I inventory · C character · K skill tree · Esc settings.
 
-Touch (`/?touch=1` or coarse/small): virtual stick · ATK · E · DASH · INV/MAP/MENU · ability bar 1/2/3.
+Touch (`/?touch=1` or coarse/small): virtual stick · ATK · E · DASH · SHIFT · INV/MAP/MENU · ability bar 1/2/3/4.
 
 ## Audio
 

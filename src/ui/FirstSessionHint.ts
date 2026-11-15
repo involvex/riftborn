@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { formatHotkey } from '../core/Hotkeys';
 import { uiFontSize } from '../core/UiFont';
 import {
   firstSessionHintText,
@@ -51,7 +52,8 @@ export class FirstSessionHint {
       return;
     }
     const touch = shouldShowTouchControls();
-    this.text.setText(firstSessionHintText(step, touch));
+    const shiftLabel = touch ? 'SHIFT' : formatHotkey('shift');
+    this.text.setText(firstSessionHintText(step, touch, shiftLabel));
     this.bg.setSize(this.text.width + 4, this.text.height + 2);
     this.layout();
     this.root.setVisible(true);

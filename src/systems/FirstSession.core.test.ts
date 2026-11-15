@@ -96,19 +96,23 @@ describe('firstSessionHintText', () => {
     expect(firstSessionHintText('move', false)).toBe('WASD - move');
   });
 
-  test('rift text names the goal and shift gates, shared by input mode', () => {
-    const text = 'Betritt den Rift: Kills bis Boss/Exit. SHIFT oeffnet Gates.';
-    expect(firstSessionHintText('rift', true)).toBe(text);
-    expect(firstSessionHintText('rift', false)).toBe(text);
-    expect(text).toContain('Kills bis Boss/Exit');
-    expect(text).toContain('SHIFT');
+  test('rift text names Kill → Boss → Exit and the live shift bind', () => {
+    expect(firstSessionHintText('rift', true, 'SHIFT')).toContain(
+      'Kill → Boss → Exit',
+    );
+    expect(firstSessionHintText('rift', true, 'SHIFT')).toContain('SHIFT');
+    expect(firstSessionHintText('rift', false, 'Q')).toContain('Q');
   });
 
-  test('attack text mentions SHIFT-Energie and differs by input', () => {
-    expect(firstSessionHintText('attack', true)).toContain(
-      'Kills fuellen SHIFT-Energie.',
+  test('attack text mentions shift energy and differs by input', () => {
+    expect(firstSessionHintText('attack', true, 'SHIFT')).toContain(
+      'Kills fill SHIFT energy.',
     );
-    expect(firstSessionHintText('attack', true)).toContain('ATK - attack');
-    expect(firstSessionHintText('attack', false)).toContain('LMB - attack');
+    expect(firstSessionHintText('attack', true, 'SHIFT')).toContain(
+      'ATK - attack',
+    );
+    expect(firstSessionHintText('attack', false, 'Q')).toContain(
+      'LMB - attack',
+    );
   });
 });

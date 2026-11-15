@@ -1,7 +1,7 @@
-# Mobile performance (M1)
+# Mobile performance (M7 — Game Off)
 
-Playtest on Android (Expo WebView) showed ~32 fps in combat / inventory.
-Root causes and the Low-quality profile that Auto enables on touch devices.
+Playtest on Android (Expo WebView) historically showed ~32 fps in combat.
+Jam stance: **best-effort**, FOV must not regress.
 
 ## Measured / observed causes
 
@@ -13,46 +13,42 @@ Root causes and the Low-quality profile that Auto enables on touch devices.
 | Hitstop + camera shake             | Extra frames stalled + redraw                        |
 | High-res UI text (`resolution: 2`) | Extra glyph raster cost                              |
 
-## Fixes (graphics quality profile)
+## What ships (Low / Auto on touch)
 
 Setting: **Graphics** = Auto / Low / High (Settings + title).
 
 - **Auto** → Low when `?touch=1` / coarse pointer / small screen; else High.
 - **Low** (`src/core/GraphicsQuality.ts`):
-  - Render buffer ~65% of CSS size, stretched via canvas CSS (`Phaser.Scale.NONE`)
-  - Damage-number pool + hard cap (10 live)
-  - Skip routine hit/burn particles; cap concurrent bursts
-  - Scale hitstop / shake (~45%)
+  - Records `renderScale: 0.65` for probes (`__RIFTBORN.graphicsProfile()`)
+  - **Does not** shrink Phaser `scale.resize` (that zoomed the world / broke FOV)
+  - Damage-number pool + hard cap (8 live)
+  - Particle burst cap (3)
+  - Scale hitstop / shake (~40%)
   - Text resolution 1 for floating numbers
-- **High**: native scale, prior juice budget
+- **High**: native juice budget
+
+## Explicit non-goal until after jam
+
+FOV-safe canvas **buffer** downscale (`computeGraphicsResize` helpers) is
+designed but not wired to the live path — shrinking the game size without a
+matching zoom/CSS contract caused M3d FOV regressions. Prefer juice caps
+over a risky buffer path for Game Off.
 
 ## How to verify
 
-1. `/?touch=1` → FPS HUD should stay closer to 50–60 in a pack.
+1. `/?touch=1` → FPS better than uncapped High; town FOV matches desktop span.
 2. Settings → Graphics → High restores desktop look (heavier).
-3. `bun test src` covers tier resolve / caps.
+3. Hub smoke M3d / P1 tests assert wide town FOV at 1024×473 Low/touch.
+4. `bun test src/core/GraphicsQuality.core.test.ts`
 
-## M1g check (2026-11-02) — Auto/Low on touch vs ~32 fps
+## M1g / M7 status
 
-Playwright phone viewport `1024×473` + `/?smoke=1&touch=1` with
-`graphicsQuality: 'auto'`:
+| Probe (`graphicsProfile()`) | Result                  |
+| --------------------------- | ----------------------- |
+| Auto on touch               | `tier: low`             |
+| `renderScale` recorded      | `0.65`                  |
+| `particleCap` (M7)          | `3`                     |
+| Live canvas size            | CSS viewport (FOV safe) |
 
-| Probe (`window.__RIFTBORN.graphicsProfile()`) | Result                           |
-| --------------------------------------------- | -------------------------------- |
-| `setting`                                     | `auto`                           |
-| `tier`                                        | `low` (Auto → touch → Low works) |
-| `renderScale` / `getAppliedRenderScale()`     | `0.65` recorded                  |
-| `particleCap`                                 | `4` (Low juice path active)      |
-
-**Verdict:** The Low _tier_ does apply on touch (particles / dmg-number
-cap / juiceScale). There is **no obvious “Auto ignored” bug**.
-
-Remaining fill-rate gap: `applyGraphicsProfile` still resizes the Phaser
-logical size to the full CSS viewport and only _records_ `renderScale`.
-The canvas backing store is **not** downscaled to 65% anymore (disabled
-earlier because shrinking `scale.resize` zoomed the world FOV). That
-matches continued ~32 fps reports on Android WebView even with Auto/Low —
-juice caps help, but pixel fill stays near native DPR.
-
-**No code fix in M1g** — restoring buffer downscale needs a FOV-safe path
-(separate from logical game size), not a one-liner.
+**Verdict:** Mobile is **best-effort**. Playable on WebView; judges should use
+desktop browser for peak feel. APK remains a convenience shell.

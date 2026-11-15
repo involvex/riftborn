@@ -77,12 +77,16 @@ export class TutorialOverlay {
       })
       .setOrigin(0.5);
 
+    const shiftKey = shouldShowTouchControls()
+      ? 'SHIFT'
+      : formatHotkey('shift');
     const lines = shouldShowTouchControls()
       ? [
           'Gleiche Welt, zwei Schichten:',
           'Asche & Schatten. Kills füllen Energie —',
-          'SHIFT phast Gegner der anderen Schicht',
-          'und öffnet Gates. Rift-Ziel: Kills bis Boss/Exit.',
+          `${shiftKey} phast Gegner der anderen Schicht`,
+          'und öffnet Gates.',
+          'Rift-Ziel: Kill → Boss → Exit.',
           'Kernloop: Town → Rift → Kampf → Beute.',
           '',
           'Stick — move · ATK — attack · E — interact',
@@ -91,8 +95,8 @@ export class TutorialOverlay {
       : [
           'Gleiche Welt, zwei Schichten: Asche & Schatten.',
           'Kills füllen Energie.',
-          `${formatHotkey('shift')} phast Gegner der anderen Schicht,`,
-          'öffnet Gates. Rift-Ziel: Kills bis Boss/Exit.',
+          `${shiftKey} phast Gegner der anderen Schicht, öffnet Gates.`,
+          'Rift-Ziel: Kill → Boss → Exit.',
           'Kernloop: Town → Rift → Kampf → Beute.',
           '',
           `WASD/LMB — move/attack · ${formatHotkey('gather')} — interact`,

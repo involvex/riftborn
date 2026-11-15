@@ -87,7 +87,8 @@ const MODS: RiftModifier[] = [
   {
     id: 'veiled',
     name: 'Ashen Veil',
-    blurb: 'Every foe lives on Asche only — stay put and fight.',
+    blurb:
+      'Foes only on Asche — SHIFT to Asche to hit them (not a combat bug).',
     packCountBonus: 0,
     hpMult: 1,
     dmgMult: 1,

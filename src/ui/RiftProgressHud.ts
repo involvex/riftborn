@@ -71,15 +71,15 @@ export class RiftProgressHud {
       modName && modName !== 'Calm Rift' ? `\n${shortMod(modName)}` : '';
     if (phase === 'fill') {
       this.fill.setFillStyle(0xc62868, 1);
-      this.label.setText(`${dTag}\n${kills}/${goal}${mod}`);
+      this.label.setText(`${dTag}\nKill ${kills}/${goal}${mod}`);
     } else if (phase === 'boss') {
       this.fill.setFillStyle(0xff7043, 1);
       this.fill.height = this.barH - 2;
-      this.label.setText(`${dTag}\nBOSS${mod}`);
+      this.label.setText(`${dTag}\nBoss${mod}`);
     } else {
       this.fill.setFillStyle(0x4db6ff, 1);
       this.fill.height = this.barH - 2;
-      this.label.setText(`${dTag}\nEXIT`);
+      this.label.setText(`${dTag}\nExit`);
     }
   }
 }
@@ -88,5 +88,7 @@ function shortMod(name: string): string {
   if (name.includes('Dense')) return 'Dense';
   if (name.includes('Glass')) return 'Glass';
   if (name.includes('Gilded')) return 'Gold';
+  if (name.includes('Veil')) return 'Veil';
+  if (name.includes('Swift')) return 'Swift';
   return name.slice(0, 6);
 }

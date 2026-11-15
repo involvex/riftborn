@@ -1,9 +1,10 @@
 # Game Off 2026 Roadmap for Riftborn
 
-**Date:** 2026-10-29  
+**Date:** 2026-10-29 (status sync **2026-11-15**)  
 **Game:** Riftborn - 2.5D Isometric Action RPG (Phaser 4 + TypeScript + Bun)  
 **Jam:** [Game Off 2026](https://itch.io/jam/game-off-2026) - Nov 1 - Dec 1, 2026  
-**Status:** Pre-theme announcement (theme revealed Nov 1, 13:37 PT)
+**Theme:** **SHIFT** — Ash/Shadow world layers (`Q` / touch SHIFT)  
+**Status:** Theme shipped. Solo loop jam-ready. Paste-ready itch copy: [`docs/ITCH_PAGE.md`](docs/ITCH_PAGE.md).
 
 ## Current State Analysis
 
@@ -251,34 +252,22 @@ bun run test:smoke  # if map changes
 
 ## Submission Checklist
 
-- [ ] Game is playable in browser (web build works)
-- [ ] Clear theme interpretation visible in game
-- [ ] Fun for 10-15 minute playthrough
-- [ ] Audio present (SFX + music) - **REQUIRED**
-- [ ] All assets use free tools/licenses (CC0 preferred)
-- [ ] No game-breaking bugs
-- [ ] README explains game and theme
-- [ ] Public GitHub repo with source code
-- [ ] Submitted to itch.io with correct link to repo
-- [ ] Title, description, screenshots/GIF on itch.io page
+- [x] Game is playable in browser (web build works) — Pages `/play/` + `bun run build:itch`
+- [x] Clear theme interpretation visible in game — SHIFT layers, tutorial, HUD
+- [x] Fun for 10-15 minute playthrough — hub → rift → Kill→Boss→Exit → craft sink
+- [x] Audio present (SFX + music) — procedural WAV/CC0 in `public/assets/audio/`
+- [x] All assets use free tools/licenses (CC0 preferred) — see `ATTRIBUTION.md`
+- [x] No game-breaking hub/rift softlocks (smoke + mid-rift resume)
+- [x] README explains game and theme
+- [x] Public GitHub repo with source code
+- [ ] Submitted to itch.io with correct link to repo _(upload zip + paste `docs/ITCH_PAGE.md`)_
+- [x] Title, description, screenshots/GIF ready — `docs/screenshots/` + itch copy doc
 
 ## Immediate Action Items (Do First)
 
-For build agents starting NOW:
-
-1. **[ ] Install free tools** - Download/install [Libresprite](https://libresprite.github.io/), bookmark [sfxr.me](https://sfxr.me/), [BeepBox](https://www.beepbox.co/)
-2. **[ ] Setup image-wizard-cli** - Review and improve `D:\repos\image-wizard-cli` for pixel art game assets (add presets, batch mode, pixel art prompts)
-3. **[ ] Setup Bing image gen** - Configure image-wizard-cli with Bing cookies for free DALL-E 3 access
-4. **[ ] Create audio directory** - `mkdir -p public/assets/audio/sfx public/assets/audio/music`
-5. **[ ] Generate core SFX** - Use sfxr.me for attack, hit, death, loot, UI click sounds (8-12 sounds)
-6. **[ ] Create simple music** - Use BeepBox to make 2 loops (hub + combat), export as .ogg
-7. **[ ] Add audio loading** - Modify BootScene to preload audio files
-8. **[ ] Wire audio** - Add SFX calls to combat/loot/UI in AudioBus
-9. **[ ] Add combat juice** - Implement screen shake, hit flashes, damage numbers
-10. **[ ] Create tutorial** - Add first-time player guidance overlay
-11. **[ ] Test build** - Ensure everything compiles and runs with audio
-12. **[ ] Create jam branch** - `git checkout -b gameoff-2026` to isolate jam work
-13. **[ ] Prepare for theme** - Review this roadmap daily after Nov 1 announcement
+Historical Phase-0 list — **done** as of mid-Nov: audio dir + SFX/music,
+tutorial, SHIFT theme, juice, itch/Pages builds. Remaining: friend playtest,
+optional mobile FPS, final itch submit before Dec 1.
 
 ## Image Wizard CLI Enhancement Plan
 
@@ -310,5 +299,5 @@ For `D:\repos\image-wizard-cli`, add these features:
 
 ---
 
-**Last Updated:** 2026-10-29  
-**Status:** Ready for Phase 0 execution
+**Last Updated:** 2026-11-15  
+**Status:** Theme SHIFT shipped — submit via `docs/ITCH_PAGE.md` + `build:itch`

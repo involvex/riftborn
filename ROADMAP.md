@@ -10,7 +10,8 @@ Solo evenings, one shippable slice at a time. Prefer **feel → content → syst
 - Hub **64×64**, plaza soft buffer, **POIs**, loot chests, Ember Shrine, Ash Scout
 - Inventory icons, **Sort**, vendor **Buy/Sell**, **auto-sell junk**
 - Passive OOC HP regen; attack facing + slash VFX; agent smoke / `__RIFTBORN`
-- **Class skills 1/2/3** distinct (Leap / Pulse / Bolt kits) + cast VFX
+- **Class skills 1/2/3/4** distinct (Leap / Pulse / Bolt kits + Battle Cry / Rift Step / Chain Surge) + cast VFX
+- **SHIFT (Q)** Ash/Shadow layers in rifts; biome mats toast into craft sink
 - **Rift depth 1–10** from level (packs / HP / dmg / loot); Rift Lord + boss chest
 - Death flash/shake + rarity loot sting; **3 character slots** on boot
 - Plaza **Bounty Board** (scout / chests / cull)
@@ -23,21 +24,24 @@ Solo evenings, one shippable slice at a time. Prefer **feel → content → syst
 - **Custom app icon** (Electron + Expo via `bun run icons`)
 - Electron portable + self-hosted co-op (basic); share kit in `SHARE.md`
 
-## Next — content density (pick one per evening)
+## Next — after Game Off submit
 
-| #   | Slice               | Why it matters                  | Done when                            |
-| --- | ------------------- | ------------------------------- | ------------------------------------ |
-| 1   | **Drag-drop equip** | QoL for bag                     | Optional; double-click already works |
-| 2   | **Friend feedback** | One external playtest complaint | Next evening fixes that one item     |
+| #   | Slice                     | Why it matters                  | Done when                              |
+| --- | ------------------------- | ------------------------------- | -------------------------------------- |
+| 1   | **Itch submit**           | Jam deadline Dec 1              | ZIP + `docs/ITCH_PAGE.md` live on itch |
+| 2   | **Friend feedback**       | One external playtest complaint | Next evening fixes that one item       |
+| 3   | **Co-op redesign / hide** | Prototype gated via `CoopGate`  | Shared hub or P removed from marketing |
 
 Skip inventing new frameworks — extend `MapGen` / `WorldScene` / `SaveStore` / NPCs.
 
 ## Later (don’t start yet)
 
 - App Store packaging for Expo shell
-- Authoritative co-op loot / gear sync
+- Authoritative co-op loot / gear sync / rift co-op
+- FOV-safe mobile canvas buffer downscale
 - Seasons, trading, seamless open world
 - Full new painted attack sheets (needs art time; VFX covers the gap for now)
+- Drag-drop equip (double-click already works)
 
 ## Pace guide (solo)
 

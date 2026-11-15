@@ -47,9 +47,9 @@ Für [itch.io](https://involvex.itch.io/riftborn) als Browser-Spiel:
 ## Submission-Paket (Game Off 2026)
 
 - Web-ZIP: `release/riftborn-web.zip` via `bun run build:itch` (letzter Lauf **3/3** Smoke-Tests grün; HTML lädt ohne Fehler).
-- Itch-Titelbild: `docs/screenshots/shift-ash.png` + `shift-shadow.png` zeigen das
-  SHIFT-Thema (Layer-Wechsel inkl. HUD + „Q · kills till energy“);
-  `touch-rift.png` zeigt das Touch-HUD.
+- Itch-Copy + Credits: [`docs/ITCH_PAGE.md`](ITCH_PAGE.md) (paste-ready).
+- Captures: `shift-ash.png` / `shift-shadow.png` (Thema), `shift-rift.gif`
+  (Layer-Switch), `shift-combat.png` (Combat), `touch-rift.png` (Touch-HUD).
 - Steuerung/SHIFT erklärt: `site/controls.html` (SHIFT-Panel mit
   Energie/Gates/Phasen-Regel), `README.md` (SHIFT im Control-Table
   plus Hinweis auf Rebinding).

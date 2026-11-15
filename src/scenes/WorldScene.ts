@@ -96,6 +96,15 @@ import {
   type RiftModifier,
 } from '../systems/RiftModifiers';
 import {
+  riftEnterToastText,
+  veiledWrongLayerToast,
+} from '../systems/RiftGoalCopy';
+import {
+  coopJoinBlockedReason,
+  coopRiftBlockedReason,
+  coopWelcomeToast,
+} from '../systems/CoopGate';
+import {
   buildMapMarkers,
   buildMapSnapshot,
   type MapCellKind,
@@ -386,6 +395,7 @@ export class WorldScene extends Phaser.Scene {
   /** Agent / Playwright helper — skip walking to the obelisk. */
   private debugEnterRift(): boolean {
     if (gameState.inRift) return true;
+    if (coopRiftBlockedReason(netClient.connected)) return false;
     gameState.inRift = true;
     // Prefer a seed known to have narrow diagonal corridors (M1e screenshots).
     gameState.riftSeed = 99;
@@ -629,10 +639,15 @@ export class WorldScene extends Phaser.Scene {
         // Layer-locked mods: tell the player why nothing is hittable.
         const lock = gameState.inRift ? riftModLayerLock(this.riftMod) : null;
         if (lock && d.layer !== lock) {
+          const shiftLabel = shouldShowTouchControls()
+            ? 'SHIFT'
+            : formatHotkey('shift');
           gameEvents.emit('ui:toast', {
-            text: `${this.riftMod.name}: foes only on ${
-              SHIFT_LAYERS[lock].name
-            }`,
+            text: veiledWrongLayerToast({
+              modName: this.riftMod.name,
+              lockedLayerName: SHIFT_LAYERS[lock].name,
+              shiftLabel,
+            }),
           });
         }
       }),
@@ -2932,7 +2947,7 @@ export class WorldScene extends Phaser.Scene {
     if (!this.portalMarker) {
       if (gameState.inRift && !this.riftBossDead) {
         gameEvents.emit('ui:toast', {
-          text: 'Fill the rift bar, slay the boss — then an Exit opens (or press B)',
+          text: 'Kill → Boss → Exit — or press B to abandon',
         });
       }
       return;
@@ -2952,6 +2967,11 @@ export class WorldScene extends Phaser.Scene {
       return;
     }
     if (!gameState.inRift) {
+      const coopBlock = coopRiftBlockedReason(netClient.connected);
+      if (coopBlock) {
+        gameEvents.emit('ui:toast', { text: coopBlock });
+        return;
+      }
       gameState.inRift = true;
       gameState.riftSeed = (Date.now() ^ (Math.random() * 1e9)) >>> 0;
       this.loadZone(true);
@@ -2960,7 +2980,11 @@ export class WorldScene extends Phaser.Scene {
         depth: this.riftDepth,
       });
       gameEvents.emit('ui:toast', {
-        text: `Rift ${riftDepthLabel(this.riftDepth)} · ${this.riftMod.name} — ${this.riftMod.blurb}`,
+        text: riftEnterToastText({
+          depthLabel: riftDepthLabel(this.riftDepth),
+          modName: this.riftMod.name,
+          modBlurb: this.riftMod.blurb,
+        }),
       });
       this.emitRiftProgress();
     } else if (this.riftBossDead) {
@@ -3048,10 +3072,15 @@ export class WorldScene extends Phaser.Scene {
       window.setTimeout(() => netClient.disconnect(), 900);
       return;
     }
+    const joinBlock = coopJoinBlockedReason(gameState.inRift);
+    if (joinBlock) {
+      gameEvents.emit('ui:toast', { text: joinBlock });
+      return;
+    }
     this.unsubNet = netClient.onMessage((msg) => {
       if (msg.type === 'welcome') {
         gameEvents.emit('ui:toast', {
-          text: msg.host ? 'Hosting co-op session' : 'Joined co-op session',
+          text: coopWelcomeToast(!!msg.host),
         });
       }
       if (msg.type === 'error') {

@@ -24,9 +24,10 @@ Install: `adb install -r mobile/android/app/build/outputs/apk/release/app-releas
 ## How to play (send with the build)
 
 1. **Move** — WASD (desktop) or left stick (phone).
-2. **Attack** — left click / ATK button; skills **1 / 2 / 3** (or center ability bar).
+2. **Attack** — left click / ATK button; skills **1 / 2 / 3 / 4** (or center ability bar). **Q** SHIFT layers in rifts.
 3. **Interact** — **E** near Mira (shop), Bram (forge), Nix (scrapper), bounty board, chests, shrine.
-4. **Rift** — **R** at the crystal; clear packs → boss → exit. **B** returns to town.
+4. **Rift** — **R** at the crystal; **Kill → Boss → Exit**. **B** returns to town.
 5. **Menus** — **I** bag, **M** map, **Esc** settings; phone: INV / MAP / MENU.
+6. **Co-op (P)** — optional hub sandbox prototype only; leave co-op before entering a rift.
 
 Ask your friend for **one** top complaint — that becomes the next evening’s only task.

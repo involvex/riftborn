@@ -103,10 +103,12 @@ const HIGH: GraphicsProfile = {
 
 const LOW: GraphicsProfile = {
   tier: 'low',
+  // renderScale is recorded for probes; live path keeps CSS FOV and cuts
+  // juice/particles instead (FOV-safe buffer downscale still deferred).
   renderScale: 0.65,
-  maxDamageNumbers: 10,
-  particleCap: 4,
-  juiceScale: 0.45,
+  maxDamageNumbers: 8,
+  particleCap: 3,
+  juiceScale: 0.4,
   textResolution: 1,
 };
 
@@ -168,11 +170,10 @@ let resizeHooked = false;
 let gameRef: Phaser.Game | null = null;
 
 /**
- * Keep logical game size = CSS viewport (same world FOV at Low/High).
- * renderScale must not shrink scale.resize (that zooms the world);
- * Low still cuts particles / juice via the profile. Buffer helpers remain
- * for tests and future safe downscale paths, but the live path must not
- * touch the canvas backing store.
+ * M7 (Game Off): keep logical game size = CSS viewport (same FOV at
+ * Low/High). Shrinking `scale.resize` by renderScale zooms the world —
+ * do not re-enable that. Low cuts particles / juice / damage numbers.
+ * `computeGraphicsResize` still documents a future FOV-safe buffer split.
  * Requires Phaser.Scale.NONE (see main.ts).
  */
 export function applyGraphicsProfile(game: Phaser.Game): void {

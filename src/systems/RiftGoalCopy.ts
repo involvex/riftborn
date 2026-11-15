@@ -1,0 +1,29 @@
+/** Pure copy for rift onboarding / mod clarity (O2). */
+
+export const RIFT_GOAL_LINE = 'Kill → Boss → Exit';
+
+/** Toast when the player first enters a rift. */
+export function riftEnterToastText(opts: {
+  depthLabel: string;
+  modName: string;
+  modBlurb: string;
+}): string {
+  return `Rift ${opts.depthLabel} · ${RIFT_GOAL_LINE} · ${opts.modName} — ${opts.modBlurb}`;
+}
+
+/**
+ * Toast when the player shifts onto the wrong layer under a layer-lock mod.
+ * Emphasizes combat is not broken — foes live only on one layer.
+ */
+export function veiledWrongLayerToast(opts: {
+  modName: string;
+  lockedLayerName: string;
+  shiftLabel: string;
+}): string {
+  return `${opts.modName}: foes only on ${opts.lockedLayerName} — ${opts.shiftLabel} back (SHIFT not broken)`;
+}
+
+/** First-session / tutorial rift goal with the live shift bind. */
+export function riftGoalHint(shiftLabel: string): string {
+  return `Rift: ${RIFT_GOAL_LINE}. ${shiftLabel} opens layer gates.`;
+}
