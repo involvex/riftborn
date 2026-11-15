@@ -1,6 +1,6 @@
 /**
- * Procedural jam audio: layered SFX + seamless hub/combat loops.
- * Everything is synthesized here — no external samples, CC0-safe.
+ * A1b jam audio (ChipTone / sfxr-style synth, CC0).
+ * Layered SFX + seamless hub/combat loops — no external samples.
  *
  * Usage: bun run scripts/gen-placeholder-sfx.mjs
  */
@@ -277,48 +277,49 @@ sfx['ui-click'] = (() => {
 })();
 
 sfx.hit = (() => {
-  const out = new Float32Array(Math.floor(0.22 * SFX_SR));
+  // Punchier sfxr-style thud + click for pack multi-hits.
+  const out = new Float32Array(Math.floor(0.2 * SFX_SR));
   mixInto(
     out,
     tone({
-      freq: 155,
-      to: 62,
-      dur: 0.18,
+      freq: 190,
+      to: 48,
+      dur: 0.16,
       type: 'sine',
-      vol: 0.6,
+      vol: 0.72,
       attack: 0.001,
-      decay: 0.05,
-      sustain: 0.22,
-      release: 0.12,
+      decay: 0.04,
+      sustain: 0.18,
+      release: 0.1,
     }),
     0,
   );
   mixInto(
     out,
     tone({
-      freq: 320,
-      to: 140,
-      dur: 0.09,
-      type: 'triangle',
-      vol: 0.2,
+      freq: 420,
+      to: 110,
+      dur: 0.07,
+      type: 'square',
+      vol: 0.14,
       attack: 0.001,
-      decay: 0.03,
-      sustain: 0.15,
-      release: 0.06,
+      decay: 0.025,
+      sustain: 0.1,
+      release: 0.04,
     }),
     0,
   );
   mixInto(
     out,
     noiseBurst({
-      dur: 0.14,
-      vol: 0.28,
-      cutoff: 2400,
-      sweepTo: 600,
-      hp: 250,
-      curve: 9,
+      dur: 0.12,
+      vol: 0.34,
+      cutoff: 3200,
+      sweepTo: 480,
+      hp: 180,
+      curve: 11,
     }),
-    0.004,
+    0.002,
   );
   return out;
 })();
@@ -487,15 +488,16 @@ sfx['loot-legendary'] = (() => {
 })();
 
 sfx.swing = (() => {
-  const out = new Float32Array(Math.floor(0.26 * SFX_SR));
+  // Blade whoosh: rising noise arc + soft body.
+  const out = new Float32Array(Math.floor(0.28 * SFX_SR));
   mixInto(
     out,
     noiseBurst({
-      dur: 0.24,
-      vol: 0.34,
-      cutoff: 900,
-      sweepTo: 6500,
-      hp: 350,
+      dur: 0.26,
+      vol: 0.4,
+      cutoff: 700,
+      sweepTo: 7800,
+      hp: 280,
       arc: true,
     }),
     0,
@@ -503,17 +505,17 @@ sfx.swing = (() => {
   mixInto(
     out,
     tone({
-      freq: 210,
-      to: 90,
-      dur: 0.1,
-      type: 'triangle',
-      vol: 0.12,
+      freq: 260,
+      to: 70,
+      dur: 0.12,
+      type: 'saw',
+      vol: 0.1,
       attack: 0.002,
       decay: 0.04,
-      sustain: 0.2,
-      release: 0.06,
+      sustain: 0.15,
+      release: 0.07,
     }),
-    0,
+    0.01,
   );
   return out;
 })();
@@ -567,18 +569,18 @@ for (const [name, samples] of Object.entries(sfx)) {
 // Music (seamless loops)
 // ---------------------------------------------------------------------------
 
-/** Calm hub theme: Am – F – C – G pad, sub bass, sparse arpeggio. */
+/** Hub: Em – C – G – D pad bed, soft bass, floating arp (BeepBox-ish). */
 function renderHub() {
-  const loopSec = 12;
-  const barSec = 3;
-  const fadeSec = 1.1;
+  const loopSec = 16;
+  const barSec = 4;
+  const fadeSec = 1.4;
   const sr = MUSIC_SR;
   const out = new Float32Array(Math.floor((loopSec + fadeSec) * sr));
   const bars = [
-    { start: 0, root: 45, triad: [57, 60, 64] }, // Am
-    { start: 3, root: 41, triad: [53, 57, 60] }, // F
-    { start: 6, root: 48, triad: [60, 64, 67] }, // C
-    { start: 9, root: 43, triad: [55, 59, 62] }, // G
+    { start: 0, root: 40, triad: [52, 55, 59] }, // Em
+    { start: 4, root: 36, triad: [48, 52, 55] }, // C
+    { start: 8, root: 43, triad: [55, 59, 62] }, // G
+    { start: 12, root: 38, triad: [50, 54, 57] }, // D
   ];
   for (const bar of bars) {
     for (const m of bar.triad) {
@@ -588,12 +590,30 @@ function renderHub() {
           freq: noteFreq(m),
           dur: barSec,
           type: 'sine',
-          vol: 0.1,
-          attack: 0.7,
-          decay: 0.8,
-          sustain: 0.72,
+          vol: 0.09,
+          attack: 0.9,
+          decay: 1,
+          sustain: 0.7,
+          release: 1.4,
+          detune: 0.002,
+          sampleRate: sr,
+        }),
+        bar.start,
+        1,
+        sr,
+      );
+      mixInto(
+        out,
+        tone({
+          freq: noteFreq(m + 12),
+          dur: barSec,
+          type: 'triangle',
+          vol: 0.035,
+          attack: 1.1,
+          decay: 1,
+          sustain: 0.55,
           release: 1.2,
-          detune: 0.0015,
+          detune: 0.001,
           sampleRate: sr,
         }),
         bar.start,
@@ -607,55 +627,56 @@ function renderHub() {
         freq: noteFreq(bar.root - 12),
         dur: barSec,
         type: 'triangle',
-        vol: 0.2,
-        attack: 0.12,
-        decay: 1,
-        sustain: 0.5,
-        release: 1,
+        vol: 0.22,
+        attack: 0.15,
+        decay: 1.2,
+        sustain: 0.55,
+        release: 1.1,
         sampleRate: sr,
       }),
       bar.start,
       1,
       sr,
     );
-    const pattern = [0, 1, 2, 1];
+    // 8-step arp sparkle.
+    const pattern = [0, 2, 1, 2, 0, 1, 2, 1];
     pattern.forEach((step, i) => {
       const m = bar.triad[step] + 12;
       mixInto(
         out,
         tone({
           freq: noteFreq(m),
-          dur: 0.7,
-          type: 'triangle',
-          vol: 0.06,
-          attack: 0.012,
-          decay: 0.24,
-          sustain: 0.18,
-          release: 0.35,
+          dur: 0.55,
+          type: 'sine',
+          vol: 0.055,
+          attack: 0.01,
+          decay: 0.2,
+          sustain: 0.15,
+          release: 0.28,
           sampleRate: sr,
         }),
-        bar.start + i * 0.75,
+        bar.start + i * 0.5,
         1,
         sr,
       );
     });
   }
-  normalize(out, 0.42);
+  normalize(out, 0.4);
   return makeLoop(out, loopSec, sr, fadeSec);
 }
 
-/** Combat theme: Dm – Bb – Gm – A with pulsed bass, kick, snare and hats. */
+/** Combat: Fm – Db – Bbm – C drive with bass, kick/snare, lead stabs. */
 function renderCombat() {
-  const loopSec = 12;
-  const barSec = 3;
-  const fadeSec = 0.9;
+  const loopSec = 16;
+  const barSec = 4;
+  const fadeSec = 1;
   const sr = MUSIC_SR;
   const out = new Float32Array(Math.floor((loopSec + fadeSec) * sr));
   const bars = [
-    { start: 0, root: 38, triad: [50, 53, 57] }, // Dm
-    { start: 3, root: 34, triad: [46, 50, 53] }, // Bb
-    { start: 6, root: 31, triad: [43, 46, 50] }, // Gm
-    { start: 9, root: 33, triad: [45, 49, 52] }, // A
+    { start: 0, root: 41, triad: [53, 56, 60] }, // Fm
+    { start: 4, root: 37, triad: [49, 53, 56] }, // Db
+    { start: 8, root: 34, triad: [46, 49, 53] }, // Bbm
+    { start: 12, root: 36, triad: [48, 52, 55] }, // C
   ];
   for (const bar of bars) {
     for (const m of bar.triad) {
@@ -665,12 +686,12 @@ function renderCombat() {
           freq: noteFreq(m),
           dur: barSec,
           type: 'saw',
-          vol: 0.035,
-          attack: 0.2,
-          decay: 0.6,
-          sustain: 0.45,
-          release: 0.6,
-          detune: 0.003,
+          vol: 0.04,
+          attack: 0.15,
+          decay: 0.5,
+          sustain: 0.5,
+          release: 0.7,
+          detune: 0.004,
           sampleRate: sr,
         }),
         bar.start,
@@ -678,21 +699,20 @@ function renderCombat() {
         sr,
       );
     }
-    // Eighth-note bass pulse with accents.
-    for (let i = 0; i < 12; i++) {
+    for (let i = 0; i < 16; i++) {
       const at = bar.start + i * 0.25;
-      const accent = i % 4 === 0 ? 1 : i % 2 === 0 ? 0.7 : 0.5;
+      const accent = i % 4 === 0 ? 1 : i % 2 === 0 ? 0.72 : 0.48;
       mixInto(
         out,
         tone({
           freq: noteFreq(bar.root),
-          dur: 0.24,
+          dur: 0.22,
           type: 'saw',
-          vol: 0.14 * accent,
-          attack: 0.004,
-          decay: 0.08,
-          sustain: 0.3,
-          release: 0.12,
+          vol: 0.15 * accent,
+          attack: 0.003,
+          decay: 0.07,
+          sustain: 0.28,
+          release: 0.1,
           sampleRate: sr,
         }),
         at,
@@ -703,13 +723,13 @@ function renderCombat() {
         out,
         tone({
           freq: noteFreq(bar.root - 12),
-          dur: 0.26,
+          dur: 0.24,
           type: 'sine',
-          vol: 0.2 * accent,
-          attack: 0.004,
-          decay: 0.1,
-          sustain: 0.35,
-          release: 0.12,
+          vol: 0.22 * accent,
+          attack: 0.003,
+          decay: 0.09,
+          sustain: 0.32,
+          release: 0.1,
           sampleRate: sr,
         }),
         at,
@@ -717,21 +737,20 @@ function renderCombat() {
         sr,
       );
     }
-    // Kick on every beat, snare on 2 and 4, hats on off-beats.
-    for (let beat = 0; beat < 6; beat++) {
+    for (let beat = 0; beat < 8; beat++) {
       const at = bar.start + beat * 0.5;
       mixInto(
         out,
         tone({
-          freq: 110,
-          to: 45,
-          dur: 0.2,
+          freq: 120,
+          to: 42,
+          dur: 0.18,
           type: 'sine',
-          vol: beat % 2 === 0 ? 0.6 : 0.4,
+          vol: beat % 2 === 0 ? 0.62 : 0.38,
           attack: 0.001,
-          decay: 0.05,
-          sustain: 0.2,
-          release: 0.12,
+          decay: 0.045,
+          sustain: 0.18,
+          release: 0.1,
           sampleRate: sr,
         }),
         at,
@@ -742,11 +761,11 @@ function renderCombat() {
         mixInto(
           out,
           noiseBurst({
-            dur: 0.14,
-            vol: 0.24,
-            cutoff: 2600,
-            hp: 600,
-            curve: 8,
+            dur: 0.12,
+            vol: 0.26,
+            cutoff: 2800,
+            hp: 500,
+            curve: 9,
             sampleRate: sr,
           }),
           at,
@@ -757,11 +776,11 @@ function renderCombat() {
       mixInto(
         out,
         noiseBurst({
-          dur: 0.04,
-          vol: 0.1,
-          cutoff: 9000,
-          hp: 5000,
-          curve: 14,
+          dur: 0.035,
+          vol: 0.11,
+          cutoff: 10000,
+          hp: 5200,
+          curve: 16,
           sampleRate: sr,
         }),
         at + 0.25,
@@ -769,26 +788,28 @@ function renderCombat() {
         sr,
       );
     }
-    // Sparse lead stabs at bar midpoint.
-    mixInto(
-      out,
-      tone({
-        freq: noteFreq(bar.triad[0] + 24),
-        dur: 0.4,
-        type: 'pulse',
-        vol: 0.07,
-        attack: 0.01,
-        decay: 0.12,
-        sustain: 0.25,
-        release: 0.2,
-        sampleRate: sr,
-      }),
-      bar.start + 1.5,
-      1,
-      sr,
-    );
+    // Lead motif mid-bar.
+    [0, 2, 3].forEach((step, i) => {
+      mixInto(
+        out,
+        tone({
+          freq: noteFreq(bar.triad[step % 3] + 24),
+          dur: 0.35,
+          type: 'pulse',
+          vol: 0.08,
+          attack: 0.008,
+          decay: 0.1,
+          sustain: 0.22,
+          release: 0.16,
+          sampleRate: sr,
+        }),
+        bar.start + 1.5 + i * 0.5,
+        1,
+        sr,
+      );
+    });
   }
-  normalize(out, 0.48);
+  normalize(out, 0.5);
   return makeLoop(out, loopSec, sr, fadeSec);
 }
 

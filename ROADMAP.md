@@ -23,6 +23,8 @@ Solo evenings, one shippable slice at a time. Prefer **feel → content → syst
 - **Map fog of war** (explore to reveal); **hub fog persists** on save
 - **Custom app icon** (Electron + Expo via `bun run icons`)
 - Electron portable + self-hosted co-op (basic); share kit in `SHARE.md`
+- **FOV-safe Low fillrate** (M7b buffer + camera zoom); touch stick analog speed
+- **A1b jam audio** — ChipTone-style SFX + hub/combat loops (CC0 synth)
 
 ## Next — after Game Off submit
 
@@ -38,7 +40,6 @@ Skip inventing new frameworks — extend `MapGen` / `WorldScene` / `SaveStore` /
 
 - App Store packaging for Expo shell
 - Authoritative co-op loot / gear sync / rift co-op
-- FOV-safe mobile canvas buffer downscale
 - Seasons, trading, seamless open world
 - Full new painted attack sheets (needs art time; VFX covers the gap for now)
 - Drag-drop equip (double-click already works)

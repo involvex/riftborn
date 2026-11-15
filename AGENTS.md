@@ -95,13 +95,13 @@ Touch (`/?touch=1` or coarse/small): virtual stick · ATK · E · DASH · SHIFT 
 
 ## Audio
 
-- Placeholders live in `public/assets/audio/sfx/` and `…/music/` (WAV).
+- A1b jam SFX/music live in `public/assets/audio/sfx/` and `…/music/` (WAV, CC0 synth).
 - Regenerate: `bun run scripts/gen-placeholder-sfx.mjs`
 - Load via `preloadAudio` in BootScene; playback through `AudioBus`
   (Phaser files first, WebAudio beeps as fallback).
 - Hub vs combat music swaps in `WorldScene.loadZone`.
-- Replace placeholders with ChipTone / sfxr / BeepBox exports (prefer `.ogg`)
-  before jam submit — keep the same Phaser keys in `AudioBus.ts`.
+- Optional: swap in ChipTone / sfxr / BeepBox `.ogg` exports later —
+  keep the same Phaser keys in `AudioBus.ts`.
 
 ## Jam asset strategy (Game Off / free tools)
 

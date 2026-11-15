@@ -2,10 +2,10 @@
 
 ## Audio
 
-All SFX and music loops in `public/assets/audio/` are procedurally
-synthesized by `scripts/gen-placeholder-sfx.mjs` (original work, released
-as CC0 / public domain). No third-party samples are bundled — regenerate
-with:
+All SFX and music loops in `public/assets/audio/` are A1b jam audio —
+procedurally synthesized ChipTone/sfxr-style by
+`scripts/gen-placeholder-sfx.mjs` (original work, CC0 / public domain).
+No third-party samples are bundled. Regenerate with:
 
 ```bash
 bun run scripts/gen-placeholder-sfx.mjs
