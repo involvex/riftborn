@@ -183,9 +183,15 @@ export class Enemy {
   syncShiftLayer(playerLayer: ShiftLayerId): void {
     const active = enemyActiveOnLayer(this.shiftLayer, playerLayer);
     this.ghosted = !active;
-    this.body.setAlpha(this.ghosted ? 0.35 : 1);
-    if (this.ghosted) this.bar.setAlpha(0.25);
-    else this.bar.setAlpha(1);
+    this.body.setAlpha(this.ghosted ? 0.22 : 1);
+    if (this.ghosted) {
+      this.bar.setAlpha(0.18);
+      // Desaturate so inactive-layer foes don't compete with live packs.
+      this.sprite.setTint(0x6a7080);
+    } else {
+      this.bar.setAlpha(1);
+      this.applyBaseTint();
+    }
   }
 
   private applyBaseTint(): void {

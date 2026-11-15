@@ -24,9 +24,10 @@ export const SHIFT_LAYERS: Record<ShiftLayerId, ShiftLayerDef> = {
   shadow: {
     id: 'shadow',
     name: 'Schatten',
-    tileTint: 0x9a8cff,
-    propTint: 0xb0a0ff,
-    overlayAlpha: 0.34,
+    // Softer violet than before — less mud when stacked with overlay.
+    tileTint: 0xb0a8e8,
+    propTint: 0xc0b4f0,
+    overlayAlpha: 0.26,
     hudColor: '#a090ff',
   },
 };

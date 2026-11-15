@@ -99,7 +99,7 @@ Playwright: `e2e/m2b.touch.spec.ts` → `artifacts/m2b-inventory.png`, `artifact
 | --------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- | ------ |
 | Tutorial v2           | `TutorialOverlay` erklärt gleiche Welt, zwei Schichten, Kills→Energie, SHIFT öffnet Wege (`riftborn.tutorial.v2`, Touch+Desktop)                | ok     |
 | Shift-Feedback        | Erfolgreicher Spieler-Shift: Toast `Asche → Schatten` + verstärkter Flash/Burst (prozedural, `ShiftFx`)                                         | ok     |
-| Sichtbarkeit Schatten | `shiftLayers.shadow.overlayAlpha` 0.18→0.34 (HUD lesbar), stärkere Transition                                                                   | ok     |
+| Sichtbarkeit Schatten | `shadow.overlayAlpha` 0.26 + softer tileTint (V1 optics; was 0.34 purple mud)                                                                   | ok     |
 | Depth-1 Gates         | `stampShiftGates` garantiert mind. ein Layer-Gate; `isWalkableOnLayer` unterscheidet Ebenen; Boss/Exit per `canReachWithShift` erreichbar       | ok     |
 | Touch-Lesbarkeit      | `ShiftHud` nutzt `uiFontSize` (Touch-Floor) und touch-klares Label `SHIFT`                                                                      | ok     |
 | Nachweis              | Unit: Depth-1 Gate + `ShiftFeedback`-Helfer. Playwright 1024×473: `artifacts/j1-ash.png`, `artifacts/j1-shadow.png`, optional `j1-tutorial.png` | ok     |

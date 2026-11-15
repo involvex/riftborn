@@ -39,6 +39,11 @@ describe('ShiftVisual', () => {
     expect(layerOverlayAlpha('ash', 1)).toBe(0);
   });
 
+  test('shadow wash stays readable without heavy purple mud', () => {
+    expect(SHIFT_LAYERS.shadow.overlayAlpha).toBeLessThanOrEqual(0.3);
+    expect(SHIFT_LAYERS.shadow.overlayAlpha).toBeGreaterThan(0.15);
+  });
+
   test('flash alpha peaks mid transition then fades', () => {
     expect(transitionFlashAlpha(0)).toBe(0);
     expect(transitionFlashAlpha(1)).toBe(0);

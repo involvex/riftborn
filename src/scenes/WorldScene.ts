@@ -47,6 +47,11 @@ import {
   type WildernessPoi,
   type ZoneLayout,
 } from '../world/MapGen';
+import {
+  HUB_TRANSITION_FLOOR_TINT,
+  HUB_WILD_FLOOR_TINT,
+  isDungeonFloorEdge,
+} from '../world/HubOptics';
 import type {
   CharacterClassId,
   GearInstance,
@@ -800,12 +805,17 @@ export class WorldScene extends Phaser.Scene {
     const tileTint = layerTileTint(layer, i);
     for (const s of this.tileSprites) {
       const gate = s.getData('gate') as ShiftLayerId | null;
+      const floorTint =
+        (s.getData('baseTint') as number | undefined) ?? 0xffffff;
       if (gate) {
         // Keep gate identity visible under layer wash.
         const base = gate === 'ash' ? 0xc8e8ff : 0x7ad4e8;
         s.setTint(blendTint(base, tileTint, 0.35 * i));
+      } else if (tileTint === 0xffffff) {
+        // Ash / hub: keep road/wild floor contrast from placeFloorTile.
+        s.setTint(floorTint);
       } else {
-        s.setTint(tileTint);
+        s.setTint(blendTint(floorTint, tileTint, Math.min(1, 0.75 * i)));
       }
     }
     const propTint = layerPropTint(layer, i);
@@ -816,6 +826,7 @@ export class WorldScene extends Phaser.Scene {
       });
     }
     const alpha = layerOverlayAlpha(layer, i);
+    const wash = SHIFT_LAYERS[layer].tileTint;
     if (!this.shiftOverlay) {
       this.shiftOverlay = this.add
         .rectangle(
@@ -823,16 +834,16 @@ export class WorldScene extends Phaser.Scene {
           this.scale.height / 2,
           this.scale.width * 2,
           this.scale.height * 2,
-          0x6a50c8,
+          wash,
           0,
         )
         .setScrollFactor(0)
         .setDepth(-500)
         .setVisible(true);
     }
-    this.shiftOverlay.setFillStyle(0x6a50c8, alpha);
+    this.shiftOverlay.setFillStyle(wash, alpha);
     this.cameras.main.setBackgroundColor(
-      layer === 'shadow' ? '#0e0c18' : '#12161c',
+      layer === 'shadow' ? '#12101c' : '#12161c',
     );
   }
 
@@ -1348,6 +1359,8 @@ export class WorldScene extends Phaser.Scene {
         .setScale(TILE_ART_SCALE)
         .setDepth(-1000);
       img.setData('gate', gate);
+      const baseTint = tint ?? 0xffffff;
+      img.setData('baseTint', baseTint);
       if (tint !== undefined) {
         img.setTint(tint);
       }
@@ -1459,18 +1472,20 @@ export class WorldScene extends Phaser.Scene {
             if (nearTown(x, y, 16)) {
               band = 'plaza'; // paved in town vicinity
               fallback = 0xd8d8d8;
-              tint = 0xe8dcc8; // warm stone/pavement
+              tint = 0xf0e4c8; // warmer stone/pavement
             } else {
               band = 'road'; // dirt/earth road outside
               fallback = 0xb8a080;
-              tint = 0xc8b090; // earth road
+              tint = 0xd0b080; // earth road — more contrast vs grass
             }
           } else if (nearTown(x, y, 14)) {
             band = 'transition';
-            fallback = 0xd8d8d8;
+            fallback = 0xd0dcc0;
+            tint = HUB_TRANSITION_FLOOR_TINT;
           } else {
             band = 'wild';
-            fallback = 0xd8d8d8;
+            fallback = 0xb8d0a0;
+            tint = HUB_WILD_FLOOR_TINT;
           }
           this.placeFloorTile(
             x,
@@ -1557,10 +1572,13 @@ export class WorldScene extends Phaser.Scene {
         }
         const gate = map.layerGates[y]![x] ?? null;
         this.placeFloorTile(x, y, key, fallbackTint, gate);
+        if (!gate && isDungeonFloorEdge(map.cells, x, y)) {
+          this.strokeIsoTileOutline(this.tiles, x, y, accent, 0.35);
+        }
         if ((x * 17 + y * 31) % 19 === 0 && !gate) {
           const { screenX, screenY } = worldToScreen(x, y);
-          this.tiles.fillStyle(accent, 0.4);
-          this.tiles.fillCircle(screenX, screenY, 3);
+          this.tiles.fillStyle(accent, 0.45);
+          this.tiles.fillCircle(screenX, screenY, 3.5);
         }
       }
     }
@@ -1568,15 +1586,16 @@ export class WorldScene extends Phaser.Scene {
     this.cullWorldSprites();
   }
 
-  /** Iso diamond outline for shift-gate tiles. */
+  /** Iso diamond outline for shift-gate tiles / rift void edges. */
   private strokeIsoTileOutline(
     g: Phaser.GameObjects.Graphics,
     x: number,
     y: number,
     color: number,
+    alpha = 0.85,
   ): void {
     const { screenX, screenY } = worldToScreen(x, y);
-    g.lineStyle(2, color, 0.85);
+    g.lineStyle(2, color, alpha);
     g.beginPath();
     g.moveTo(screenX, screenY - 16);
     g.lineTo(screenX + 32, screenY);

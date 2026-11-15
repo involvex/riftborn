@@ -1,5 +1,9 @@
 import { generateRoads } from './Roads';
 import type { AmbushDef } from './Ambush';
+import {
+  HUB_FRINGE_DECOR_ATTEMPTS,
+  HUB_PATH_EDGE_DECOR_CHANCE,
+} from './HubOptics';
 
 /** Deterministic PRNG (mulberry32). */
 export function mulberry32(seed: number): () => number {
@@ -406,7 +410,7 @@ export function generateHub(seed = 1): ZoneLayout {
   // Path-edge / transition props (bush, rock, lantern)
   for (const p of paths) {
     if (inPlaza(p.x, p.y) || nearTown(p.x, p.y, 4)) continue;
-    if (rnd() > 0.16) continue;
+    if (rnd() > HUB_PATH_EDGE_DECOR_CHANCE) continue;
     const ox = rnd() > 0.5 ? 1 : -1;
     const oy = rnd() > 0.5 ? 1 : -1;
     const dx = p.x + (rnd() > 0.5 ? ox : 0);
@@ -463,7 +467,7 @@ export function generateHub(seed = 1): ZoneLayout {
   nodes.push({ defId: 'rift_vein', x: 39.5, y: 56.5 });
 
   // Fringe / wilderness clutter (tree, bush, rock, crystal) — skip roads
-  for (let i = 0; i < 96; i++) {
+  for (let i = 0; i < HUB_FRINGE_DECOR_ATTEMPTS; i++) {
     const x = 3 + rnd() * (size - 6);
     const y = 3 + rnd() * (size - 6);
     if (inPlaza(x, y) || nearPoi(x, y, pois) || nearRoad(x, y)) continue;
