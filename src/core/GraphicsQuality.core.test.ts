@@ -132,7 +132,6 @@ describe('readCssViewport', () => {
     expect(vp.width).toBeGreaterThanOrEqual(320);
     expect(vp.height).toBeGreaterThanOrEqual(180);
   });
-
 });
 
 describe('graphicsQuality helpers', () => {
