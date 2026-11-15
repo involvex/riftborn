@@ -10,11 +10,13 @@ import { installNativeBackBridge } from './core/NativeBackBridge';
 import {
   applyGraphicsProfile,
   gameSizeForProfile,
+  readCssViewport,
 } from './core/GraphicsQuality';
 
 const parent = document.getElementById('app');
-// Logical size = CSS viewport; renderScale only affects buffer later.
-const bootSize = gameSizeForProfile(window.innerWidth, window.innerHeight, 1);
+// Logical size = CSS viewport (never physical/DPR pixels).
+const vp = readCssViewport();
+const bootSize = gameSizeForProfile(vp.width, vp.height, 1);
 const bootW = bootSize.width;
 const bootH = bootSize.height;
 
@@ -27,10 +29,12 @@ const game = new Phaser.Game({
   },
   scale: {
     // NONE — GraphicsQuality owns buffer size + CSS stretch on mobile.
+    // NO_CENTER: we size the canvas to the CSS viewport ourselves;
+    // CENTER_BOTH letterboxes when a stale probe undersizes the game.
     mode: Phaser.Scale.NONE,
     width: bootW,
     height: bootH,
-    autoCenter: Phaser.Scale.CENTER_BOTH,
+    autoCenter: Phaser.Scale.NO_CENTER,
     autoRound: true,
   },
   fps: {

@@ -137,6 +137,26 @@ export default function App() {
         allowUniversalAccessFromFileURLs
         mixedContentMode="always"
         setSupportMultipleWindows={false}
+        scalesPageToFit={false}
+        setBuiltInZoomControls={false}
+        setDisplayZoomControls={false}
+        injectedJavaScriptBeforeContentLoaded={`
+          (function () {
+            try {
+              var m = document.querySelector('meta[name=viewport]');
+              if (!m) {
+                m = document.createElement('meta');
+                m.setAttribute('name', 'viewport');
+                document.head.appendChild(m);
+              }
+              m.setAttribute(
+                'content',
+                'width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover'
+              );
+            } catch (e) {}
+            true;
+          })();
+        `}
         onLoadEnd={() => setReady(true)}
         onError={(e: { nativeEvent: { description?: string } }) => {
           setError(e.nativeEvent.description || 'Could not load the game');

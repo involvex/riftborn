@@ -7,6 +7,7 @@ import {
   getAppliedCameraZoom,
   graphicsQualityLabel,
   profileForTier,
+  readCssViewport,
   resolveGraphicsTier,
   visibleWorldTileSpan,
 } from './GraphicsQuality';
@@ -118,10 +119,20 @@ describe('render scale vs world FOV', () => {
 });
 
 describe('getAppliedCameraZoom', () => {
-  test('defaults to base when scale is full', () => {
-    // Before applyGraphicsProfile, scale is 1 → identity.
+  test('returns base zoom (game size is always CSS/logical)', () => {
+    // Low fillrate shrinks the drawing buffer only — no zoom×scale.
     expect(getAppliedCameraZoom(1.1)).toBeCloseTo(1.1, 5);
+    expect(getAppliedCameraZoom(1)).toBe(1);
   });
+});
+
+describe('readCssViewport', () => {
+  test('returns positive layout size', () => {
+    const vp = readCssViewport();
+    expect(vp.width).toBeGreaterThanOrEqual(320);
+    expect(vp.height).toBeGreaterThanOrEqual(180);
+  });
+
 });
 
 describe('graphicsQuality helpers', () => {

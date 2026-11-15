@@ -21,6 +21,61 @@ export type GraphicsProfile = {
 
 export type Size2 = { width: number; height: number };
 
+/**
+ * CSS layout size for the game — never physical/DPR pixels.
+ * Prefer #app when laid out; fall back to document / inner / visualViewport.
+ * Do **not** Math.min every candidate — a single undersized probe (common
+ * mid-orientation on Android WebView) letterboxes the title UI.
+ * Cap vs the largest layout probe so a 2× DPR false reading can't win.
+ */
+export function readCssViewport(): Size2 {
+  if (typeof window === 'undefined') {
+    return { width: 1280, height: 720 };
+  }
+  const app = document.getElementById('app');
+  const vv = window.visualViewport;
+  const doc = document.documentElement;
+  const probes = (vals: Array<number | undefined | null>): number[] =>
+    vals.filter(
+      (n): n is number => typeof n === 'number' && Number.isFinite(n) && n > 1,
+    );
+
+  const widths = probes([
+    app?.clientWidth,
+    doc?.clientWidth,
+    window.innerWidth,
+    vv?.width,
+  ]);
+  const heights = probes([
+    app?.clientHeight,
+    doc?.clientHeight,
+    window.innerHeight,
+    vv?.height,
+  ]);
+
+  const pick = (list: number[], fallback: number): number => {
+    if (!list.length) return fallback;
+    // Prefer the first laid-out probe (#app → doc → inner).
+    const primary = list[0]!;
+    const largest = Math.max(...list);
+    // Reject a primary that is wildly smaller than the layout max
+    // (stale visualViewport / 0-layout race), but also reject a
+    // primary that is ~2× the next-smallest (DPR-as-CSS bug).
+    const sorted = [...list].sort((a, b) => a - b);
+    const median = sorted[Math.floor(sorted.length / 2)]!;
+    if (primary < median * 0.85) return Math.floor(median);
+    if (primary > median * 1.35 && largest > median * 1.35) {
+      return Math.floor(median);
+    }
+    return Math.floor(primary);
+  };
+
+  return {
+    width: Math.max(320, pick(widths, 1280)),
+    height: Math.max(180, pick(heights, 720)),
+  };
+}
+
 export type GraphicsResizeSizes = {
   /** Camera/world/game size — always CSS viewport (preserves FOV). */
   logical: Size2;
@@ -171,9 +226,12 @@ let resizeHooked = false;
 let gameRef: Phaser.Game | null = null;
 
 /**
- * M7b: FOV-safe Low fillrate. Resize the Phaser canvas/game to the
- * *buffer* size, stretch CSS back to the viewport, and ask cameras to
- * use `getAppliedCameraZoom(base)` so tile span matches High.
+ * M7b: FOV-safe Low fillrate.
+ * - Phaser game size stays at CSS/logical (UI + world coords unchanged).
+ * - Canvas matches game size — do **not** shrink the drawing buffer below
+ *   game size (that crops the scene and parks UI in a corner).
+ * - Low still cuts juice/particles/text budget via the profile caps.
+ * - Cameras keep base zoom because game size == CSS.
  * Requires Phaser.Scale.NONE (see main.ts).
  */
 export function applyGraphicsProfile(game: Phaser.Game): void {
@@ -188,17 +246,31 @@ export function applyGraphicsProfile(game: Phaser.Game): void {
     if (!gameRef) return;
     const p = currentGraphicsProfile();
     appliedScale = p.renderScale;
-    const cssW = window.innerWidth;
-    const cssH = window.innerHeight;
-    const sizes = computeGraphicsResize(cssW, cssH, p.renderScale);
+    const vp = readCssViewport();
+    const sizes = computeGraphicsResize(vp.width, vp.height, p.renderScale);
     appliedLogical = sizes.logical;
-    appliedBuffer = sizes.buffer;
-    // Low: smaller backing store (fill-rate). High: full CSS pixels.
-    const target = p.renderScale < 1 ? sizes.buffer : sizes.logical;
-    gameRef.scale.resize(target.width, target.height);
-    if (gameRef.canvas) {
-      gameRef.canvas.style.width = `${sizes.css.width}px`;
-      gameRef.canvas.style.height = `${sizes.css.height}px`;
+    // Applied buffer == logical: independent canvas downscale crops UI.
+    appliedBuffer = { ...sizes.logical };
+    gameRef.scale.resize(sizes.logical.width, sizes.logical.height);
+    const parent = gameRef.canvas?.parentElement;
+    if (parent) {
+      parent.style.width = '100%';
+      parent.style.height = '100%';
+      parent.style.margin = '0';
+      parent.style.overflow = 'hidden';
+    }
+    const c = gameRef.canvas;
+    if (c) {
+      // Force display size to CSS viewport — Phaser/WebView can leave
+      // style.width at buffer×DPR and clip the title menu.
+      c.style.position = 'absolute';
+      c.style.left = '0';
+      c.style.top = '0';
+      c.style.width = '100%';
+      c.style.height = '100%';
+      c.style.maxWidth = '100%';
+      c.style.maxHeight = '100%';
+      c.style.margin = '0';
     }
   };
 
@@ -206,9 +278,11 @@ export function applyGraphicsProfile(game: Phaser.Game): void {
 
   if (!resizeHooked) {
     resizeHooked = true;
-    window.addEventListener('resize', () => {
+    const onResize = (): void => {
       requestAnimationFrame(resizeToProfile);
-    });
+    };
+    window.addEventListener('resize', onResize);
+    window.visualViewport?.addEventListener('resize', onResize);
   }
 }
 
@@ -222,12 +296,12 @@ export function getAppliedRenderScale(): number {
 }
 
 /**
- * Camera zoom that keeps world FOV stable when Low uses a smaller buffer.
+ * Camera zoom for world FOV. Game size is always CSS/logical, so Low no
+ * longer multiplies zoom by renderScale (that was for buffer-sized games).
  * Pair with `cameras.main.setZoom(getAppliedCameraZoom(1.1))`.
  */
 export function getAppliedCameraZoom(baseZoom: number): number {
-  if (!(appliedScale > 0) || appliedScale >= 1) return baseZoom;
-  return baseZoom * appliedScale;
+  return baseZoom;
 }
 
 /** Live sizes for probes / Playwright (FOV + fillrate checks). */

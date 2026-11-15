@@ -77,6 +77,10 @@ export class BootScene extends Phaser.Scene {
   }
 
   private onResize = (): void => {
+    // WebView orientation / graphics resize can leave camera bounds stale.
+    this.cameras.main.setSize(this.scale.width, this.scale.height);
+    this.cameras.main.setScroll(0, 0);
+    this.cameras.main.setZoom(1);
     this.render();
   };
 
@@ -94,19 +98,27 @@ export class BootScene extends Phaser.Scene {
 
   private drawTitle(): void {
     const { width, height } = this.scale;
+    // Short landscape phones: pull the stack up and tighten gaps so
+    // Settings is never clipped by the bottom edge.
+    const compact = height < 500;
     const title = this.add
-      .text(width / 2, height * 0.22, 'RIFTBORN', {
+      .text(width / 2, height * (compact ? 0.14 : 0.22), 'RIFTBORN', {
         fontFamily: 'Georgia, "Times New Roman", serif',
-        fontSize: uiFont(this, 56, 36, 72),
+        fontSize: uiFont(this, compact ? 42 : 56, 28, 64),
         color: '#e8e4d8',
       })
       .setOrigin(0.5);
     const sub = this.add
-      .text(width / 2, height * 0.32, 'SHIFT between Asche & Schatten', {
-        fontFamily: 'Segoe UI, sans-serif',
-        fontSize: uiFont(this, 18, 14, 22),
-        color: '#8a9aaa',
-      })
+      .text(
+        width / 2,
+        height * (compact ? 0.26 : 0.32),
+        'SHIFT between Asche & Schatten',
+        {
+          fontFamily: 'Segoe UI, sans-serif',
+          fontSize: uiFont(this, 18, 13, 20),
+          color: '#8a9aaa',
+        },
+      )
       .setOrigin(0.5);
     this.root.add([title, sub]);
 
@@ -117,7 +129,8 @@ export class BootScene extends Phaser.Scene {
       continue: 'Continue',
       settings: 'Settings',
     };
-    let y = height * 0.48;
+    const gap = compact ? Math.max(36, Math.floor(height * 0.1)) : 56;
+    let y = height * (compact ? 0.42 : 0.48);
     for (const action of actions) {
       const btn = this.makeButton(width / 2, y, labels[action], () => {
         if (action === 'newGame') this.onNewGame();
@@ -128,23 +141,25 @@ export class BootScene extends Phaser.Scene {
         }
       });
       this.root.add(btn);
-      y += 56;
+      y += gap;
     }
 
-    const hint = this.add
-      .text(
-        width / 2,
-        height * 0.9,
-        'WASD · LMB · Q shift · 1/2/3 · M map · R rift · B town',
-        {
-          fontFamily: 'Segoe UI, sans-serif',
-          fontSize: '13px',
-          color: '#5a6a7a',
-          align: 'center',
-        },
-      )
-      .setOrigin(0.5);
-    this.root.add(hint);
+    if (!compact) {
+      const hint = this.add
+        .text(
+          width / 2,
+          height * 0.9,
+          'WASD · LMB · Q shift · 1/2/3 · M map · R rift · B town',
+          {
+            fontFamily: 'Segoe UI, sans-serif',
+            fontSize: uiFont(this, 13, 11, 14),
+            color: '#5a6a7a',
+            align: 'center',
+          },
+        )
+        .setOrigin(0.5);
+      this.root.add(hint);
+    }
   }
 
   private onNewGame(): void {
@@ -427,13 +442,14 @@ export class BootScene extends Phaser.Scene {
     label: string,
     onClick: () => void,
   ): Phaser.GameObjects.Text {
+    const compact = this.scale.height < 500;
     const btn = this.add
       .text(x, y, label, {
         fontFamily: 'Georgia, serif',
-        fontSize: '20px',
+        fontSize: uiFont(this, compact ? 16 : 20, 14, 22),
         color: '#0a0c10',
         backgroundColor: '#c4a574',
-        padding: { x: 18, y: 10 },
+        padding: { x: compact ? 14 : 18, y: compact ? 7 : 10 },
       })
       .setOrigin(0.5)
       .setInteractive({ useHandCursor: true });

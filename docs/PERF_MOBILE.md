@@ -19,13 +19,14 @@ Setting: **Graphics** = Auto / Low / High (Settings + title).
 
 - **Auto** → Low when `?touch=1` / coarse pointer / small screen; else High.
 - **Low** (`src/core/GraphicsQuality.ts`):
-  - `renderScale: 0.65` — canvas/game resize to **buffer** size
-  - CSS stretch back to viewport (`pixelated`)
-  - Camera zoom via `getAppliedCameraZoom(1.1)` = `1.1 × 0.65` so tile span matches High
-  - Damage-number pool + hard cap (8 live)
-  - Particle burst cap (3)
-  - Scale hitstop / shake (~40%)
-  - Text resolution 1 for floating numbers
+  - Phaser **game size stays CSS/logical** (never buffer-sized — that
+    overscaled or cropped the title UI)
+  - Canvas matches game size (shrinking the drawing buffer below game size
+    cropped the scene)
+  - Camera zoom stays base (`getAppliedCameraZoom(1.1)` → `1.1`)
+  - Fillrate wins come from juice budget: damage-number pool (8), particle
+    cap (3), hitstop/shake ~40%, text resolution 1
+  - Profile still exposes `renderScale: 0.65` for probes / future work
 - **High**: full CSS pixels + juice budget
 
 ## Stick feel (touch)
@@ -37,10 +38,12 @@ Setting: **Graphics** = Auto / Low / High (Settings + title).
 ## How to verify
 
 1. `/?touch=1` + Graphics Auto/Low → `__RIFTBORN.graphicsProfile()` shows
-   `bufferWidth < logicalWidth` and `renderScale === 0.65`.
-2. Hub smoke M3d / P1 at 1024×473 still look wide (FOV).
-3. `bun test src/core/GraphicsQuality.core.test.ts`
-4. Stick: half push walks slower than full push.
+   `renderScale === 0.65` and `logicalWidth === bufferWidth` (game size
+   stays CSS; juice caps apply).
+2. Title screen buttons stay centered (not cropped / not overscaled).
+3. Hub smoke M3d / P1 at 1024×473 still look wide (FOV).
+4. `bun test src/core/GraphicsQuality.core.test.ts`
+5. Stick: half push walks slower than full push.
 
 ## M3d contract
 

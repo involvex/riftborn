@@ -41,13 +41,23 @@ function syncTo(dest) {
   const indexPath = join(dest, 'index.html');
   if (existsSync(indexPath)) {
     let html = readFileSync(indexPath, 'utf8');
+    let dirty = false;
     if (!html.includes('__RIFTBORN_TOUCH')) {
       html = html.replace(
         '<head>',
         '<head>\n    <script>window.__RIFTBORN_TOUCH=1</script>',
       );
-      writeFileSync(indexPath, html);
+      dirty = true;
     }
+    // file:// WebViews sometimes ignore a weak viewport — pin scale.
+    if (!html.includes('user-scalable=no')) {
+      html = html.replace(
+        /content="width=device-width[^"]*"/,
+        'content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover"',
+      );
+      dirty = true;
+    }
+    if (dirty) writeFileSync(indexPath, html);
   }
   console.log(`Synced → ${dest}`);
 }
