@@ -5,7 +5,7 @@ import type {
   PlayerStats,
 } from './game';
 
-export type BountyKind = 'scout' | 'chests' | 'cull';
+export type BountyKind = 'scout' | 'chests' | 'cull' | 'shrine';
 
 export type ActiveBounty = {
   kind: BountyKind;

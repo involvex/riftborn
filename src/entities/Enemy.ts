@@ -203,6 +203,8 @@ export class Enemy {
     } else if (this.def.id === 'ash_bat') {
       // Red-eye bat sheet already reads aggressive; light violet punch
       this.sprite.setTint(0xc8a0ff);
+    } else if (this.def.id === 'ash_bramble') {
+      this.sprite.setTint(0x6abf5a);
     } else if (
       (this.def.isElite || this.elitePack || this.isBoss) &&
       !painted

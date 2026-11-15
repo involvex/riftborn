@@ -9,6 +9,7 @@ export type EnemyId =
   | 'ash_scamp'
   | 'ash_bat'
   | 'ash_scout'
+  | 'ash_bramble'
   | 'rift_lord'
   | 'crystal_lord'
   | 'grove_alpha'

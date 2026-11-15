@@ -24,5 +24,6 @@ describe('CoopGate', () => {
   test('welcome toast names the hub sandbox', () => {
     expect(coopWelcomeToast(true)).toContain('prototype');
     expect(coopWelcomeToast(false)).toContain('hub sandbox');
+    expect(coopWelcomeToast(true)).toContain('64');
   });
 });

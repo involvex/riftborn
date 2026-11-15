@@ -19,5 +19,5 @@ export function coopRiftBlockedReason(connected: boolean): string | null {
 
 export function coopWelcomeToast(host: boolean): string {
   const role = host ? 'Hosting' : 'Joined';
-  return `${role} co-op hub sandbox (prototype — no rifts)`;
+  return `${role} co-op hub sandbox 64×64 (prototype — no rifts)`;
 }

@@ -25,21 +25,28 @@ Solo evenings, one shippable slice at a time. Prefer **feel → content → syst
 - Electron portable + self-hosted co-op (basic); share kit in `SHARE.md`
 - **FOV-safe Low fillrate** (M7b buffer + camera zoom); touch stick analog speed
 - **A1b jam audio** — ChipTone-style SFX + hub/combat loops (CC0 synth)
+- Game Off itch pack (`docs/ITCH_PAGE.md`, `bun run build:itch`)
+- **Co-op Fix-light** — hub sandbox clamps/spawns on full **64×64** (`clampHubCoord`)
+- Biome craft sinks: **Ashen Charm / Crystal Lens / Grove Tonic**
+- Hub elite **Ash Bramble** (grove); bounty kind **shrine** (Ember bless)
 
-## Next — after Game Off submit
+## Next — post-jam
 
-| #   | Slice                     | Why it matters                  | Done when                              |
-| --- | ------------------------- | ------------------------------- | -------------------------------------- |
-| 1   | **Itch submit**           | Jam deadline Dec 1              | ZIP + `docs/ITCH_PAGE.md` live on itch |
-| 2   | **Friend feedback**       | One external playtest complaint | Next evening fixes that one item       |
-| 3   | **Co-op redesign / hide** | Prototype gated via `CoopGate`  | Shared hub or P removed from marketing |
+| #   | Slice               | Why it matters                  | Done when                                 |
+| --- | ------------------- | ------------------------------- | ----------------------------------------- |
+| 1   | **Friend feedback** | One external playtest complaint | Next evening fixes that **one** item only |
 
-Skip inventing new frameworks — extend `MapGen` / `WorldScene` / `SaveStore` / NPCs.
+**Playtest slot:** share a build (`SHARE.md`), ask for **one** top complaint, put that complaint in this table as #1 for the next session — do not invent extras the same night.
 
-## Later (don’t start yet)
+Skip inventing new frameworks — extend `MapGen` / `WorldScene` / `SaveStore` / NPCs / `server/index.ts` / `src/data/*`.
+
+## Later (parked — after playtest loop)
+
+Do **not** start these until a friend complaint slice is done (or explicitly requested):
 
 - App Store packaging for Expo shell
-- Authoritative co-op loot / gear sync / rift co-op
+- Authoritative co-op loot / gear sync / rift co-op (beyond Fix-light)
+- CI: `typecheck` + `test:smoke` on GitHub Actions (release guard)
 - Seasons, trading, seamless open world
 - Full new painted attack sheets (needs art time; VFX covers the gap for now)
 - Drag-drop equip (double-click already works)
@@ -48,4 +55,8 @@ Skip inventing new frameworks — extend `MapGen` / `WorldScene` / `SaveStore` /
 
 - **1 slice / session** when tired; **2** if hot
 - Always leave a green `typecheck` + `lint` + `build`; map/POI → also `test:smoke`
-- Share a portable build with one friend once rifts + skills feel good
+- Share a portable build with one friend once a slice feels good
+
+## Archive
+
+Jam-era planning lives in [`GAME_OFF_2026_ROADMAP.md`](GAME_OFF_2026_ROADMAP.md) (**archive** — do not treat as current tasks). Living truth is this file.

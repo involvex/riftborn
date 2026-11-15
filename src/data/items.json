@@ -143,5 +143,29 @@
     "kind": "material",
     "color": "#6ABF5A",
     "sellValue": 6
+  },
+  "ashen_charm": {
+    "id": "ashen_charm",
+    "name": "Ashen Charm",
+    "stack": 20,
+    "kind": "material",
+    "color": "#C8CDD2",
+    "sellValue": 28
+  },
+  "crystal_lens": {
+    "id": "crystal_lens",
+    "name": "Crystal Lens",
+    "stack": 20,
+    "kind": "material",
+    "color": "#7FD8FF",
+    "sellValue": 40
+  },
+  "grove_tonic": {
+    "id": "grove_tonic",
+    "name": "Grove Tonic",
+    "stack": 20,
+    "kind": "material",
+    "color": "#6ABF5A",
+    "sellValue": 32
   }
 }

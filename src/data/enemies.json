@@ -210,5 +210,20 @@
     "lootTier": 3,
     "healRange": 6,
     "healFrac": 0.25
+  },
+  "ash_bramble": {
+    "id": "ash_bramble",
+    "name": "Ash Bramble",
+    "hp": 88,
+    "damage": 8,
+    "speed": 1.7,
+    "attackRange": 1.2,
+    "attackCooldown": 1.05,
+    "xp": 52,
+    "color": "#5A9A48",
+    "radius": 13,
+    "lootTable": "scout_loot",
+    "isElite": true,
+    "lootTier": 3
   }
 }

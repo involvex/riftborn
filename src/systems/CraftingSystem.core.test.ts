@@ -41,6 +41,29 @@ describe('recipes data', () => {
     expect(mailMats).toContain('ashen_bone');
     expect(mailMats).toContain('grove_sap');
   });
+
+  test('biome mat craft sinks exist for bone, crystal, and sap', () => {
+    expect(recipes['ashen_charm']!.ingredients.map((i) => i.itemId)).toContain(
+      'ashen_bone',
+    );
+    expect(recipes['crystal_lens']!.ingredients.map((i) => i.itemId)).toContain(
+      'rift_crystal',
+    );
+    expect(recipes['grove_tonic']!.ingredients.map((i) => i.itemId)).toContain(
+      'grove_sap',
+    );
+  });
+});
+
+describe('biome craft sinks', () => {
+  test('ashen charm consumes bone + scrap', () => {
+    const { inv, crafting } = setup();
+    inv.add('ashen_bone', 4);
+    inv.add('scrap', 3);
+    expect(crafting.craft('ashen_charm')).toBe(true);
+    expect(inv.count('ashen_charm')).toBe(1);
+    expect(inv.count('ashen_bone')).toBe(0);
+  });
 });
 
 describe('biome loot materials', () => {

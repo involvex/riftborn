@@ -43,6 +43,7 @@ export const ENEMY_SHIFT_LAYER: Record<string, EnemyShiftLayer> = {
   ash_scamp: 'ash',
   ash_scout: 'ash',
   ash_bat: 'ash',
+  ash_bramble: 'ash',
   shade: 'shadow',
   crawler: 'shadow',
   wisp: 'both',

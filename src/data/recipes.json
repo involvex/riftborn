@@ -49,5 +49,35 @@
       { "itemId": "grove_sap", "qty": 3 },
       { "itemId": "ore", "qty": 4 }
     ]
+  },
+  "ashen_charm": {
+    "id": "ashen_charm",
+    "name": "Ashen Charm",
+    "resultId": "ashen_charm",
+    "resultQty": 1,
+    "ingredients": [
+      { "itemId": "ashen_bone", "qty": 4 },
+      { "itemId": "scrap", "qty": 3 }
+    ]
+  },
+  "crystal_lens": {
+    "id": "crystal_lens",
+    "name": "Crystal Lens",
+    "resultId": "crystal_lens",
+    "resultQty": 1,
+    "ingredients": [
+      { "itemId": "rift_crystal", "qty": 3 },
+      { "itemId": "ore", "qty": 2 }
+    ]
+  },
+  "grove_tonic": {
+    "id": "grove_tonic",
+    "name": "Grove Tonic",
+    "resultId": "grove_tonic",
+    "resultQty": 1,
+    "ingredients": [
+      { "itemId": "grove_sap", "qty": 3 },
+      { "itemId": "berries", "qty": 4 }
+    ]
   }
 }

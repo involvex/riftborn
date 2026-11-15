@@ -1,6 +1,9 @@
 # C6 — Core gameloop & animation audit
 
-Date: 2026-10-31 · Branch: `c6-core-loop` · Repo: `D:\repos\rpg-game`
+Date: 2026-10-31 · Branch: `c6-core-loop` · Repo: `D:\repos\rpg-game`  
+**Re-verified 2026-11-15 (post-jam):** majors 1–5 and minors 6–8 still **fixed** in tree
+(`HubResume`, `spendStat` test, `attackGen`, `resetCombatPose`, `Enemy.playDeath` fade tween,
+`Player.playAttack` zeros rotation, single `setOrigin(0.5, 0.88)`).
 
 Scope: Hub → Rift → fight → loot → boss → exit → hub; death/respawn; level-up; save; player/enemy anims (idle/walk/attack/hit/death), facing, frames, rates, foot anchors, depth. Did **not** touch MapGen / DungeonGen / WorldArt / biomes / hub tile draw / `playwright.config.ts`.
 

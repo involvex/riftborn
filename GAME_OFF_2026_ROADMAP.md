@@ -1,12 +1,18 @@
-# Game Off 2026 Roadmap for Riftborn
+# Game Off 2026 Roadmap for Riftborn — ARCHIVE
 
-**Date:** 2026-10-29 (status sync **2026-11-15**)  
+> **Archive (post-jam).** Do not schedule work from this file.
+> Living roadmap: [`ROADMAP.md`](ROADMAP.md).
+>
+> Jam outcome: theme **SHIFT** shipped; solo loop + itch pack + A1b audio done.
+> Weaknesses below (e.g. “no audio”) are **historical** and outdated.
+
+**Date:** 2026-10-29 (archived **2026-11-15**)  
 **Game:** Riftborn - 2.5D Isometric Action RPG (Phaser 4 + TypeScript + Bun)  
 **Jam:** [Game Off 2026](https://itch.io/jam/game-off-2026) - Nov 1 - Dec 1, 2026  
 **Theme:** **SHIFT** — Ash/Shadow world layers (`Q` / touch SHIFT)  
-**Status:** Theme shipped. Solo loop jam-ready. Paste-ready itch copy: [`docs/ITCH_PAGE.md`](docs/ITCH_PAGE.md).
+**Status:** **Archived.** Theme + audio + onboarding shipped. See `ROADMAP.md`.
 
-## Current State Analysis
+## Current State Analysis (historical)
 
 ### Strengths
 
@@ -19,16 +25,13 @@
 - **Cross-platform ready**: Web (Vite), Desktop (Electron), Mobile shell (Expo WebView)
 - **Co-op foundation**: Basic local co-op server exists
 
-### Weaknesses / Gaps for Jam
+### Weaknesses / Gaps for Jam (historical — many resolved)
 
-- **Audio**: No audio files found, AudioBus exists but likely minimal/placeholder - big gap for jam (audio category judged)
-- **Theme flexibility**: Current theme is generic ARPG; needs to pivot quickly when theme announced Nov 1
-- **First impression/hook**: May need a stronger hook or more "jammy" moment
-- **Tutorial/onboarding**: New players might not know all mechanics
-- **Balance/length**: Could use better pacing for a jam playthrough (15-30 min satisfying loop)
-- **Visual polish**: Some systems functional but could use more juice/feedback
-- **Narrative**: Minimal story/lore - some jams reward theme interpretation with narrative
-- **Performance**: Should test on lower-end devices (browser)
+- **Audio**: ~~No audio~~ → **shipped** A1b jam SFX + hub/combat loops (`public/assets/audio/`)
+- **Theme**: ~~generic~~ → **SHIFT** ash/shadow layers shipped
+- **Tutorial/onboarding**: first-session + SHIFT coaching shipped
+- **Balance/length**: depth 1–3 pacing softened (B4)
+- **Visual polish / narrative / performance**: ongoing via living `ROADMAP.md`
 
 ## Game Off Judging Criteria (Informed by past jams)
 

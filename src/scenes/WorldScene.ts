@@ -2388,7 +2388,8 @@ export class WorldScene extends Phaser.Scene {
     this.grantBiomeMaterial(enemy);
     const scoutKill = enemy.def.id === 'ash_scout';
     const batKill = enemy.def.id === 'ash_bat';
-    const namedElite = scoutKill || batKill;
+    const brambleKill = enemy.def.id === 'ash_bramble';
+    const namedElite = scoutKill || batKill || brambleKill;
     gameState.combat.grantKillRewards(enemy.def.xp, enemy.def.lootTable, {
       elite: enemy.awardsEliteLoot,
       lootTier: tier,
@@ -2407,6 +2408,10 @@ export class WorldScene extends Phaser.Scene {
         } else if (batKill) {
           gameEvents.emit('ui:toast', {
             text: `Nightwing down — ${g.rarity} ${g.name}`,
+          });
+        } else if (brambleKill) {
+          gameEvents.emit('ui:toast', {
+            text: `Bramble crushed — ${g.rarity} ${g.name}`,
           });
         } else {
           gameEvents.emit('ui:toast', {
@@ -2951,6 +2956,7 @@ export class WorldScene extends Phaser.Scene {
     const heal = Math.floor(gameState.maxHp * 0.15);
     gameState.hp = Math.min(gameState.maxHp, gameState.hp + heal);
     this.safeCameraFlash(180, 220, 100, 60);
+    gameState.bounties.noteShrineUse();
     gameEvents.emit('ui:toast', {
       text: `Ember blessing — +${Math.round((bless.mult - 1) * 100)}% damage ${bless.duration}s`,
     });

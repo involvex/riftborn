@@ -7,7 +7,7 @@
  */
 
 import type { ServerWebSocket } from 'bun';
-import { generateHub } from '../src/world/MapGen';
+import { clampHubCoord, generateHub, HUB_SPAWN } from '../src/world/MapGen';
 import enemiesData from '../src/data/enemies.json';
 import nodesData from '../src/data/nodes.json';
 import loottables from '../src/data/loottables.json';
@@ -168,8 +168,8 @@ function tick(dt: number): void {
     if (client.dx || client.dy) {
       client.x += (client.dx / len) * 4.2 * dt;
       client.y += (client.dy / len) * 4.2 * dt;
-      client.x = Math.min(23.5, Math.max(0.5, client.x));
-      client.y = Math.min(23.5, Math.max(0.5, client.y));
+      client.x = clampHubCoord(client.x);
+      client.y = clampHubCoord(client.y);
     }
     client.attackCd = Math.max(0, client.attackCd - dt);
 
@@ -362,8 +362,8 @@ function startServer(preferredPort: number) {
             data: {
               id: '',
               name: 'Guest',
-              x: 8,
-              y: 8,
+              x: HUB_SPAWN.x,
+              y: HUB_SPAWN.y,
               hp: 100,
               maxHp: 100,
               dx: 0,

@@ -105,6 +105,11 @@ export const PLAZA = { x0: 28, x1: 36, y0: 28, y1: 36 } as const;
 export const HUB_ROAD_AXIS = 32;
 export const HUB_SPAWN = { x: 32.5, y: 33.5 };
 
+/** Keep a world coord inside the hub (shared by solo + co-op server). */
+export function clampHubCoord(v: number, size = HUB_SIZE): number {
+  return Math.min(size - 0.5, Math.max(0.5, v));
+}
+
 /** Safe plaza — no hostile packs. */
 export function inPlaza(x: number, y: number): boolean {
   return x >= PLAZA.x0 && x <= PLAZA.x1 && y >= PLAZA.y0 && y <= PLAZA.y1;
@@ -534,6 +539,8 @@ export function generateHub(seed = 1): ZoneLayout {
   // Flying elite near the cairn + a second on the watch ridge
   packs.push({ enemyId: 'ash_bat', count: 1, x: 40.5, y: 55.5 });
   packs.push({ enemyId: 'ash_bat', count: 1, x: 56.5, y: 33.5 });
+  // Grove elite — crawler sheet, green tint
+  packs.push({ enemyId: 'ash_bramble', count: 1, x: 22.5, y: 10.5 });
   packs.push(
     { enemyId: 'wisp', count: 2, x: 10.5, y: 9.5 },
     { enemyId: 'ash_scamp', count: 2, x: 11.5, y: 11.5 },

@@ -9,6 +9,7 @@ describe('SpriteAtlas enemySpriteKey', () => {
     expect(enemySpriteKey('rift_lord')).toBe('spr_rift_lord');
     expect(enemySpriteKey('ash_scamp')).toBe('spr_shade');
     expect(enemySpriteKey('ash_bat')).toBe('spr_bat');
+    expect(enemySpriteKey('ash_bramble')).toBe('spr_crawler');
   });
 
   test('new enemy mappings', () => {
