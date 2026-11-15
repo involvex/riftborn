@@ -54,6 +54,18 @@ export class InventoryPanel {
   private lastLayout: InventoryLayout | null = null;
   /** Pixel scroll into the bag grid (scrollable layouts only). */
   private bagScrollY = 0;
+  /** Desktop drag-to-equip ghost (touch keeps double-tap only). */
+  private itemDrag: {
+    kind: 'gear' | 'tool';
+    uid?: string;
+    itemId?: string;
+    ghost: Phaser.GameObjects.Container;
+  } | null = null;
+  private itemDragMoved = false;
+  private eqDropZones: {
+    key: EqKey;
+    zone: Phaser.GameObjects.Rectangle;
+  }[] = [];
   open = false;
 
   constructor(scene: Phaser.Scene) {
@@ -103,7 +115,7 @@ export class InventoryPanel {
     this.setDetailPlain(
       shouldShowTouchControls()
         ? 'Tap item for stats'
-        : 'Hover gear for compare · Double-click to equip',
+        : 'Hover gear for compare · Drag or double-click to equip',
     );
     this.layout();
   }
@@ -181,6 +193,7 @@ export class InventoryPanel {
   }
 
   hide(): void {
+    this.clearItemDrag();
     this.root.setVisible(false);
     this.open = false;
     this.selectedIndex = null;
@@ -300,10 +313,12 @@ export class InventoryPanel {
   }
 
   refresh(): void {
+    this.clearItemDrag();
     this.eqRoot.removeAll(true);
     this.gridRoot.removeAll(true);
     this.hintRoot.removeAll(true);
     this.bagCellsRoot = this.scene.add.container(0, 0);
+    this.eqDropZones = [];
 
     const touch = shouldShowTouchControls();
     const layout = this.lastLayout ?? this.computeLayout();
@@ -332,7 +347,8 @@ export class InventoryPanel {
       const cell = this.scene.add
         .rectangle(x, y, eqCellW, eqCellH, 0x141c28, 1)
         .setStrokeStyle(1, 0x5a6a80)
-        .setInteractive({ useHandCursor: true });
+        .setInteractive({ useHandCursor: true, dropZone: true });
+      this.eqDropZones.push({ key: s.key, zone: cell });
       const iconSize = Math.min(touch ? 28 : 36, eqCellH - 8);
       const iconX = x - eqCellW / 2 + 6;
       const iconY = y - iconSize / 2;
@@ -402,8 +418,8 @@ export class InventoryPanel {
         ? 'Auto-sell ON'
         : 'Double-tap to equip'
       : junkOn
-        ? 'Hover to compare · Auto-sell junk ON'
-        : 'Hover to compare · Double-click to equip';
+        ? 'Drag to equip · Auto-sell junk ON'
+        : 'Drag to equip · Double-click works too';
     const hint = this.scene.add
       .text(0, 0, hintLine, {
         fontFamily: UI_FONT,
@@ -483,8 +499,8 @@ export class InventoryPanel {
     const yOffset = layout.scrollable ? -(this.bagScrollY % rowPitch) : 0;
 
     this.bagCellsRoot.setPosition(gridOriginX, gridOriginY + yOffset);
-    this.gridRoot.add(this.bagCellsRoot);
 
+    // Scroll hit behind bag cells so click/drag-equip still reach items.
     if (layout.scrollable) {
       const hit = this.scene.add
         .rectangle(
@@ -504,6 +520,7 @@ export class InventoryPanel {
         scrollStart = this.bagScrollY;
       });
       hit.on('drag', (_p: Phaser.Input.Pointer, _x: number, y: number) => {
+        if (this.itemDrag) return;
         const next = Phaser.Math.Clamp(
           scrollStart - (y - dragStart),
           0,
@@ -514,6 +531,7 @@ export class InventoryPanel {
         this.refresh();
       });
     }
+    this.gridRoot.add(this.bagCellsRoot);
 
     const playerClass = gameState.progression.classId;
 
@@ -532,10 +550,22 @@ export class InventoryPanel {
         const x = col * (cell + gap);
         const y = r * rowPitch;
         const slot = gameState.inventory.slots[i] as InventorySlot | undefined;
+        const cx = x + cell / 2;
+        const cy = y + cell / 2;
+        const canDragEquip =
+          !touch &&
+          !!slot &&
+          (slot.kind === 'gear' ||
+            (slot.kind === 'stack' &&
+              getItemDef(slot.itemId)?.kind === 'tool'));
         const rect = this.scene.add
-          .rectangle(x + cell / 2, y + cell / 2, cell, cell, 0x121820, 1)
+          .rectangle(cx, cy, cell, cell, 0x121820, 1)
           .setStrokeStyle(1, this.selectedIndex === i ? 0x7ed0ff : 0x4a5568)
-          .setInteractive({ useHandCursor: true });
+          .setInteractive({
+            useHandCursor: true,
+            draggable: canDragEquip,
+          });
+        if (canDragEquip) this.scene.input.setDraggable(rect);
 
         const contents: Phaser.GameObjects.GameObject[] = [rect];
         if (slot) {
@@ -570,7 +600,38 @@ export class InventoryPanel {
           }
         }
 
-        rect.on('pointerup', () => this.onBagClick(i));
+        let pointerDownX = 0;
+        let pointerDownY = 0;
+        rect.on('pointerdown', (p: Phaser.Input.Pointer) => {
+          pointerDownX = p.x;
+          pointerDownY = p.y;
+          this.itemDragMoved = false;
+        });
+        if (canDragEquip && slot) {
+          rect.on('drag', (p: Phaser.Input.Pointer) => {
+            // Keep the bag cell locked; only the ghost follows the pointer.
+            rect.setPosition(cx, cy);
+            const dist = Math.hypot(p.x - pointerDownX, p.y - pointerDownY);
+            if (!this.itemDrag && dist >= 8) {
+              this.itemDragMoved = true;
+              this.beginItemDrag(slot, p.x, p.y);
+            }
+            if (this.itemDrag) {
+              this.itemDrag.ghost.setPosition(p.x, p.y);
+            }
+          });
+          rect.on('dragend', (p: Phaser.Input.Pointer) => {
+            rect.setPosition(cx, cy);
+            if (this.itemDrag) this.finishItemDrag(p.x, p.y);
+          });
+        }
+        rect.on('pointerup', () => {
+          if (this.itemDragMoved || this.itemDrag) {
+            this.itemDragMoved = false;
+            return;
+          }
+          this.onBagClick(i);
+        });
         rect.on('pointerover', () => {
           if (!slot) {
             this.setDetailPlain('Empty slot');
@@ -591,7 +652,7 @@ export class InventoryPanel {
             const tip = usable
               ? touch
                 ? 'Double-tap to equip'
-                : 'Double-click to equip'
+                : 'Drag onto a slot · or double-click'
               : `${classLabel(req)} only`;
             this.showGearTooltip(slot.item, tip);
           }
@@ -599,6 +660,91 @@ export class InventoryPanel {
 
         this.bagCellsRoot.add(contents);
       }
+    }
+  }
+
+  private beginItemDrag(slot: InventorySlot, x: number, y: number): void {
+    this.clearItemDrag();
+    const ghost = this.scene.add
+      .container(x, y)
+      .setScrollFactor(0)
+      .setDepth(10_040);
+    const size = 40;
+    if (slot.kind === 'gear') {
+      for (const g of addSlotIcon(this.scene, -size / 2, -size / 2, size, {
+        kind: 'gear',
+        item: slot.item,
+      })) {
+        ghost.add(g);
+      }
+      this.itemDrag = { kind: 'gear', uid: slot.item.uid, ghost };
+    } else {
+      for (const g of addSlotIcon(this.scene, -size / 2, -size / 2, size, {
+        kind: 'stack',
+        itemId: slot.itemId,
+      })) {
+        ghost.add(g);
+      }
+      this.itemDrag = { kind: 'tool', itemId: slot.itemId, ghost };
+    }
+    ghost.setAlpha(0.9);
+  }
+
+  private finishItemDrag(screenX: number, screenY: number): void {
+    const drag = this.itemDrag;
+    if (!drag) return;
+    const hit = this.eqDropZones.find((z) => {
+      const b = z.zone.getBounds();
+      return (
+        screenX >= b.left &&
+        screenX <= b.right &&
+        screenY >= b.top &&
+        screenY <= b.bottom
+      );
+    });
+    this.clearItemDrag();
+    if (!hit) {
+      this.setDetailPlain('Drop on an equipment slot to equip');
+      return;
+    }
+    if (drag.kind === 'tool') {
+      if (hit.key !== 'tool') {
+        this.setDetailPlain('Tools go in the TOOL slot', '#e07070');
+        return;
+      }
+      if (!drag.itemId) return;
+      const def = getItemDef(drag.itemId);
+      if (gameState.inventory.equipTool(drag.itemId)) {
+        gameState.persist();
+        audioBus.open();
+        this.setDetailPlain(`Equipped ${def?.name ?? drag.itemId}`, '#6ecf7a');
+        this.refresh();
+      }
+      return;
+    }
+    if (!drag.uid) return;
+    const bagSlot = gameState.inventory.slots.find(
+      (s) => s.kind === 'gear' && s.item.uid === drag.uid,
+    );
+    if (!bagSlot || bagSlot.kind !== 'gear') return;
+    if (hit.key !== 'tool' && bagSlot.item.slot !== hit.key) {
+      this.setDetailPlain(
+        `That gear fits ${bagSlot.item.slot}, not ${hit.key}`,
+        '#e07070',
+      );
+      return;
+    }
+    if (hit.key === 'tool') {
+      this.setDetailPlain('Gear does not go in TOOL', '#e07070');
+      return;
+    }
+    this.tryEquipGear(drag.uid);
+  }
+
+  private clearItemDrag(): void {
+    if (this.itemDrag) {
+      this.itemDrag.ghost.destroy(true);
+      this.itemDrag = null;
     }
   }
 
@@ -672,6 +818,7 @@ export class InventoryPanel {
     if (gameState.inventory.equipGear(uid, gameState.progression.classId)) {
       gameState.recalcMaxHp();
       gameState.persist();
+      audioBus.open();
       this.setDetailPlain(`Equipped ${slot.item.name}`, '#6ecf7a');
     } else {
       this.setDetailPlain('Cannot equip (bag full when swapping?)', '#e07070');

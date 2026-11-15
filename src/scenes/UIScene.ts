@@ -267,8 +267,22 @@ export class UIScene extends Phaser.Scene {
       gameEvents.on(Events.SKILL_CAST, () => this.abilityBar.refresh()),
       gameEvents.on(Events.PLAYER_DAMAGED, () => this.refresh()),
       gameEvents.on(Events.PLAYER_HEALED, () => this.refresh()),
-      gameEvents.on(Events.CRAFT_SUCCESS, () => {
-        this.toast('Crafted!');
+      gameEvents.on(Events.CRAFT_SUCCESS, (p) => {
+        const d = p as { recipeId?: string };
+        const id = d.recipeId ?? '';
+        const pretty =
+          id === 'ashen_charm'
+            ? 'Ashen Charm'
+            : id === 'crystal_lens'
+              ? 'Crystal Lens'
+              : id === 'grove_tonic'
+                ? 'Grove Tonic'
+                : id
+                  ? id.replace(/_/g, ' ')
+                  : 'item';
+        audioBus.open();
+        audioBus.loot(id.startsWith('rift_') ? 'magic' : 'common');
+        this.toast(`Crafted ${pretty}`);
         this.refresh();
         this.hideCraft();
       }),
@@ -468,6 +482,7 @@ export class UIScene extends Phaser.Scene {
         gameState.progression.addXp(b.rewardXp);
         gameState.persist();
         audioBus.loot('rare');
+        audioBus.skill();
         this.toast(
           `Bounty complete — ${b.label} · +${b.rewardGold}g +${b.rewardXp} XP`,
         );

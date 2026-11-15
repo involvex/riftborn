@@ -14,7 +14,7 @@ Solo evenings, one shippable slice at a time. Prefer **feel → content → syst
 - **SHIFT (Q)** Ash/Shadow layers in rifts; biome mats toast into craft sink
 - **Rift depth 1–10** from level (packs / HP / dmg / loot); Rift Lord + boss chest
 - Death flash/shake + rarity loot sting; **3 character slots** on boot
-- Plaza **Bounty Board** (scout / chests / cull)
+- Plaza **Bounty Board** (scout / chests / cull / shrine / bramble)
 - **Rift modifiers** (Dense / Glass / Gilded)
 - **Nix** material / repair trader (supplies, mat buyback, patch-up)
 - **Bounties persist** across reload (active + board cooldown)
@@ -28,7 +28,10 @@ Solo evenings, one shippable slice at a time. Prefer **feel → content → syst
 - Game Off itch pack (`docs/ITCH_PAGE.md`, `bun run build:itch`)
 - **Co-op Fix-light** — hub sandbox clamps/spawns on full **64×64** (`clampHubCoord`)
 - Biome craft sinks: **Ashen Charm / Crystal Lens / Grove Tonic**
-- Hub elite **Ash Bramble** (grove); bounty kind **shrine** (Ember bless)
+- Hub elite **Ash Bramble** (grove); also in shattered_woods rift mix
+- Inventory **drag-to-equip** (desktop); double-click / double-tap still work
+- Craft / bounty / shrine **SFX juice**
+- CI: typecheck + lint + format + unit + smoke (`.github/workflows/ci.yml`)
 
 ## Next — post-jam
 
@@ -40,16 +43,12 @@ Solo evenings, one shippable slice at a time. Prefer **feel → content → syst
 
 Skip inventing new frameworks — extend `MapGen` / `WorldScene` / `SaveStore` / NPCs / `server/index.ts` / `src/data/*`.
 
-## Later (parked — after playtest loop)
-
-Do **not** start these until a friend complaint slice is done (or explicitly requested):
+## Later (parked)
 
 - App Store packaging for Expo shell
 - Authoritative co-op loot / gear sync / rift co-op (beyond Fix-light)
-- CI: `typecheck` + `test:smoke` on GitHub Actions (release guard)
 - Seasons, trading, seamless open world
 - Full new painted attack sheets (needs art time; VFX covers the gap for now)
-- Drag-drop equip (double-click already works)
 
 ## Pace guide (solo)
 

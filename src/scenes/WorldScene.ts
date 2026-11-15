@@ -2422,6 +2422,7 @@ export class WorldScene extends Phaser.Scene {
     });
     if (!gameState.inRift) {
       if (scoutKill) gameState.bounties.noteScoutKill();
+      else if (brambleKill) gameState.bounties.noteBrambleKill();
       else gameState.bounties.noteWildernessKill();
     }
     gameState.persist();
@@ -2957,6 +2958,8 @@ export class WorldScene extends Phaser.Scene {
     gameState.hp = Math.min(gameState.maxHp, gameState.hp + heal);
     this.safeCameraFlash(180, 220, 100, 60);
     gameState.bounties.noteShrineUse();
+    audioBus.skill();
+    audioBus.open();
     gameEvents.emit('ui:toast', {
       text: `Ember blessing — +${Math.round((bless.mult - 1) * 100)}% damage ${bless.duration}s`,
     });

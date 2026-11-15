@@ -18,6 +18,7 @@ const ALLOWED_ENEMY_IDS = new Set([
   'ash_scamp',
   'ash_bat',
   'ash_scout',
+  'ash_bramble',
   'rift_lord',
   'enemy_rift_goblin',
   'enemy_shadow_wolf',

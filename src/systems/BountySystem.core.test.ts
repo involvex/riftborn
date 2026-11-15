@@ -42,4 +42,22 @@ describe('BountySystem shrine', () => {
     b2.load(slice);
     expect(b2.statusLine()).toMatch(/Shrine/);
   });
+
+  test('bramble kill completes the elite bounty', () => {
+    const b = new BountySystem();
+    b.load({
+      bounty: {
+        kind: 'bramble',
+        label: 'Crush the Ash Bramble',
+        target: 1,
+        progress: 0,
+        rewardGold: 50,
+        rewardXp: 45,
+      },
+      lastKind: 'shrine',
+      cooldownLeft: 0,
+    });
+    expect(b.noteBrambleKill()?.kind).toBe('bramble');
+    expect(b.statusLine()).toBeNull();
+  });
 });

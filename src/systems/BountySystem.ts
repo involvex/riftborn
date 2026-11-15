@@ -38,9 +38,16 @@ const POOL: Array<Omit<ActiveBounty, 'progress'>> = [
     rewardGold: 30,
     rewardXp: 25,
   },
+  {
+    kind: 'bramble',
+    label: 'Crush the Ash Bramble',
+    target: 1,
+    rewardGold: 50,
+    rewardXp: 45,
+  },
 ];
 
-const KINDS: BountyKind[] = ['scout', 'chests', 'cull', 'shrine'];
+const KINDS: BountyKind[] = ['scout', 'chests', 'cull', 'shrine', 'bramble'];
 
 function isBountyKind(v: unknown): v is BountyKind {
   return typeof v === 'string' && (KINDS as string[]).includes(v);
@@ -151,6 +158,10 @@ export class BountySystem {
 
   noteShrineUse(): ActiveBounty | null {
     return this.bump('shrine', 1);
+  }
+
+  noteBrambleKill(): ActiveBounty | null {
+    return this.bump('bramble', 1);
   }
 
   private bump(kind: BountyKind, amount: number): ActiveBounty | null {

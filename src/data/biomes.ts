@@ -152,6 +152,8 @@ export const SHATTERED_WOODS_BIOME: BiomeDef = {
     { enemyId: 'shade', weight: 0.3, minCount: 2, maxCount: 3 },
     { enemyId: 'enemy_shadow_wolf', weight: 0.15, minCount: 1, maxCount: 3 },
     { enemyId: 'enemy_rift_goblin', weight: 0.12, minCount: 1, maxCount: 2 },
+    // Grove elite sheet reuse — rare bramble in woods packs.
+    { enemyId: 'ash_bramble', weight: 0.08, minCount: 1, maxCount: 1 },
     // Support foe: kill the Mender before the pack regroups.
     { enemyId: 'rift_mender', weight: 0.1, minCount: 1, maxCount: 1 },
   ],
