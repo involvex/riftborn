@@ -3,6 +3,7 @@ import {
   getRiftModifier,
   riftModLayerLock,
   rollRiftModifier,
+  rollRiftModifierForDepth,
 } from './RiftModifiers';
 import { SHIFT_LAYERS } from '../data/shiftLayers';
 
@@ -42,6 +43,17 @@ describe('rift modifiers', () => {
     expect(swift.packCountBonus).toBeGreaterThan(0);
   });
 
+  test('dense packs stay light (+1) so early padding is not a second rift', () => {
+    expect(getRiftModifier('dense').packCountBonus).toBe(1);
+  });
+
+  test('glass cannon spikes less hard than 1.45×', () => {
+    const glass = getRiftModifier('glass');
+    expect(glass.hpMult).toBeLessThan(1);
+    expect(glass.dmgMult).toBeGreaterThan(1);
+    expect(glass.dmgMult).toBeLessThanOrEqual(1.35);
+  });
+
   test('ashen veil locks every foe to a real layer and pays for it', () => {
     const veiled = getRiftModifier('veiled');
     expect(veiled.lockedLayer).toBe('ash');
@@ -62,7 +74,7 @@ describe('rift modifiers', () => {
     expect(rollRiftModifier(stubA).id).toBe(rollRiftModifier(stubB).id);
   });
 
-  test('rolls cover the whole table and never return null', () => {
+  test('late rolls cover the whole table and never return null', () => {
     const seen = new Set<string>();
     for (let i = 0; i < 512; i++) {
       const mod = rollRiftModifier(() => i / 512);
@@ -72,12 +84,26 @@ describe('rift modifiers', () => {
     expect(seen.size).toBe(ALL_IDS.length);
   });
 
-  test('calm rifts stay rare', () => {
+  test('late calm rifts stay uncommon', () => {
     let calm = 0;
     for (let i = 0; i < 1000; i++) {
       if (rollRiftModifier(() => (i % 1000) / 1000).id === 'none') calm += 1;
     }
     expect(calm).toBeGreaterThan(0);
     expect(calm).toBeLessThan(200);
+  });
+
+  test('D1–D2 rolls favour calm and skip dense / veil', () => {
+    const seen = new Set<string>();
+    let calm = 0;
+    for (let i = 0; i < 1000; i++) {
+      const mod = rollRiftModifierForDepth(1, () => (i % 1000) / 1000);
+      seen.add(mod.id);
+      if (mod.id === 'none') calm += 1;
+    }
+    expect(calm).toBeGreaterThan(300);
+    expect(seen.has('dense')).toBe(false);
+    expect(seen.has('veiled')).toBe(false);
+    expect(seen.has('wealthy')).toBe(true);
   });
 });

@@ -92,6 +92,8 @@ import {
 import classesData from '../data/classes.json';
 import {
   clampLootTier,
+  earlyBiomeBossDmgMult,
+  earlyBiomeBossHpMult,
   riftDepthFromLevel,
   riftDepthLabel,
   riftLootTierBump,
@@ -100,7 +102,7 @@ import {
 import {
   getRiftModifier,
   riftModLayerLock,
-  rollRiftModifier,
+  rollRiftModifierForDepth,
   type RiftModifier,
 } from '../systems/RiftModifiers';
 import {
@@ -709,7 +711,7 @@ export class WorldScene extends Phaser.Scene {
     if (rift) {
       const seed = gameState.riftSeed ?? Date.now();
       this.riftDepth = riftDepthFromLevel(gameState.progression.level);
-      this.riftMod = rollRiftModifier();
+      this.riftMod = rollRiftModifierForDepth(this.riftDepth);
       this.dungeon = generateDungeon(seed, this.riftDepth);
       this.player.maxX = this.dungeon.width - 1.5;
       this.player.maxY = this.dungeon.height - 1.5;
@@ -2485,6 +2487,8 @@ export class WorldScene extends Phaser.Scene {
       {
         boss: true,
         levelScale: gameState.progression.level + 2 + this.riftDepth,
+        hpMult: earlyBiomeBossHpMult(this.riftDepth, this.riftBossDefId),
+        dmgMult: earlyBiomeBossDmgMult(this.riftDepth, this.riftBossDefId),
       },
     );
     boss.maxBound = 22;

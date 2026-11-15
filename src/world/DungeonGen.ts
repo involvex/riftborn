@@ -11,6 +11,7 @@ import {
 } from './ShiftGateMap';
 import { minRiftEnemyCount, placeRiftEnemyPacks } from './RiftEnemyPlacement';
 import { pickRiftBiome, type BiomeDef } from '../data/biomes';
+import { riftKillGoalFillRatio } from '../systems/RiftDepth';
 
 export type DungeonCell = 0 | 1; // 0 wall, 1 floor
 
@@ -204,7 +205,7 @@ export function generateDungeon(seed: number, depth = 1): DungeonMap {
   // Place after gates so flood-fill matches real rift walkability.
   layout.packs = placeRiftEnemyPacks(map, d, rnd, 3, biome.enemyMix);
   const expectedKills = layout.packs.reduce((s, p) => s + p.count, 0);
-  const fillRatio = Math.min(0.85, 0.68 + d * 0.015);
+  const fillRatio = riftKillGoalFillRatio(d);
   // The goal must stay reachable: never ask for more kills than the rift
   // actually spawned, or the boss can never appear and the run can only be
   // abandoned. Mod pack bonuses only add foes, so this stays conservative.

@@ -40,7 +40,7 @@ const MODS: RiftModifier[] = [
     id: 'dense',
     name: 'Dense Packs',
     blurb: 'More foes in every room.',
-    packCountBonus: 2,
+    packCountBonus: 1,
     hpMult: 1,
     dmgMult: 1.05,
     speedMult: 1,
@@ -54,7 +54,7 @@ const MODS: RiftModifier[] = [
     blurb: 'Enemies hit harder, die faster.',
     packCountBonus: 0,
     hpMult: 0.7,
-    dmgMult: 1.45,
+    dmgMult: 1.3,
     speedMult: 1,
     lockedLayer: null,
     goldOnKill: 0,
@@ -79,7 +79,7 @@ const MODS: RiftModifier[] = [
     packCountBonus: 1,
     hpMult: 0.9,
     dmgMult: 1.05,
-    speedMult: 1.45,
+    speedMult: 1.35,
     lockedLayer: null,
     goldOnKill: 0,
     lootBump: 0,
@@ -99,9 +99,9 @@ const MODS: RiftModifier[] = [
   },
 ];
 
-/** Pick a modifier for this rift run (biased away from calm). */
-export function rollRiftModifier(rng = Math.random): RiftModifier {
-  const weighted = [
+/** Late-game table — spicy, calm stays uncommon. */
+function lateModWeights(): RiftModifier[] {
+  return [
     MODS[0]!,
     MODS[1]!,
     MODS[2]!,
@@ -111,6 +111,37 @@ export function rollRiftModifier(rng = Math.random): RiftModifier {
     MODS[4]!,
     MODS[5]!,
   ];
+}
+
+/**
+ * Early depths favour Calm / Gilded and skip Dense + Veil so the first
+ * rifts teach SHIFT gates without packing or layer-lock spikes.
+ */
+function earlyModWeights(): RiftModifier[] {
+  return [
+    MODS[0]!,
+    MODS[0]!,
+    MODS[0]!,
+    MODS[3]!,
+    MODS[3]!,
+    MODS[2]!,
+    MODS[4]!,
+    MODS[0]!,
+  ];
+}
+
+/** Pick a modifier for this rift run (biased away from calm). */
+export function rollRiftModifier(rng = Math.random): RiftModifier {
+  return rollRiftModifierForDepth(10, rng);
+}
+
+/** Depth-aware roll — kinder tables for D1–D2. */
+export function rollRiftModifierForDepth(
+  depth: number,
+  rng = Math.random,
+): RiftModifier {
+  const d = Math.max(1, Math.min(10, depth));
+  const weighted = d <= 2 ? earlyModWeights() : lateModWeights();
   return weighted[Math.floor(rng() * weighted.length)]!;
 }
 

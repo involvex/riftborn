@@ -68,6 +68,18 @@ describe('first-run rift reachability', () => {
     }
   });
 
+  test('D1 kill goals stay in a first-session friendly band', () => {
+    let sum = 0;
+    for (let s = 1; s <= SEEDS_PER_DEPTH; s++) {
+      const map = generateDungeon(s * 7919 + 1, 1);
+      const goal = map.layout.killGoal;
+      expect(goal).toBeGreaterThanOrEqual(6);
+      expect(goal).toBeLessThanOrEqual(13);
+      sum += goal;
+    }
+    expect(sum / SEEDS_PER_DEPTH).toBeGreaterThanOrEqual(9);
+  });
+
   test('deep rifts keep the old packed pacing when foes allow it', () => {
     let withFullGoal = 0;
     for (let s = 1; s <= SEEDS_PER_DEPTH; s++) {
