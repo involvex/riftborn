@@ -139,6 +139,40 @@ export class SkillSystem {
     this.cooldownLeft[slot] = Math.max(0, sec);
   }
 
+  /** Mid-rift persist — CDs + barrier as remaining seconds. */
+  snapshotCombat(): {
+    skillCooldowns: [number, number, number, number];
+    barrierHp: number;
+    barrierLeft: number;
+  } {
+    return {
+      skillCooldowns: [
+        this.cooldownLeft[0] ?? 0,
+        this.cooldownLeft[1] ?? 0,
+        this.cooldownLeft[2] ?? 0,
+        this.cooldownLeft[3] ?? 0,
+      ],
+      barrierHp: Math.max(0, this.barrierHp),
+      barrierLeft: Math.max(0, this.barrierUntil - this.now),
+    };
+  }
+
+  /** Restore after zone load (relative to current `now`). */
+  restoreCombat(opts: {
+    skillCooldowns?: number[] | null;
+    barrierHp?: number;
+    barrierLeft?: number;
+  }): void {
+    const cds = opts.skillCooldowns ?? [0, 0, 0, 0];
+    for (let i = 0; i < ACTIVE_SLOTS; i++) {
+      this.cooldownLeft[i] = Math.max(0, cds[i] ?? 0);
+    }
+    const hp = Math.max(0, opts.barrierHp ?? 0);
+    const left = Math.max(0, opts.barrierLeft ?? 0);
+    this.barrierHp = left > 0 ? hp : 0;
+    this.barrierUntil = this.now + left;
+  }
+
   damageMultiplier(): number {
     if (this.now < this.damageBuffUntil) return this.damageBuffMult;
     return 1;

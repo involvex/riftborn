@@ -142,6 +142,29 @@ export function parseRiftRun(raw: unknown): RiftRunSave | null {
     if (typeof row.hp !== 'number') continue;
     nodes.push({ id: row.id, x: row.x, y: row.y, hp: Math.max(0, row.hp) });
   }
+  const rawRec = raw as RiftRunSave & {
+    skillCooldowns?: unknown;
+    barrierHp?: unknown;
+    barrierLeft?: unknown;
+  };
+  const cdsRaw = Array.isArray(rawRec.skillCooldowns)
+    ? rawRec.skillCooldowns
+    : [0, 0, 0, 0];
+  const skillCooldowns: [number, number, number, number] = [
+    Math.max(0, Number(cdsRaw[0]) || 0),
+    Math.max(0, Number(cdsRaw[1]) || 0),
+    Math.max(0, Number(cdsRaw[2]) || 0),
+    Math.max(0, Number(cdsRaw[3]) || 0),
+  ];
+  const barrierHp =
+    typeof rawRec.barrierHp === 'number' && Number.isFinite(rawRec.barrierHp)
+      ? Math.max(0, rawRec.barrierHp)
+      : 0;
+  const barrierLeft =
+    typeof rawRec.barrierLeft === 'number' &&
+    Number.isFinite(rawRec.barrierLeft)
+      ? Math.max(0, rawRec.barrierLeft)
+      : 0;
   return {
     seed: raw.seed >>> 0,
     depth: Math.max(1, Math.min(10, Math.floor(raw.depth))),
@@ -158,5 +181,8 @@ export function parseRiftRun(raw: unknown): RiftRunSave | null {
     groundLoot,
     bossChest,
     nodes,
+    skillCooldowns,
+    barrierHp,
+    barrierLeft,
   };
 }

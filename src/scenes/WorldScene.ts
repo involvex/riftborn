@@ -3157,6 +3157,7 @@ export class WorldScene extends Phaser.Scene {
       }));
     const exploredPacked =
       this.explored.length > 0 ? packExplored(this.explored) : null;
+    const combat = gameState.skills.snapshotCombat();
     return {
       seed,
       depth: this.riftDepth,
@@ -3173,6 +3174,9 @@ export class WorldScene extends Phaser.Scene {
       groundLoot,
       bossChest,
       nodes,
+      skillCooldowns: combat.skillCooldowns,
+      barrierHp: combat.barrierHp,
+      barrierLeft: combat.barrierLeft,
     };
   }
 
@@ -3188,6 +3192,11 @@ export class WorldScene extends Phaser.Scene {
       layer: run.shiftLayer,
       energy: run.shiftEnergy,
       cooldownLeft: run.shiftCooldownLeft,
+    });
+    gameState.skills.restoreCombat({
+      skillCooldowns: run.skillCooldowns,
+      barrierHp: run.barrierHp,
+      barrierLeft: run.barrierLeft,
     });
 
     for (const e of this.enemies) e.destroy();

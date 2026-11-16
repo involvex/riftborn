@@ -118,6 +118,8 @@ describe('RiftRunPersist', () => {
     });
     expect(parsed?.depth).toBe(10);
     expect(parsed?.groundLoot[0]?.item.name).toBe('Hood');
+    expect(parsed?.skillCooldowns).toEqual([0, 0, 0, 0]);
+    expect(parsed?.barrierHp).toBe(0);
     parsed!.groundLoot[0]!.item.name = 'mutated';
     expect(
       (
@@ -126,5 +128,17 @@ describe('RiftRunPersist', () => {
         }
       ).groundLoot,
     ).toEqual([]);
+  });
+
+  test('parseRiftRun keeps skill CDs and barrier', () => {
+    const parsed = parseRiftRun({
+      ...base,
+      skillCooldowns: [3.5, 0, 1, 8],
+      barrierHp: 40,
+      barrierLeft: 2.25,
+    });
+    expect(parsed?.skillCooldowns).toEqual([3.5, 0, 1, 8]);
+    expect(parsed?.barrierHp).toBe(40);
+    expect(parsed?.barrierLeft).toBe(2.25);
   });
 });

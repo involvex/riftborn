@@ -19,6 +19,9 @@ function sampleRun(over: Partial<RiftRunSave> = {}): RiftRunSave {
     groundLoot: [],
     bossChest: null,
     nodes: [],
+    skillCooldowns: [0, 0, 0, 0],
+    barrierHp: 0,
+    barrierLeft: 0,
     ...over,
   };
 }

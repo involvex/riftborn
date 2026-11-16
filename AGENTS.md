@@ -143,7 +143,7 @@ Touch (`/?touch=1` or coarse/small): virtual stick · ATK · E · DASH · SHIFT 
 
 ## Save note
 
-Save version is in `SaveStore` / `CharacterSave` (v5). Mid-rift runs persist via `riftRun`; corrupt/missing blobs still HubResume to plaza. Old hub coordinates outside the current plaza snap back to town spawn on load.
+Save version is in `SaveStore` / `CharacterSave` (v5). Mid-rift runs persist via `riftRun` (incl. skill CDs + barrier); corrupt/missing blobs still HubResume to plaza. Old hub coordinates outside the current plaza snap back to town spawn on load.
 
 ## What not to do
 

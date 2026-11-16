@@ -42,6 +42,12 @@ export type RiftRunSave = {
   } | null;
   /** Resource nodes still in the run (id = defId). */
   nodes: { id: string; x: number; y: number; hp: number }[];
+  /** Active skill slot cooldowns remaining (seconds). */
+  skillCooldowns: [number, number, number, number];
+  /** Mage barrier HP left (0 = none). */
+  barrierHp: number;
+  /** Seconds of barrier duration remaining. */
+  barrierLeft: number;
 };
 
 export type BountyKind =
