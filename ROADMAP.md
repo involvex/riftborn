@@ -38,6 +38,7 @@ Solo evenings, one shippable slice at a time. Prefer **feel → content → syst
 - **One passive per class** (Iron Will / Rift Attunement / Arcane Reservoir)
 - **BiomeLook** — rift floors tinted per biome + accents + void background
 - **HubLook** — plaza glow, POI floor washes, dirt-road edges, warmer plaza lanterns
+- **Combat readability** — warmer hit flash/knock, Low-tier hit bursts, skill hit VFX, boss scale-in + crit kill juice
 
 ## Next — feel & look (core loop)
 
@@ -45,11 +46,11 @@ Prefer sessions that make the existing Hub → Rift → Boss → Exit loop
 **clearer and prettier**. Skip jam-theme work and new systems unless they
 earn their keep in feel.
 
-| #   | Slice                    | Why it matters               | Done when                                                              |
-| --- | ------------------------ | ---------------------------- | ---------------------------------------------------------------------- |
-| ✓   | **Rift biomes readable** | Same tiles — biomes alike    | Shipped: `BiomeLook` floor tint / accents / void bg + enter biome name |
-| ✓   | **Hub atmosphere**       | Town still reads flat        | Shipped: `HubLook` plaza glow / POI tints / dirt-road edges / lanterns |
-| 3   | **Combat readability**   | Hits/boss moments still soft | Hit/death/boss emerge juice pass on existing sheets + VFX              |
+| #   | Slice                    | Why it matters               | Done when                                                                                            |
+| --- | ------------------------ | ---------------------------- | ---------------------------------------------------------------------------------------------------- |
+| ✓   | **Rift biomes readable** | Same tiles — biomes alike    | Shipped: `BiomeLook` floor tint / accents / void bg + enter biome name                               |
+| ✓   | **Hub atmosphere**       | Town still reads flat        | Shipped: `HubLook` plaza glow / POI tints / dirt-road edges / lanterns                               |
+| ✓   | **Combat readability**   | Hits/boss moments still soft | Shipped: warmer hit flash/knock, Low-tier hit bursts, skill hit VFX, boss scale-in + crit kill juice |
 
 Skip inventing new frameworks — extend `MapGen` / `WorldScene` /
 `SaveStore` / NPCs / `server/index.ts` / `src/data/*` / `src/render/*`.

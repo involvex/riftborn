@@ -42,25 +42,36 @@ export function playCombatBurst(
   facing: 1 | -1 = 1,
 ): void {
   const profile = currentGraphicsProfile();
-  // Low: keep crits / player slash; drop routine hit/burn overdraw.
-  if (profile.tier === 'low' && (kind === 'hit' || kind === 'burn')) return;
+  const low = profile.tier === 'low';
+  // Low: skip burn overdraw; keep a tiny hit so packs still read.
+  if (low && kind === 'burn') return;
   if (liveBursts >= profile.particleCap) return;
 
   const texKey = KEYS[kind];
   if (!scene.textures.exists(texKey)) return;
   const { screenX, screenY } = worldToScreen(worldX, worldY);
+  const startScale =
+    low && kind === 'hit' ? 0.32 : low ? 0.42 : kind === 'crit' ? 0.68 : 0.58;
   const img = scene.add
     .image(screenX + facing * 10, screenY - 14, texKey)
     .setDepth(9_600)
-    .setScale(profile.tier === 'low' ? 0.42 : 0.55)
-    .setAlpha(0.95)
+    .setScale(startScale)
+    .setAlpha(low && kind === 'hit' ? 0.8 : 0.95)
     .setBlendMode(Phaser.BlendModes.ADD);
   if (facing < 0) img.setFlipX(true);
   liveBursts += 1;
   // Routine hits clear fast so pack cleaves don't saturate particleCap.
   const duration =
-    kind === 'slash' ? 170 : kind === 'crit' ? 220 : kind === 'hit' ? 160 : 180;
-  const endScale = kind === 'crit' ? 1.12 : kind === 'hit' ? 0.85 : 0.95;
+    kind === 'slash'
+      ? 190
+      : kind === 'crit'
+        ? 260
+        : kind === 'hit'
+          ? low
+            ? 120
+            : 180
+          : 180;
+  const endScale = kind === 'crit' ? 1.28 : kind === 'hit' ? 0.95 : 1.05;
   scene.tweens.add({
     targets: img,
     alpha: 0,

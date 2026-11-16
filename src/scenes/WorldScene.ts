@@ -2572,7 +2572,16 @@ export class WorldScene extends Phaser.Scene {
     }
     gameState.persist();
     this.lifeKills += 1;
-    this.triggerCombatShake(enemy.isBoss ? 'boss' : 'hit');
+    if (enemy.isBoss) {
+      this.triggerCombatShake('boss');
+      this.triggerHitstop('crit');
+      playCombatBurst(this, enemy.worldX, enemy.worldY, 'crit');
+    } else if (enemy.awardsEliteLoot) {
+      this.triggerCombatShake('crit');
+      playCombatBurst(this, enemy.worldX, enemy.worldY, 'crit');
+    } else {
+      this.triggerCombatShake('hit');
+    }
     if (!gameState.inRift) return;
 
     if (
@@ -2661,9 +2670,21 @@ export class WorldScene extends Phaser.Scene {
         depthLabel: riftDepthLabel(this.riftDepth),
       }),
     });
-    // W1: emerge reads as a setpiece, not a quiet spawn flash.
+    // Emerge: scale-in + crit burst so the spawn reads as a setpiece.
+    boss.body.setScale(0.4);
+    boss.body.setAlpha(0.35);
+    this.tweens.add({
+      targets: boss.body,
+      scaleX: 1,
+      scaleY: 1,
+      alpha: 1,
+      duration: 420,
+      ease: 'Back.easeOut',
+    });
+    playCombatBurst(this, boss.worldX, boss.worldY, 'crit');
     this.safeCameraFlash(220, 160, 60, 120);
     this.triggerCombatShake('boss');
+    this.triggerHitstop('crit');
     audioBus.skill();
     playEnemyTelegraph(this, 'wail', 'impact', boss.worldX, boss.worldY);
     this.emitRiftProgress();
