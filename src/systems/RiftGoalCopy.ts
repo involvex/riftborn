@@ -7,8 +7,14 @@ export function riftEnterToastText(opts: {
   depthLabel: string;
   modName: string;
   modBlurb: string;
+  ruleName?: string;
+  ruleBlurb?: string;
 }): string {
-  return `Rift ${opts.depthLabel} · ${RIFT_GOAL_LINE} · ${opts.modName} — ${opts.modBlurb}`;
+  const rule =
+    opts.ruleName && opts.ruleBlurb
+      ? ` · ${opts.ruleName} — ${opts.ruleBlurb}`
+      : '';
+  return `Rift ${opts.depthLabel} · ${RIFT_GOAL_LINE} · ${opts.modName} — ${opts.modBlurb}${rule}`;
 }
 
 /**

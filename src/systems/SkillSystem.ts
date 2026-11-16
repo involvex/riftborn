@@ -11,6 +11,11 @@ import { pickChainTargetIds } from './SkillChain';
 import { ASSIST_RANGE, pickEnemiesAround } from './AutoTarget';
 import { decideSkillRangeGate, skillRangeKind } from './SkillRangeGate';
 import { ACTIVE_SLOTS, classAbilityIds, getClassTree } from './SkillSlots';
+import {
+  incomingDamageMult as passiveIncomingMult,
+  passiveBarrierMult as barrierPassiveMult,
+  passiveSkillPower as attuneSkillPower,
+} from './SkillPassives';
 
 export { ACTIVE_SLOTS, classAbilityIds, getClassTree };
 
@@ -137,6 +142,21 @@ export class SkillSystem {
     return 1;
   }
 
+  /** Warrior Iron Will — fraction of incoming damage kept (≤1). */
+  incomingDamageMult(): number {
+    return passiveIncomingMult(this.ranks);
+  }
+
+  /** Mystic Rift Attunement — flat skill-power percent added to casts. */
+  passiveSkillPower(): number {
+    return attuneSkillPower(this.ranks);
+  }
+
+  /** Mage Arcane Reservoir — barrier HP multiplier. */
+  passiveBarrierMult(): number {
+    return barrierPassiveMult(this.ranks);
+  }
+
   /** Shrine / world blessing — timed damage buff (stacks by refresh). */
   applyShrineBuff(
     mult = 1.4,
@@ -221,8 +241,13 @@ export class SkillSystem {
       };
     }
 
+    if (def.kind === 'passive') {
+      return { ok: false, reason: 'Passive — not castable' };
+    }
+
     const mult = def.damageMult + def.rankBonus * (rank - 1);
-    const gearSkill = 1 + (ctx.gearSkillPower ?? 0) / 100;
+    const gearSkill =
+      1 + ((ctx.gearSkillPower ?? 0) + this.passiveSkillPower()) / 100;
     const base = Math.max(
       1,
       Math.floor(
@@ -444,8 +469,9 @@ export class SkillSystem {
         break;
       }
       case 'barrier': {
-        const hp = (def.barrierHp ?? 30) + (def.rankBarrier ?? 15) * (rank - 1);
-        this.barrierHp = hp;
+        const rawHp =
+          (def.barrierHp ?? 30) + (def.rankBarrier ?? 15) * (rank - 1);
+        this.barrierHp = Math.floor(rawHp * this.passiveBarrierMult());
         this.barrierUntil = this.now + (def.duration ?? 6);
         break;
       }

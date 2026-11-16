@@ -30,6 +30,9 @@ export function skillRangeKind(kind: AbilityKind): SkillRangeKind {
     case 'buff':
     case 'barrier':
       return 'aoe';
+    case 'passive':
+      // Never cast — callers should skip passives before gating.
+      return 'aoe';
   }
 }
 

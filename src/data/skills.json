@@ -164,6 +164,39 @@
       "damageMult": 1.1,
       "rankBonus": 0.18,
       "maxTargets": 4
+    },
+    "war_ironwill": {
+      "id": "war_ironwill",
+      "classId": "warrior",
+      "name": "Iron Will",
+      "blurb": "Passive. Take less damage — harden the frontline.",
+      "maxRank": 3,
+      "cooldown": 0,
+      "kind": "passive",
+      "damageMult": 0,
+      "rankBonus": 0
+    },
+    "mys_riftattune": {
+      "id": "mys_riftattune",
+      "classId": "mystic",
+      "name": "Rift Attunement",
+      "blurb": "Passive. Skills hit harder — walk the rift's grain.",
+      "maxRank": 3,
+      "cooldown": 0,
+      "kind": "passive",
+      "damageMult": 0,
+      "rankBonus": 0
+    },
+    "mag_arcaneres": {
+      "id": "mag_arcaneres",
+      "classId": "mage",
+      "name": "Arcane Reservoir",
+      "blurb": "Passive. Barriers hold more — stockpile the surge.",
+      "maxRank": 3,
+      "cooldown": 0,
+      "kind": "passive",
+      "damageMult": 0,
+      "rankBonus": 0
     }
   },
   "trees": {
@@ -207,6 +240,16 @@
         "row": 2,
         "requires": [],
         "starter": true
+      },
+      {
+        "id": "w_iron",
+        "abilityId": "war_ironwill",
+        "name": "Iron Will",
+        "blurb": "Passive. Requires Battle Cry. Take less damage.",
+        "col": 0,
+        "row": 3,
+        "requires": ["w_cry"],
+        "starter": false
       }
     ],
     "mystic": [
@@ -249,6 +292,16 @@
         "row": 2,
         "requires": [],
         "starter": true
+      },
+      {
+        "id": "m_attune",
+        "abilityId": "mys_riftattune",
+        "name": "Rift Attunement",
+        "blurb": "Passive. Requires Rift Step. Skills hit harder.",
+        "col": 0,
+        "row": 3,
+        "requires": ["m_step"],
+        "starter": false
       }
     ],
     "mage": [
@@ -291,6 +344,16 @@
         "row": 2,
         "requires": [],
         "starter": true
+      },
+      {
+        "id": "g_res",
+        "abilityId": "mag_arcaneres",
+        "name": "Arcane Reservoir",
+        "blurb": "Passive. Requires Chain Surge. Barriers hold more.",
+        "col": 0,
+        "row": 3,
+        "requires": ["g_chain"],
+        "starter": false
       }
     ]
   }

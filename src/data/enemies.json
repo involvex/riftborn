@@ -134,6 +134,21 @@
     "isElite": true,
     "lootTier": 4
   },
+  "salt_warden": {
+    "id": "salt_warden",
+    "name": "Salt Warden",
+    "hp": 280,
+    "damage": 15,
+    "speed": 2.2,
+    "attackRange": 1.55,
+    "attackCooldown": 1.0,
+    "xp": 115,
+    "color": "#D8D0C0",
+    "radius": 18,
+    "lootTable": "elite_loot",
+    "isElite": true,
+    "lootTier": 4
+  },
   "enemy_rift_goblin": {
     "id": "enemy_rift_goblin",
     "name": "Rift Goblin",

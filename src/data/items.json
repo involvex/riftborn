@@ -167,5 +167,21 @@
     "kind": "material",
     "color": "#6ABF5A",
     "sellValue": 32
+  },
+  "salt_shard": {
+    "id": "salt_shard",
+    "name": "Salt Shard",
+    "stack": 40,
+    "kind": "material",
+    "color": "#E8E4D8",
+    "sellValue": 5
+  },
+  "salt_charm": {
+    "id": "salt_charm",
+    "name": "Salt Charm",
+    "stack": 20,
+    "kind": "material",
+    "color": "#E8E4D8",
+    "sellValue": 34
   }
 }

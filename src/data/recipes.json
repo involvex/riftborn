@@ -79,5 +79,15 @@
       { "itemId": "grove_sap", "qty": 3 },
       { "itemId": "berries", "qty": 4 }
     ]
+  },
+  "salt_charm": {
+    "id": "salt_charm",
+    "name": "Salt Charm",
+    "resultId": "salt_charm",
+    "resultQty": 1,
+    "ingredients": [
+      { "itemId": "salt_shard", "qty": 4 },
+      { "itemId": "scrap", "qty": 3 }
+    ]
   }
 }

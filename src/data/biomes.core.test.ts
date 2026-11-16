@@ -4,7 +4,12 @@ import itemsData from './items.json';
 
 const idDefs = itemsData as Record<string, { kind: string }>;
 
-const BIOME_IDS = ['ashen_crypt', 'crystal_cavern', 'shattered_woods'] as const;
+const BIOME_IDS = [
+  'ashen_crypt',
+  'crystal_cavern',
+  'shattered_woods',
+  'salt_wastes',
+] as const;
 const TILE_KEYS = [
   'tile_dungeon_0',
   'tile_dungeon_1',
@@ -20,6 +25,9 @@ const ALLOWED_ENEMY_IDS = new Set([
   'ash_scout',
   'ash_bramble',
   'rift_lord',
+  'crystal_lord',
+  'grove_alpha',
+  'salt_warden',
   'enemy_rift_goblin',
   'enemy_shadow_wolf',
   'enemy_bone_archer',
@@ -60,7 +68,7 @@ describe('biomes', () => {
     }
   });
 
-  test('all three biome IDs appear across seed/depth pairs', () => {
+  test('all four biome IDs appear across seed/depth pairs', () => {
     const seen = new Set<string>();
     for (let seed = 0; seed < 120; seed++) {
       for (let depth = 1; depth <= 10; depth++) {
@@ -73,7 +81,7 @@ describe('biomes', () => {
   });
 
   test('each biome has valid tileWeights, propWeights, and enemyMix', () => {
-    expect(RIFT_BIOMES.length).toBe(3);
+    expect(RIFT_BIOMES.length).toBe(4);
     for (const b of RIFT_BIOMES) {
       assertBiomeShape(b);
     }

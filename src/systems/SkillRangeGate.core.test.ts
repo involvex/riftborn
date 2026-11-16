@@ -20,6 +20,7 @@ const ALL_KINDS: AbilityKind[] = [
   'bolt',
   'barrier',
   'chain',
+  'passive',
 ];
 
 const RANGE_KINDS: SkillRangeKind[] = ['targeted', 'aoe', 'mobility'];
@@ -44,12 +45,13 @@ describe('skillRangeKind', () => {
     expect(skillRangeKind('blink')).toBe('mobility');
   });
 
-  test('aoe covers cleave, nova, pulse and self buffs', () => {
+  test('aoe covers cleave, nova, pulse, self buffs, and passive', () => {
     expect(skillRangeKind('cleave')).toBe('aoe');
     expect(skillRangeKind('slow_nova')).toBe('aoe');
     expect(skillRangeKind('pulse')).toBe('aoe');
     expect(skillRangeKind('buff')).toBe('aoe');
     expect(skillRangeKind('barrier')).toBe('aoe');
+    expect(skillRangeKind('passive')).toBe('aoe');
   });
 });
 

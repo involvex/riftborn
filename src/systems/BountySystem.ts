@@ -9,6 +9,13 @@ export type BountySaveSlice = {
   cooldownLeft: number;
 };
 
+/** Craft results the forge contract can pay out (existing bench sinks). */
+export const FORGE_REWARD_ITEMS = [
+  'ashen_charm',
+  'crystal_lens',
+  'grove_tonic',
+] as const;
+
 const POOL: Array<Omit<ActiveBounty, 'progress'>> = [
   {
     kind: 'scout',
@@ -45,12 +52,32 @@ const POOL: Array<Omit<ActiveBounty, 'progress'>> = [
     rewardGold: 50,
     rewardXp: 45,
   },
+  {
+    kind: 'forge',
+    label: 'Forge contract — cull for Bram',
+    target: 10,
+    rewardGold: 25,
+    rewardXp: 35,
+    rewardItemId: 'ashen_charm',
+  },
 ];
 
-const KINDS: BountyKind[] = ['scout', 'chests', 'cull', 'shrine', 'bramble'];
+const KINDS: BountyKind[] = [
+  'scout',
+  'chests',
+  'cull',
+  'shrine',
+  'bramble',
+  'forge',
+];
 
 function isBountyKind(v: unknown): v is BountyKind {
   return typeof v === 'string' && (KINDS as string[]).includes(v);
+}
+
+function pickForgeReward(rng = Math.random): string {
+  const i = Math.floor(rng() * FORGE_REWARD_ITEMS.length);
+  return FORGE_REWARD_ITEMS[i] ?? FORGE_REWARD_ITEMS[0]!;
 }
 
 function sanitizeBounty(raw: unknown): ActiveBounty | null {
@@ -64,6 +91,10 @@ function sanitizeBounty(raw: unknown): ActiveBounty | null {
     0,
     Math.min(target, Math.floor(Number(b.progress) || 0)),
   );
+  const rewardItemId =
+    typeof b.rewardItemId === 'string' && b.rewardItemId
+      ? b.rewardItemId
+      : template.rewardItemId;
   return {
     kind: b.kind,
     label: typeof b.label === 'string' && b.label ? b.label : template.label,
@@ -74,6 +105,7 @@ function sanitizeBounty(raw: unknown): ActiveBounty | null {
       Math.floor(Number(b.rewardGold) || template.rewardGold),
     ),
     rewardXp: Math.max(0, Math.floor(Number(b.rewardXp) || template.rewardXp)),
+    ...(rewardItemId ? { rewardItemId } : {}),
   };
 }
 
@@ -115,6 +147,9 @@ export class BountySystem {
             progress: this.active.progress,
             rewardGold: this.active.rewardGold,
             rewardXp: this.active.rewardXp,
+            ...(this.active.rewardItemId
+              ? { rewardItemId: this.active.rewardItemId }
+              : {}),
           }
         : null,
       lastKind: this.lastKind,
@@ -132,12 +167,17 @@ export class BountySystem {
     return !this.active && this.now >= this.cooldownUntil;
   }
 
-  accept(): ActiveBounty | null {
+  accept(rng = Math.random): ActiveBounty | null {
     if (!this.canAccept()) return null;
     const choices = POOL.filter((b) => b.kind !== this.lastKind);
-    const pick =
-      choices[Math.floor(Math.random() * choices.length)] ?? POOL[0]!;
-    this.active = { ...pick, progress: 0 };
+    const pick = choices[Math.floor(rng() * choices.length)] ?? POOL[0]!;
+    const rewardItemId =
+      pick.kind === 'forge' ? pickForgeReward(rng) : pick.rewardItemId;
+    this.active = {
+      ...pick,
+      progress: 0,
+      ...(rewardItemId ? { rewardItemId } : {}),
+    };
     this.lastKind = pick.kind;
     gameEvents.emit(Events.BOUNTY_CHANGED, { bounty: this.active });
     return this.active;
@@ -153,6 +193,8 @@ export class BountySystem {
   }
 
   noteWildernessKill(): ActiveBounty | null {
+    // Forge contracts share wilderness cull progress.
+    if (this.active?.kind === 'forge') return this.bump('forge', 1);
     return this.bump('cull', 1);
   }
 

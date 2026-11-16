@@ -277,9 +277,11 @@ export class UIScene extends Phaser.Scene {
               ? 'Crystal Lens'
               : id === 'grove_tonic'
                 ? 'Grove Tonic'
-                : id
-                  ? id.replace(/_/g, ' ')
-                  : 'item';
+                : id === 'salt_charm'
+                  ? 'Salt Charm'
+                  : id
+                    ? id.replace(/_/g, ' ')
+                    : 'item';
         audioBus.open();
         audioBus.loot(id.startsWith('rift_') ? 'magic' : 'common');
         this.toast(`Crafted ${pretty}`);
@@ -349,6 +351,7 @@ export class UIScene extends Phaser.Scene {
           depth: number;
           kills: number;
           modName?: string;
+          ruleName?: string;
           gold: number;
           level: number;
         };
@@ -359,6 +362,9 @@ export class UIScene extends Phaser.Scene {
             { text: `Depth D${d.depth}` },
             { text: `Pack kills: ${d.kills}` },
             { text: d.modName ? `Mod: ${d.modName}` : 'Mod: —' },
+            {
+              text: d.ruleName ? `Rule: ${d.ruleName}` : 'Rule: —',
+            },
             { text: `Level ${d.level} · ${d.gold}g` },
             { text: '' },
             { text: 'Loot the chest · Exit portal · B town' },
@@ -382,6 +388,7 @@ export class UIScene extends Phaser.Scene {
           phase?: 'fill' | 'boss' | 'exit';
           depth?: number;
           modName?: string;
+          ruleName?: string;
         };
         if (!d.active) {
           this.riftHud.hide();
@@ -394,6 +401,7 @@ export class UIScene extends Phaser.Scene {
           d.phase ?? 'fill',
           d.depth ?? 1,
           d.modName,
+          d.ruleName,
         );
       }),
       gameEvents.on('ui:dismissSummary', () => {
@@ -475,16 +483,26 @@ export class UIScene extends Phaser.Scene {
       gameEvents.on(Events.BOUNTY_CHANGED, () => this.refresh()),
       gameEvents.on(Events.BOUNTY_COMPLETE, (p) => {
         const d = p as {
-          bounty: { label: string; rewardGold: number; rewardXp: number };
+          bounty: {
+            label: string;
+            rewardGold: number;
+            rewardXp: number;
+            rewardItemId?: string;
+          };
         };
         const b = d.bounty;
         gameState.inventory.add('gold', b.rewardGold);
         gameState.progression.addXp(b.rewardXp);
+        let itemBit = '';
+        if (b.rewardItemId) {
+          gameState.inventory.add(b.rewardItemId, 1);
+          itemBit = ` + ${b.rewardItemId.replace(/_/g, ' ')}`;
+        }
         gameState.persist();
         audioBus.loot('rare');
         audioBus.skill();
         this.toast(
-          `Bounty complete — ${b.label} · +${b.rewardGold}g +${b.rewardXp} XP`,
+          `Bounty complete — ${b.label} · +${b.rewardGold}g +${b.rewardXp} XP${itemBit}`,
         );
         this.refresh();
       }),

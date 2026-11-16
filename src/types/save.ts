@@ -5,7 +5,8 @@ import type {
   PlayerStats,
 } from './game';
 
-export type BountyKind = 'scout' | 'chests' | 'cull' | 'shrine' | 'bramble';
+export type BountyKind =
+  'scout' | 'chests' | 'cull' | 'shrine' | 'bramble' | 'forge';
 
 export type ActiveBounty = {
   kind: BountyKind;
@@ -14,6 +15,8 @@ export type ActiveBounty = {
   progress: number;
   rewardGold: number;
   rewardXp: number;
+  /** Craft-sink item paid by the forge contract (optional). */
+  rewardItemId?: string;
 };
 
 export type StackSlot = {

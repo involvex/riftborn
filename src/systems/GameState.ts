@@ -181,9 +181,9 @@ export class GameState {
   }
 
   takeDamage(raw: number): number {
-    const afterBarrier = this.skills.absorbDamage(
-      this.combat.mitigateIncoming(raw),
-    );
+    const mitigated = this.combat.mitigateIncoming(raw);
+    const afterDr = mitigated * this.skills.incomingDamageMult();
+    const afterBarrier = this.skills.absorbDamage(afterDr);
     const dealt = Math.max(0, Math.floor(afterBarrier));
     if (dealt <= 0) {
       gameEvents.emit(Events.PLAYER_DAMAGED, { dealt: 0, hp: this.hp });

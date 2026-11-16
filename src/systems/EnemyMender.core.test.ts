@@ -67,11 +67,15 @@ describe('mender data', () => {
     expect(enemyTelegraphKind('rift_mender')).toBe('wail');
   });
 
-  test('mender appears in exactly two rift biomes, one each', () => {
+  test('mender appears in crystal, woods, and salt biomes (one each)', () => {
     const withMender = RIFT_BIOMES.filter((b) =>
       b.enemyMix.some((e) => e.enemyId === 'rift_mender'),
     );
-    expect(withMender.length).toBe(2);
+    expect(withMender.map((b) => b.id).sort()).toEqual([
+      'crystal_cavern',
+      'salt_wastes',
+      'shattered_woods',
+    ]);
     for (const b of withMender) {
       const entry = b.enemyMix.find((e) => e.enemyId === 'rift_mender')!;
       expect(entry.minCount).toBe(1);

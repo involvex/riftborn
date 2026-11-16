@@ -63,25 +63,34 @@ export class RiftProgressHud {
     phase: 'fill' | 'boss' | 'exit',
     depth = 1,
     modName?: string,
+    ruleName?: string,
   ): void {
     const ratio = goal <= 0 ? 1 : Phaser.Math.Clamp(kills / goal, 0, 1);
     this.fill.height = Math.max(2, (this.barH - 2) * ratio);
     const dTag = `D${depth}`;
+    const rule = ruleName ? `\n${shortRule(ruleName)}` : '';
     const mod =
       modName && modName !== 'Calm Rift' ? `\n${shortMod(modName)}` : '';
     if (phase === 'fill') {
       this.fill.setFillStyle(0xc62868, 1);
-      this.label.setText(`${dTag}\nKill ${kills}/${goal}${mod}`);
+      this.label.setText(`${dTag}${rule}\nKill ${kills}/${goal}${mod}`);
     } else if (phase === 'boss') {
       this.fill.setFillStyle(0xff7043, 1);
       this.fill.height = this.barH - 2;
-      this.label.setText(`${dTag}\nBoss${mod}`);
+      this.label.setText(`${dTag}${rule}\nBoss${mod}`);
     } else {
       this.fill.setFillStyle(0x4db6ff, 1);
       this.fill.height = this.barH - 2;
       this.label.setText(`${dTag}\nExit`);
     }
   }
+}
+
+function shortRule(name: string): string {
+  if (name.includes('Hardened')) return 'Hard';
+  if (name.includes('Relentless')) return 'Relent';
+  if (name.includes('Apex')) return 'Apex';
+  return name.slice(0, 6);
 }
 
 function shortMod(name: string): string {
