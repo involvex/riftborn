@@ -41,8 +41,9 @@ Solo evenings, one shippable slice at a time. Prefer **feel → content → syst
 - **Combat readability** — warmer hit flash/knock, Low-tier hit bursts, skill hit VFX, boss scale-in + crit kill juice
 - **LoopBeat / portals** — zone fade + portal sting; exit gate at boss anchor; HUD phase pulse
 - **Loot readability** — magic+ drop icons/beams, boss chest look, rarity-gated loot juice
+- **Boss arena beat** — biome wash + phase ring in boss room (idle → boss → exit)
 
-## Next — feel & look (core loop)
+## Done — feel & look (core loop)
 
 Prefer sessions that make the existing Hub → Rift → Boss → Exit loop
 **clearer and prettier**. Skip jam-theme work and new systems unless they
@@ -55,7 +56,18 @@ earn their keep in feel.
 | ✓   | **Combat readability**   | Hits/boss moments still soft | Shipped: warmer hit flash/knock, Low-tier hit bursts, skill hit VFX, boss scale-in + crit kill juice |
 | ✓   | **LoopBeat / portals**   | Enter/clear/exit still soft  | Shipped: zone fade + portal sting; exit gate at boss anchor; HUD phase pulse                         |
 | ✓   | **Loot readability**     | Payoff after combat soft     | Shipped: magic+ drop icons/beams, boss chest look, rarity-gated loot juice                           |
-| 6   | **Boss arena beat**      | Boss room = any hall         | Biome wash / spotlight in boss room + clearer phase cues                                             |
+| ✓   | **Boss arena beat**      | Boss room = any hall         | Shipped: biome wash + phase ring in boss room (idle → boss → exit)                                   |
+
+## Next — content (keep after feel)
+
+Looks are distinct; **fights and chase** should earn another run. Still extend
+existing data / systems — no new frameworks.
+
+| #   | Slice                     | Why it matters                    | Done when                                                                 |
+| --- | ------------------------- | --------------------------------- | ------------------------------------------------------------------------- |
+| 1   | **Biome pack identity**   | Biomes tint floors; packs fight alike | Each biome’s first pack reads different in ~10s (no new topology)     |
+| 2   | **Boss signature beats**  | Arena looks special; fight is one pattern | One clear tell per biome boss (warn → punish), shared brain hooks   |
+| 3   | **Set chase readability** | Loot pops; keeping gear is thin   | 2pc is a mid-session goal (drop bias + bag/HUD “need X”)                  |
 
 Skip inventing new frameworks — extend `MapGen` / `WorldScene` /
 `SaveStore` / NPCs / `server/index.ts` / `src/data/*` / `src/render/*`.

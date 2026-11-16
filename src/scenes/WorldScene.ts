@@ -152,6 +152,17 @@ import {
   TILE_ART_SCALE,
 } from '../render/WorldArt';
 import { biomeLook, type BiomeLook } from '../render/BiomeLook';
+import {
+  arenaRingAlpha,
+  arenaRingColor,
+  bossArenaEdgeAlpha,
+  bossArenaFloorTint,
+  bossArenaSpeckEvery,
+  dungeonBossRoom,
+  tileInArenaRoom,
+  type ArenaPhase,
+  type ArenaRoom,
+} from '../render/BossArenaLook';
 import { ShiftSystem } from '../systems/ShiftSystem';
 import { BossShiftBrain } from '../systems/BossShift';
 import { cancelShiftTransition, playShiftTransition } from '../render/ShiftFx';
@@ -242,6 +253,9 @@ export class WorldScene extends Phaser.Scene {
   /** Active rift biome palette (null in hub). */
   private biomeLookActive: BiomeLook | null = null;
   private bossAnchor: { x: number; y: number } | null = null;
+  /** Last-room bounds for arena wash / ring. */
+  private bossArenaRoom: ArenaRoom | null = null;
+  private bossArenaOverlay: Phaser.GameObjects.Graphics | null = null;
   private hubLayout: ZoneLayout | null = null;
   /** POI ambushes already triggered this visit. */
   private ambushFired = new Set<string>();
@@ -773,6 +787,7 @@ export class WorldScene extends Phaser.Scene {
       this.riftMod = getRiftModifier('none');
       this.depthRule = depthRuleFor(1);
       this.biomeLookActive = null;
+      this.clearBossArenaOverlay();
       this.cameras.main.setBackgroundColor('#12161c');
       this.hubLayout = generateHub(42);
       this.hubSize = this.hubLayout.size ?? DEFAULT_HUB_SIZE;
@@ -1531,6 +1546,59 @@ export class WorldScene extends Phaser.Scene {
     this.tileSprites = [];
   }
 
+  private clearBossArenaOverlay(): void {
+    if (this.bossArenaOverlay) {
+      this.tweens.killTweensOf(this.bossArenaOverlay);
+      this.bossArenaOverlay.destroy();
+      this.bossArenaOverlay = null;
+    }
+    this.bossArenaRoom = null;
+  }
+
+  /** Spotlight ring over the boss chamber — idle wash, boss/exit punch. */
+  private paintBossArenaRing(phase: ArenaPhase): void {
+    const room = this.bossArenaRoom;
+    const look = this.biomeLookActive;
+    if (!room || !look) return;
+    if (!this.bossArenaOverlay) {
+      this.bossArenaOverlay = this.add.graphics().setDepth(-900);
+    } else {
+      this.tweens.killTweensOf(this.bossArenaOverlay);
+      this.bossArenaOverlay.clear();
+    }
+    const g = this.bossArenaOverlay;
+    const color = arenaRingColor(look, phase);
+    const alpha = arenaRingAlpha(phase);
+    // Floor wash diamonds inside the room.
+    for (let ty = room.y; ty < room.y + room.h; ty++) {
+      for (let tx = room.x; tx < room.x + room.w; tx++) {
+        if (this.dungeon?.cells[ty]?.[tx] !== 1) continue;
+        const { screenX, screenY } = worldToScreen(tx + 0.5, ty + 0.5);
+        g.fillStyle(color, phase === 'idle' ? 0.06 : 0.1);
+        g.fillEllipse(screenX, screenY, 28, 14);
+      }
+    }
+    const cx = room.x + room.w / 2;
+    const cy = room.y + room.h / 2;
+    const { screenX, screenY } = worldToScreen(cx, cy);
+    const rw = room.w * 28;
+    const rh = room.h * 14;
+    g.lineStyle(phase === 'idle' ? 2 : 3, color, alpha);
+    g.strokeEllipse(screenX, screenY, rw, rh);
+    if (phase !== 'idle') {
+      g.lineStyle(1.5, 0xfff0e0, alpha * 0.55);
+      g.strokeEllipse(screenX, screenY, rw * 0.72, rh * 0.72);
+      this.tweens.add({
+        targets: g,
+        alpha: { from: 0.55, to: 1 },
+        duration: phase === 'boss' ? 520 : 640,
+        yoyo: true,
+        repeat: -1,
+        ease: 'Sine.easeInOut',
+      });
+    }
+  }
+
   /** Hide offscreen floor tiles/decor to cut mobile overdraw (P1). */
   private cullWorldSprites(): void {
     const view = this.cameras.main?.worldView;
@@ -1740,6 +1808,8 @@ export class WorldScene extends Phaser.Scene {
   private drawDungeonTiles(map: DungeonMap): void {
     this.tiles.clear();
     this.clearTileSprites();
+    this.bossArenaOverlay?.destroy();
+    this.bossArenaOverlay = null;
 
     const valueNoise = (x: number, y: number, scale: number): number => {
       const xi = Math.floor(x / scale);
@@ -1765,6 +1835,8 @@ export class WorldScene extends Phaser.Scene {
 
     const biome = map.biome;
     const look = biomeLook(biome.id);
+    const bossRoom = dungeonBossRoom(map.rooms);
+    this.bossArenaRoom = bossRoom;
     const w0 = biome.tileWeights.tile_dungeon_0 ?? 0.6;
     const w1 = biome.tileWeights.tile_dungeon_1 ?? 0.3;
     const w2 = biome.tileWeights.tile_dungeon_2 ?? 0.1;
@@ -1785,25 +1857,33 @@ export class WorldScene extends Phaser.Scene {
           key = 'tile_dungeon_2';
         }
         const gate = map.layerGates[y]![x] ?? null;
+        const inArena = !!(bossRoom && tileInArenaRoom(x, y, bossRoom));
+        const floorTint = inArena ? bossArenaFloorTint(look) : look.floorTint;
+        const edgeA = inArena ? bossArenaEdgeAlpha(look) : look.edgeAlpha;
+        const speckEvery = inArena
+          ? bossArenaSpeckEvery(look)
+          : look.speckEvery;
         // Floor tint is the main biome read — painted sheets alone look identical.
-        this.placeFloorTile(x, y, key, look.floorTint, gate, look.floorTint);
+        this.placeFloorTile(x, y, key, floorTint, gate, floorTint);
         if (!gate && isDungeonFloorEdge(map.cells, x, y)) {
-          this.strokeIsoTileOutline(
-            this.tiles,
-            x,
-            y,
-            look.accent,
-            look.edgeAlpha,
-          );
+          this.strokeIsoTileOutline(this.tiles, x, y, look.accent, edgeA);
         }
-        if ((x * 17 + y * 31) % look.speckEvery === 0 && !gate) {
+        if ((x * 17 + y * 31) % speckEvery === 0 && !gate) {
           const { screenX, screenY } = worldToScreen(x, y);
-          this.tiles.fillStyle(look.accent, look.speckAlpha);
-          this.tiles.fillCircle(screenX, screenY, look.speckRadius);
+          this.tiles.fillStyle(
+            look.accent,
+            inArena ? Math.min(0.85, look.speckAlpha + 0.2) : look.speckAlpha,
+          );
+          this.tiles.fillCircle(
+            screenX,
+            screenY,
+            inArena ? look.speckRadius + 1.2 : look.speckRadius,
+          );
         }
       }
     }
     this.tiles.setDepth(-999);
+    this.paintBossArenaRing('idle');
     this.cullWorldSprites();
   }
 
@@ -2776,6 +2856,7 @@ export class WorldScene extends Phaser.Scene {
     this.triggerHitstop('crit');
     audioBus.skill();
     playEnemyTelegraph(this, 'wail', 'impact', boss.worldX, boss.worldY);
+    this.paintBossArenaRing('boss');
     this.emitRiftProgress();
   }
 
@@ -2893,6 +2974,7 @@ export class WorldScene extends Phaser.Scene {
     audioBus.portalExit();
     playPortalReveal(this, p.x, p.y);
     this.safeCameraFlash(180, 70, 150, 230);
+    this.paintBossArenaRing('exit');
     this.emitMapSnapshot();
   }
 
