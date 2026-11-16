@@ -43,6 +43,7 @@ Solo evenings, one shippable slice at a time. Prefer **feel → content → syst
 - **Loot readability** — magic+ drop icons/beams, boss chest look, rarity-gated loot juice
 - **Boss arena beat** — biome wash + phase ring in boss room (idle → boss → exit)
 - **Biome pack identity** — opening packs per biome (grind / kite / rush / poke)
+- **Boss signature beats** — Ash hop / Crystal wail / Grove charge / Salt volley
 
 ## Done — feel & look (core loop)
 
@@ -67,7 +68,7 @@ existing data / systems — no new frameworks.
 | #   | Slice                     | Why it matters                            | Done when                                                          |
 | --- | ------------------------- | ----------------------------------------- | ------------------------------------------------------------------ |
 | ✓   | **Biome pack identity**   | Biomes tint floors; packs fight alike     | Shipped: opening packs (grind / kite / rush / poke) + skewed mixes |
-| 2   | **Boss signature beats**  | Arena looks special; fight is one pattern | One clear tell per biome boss (warn → punish), shared brain hooks  |
+| ✓   | **Boss signature beats**  | Arena looks special; fight is one pattern | Shipped: hop / wail / charge / volley on shared beat cadence       |
 | 3   | **Set chase readability** | Loot pops; keeping gear is thin           | 2pc is a mid-session goal (drop bias + bag/HUD “need X”)           |
 
 Skip inventing new frameworks — extend `MapGen` / `WorldScene` /

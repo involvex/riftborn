@@ -22,7 +22,8 @@ export interface AdvanceEnemyShotResult {
 }
 
 export function isRangedEnemy(defId: string): boolean {
-  return defId === 'enemy_bone_archer';
+  // Salt boss pokes with shots; volley beat fires extras from WorldScene.
+  return defId === 'enemy_bone_archer' || defId === 'salt_warden';
 }
 
 export function createEnemyShot(

@@ -19,8 +19,9 @@ describe('EnemyWraith', () => {
     expect(WAIL_WINDUP).toBe(0.42);
   });
 
-  test('isWraithEnemy is true only for enemy_rift_wraith', () => {
+  test('isWraithEnemy covers rift wraith and crystal lord', () => {
     expect(isWraithEnemy('enemy_rift_wraith')).toBe(true);
+    expect(isWraithEnemy('crystal_lord')).toBe(true);
     for (const id of [
       'shade',
       'crawler',

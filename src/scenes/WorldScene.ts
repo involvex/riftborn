@@ -126,8 +126,6 @@ import {
 } from '../systems/RiftModifiers';
 import {
   bossPhaseToastText,
-  bossShiftHopToastText,
-  bossShiftWarnToastText,
   riftEnterToastText,
   veiledWrongLayerToast,
 } from '../systems/RiftGoalCopy';
@@ -165,6 +163,14 @@ import {
 } from '../render/BossArenaLook';
 import { ShiftSystem } from '../systems/ShiftSystem';
 import { BossShiftBrain } from '../systems/BossShift';
+import {
+  BOSS_VOLLEY_SPREAD,
+  bossSignatureKind,
+  bossSignaturePunishToast,
+  bossSignatureTelegraph,
+  bossSignatureWarnToast,
+  volleyAimPoint,
+} from '../systems/BossSignature';
 import { cancelShiftTransition, playShiftTransition } from '../render/ShiftFx';
 import { shiftShakeParams } from '../render/ShiftFeel';
 import { playEnemyTelegraph } from '../render/EnemyTelegraphVfx';
@@ -182,7 +188,11 @@ import {
   shiftTransitionText,
   shouldAnnounceShiftReady,
 } from '../systems/ShiftFeedback';
-import { advanceEnemyShot, type EnemyShot } from '../systems/EnemyRanged';
+import {
+  advanceEnemyShot,
+  createEnemyShot,
+  type EnemyShot,
+} from '../systems/EnemyRanged';
 import {
   resolveInteractAction,
   type InteractCandidate,
@@ -2864,43 +2874,78 @@ export class WorldScene extends Phaser.Scene {
     if (!gameState.inRift || !this.riftBossSpawned || this.riftBossDead) {
       return;
     }
-    // Layer-locked mods pin the boss — no free shifting.
-    if (riftModLayerLock(this.riftMod)) return;
-    const ev = this.bossShift.tick(dtMs);
-    if (!ev) return;
+    // Layer-locked mods pin hop bosses — other tells still fire.
     const boss = this.enemies.find(
       (e) =>
         e.alive &&
         (this.riftBossId !== null ? e.id === this.riftBossId : e.isBoss),
     );
     if (!boss) return;
+    const kind = bossSignatureKind(boss.def.id);
+    if (kind === 'shift_hop' && riftModLayerLock(this.riftMod)) return;
+
+    const ev = this.bossShift.tick(dtMs);
+    if (!ev) return;
+    const telegraph = bossSignatureTelegraph(kind);
 
     if (ev.phase === 'warn') {
       const nextName = SHIFT_LAYERS[ev.nextLayer].name;
       gameEvents.emit('ui:toast', {
-        text: bossShiftWarnToastText({
+        text: bossSignatureWarnToast({
           bossName: boss.def.name,
+          kind,
           nextLayerName: nextName,
         }),
       });
-      playEnemyTelegraph(this, 'wail', 'windup', boss.worldX, boss.worldY);
+      playEnemyTelegraph(this, telegraph, 'windup', boss.worldX, boss.worldY);
       audioBus.open();
       return;
     }
 
-    boss.setCombatLayer(ev.layer);
-    boss.syncShiftLayer(this.shiftSystem.layer);
-    playShiftTransition(this, ev.layer, this.shiftFxIntensity);
-    const punch = shiftShakeParams(this.shiftFxIntensity);
-    this.triggerHitShake(punch.ms, punch.intensity);
-    playEnemyTelegraph(this, 'wail', 'impact', boss.worldX, boss.worldY);
+    // Punish beat — hop or signature special.
+    if (kind === 'shift_hop') {
+      boss.setCombatLayer(ev.layer);
+      boss.syncShiftLayer(this.shiftSystem.layer);
+      playShiftTransition(this, ev.layer, this.shiftFxIntensity);
+      const punch = shiftShakeParams(this.shiftFxIntensity);
+      this.triggerHitShake(punch.ms, punch.intensity);
+      playEnemyTelegraph(this, 'wail', 'impact', boss.worldX, boss.worldY);
+    } else if (kind === 'kite_wail') {
+      boss.forceSignatureWail(this.player.worldX, this.player.worldY);
+      playEnemyTelegraph(this, 'wail', 'impact', boss.worldX, boss.worldY);
+      this.triggerHitShake(90, 0.004);
+    } else if (kind === 'charge') {
+      boss.forceSignatureRush(this.player.worldX, this.player.worldY);
+      playEnemyTelegraph(this, 'rush', 'impact', boss.worldX, boss.worldY);
+      this.triggerCombatShake('crit');
+    } else {
+      this.fireBossVolley(boss);
+      playEnemyTelegraph(this, 'shot', 'impact', boss.worldX, boss.worldY);
+      this.triggerHitShake(80, 0.0035);
+    }
     audioBus.skill();
     gameEvents.emit('ui:toast', {
-      text: bossShiftHopToastText({
+      text: bossSignaturePunishToast({
         bossName: boss.def.name,
+        kind,
         layerName: SHIFT_LAYERS[ev.layer].name,
       }),
     });
+  }
+
+  /** Salt Warden punish — three-spoke shot fan at the player. */
+  private fireBossVolley(boss: Enemy): void {
+    const from = { x: boss.worldX, y: boss.worldY };
+    const to = { x: this.player.worldX, y: this.player.worldY };
+    const dmg = Math.max(1, Math.floor(boss.def.damage * 0.85));
+    for (const angle of BOSS_VOLLEY_SPREAD) {
+      const aim = volleyAimPoint(from, to, angle);
+      const shot = createEnemyShot(from, aim, dmg);
+      this.enemyShots.push({
+        shot,
+        graphic: this.spawnEnemyShotGraphic(shot),
+      });
+    }
   }
 
   private spawnBossChest(wx: number, wy: number): void {

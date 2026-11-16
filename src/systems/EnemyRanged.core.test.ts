@@ -9,8 +9,9 @@ import {
 } from './EnemyRanged';
 
 describe('EnemyRanged', () => {
-  test('isRangedEnemy is true only for enemy_bone_archer', () => {
+  test('isRangedEnemy covers bone archer and salt warden', () => {
     expect(isRangedEnemy('enemy_bone_archer')).toBe(true);
+    expect(isRangedEnemy('salt_warden')).toBe(true);
     for (const id of [
       'shade',
       'crawler',

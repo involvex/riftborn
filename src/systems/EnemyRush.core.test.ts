@@ -11,8 +11,9 @@ import {
 } from './EnemyRush';
 
 describe('EnemyRush', () => {
-  test('isRushEnemy is true only for enemy_rift_goblin', () => {
+  test('isRushEnemy covers rift goblin and grove alpha', () => {
     expect(isRushEnemy('enemy_rift_goblin')).toBe(true);
+    expect(isRushEnemy('grove_alpha')).toBe(true);
     for (const id of [
       'shade',
       'crawler',

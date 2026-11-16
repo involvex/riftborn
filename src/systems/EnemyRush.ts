@@ -10,7 +10,8 @@ export const RUSH_MIN_RANGE = 1.2; // tiles
 export const RUSH_TRIGGER_RANGE = 4.8; // tiles
 
 export function isRushEnemy(defId: string): boolean {
-  return defId === 'enemy_rift_goblin';
+  // Grove boss digs in and charges as its signature tell.
+  return defId === 'enemy_rift_goblin' || defId === 'grove_alpha';
 }
 
 export function rushSpeed(baseSpeed: number): number {

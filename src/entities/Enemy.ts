@@ -754,6 +754,35 @@ export class Enemy {
     if (this.hp !== before) this.redrawBar();
   }
 
+  /** Boss beat (Crystal): start a telegraphed wail channel. */
+  forceSignatureWail(playerX: number, playerY: number): void {
+    if (!this.alive || this.ghosted) return;
+    this.pounce = null;
+    this.pounceWindup = 0;
+    this.rushRemaining = 0;
+    this.menderWindup = 0;
+    this.wailWindup = WAIL_WINDUP;
+    this.attackTimer = Math.max(this.attackTimer, WAIL_WINDUP + 0.2);
+    this.state = 'chase';
+    this.setFacingToward(playerX, playerY);
+    this.sprite.setTint(0xa8e0e8);
+    this.playAnim('attack', true);
+  }
+
+  /** Boss beat (Grove): dig in and sprint at the player. */
+  forceSignatureRush(playerX: number, playerY: number): void {
+    if (!this.alive || this.ghosted) return;
+    this.pounce = null;
+    this.pounceWindup = 0;
+    this.wailWindup = 0;
+    this.rushRemaining = RUSH_DURATION;
+    this.rushReadyIn = RUSH_COOLDOWN;
+    this.state = 'chase';
+    this.setFacingToward(playerX, playerY);
+    this.sprite.setTint(0xe0a070);
+    this.playAnim('attack', true);
+  }
+
   /** Hit frames + warm flash/knock so connects read even on pale sheets. */
   flashHit(): void {
     if (!this.alive) return;

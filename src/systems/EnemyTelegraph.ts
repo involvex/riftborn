@@ -41,13 +41,18 @@ export function enemyTelegraphKind(defId: string): EnemyTelegraphKind | null {
     case 'enemy_shadow_wolf':
       return 'pounce';
     case 'enemy_rift_wraith':
+    case 'crystal_lord':
       return 'wail';
     case 'enemy_bone_archer':
+    case 'salt_warden':
       return 'shot';
     case 'enemy_rift_goblin':
+    case 'grove_alpha':
       return 'rush';
     case 'rift_mender':
       // Green ring channel reads as "support incoming" (wail styling).
+      return 'wail';
+    case 'rift_lord':
       return 'wail';
     default:
       return null;

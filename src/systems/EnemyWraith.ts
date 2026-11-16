@@ -15,7 +15,8 @@ export interface Vec2 {
 }
 
 export function isWraithEnemy(defId: string): boolean {
-  return defId === 'enemy_rift_wraith';
+  // Crystal boss reuses kite + wail as its signature tell.
+  return defId === 'enemy_rift_wraith' || defId === 'crystal_lord';
 }
 
 /**
