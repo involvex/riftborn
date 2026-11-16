@@ -140,5 +140,17 @@ describe('RiftRunPersist', () => {
     expect(parsed?.skillCooldowns).toEqual([3.5, 0, 1, 8]);
     expect(parsed?.barrierHp).toBe(40);
     expect(parsed?.barrierLeft).toBe(2.25);
+    expect(parsed?.damageBuffMult).toBe(1);
+    expect(parsed?.damageBuffLeft).toBe(0);
+  });
+
+  test('parseRiftRun keeps shrine damage buff', () => {
+    const parsed = parseRiftRun({
+      ...base,
+      damageBuffMult: 1.4,
+      damageBuffLeft: 22,
+    });
+    expect(parsed?.damageBuffMult).toBe(1.4);
+    expect(parsed?.damageBuffLeft).toBe(22);
   });
 });

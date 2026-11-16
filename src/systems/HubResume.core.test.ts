@@ -22,6 +22,8 @@ function sampleRun(over: Partial<RiftRunSave> = {}): RiftRunSave {
     skillCooldowns: [0, 0, 0, 0],
     barrierHp: 0,
     barrierLeft: 0,
+    damageBuffMult: 1,
+    damageBuffLeft: 0,
     ...over,
   };
 }

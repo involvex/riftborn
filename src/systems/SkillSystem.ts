@@ -139,12 +139,15 @@ export class SkillSystem {
     this.cooldownLeft[slot] = Math.max(0, sec);
   }
 
-  /** Mid-rift persist — CDs + barrier as remaining seconds. */
+  /** Mid-rift persist — CDs + barrier + shrine buff as remaining seconds. */
   snapshotCombat(): {
     skillCooldowns: [number, number, number, number];
     barrierHp: number;
     barrierLeft: number;
+    damageBuffMult: number;
+    damageBuffLeft: number;
   } {
+    const damageBuffLeft = Math.max(0, this.damageBuffUntil - this.now);
     return {
       skillCooldowns: [
         this.cooldownLeft[0] ?? 0,
@@ -154,6 +157,8 @@ export class SkillSystem {
       ],
       barrierHp: Math.max(0, this.barrierHp),
       barrierLeft: Math.max(0, this.barrierUntil - this.now),
+      damageBuffMult: damageBuffLeft > 0 ? this.damageBuffMult : 1,
+      damageBuffLeft,
     };
   }
 
@@ -162,6 +167,8 @@ export class SkillSystem {
     skillCooldowns?: number[] | null;
     barrierHp?: number;
     barrierLeft?: number;
+    damageBuffMult?: number;
+    damageBuffLeft?: number;
   }): void {
     const cds = opts.skillCooldowns ?? [0, 0, 0, 0];
     for (let i = 0; i < ACTIVE_SLOTS; i++) {
@@ -171,6 +178,15 @@ export class SkillSystem {
     const left = Math.max(0, opts.barrierLeft ?? 0);
     this.barrierHp = left > 0 ? hp : 0;
     this.barrierUntil = this.now + left;
+    const buffLeft = Math.max(0, opts.damageBuffLeft ?? 0);
+    const buffMult = Math.max(1, opts.damageBuffMult ?? 1);
+    if (buffLeft > 0 && buffMult > 1) {
+      this.damageBuffMult = buffMult;
+      this.damageBuffUntil = this.now + buffLeft;
+    } else {
+      this.damageBuffMult = 1;
+      this.damageBuffUntil = 0;
+    }
   }
 
   damageMultiplier(): number {

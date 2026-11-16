@@ -3177,6 +3177,8 @@ export class WorldScene extends Phaser.Scene {
       skillCooldowns: combat.skillCooldowns,
       barrierHp: combat.barrierHp,
       barrierLeft: combat.barrierLeft,
+      damageBuffMult: combat.damageBuffMult,
+      damageBuffLeft: combat.damageBuffLeft,
     };
   }
 
@@ -3197,6 +3199,8 @@ export class WorldScene extends Phaser.Scene {
       skillCooldowns: run.skillCooldowns,
       barrierHp: run.barrierHp,
       barrierLeft: run.barrierLeft,
+      damageBuffMult: run.damageBuffMult,
+      damageBuffLeft: run.damageBuffLeft,
     });
 
     for (const e of this.enemies) e.destroy();

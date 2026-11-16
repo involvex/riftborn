@@ -48,6 +48,10 @@ export type RiftRunSave = {
   barrierHp: number;
   /** Seconds of barrier duration remaining. */
   barrierLeft: number;
+  /** Ember Shrine (and similar) damage buff multiplier. */
+  damageBuffMult: number;
+  /** Seconds of damage buff remaining. */
+  damageBuffLeft: number;
 };
 
 export type BountyKind =

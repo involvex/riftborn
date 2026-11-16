@@ -146,6 +146,8 @@ export function parseRiftRun(raw: unknown): RiftRunSave | null {
     skillCooldowns?: unknown;
     barrierHp?: unknown;
     barrierLeft?: unknown;
+    damageBuffMult?: unknown;
+    damageBuffLeft?: unknown;
   };
   const cdsRaw = Array.isArray(rawRec.skillCooldowns)
     ? rawRec.skillCooldowns
@@ -165,6 +167,17 @@ export function parseRiftRun(raw: unknown): RiftRunSave | null {
     Number.isFinite(rawRec.barrierLeft)
       ? Math.max(0, rawRec.barrierLeft)
       : 0;
+  const damageBuffLeft =
+    typeof rawRec.damageBuffLeft === 'number' &&
+    Number.isFinite(rawRec.damageBuffLeft)
+      ? Math.max(0, rawRec.damageBuffLeft)
+      : 0;
+  const damageBuffMult =
+    damageBuffLeft > 0 &&
+    typeof rawRec.damageBuffMult === 'number' &&
+    Number.isFinite(rawRec.damageBuffMult)
+      ? Math.max(1, rawRec.damageBuffMult)
+      : 1;
   return {
     seed: raw.seed >>> 0,
     depth: Math.max(1, Math.min(10, Math.floor(raw.depth))),
@@ -184,5 +197,7 @@ export function parseRiftRun(raw: unknown): RiftRunSave | null {
     skillCooldowns,
     barrierHp,
     barrierLeft,
+    damageBuffMult,
+    damageBuffLeft,
   };
 }
