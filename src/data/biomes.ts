@@ -67,12 +67,13 @@ export const ASHEN_CRYPT_BIOME: BiomeDef = {
     lantern: 0.05,
   },
   propsPer10x10: { min: 4, max: 6 },
+  // Grind wall — serpents + shades; light archer spice only.
   enemyMix: [
-    { enemyId: 'shade', weight: 0.35, minCount: 2, maxCount: 4 },
-    { enemyId: 'crawler', weight: 0.45, minCount: 3, maxCount: 5 },
-    { enemyId: 'wisp', weight: 0.2, minCount: 1, maxCount: 2 },
-    { enemyId: 'enemy_rift_goblin', weight: 0.15, minCount: 1, maxCount: 3 },
-    { enemyId: 'enemy_bone_archer', weight: 0.12, minCount: 1, maxCount: 2 },
+    { enemyId: 'crawler', weight: 0.5, minCount: 3, maxCount: 5 },
+    { enemyId: 'shade', weight: 0.3, minCount: 2, maxCount: 4 },
+    { enemyId: 'wisp', weight: 0.12, minCount: 1, maxCount: 2 },
+    { enemyId: 'enemy_rift_goblin', weight: 0.1, minCount: 1, maxCount: 2 },
+    { enemyId: 'enemy_bone_archer', weight: 0.08, minCount: 1, maxCount: 2 },
   ],
   roomTypeRules: [
     'rectangular_halls',
@@ -107,12 +108,13 @@ export const CRYSTAL_CAVERN_BIOME: BiomeDef = {
     bush: 0.05,
   },
   propsPer10x10: { min: 5, max: 7 },
+  // Kite / protect-the-mender — wisps + wraith, mender is forced.
   enemyMix: [
     { enemyId: 'wisp', weight: 0.35, minCount: 2, maxCount: 3 },
-    { enemyId: 'ash_bat', weight: 0.4, minCount: 2, maxCount: 4 },
-    { enemyId: 'crawler', weight: 0.25, minCount: 2, maxCount: 4 },
-    { enemyId: 'enemy_rift_wraith', weight: 0.15, minCount: 1, maxCount: 3 },
-    { enemyId: 'enemy_shadow_wolf', weight: 0.12, minCount: 1, maxCount: 2 },
+    { enemyId: 'ash_bat', weight: 0.28, minCount: 2, maxCount: 3 },
+    { enemyId: 'enemy_rift_wraith', weight: 0.22, minCount: 1, maxCount: 3 },
+    { enemyId: 'crawler', weight: 0.15, minCount: 1, maxCount: 3 },
+    { enemyId: 'enemy_shadow_wolf', weight: 0.08, minCount: 1, maxCount: 2 },
     // Support foe: kill the Mender before the pack regroups.
     { enemyId: 'rift_mender', weight: 0.1, minCount: 1, maxCount: 1 },
   ],
@@ -148,12 +150,13 @@ export const SHATTERED_WOODS_BIOME: BiomeDef = {
     crate: 0.05,
   },
   propsPer10x10: { min: 5, max: 8 },
+  // Rush — goblins sprint, wolves pounce, scamps swarm.
   enemyMix: [
-    { enemyId: 'ash_scamp', weight: 0.35, minCount: 3, maxCount: 5 },
-    { enemyId: 'wisp', weight: 0.35, minCount: 2, maxCount: 4 },
-    { enemyId: 'shade', weight: 0.3, minCount: 2, maxCount: 3 },
-    { enemyId: 'enemy_shadow_wolf', weight: 0.15, minCount: 1, maxCount: 3 },
-    { enemyId: 'enemy_rift_goblin', weight: 0.12, minCount: 1, maxCount: 2 },
+    { enemyId: 'enemy_rift_goblin', weight: 0.28, minCount: 2, maxCount: 4 },
+    { enemyId: 'enemy_shadow_wolf', weight: 0.22, minCount: 1, maxCount: 3 },
+    { enemyId: 'ash_scamp', weight: 0.22, minCount: 2, maxCount: 4 },
+    { enemyId: 'wisp', weight: 0.15, minCount: 1, maxCount: 3 },
+    { enemyId: 'shade', weight: 0.12, minCount: 1, maxCount: 2 },
     // Grove elite sheet reuse — rare bramble in woods packs.
     { enemyId: 'ash_bramble', weight: 0.08, minCount: 1, maxCount: 1 },
     // Support foe: kill the Mender before the pack regroups.
@@ -187,12 +190,13 @@ export const SALT_WASTES_BIOME: BiomeDef = {
     totem: 0.07,
   },
   propsPer10x10: { min: 4, max: 7 },
+  // Poke — bone archers lead, goblins close gaps.
   enemyMix: [
-    { enemyId: 'enemy_bone_archer', weight: 0.3, minCount: 2, maxCount: 3 },
-    { enemyId: 'enemy_rift_goblin', weight: 0.3, minCount: 2, maxCount: 4 },
-    { enemyId: 'shade', weight: 0.25, minCount: 2, maxCount: 3 },
-    { enemyId: 'wisp', weight: 0.15, minCount: 1, maxCount: 2 },
+    { enemyId: 'enemy_bone_archer', weight: 0.4, minCount: 2, maxCount: 4 },
+    { enemyId: 'enemy_rift_goblin', weight: 0.25, minCount: 2, maxCount: 3 },
+    { enemyId: 'shade', weight: 0.18, minCount: 1, maxCount: 3 },
     { enemyId: 'enemy_rift_wraith', weight: 0.12, minCount: 1, maxCount: 2 },
+    { enemyId: 'wisp', weight: 0.08, minCount: 1, maxCount: 2 },
     { enemyId: 'rift_mender', weight: 0.1, minCount: 1, maxCount: 1 },
   ],
   roomTypeRules: ['wide_flats', 'eroded_halls', 'salt_ridges', 'boss_basin'],

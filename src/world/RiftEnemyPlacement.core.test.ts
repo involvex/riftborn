@@ -5,7 +5,13 @@ import {
   placeRiftEnemyPacks,
   reachableFloorCells,
 } from './RiftEnemyPlacement';
-import { ASHEN_CRYPT_BIOME, CRYSTAL_CAVERN_BIOME } from '../data/biomes';
+import {
+  ASHEN_CRYPT_BIOME,
+  CRYSTAL_CAVERN_BIOME,
+  SALT_WASTES_BIOME,
+  SHATTERED_WOODS_BIOME,
+} from '../data/biomes';
+import { biomeSignatureEnemyIds } from './BiomePackIdentity';
 
 /** Deterministic rnd for reproducible placement. */
 function seededRnd(seed: number): () => number {
@@ -101,6 +107,36 @@ describe('RiftEnemyPlacement', () => {
       // The floor count still holds with the mender on top.
       const total = packs.reduce((s, p) => s + p.count, 0);
       expect(total).toBeGreaterThanOrEqual(minRiftEnemyCount(depth));
+    }
+  });
+
+  test('each biome places its signature foes in opening packs', () => {
+    const cases = [
+      ASHEN_CRYPT_BIOME,
+      CRYSTAL_CAVERN_BIOME,
+      SHATTERED_WOODS_BIOME,
+      SALT_WASTES_BIOME,
+    ] as const;
+    for (const biome of cases) {
+      const sig = new Set(biomeSignatureEnemyIds(biome.id));
+      for (let seed = 1; seed <= 12; seed++) {
+        const map = generateDungeon(seed * 401 + biome.id.length, 2);
+        map.biome = biome;
+        const packs = placeRiftEnemyPacks(
+          map,
+          2,
+          seededRnd(seed + 900),
+          3,
+          biome.enemyMix,
+        );
+        const ids = new Set(packs.map((p) => p.enemyId));
+        for (const id of sig) {
+          expect(
+            ids.has(id),
+            `${biome.id} seed ${seed} missing opening ${id}`,
+          ).toBe(true);
+        }
+      }
     }
   });
 

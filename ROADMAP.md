@@ -42,6 +42,7 @@ Solo evenings, one shippable slice at a time. Prefer **feel → content → syst
 - **LoopBeat / portals** — zone fade + portal sting; exit gate at boss anchor; HUD phase pulse
 - **Loot readability** — magic+ drop icons/beams, boss chest look, rarity-gated loot juice
 - **Boss arena beat** — biome wash + phase ring in boss room (idle → boss → exit)
+- **Biome pack identity** — opening packs per biome (grind / kite / rush / poke)
 
 ## Done — feel & look (core loop)
 
@@ -63,11 +64,11 @@ earn their keep in feel.
 Looks are distinct; **fights and chase** should earn another run. Still extend
 existing data / systems — no new frameworks.
 
-| #   | Slice                     | Why it matters                    | Done when                                                                 |
-| --- | ------------------------- | --------------------------------- | ------------------------------------------------------------------------- |
-| 1   | **Biome pack identity**   | Biomes tint floors; packs fight alike | Each biome’s first pack reads different in ~10s (no new topology)     |
-| 2   | **Boss signature beats**  | Arena looks special; fight is one pattern | One clear tell per biome boss (warn → punish), shared brain hooks   |
-| 3   | **Set chase readability** | Loot pops; keeping gear is thin   | 2pc is a mid-session goal (drop bias + bag/HUD “need X”)                  |
+| #   | Slice                     | Why it matters                            | Done when                                                          |
+| --- | ------------------------- | ----------------------------------------- | ------------------------------------------------------------------ |
+| ✓   | **Biome pack identity**   | Biomes tint floors; packs fight alike     | Shipped: opening packs (grind / kite / rush / poke) + skewed mixes |
+| 2   | **Boss signature beats**  | Arena looks special; fight is one pattern | One clear tell per biome boss (warn → punish), shared brain hooks  |
+| 3   | **Set chase readability** | Loot pops; keeping gear is thin           | 2pc is a mid-session goal (drop bias + bag/HUD “need X”)           |
 
 Skip inventing new frameworks — extend `MapGen` / `WorldScene` /
 `SaveStore` / NPCs / `server/index.ts` / `src/data/*` / `src/render/*`.

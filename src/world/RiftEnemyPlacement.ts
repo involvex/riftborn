@@ -4,6 +4,10 @@ import { FIGURE_COLLISION_RADIUS, footprintFits } from '../core/FigureScale';
 import type { DungeonMap } from './DungeonGen';
 import { isWalkableOnLayer } from './ShiftGateMap';
 import type { ZoneLayout } from './MapGen';
+import {
+  assignOpeningPackSpots,
+  openingPacksForBiome,
+} from './BiomePackIdentity';
 
 export type ReachKey = string; // "x,y,layer"
 
@@ -315,6 +319,7 @@ export function placeRiftEnemyPacks(
   const target = minRiftEnemyCount(depth);
   const packs: ZoneLayout['packs'] = [];
   const countBonus = Math.floor((depth - 1) / 3);
+  const used = new Set<string>();
 
   if (candidates.length === 0) {
     for (let i = 0; i < target; i++) {
@@ -326,6 +331,22 @@ export function placeRiftEnemyPacks(
       });
     }
     return packs;
+  }
+
+  // Biome opening packs first — closest reachable tiles past minDist.
+  const opening = assignOpeningPackSpots({
+    specs: openingPacksForBiome(map.biome.id),
+    candidates,
+    spawn,
+    used,
+  });
+  for (const spot of opening) {
+    packs.push({
+      enemyId: spot.enemyId,
+      count: spot.count,
+      x: spot.x,
+      y: spot.y,
+    });
   }
 
   // Room-centered packs (skip spawn room), snapped onto reachable tiles.
@@ -340,6 +361,9 @@ export function placeRiftEnemyPacks(
     ) {
       continue;
     }
+    const tileKey = `${Math.floor(snapped.x)},${Math.floor(snapped.y)}`;
+    if (used.has(tileKey)) continue;
+    used.add(tileKey);
     const count = 3 + Math.floor(rnd() * 4) + countBonus;
     packs.push({
       enemyId: pickEnemyId(rnd, enemyMix),
@@ -351,9 +375,6 @@ export function placeRiftEnemyPacks(
 
   let total = packs.reduce((s, p) => s + p.count, 0);
   // Top up with single foes on spaced reachable cells.
-  const used = new Set(
-    packs.map((p) => `${Math.floor(p.x)},${Math.floor(p.y)}`),
-  );
   let guard = 0;
   while (total < target && guard++ < candidates.length * 3) {
     const c = candidates[Math.floor(rnd() * candidates.length)]!;

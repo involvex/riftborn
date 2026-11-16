@@ -87,25 +87,18 @@ describe('biomes', () => {
     }
   });
 
-  test('original biome enemy mixes remain unchanged', () => {
+  test('biome mixes lead with their signature roles', () => {
     const ashen = RIFT_BIOMES.find((b) => b.id === 'ashen_crypt')!;
-    expect(ashen.enemyMix.slice(0, 3)).toEqual([
-      { enemyId: 'shade', weight: 0.35, minCount: 2, maxCount: 4 },
-      { enemyId: 'crawler', weight: 0.45, minCount: 3, maxCount: 5 },
-      { enemyId: 'wisp', weight: 0.2, minCount: 1, maxCount: 2 },
-    ]);
+    expect(ashen.enemyMix[0]!.enemyId).toBe('crawler');
     const crystal = RIFT_BIOMES.find((b) => b.id === 'crystal_cavern')!;
-    expect(crystal.enemyMix.slice(0, 3)).toEqual([
-      { enemyId: 'wisp', weight: 0.35, minCount: 2, maxCount: 3 },
-      { enemyId: 'ash_bat', weight: 0.4, minCount: 2, maxCount: 4 },
-      { enemyId: 'crawler', weight: 0.25, minCount: 2, maxCount: 4 },
-    ]);
+    expect(crystal.enemyMix[0]!.enemyId).toBe('wisp');
+    expect(
+      crystal.enemyMix.some((e) => e.enemyId === 'enemy_rift_wraith'),
+    ).toBe(true);
     const woods = RIFT_BIOMES.find((b) => b.id === 'shattered_woods')!;
-    expect(woods.enemyMix.slice(0, 3)).toEqual([
-      { enemyId: 'ash_scamp', weight: 0.35, minCount: 3, maxCount: 5 },
-      { enemyId: 'wisp', weight: 0.35, minCount: 2, maxCount: 4 },
-      { enemyId: 'shade', weight: 0.3, minCount: 2, maxCount: 3 },
-    ]);
+    expect(woods.enemyMix[0]!.enemyId).toBe('enemy_rift_goblin');
+    const salt = RIFT_BIOMES.find((b) => b.id === 'salt_wastes')!;
+    expect(salt.enemyMix[0]!.enemyId).toBe('enemy_bone_archer');
   });
 
   test('all four new enemy ids appear across biomes', () => {
