@@ -5,6 +5,7 @@ import {
   spriteFacingFromDelta,
   worldDistance,
   worldToScreen,
+  type FacingOctant,
   type FacingSign,
 } from '../core/IsoMath';
 import { figureDrawScale, figureEliteDrawScale } from '../core/FigureScale';
@@ -113,6 +114,8 @@ export class Enemy {
   private attackGen = 0;
   /** Sticky 2-dir facing (avoids moonwalk on iso N/S). */
   private facing: FacingSign = 1;
+  /** 8-way screen octant (sheets still 2-dir flip). */
+  private facingOctant: FacingOctant = 'e';
 
   constructor(
     scene: Phaser.Scene,
@@ -689,21 +692,21 @@ export class Enemy {
   }
 
   private setFacingFromDelta(dx: number, dy: number): void {
-    const facing = spriteFacingFromDelta(dx, dy, this.facing);
+    const facing = spriteFacingFromDelta(
+      dx,
+      dy,
+      this.facing,
+      this.facingOctant,
+    );
     this.facing = facing.sign;
+    this.facingOctant = facing.octant;
     applyFlipFacing(this.sprite, facing);
   }
 
-  /** Snap to target for attacks (horizontal bias when screen-X is clear). */
+  /** Snap to target for attacks — full 8-way (sticky flip on pure N/S). */
   private setFacingToward(worldX: number, worldY: number): void {
     const dx = worldX - this.worldX;
     const dy = worldY - this.worldY;
-    const screenDx = dx - dy;
-    if (Math.abs(screenDx) >= 0.08) {
-      this.facing = screenDx >= 0 ? 1 : -1;
-      applyFlipFacing(this.sprite, this.facing);
-      return;
-    }
     this.setFacingFromDelta(dx, dy);
   }
 

@@ -45,6 +45,7 @@ Solo evenings, one shippable slice at a time. Prefer **feel → content → syst
 - **Biome pack identity** — opening packs per biome (grind / kite / rush / poke)
 - **Boss signature beats** — Ash hop / Crystal wail / Grove charge / Salt volley
 - **Full rift resume** — mid-rift reload restores seed/mod/progress/foes/loot/SHIFT/fog/skill CDs/barrier/shrine buff (`riftRun` v5)
+- **8-dir facing** — screen octant + lean + slash aim; sheets remain 2-dir flipX
 
 ## Done — feel & look (core loop)
 
@@ -78,16 +79,17 @@ Skip inventing new frameworks — extend `MapGen` / `WorldScene` /
 ## Later (parked)
 
 - Co-op rifts + authoritative loot / gear sync (hub sandbox stays prototype)
-- True 8-dir facing + dedicated hit/death frames (screen-X flip + fade now)
 - App Store packaging for Expo shell
 - Seasons, trading, seamless open world
 - `GraphicsQuality` `renderScale: 0.65` remains a probe until a device breaks Low juice caps
+- Dedicated 8-dir **sprite rows** (logic/octant shipped; sheets still 2-dir flipX)
 
 ## Done — systems polish
 
 | #   | Slice                | Why it matters                | Done when                                                                                                                         |
 | --- | -------------------- | ----------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
 | ✓   | **Full rift resume** | Reload mid-rift wiped the run | Shipped: `riftRun` v5 snapshot (seed/mod/foes/loot/SHIFT/fog/skill CDs/barrier/shrine buff); HubResume plaza only if blob corrupt |
+| ✓   | **8-dir facing**     | Only screen-X flip read flat  | Shipped: octant + lean + slash aim vector; sheets still 2-dir flip (hit/death frames already derived)                             |
 
 ## Pace guide (solo)
 

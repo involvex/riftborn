@@ -42,53 +42,112 @@ export function snapToTile(x: number, y: number): { x: number; y: number } {
 /** Screen-right (+1) / screen-left (−1) for 2-dir sheets + flipX. */
 export type FacingSign = 1 | -1;
 
-/** Coarse 4-way from screen axes (future 4-dir sheets). */
+/** Coarse 4-way from screen axes (compat / HUD). */
 export type FacingCardinal = 'e' | 'w' | 'n' | 's';
+
+/**
+ * Screen-space octant for iso aim / lean.
+ * Sheets are still 2-dir (flipX); octant drives slash, lean, future rows.
+ */
+export type FacingOctant = 'e' | 'ne' | 'n' | 'nw' | 'w' | 'sw' | 's' | 'se';
 
 export type SpriteFacing = {
   sign: FacingSign;
   flipX: boolean;
   cardinal: FacingCardinal;
+  octant: FacingOctant;
+  /** Subtle sprite lean (radians) so diagonals read vs cardinals. */
+  lean: number;
+  /** Unit screen direction (east +, south +) for VFX offsets. */
+  screenX: number;
+  screenY: number;
 };
+
+const OCTANTS: FacingOctant[] = ['e', 'se', 's', 'sw', 'w', 'nw', 'n', 'ne'];
+
+const OCTANT_LEAN: Record<FacingOctant, number> = {
+  e: 0,
+  se: 0.07,
+  s: 0.1,
+  sw: 0.07,
+  w: 0,
+  nw: -0.07,
+  n: -0.1,
+  ne: -0.07,
+};
+
+const OCTANT_SCREEN: Record<FacingOctant, { x: number; y: number }> = {
+  e: { x: 1, y: 0 },
+  se: { x: 0.707, y: 0.707 },
+  s: { x: 0, y: 1 },
+  sw: { x: -0.707, y: 0.707 },
+  w: { x: -1, y: 0 },
+  nw: { x: -0.707, y: -0.707 },
+  n: { x: 0, y: -1 },
+  ne: { x: 0.707, y: -0.707 },
+};
+
+function cardinalFromOctant(o: FacingOctant): FacingCardinal {
+  if (o === 'e') return 'e';
+  if (o === 'w') return 'w';
+  if (o === 'n' || o === 'ne' || o === 'nw') return 'n';
+  return 's';
+}
+
+/** Pick the nearest of 8 screen octants from world Δ. */
+export function facingOctantFromDelta(
+  dx: number,
+  dy: number,
+  prev: FacingOctant = 'e',
+): FacingOctant {
+  const screenDx = dx - dy;
+  const screenDy = dx + dy;
+  if (Math.abs(screenDx) < 0.08 && Math.abs(screenDy) < 0.08) return prev;
+  // atan2(south, east) — 0 = screen-east, +π/2 = screen-south.
+  const ang = Math.atan2(screenDy, screenDx);
+  const sector = Math.round(ang / (Math.PI / 4));
+  const idx = ((sector % 8) + 8) % 8;
+  return OCTANTS[idx]!;
+}
+
+function facingFromOctant(
+  octant: FacingOctant,
+  prevSign: FacingSign,
+): SpriteFacing {
+  // Pure N/S: hold flip so 2-dir sheets don't moonwalk.
+  let sign: FacingSign = prevSign;
+  if (octant === 'e' || octant === 'ne' || octant === 'se') sign = 1;
+  else if (octant === 'w' || octant === 'nw' || octant === 'sw') sign = -1;
+  const screen = OCTANT_SCREEN[octant];
+  return {
+    sign,
+    flipX: sign < 0,
+    cardinal: cardinalFromOctant(octant),
+    octant,
+    lean: OCTANT_LEAN[octant],
+    screenX: screen.x,
+    screenY: screen.y,
+  };
+}
 
 /**
  * Map world Δ to sprite facing for sheets authored facing screen-right.
- * - 2-dir: flipX only when screen-X dominates (E/W). Pure screen-Y moves
- *   (N/S) keep `prevSign` so sprites don't moonwalk while strafing iso-up.
- * - 4-dir: `cardinal` is always set for callers with directional sheets.
+ * - 2-dir: flipX from E/W-ish octants; pure N/S keep `prevSign`.
+ * - 8-dir: `octant` + `lean` + screen unit for aim / slash VFX.
  */
 export function spriteFacingFromDelta(
   dx: number,
   dy: number,
   prevSign: FacingSign = 1,
+  prevOctant: FacingOctant = prevSign >= 0 ? 'e' : 'w',
 ): SpriteFacing {
-  const screenDx = dx - dy;
-  const screenDy = dx + dy;
-  const ax = Math.abs(screenDx);
-  const ay = Math.abs(screenDy);
-
-  if (ax < 0.08 && ay < 0.08) {
-    return {
-      sign: prevSign,
-      flipX: prevSign < 0,
-      cardinal: prevSign >= 0 ? 'e' : 'w',
-    };
-  }
-
-  const cardinal: FacingCardinal =
-    ax >= ay ? (screenDx >= 0 ? 'e' : 'w') : screenDy >= 0 ? 's' : 'n';
-
-  // Hold facing on N/S so 2-dir sheets don't flip every iso-north step.
-  let sign: FacingSign = prevSign;
-  if (cardinal === 'e') sign = 1;
-  else if (cardinal === 'w') sign = -1;
-
-  return { sign, flipX: sign < 0, cardinal };
+  const octant = facingOctantFromDelta(dx, dy, prevOctant);
+  return facingFromOctant(octant, prevSign);
 }
 
 /**
  * Iso facing for SE-authored sprites: +1 faces screen-right, -1 screen-left.
- * Prefer `spriteFacingFromDelta` when sticky facing / cardinal is needed.
+ * Prefer `spriteFacingFromDelta` when sticky facing / octant is needed.
  */
 export function facingFromDelta(
   dx: number,
@@ -98,11 +157,19 @@ export function facingFromDelta(
   return spriteFacingFromDelta(dx, dy, prevSign).sign;
 }
 
-/** Apply unified facing to a Phaser sprite (2-dir + flipX). */
+/** Apply 2-dir flipX (lean is caller-owned — walk bob composes it). */
 export function applyFlipFacing(
   sprite: { setFlipX: (v: boolean) => void },
   facing: SpriteFacing | FacingSign,
 ): void {
   const flip = typeof facing === 'number' ? facing < 0 : facing.flipX;
   sprite.setFlipX(flip);
+}
+
+/** Screen unit vector for an octant (east +, south +). */
+export function octantScreenUnit(octant: FacingOctant): {
+  x: number;
+  y: number;
+} {
+  return { ...OCTANT_SCREEN[octant] };
 }

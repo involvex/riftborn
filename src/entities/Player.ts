@@ -4,7 +4,9 @@ import {
   depthFromWorld,
   spriteFacingFromDelta,
   worldToScreen,
+  type FacingOctant,
   type FacingSign,
+  type SpriteFacing,
 } from '../core/IsoMath';
 import { figureDrawScale } from '../core/FigureScale';
 import { slideMove } from '../core/Movement';
@@ -35,6 +37,11 @@ export class Player {
   private readonly slash: Phaser.GameObjects.Graphics;
   /** +1 = screen-right (SE), -1 = screen-left (mirrored). */
   private facing: FacingSign = 1;
+  /** 8-way screen aim (sheets still 2-dir flip). */
+  private facingOctant: FacingOctant = 'e';
+  private facingLean = 0;
+  private facingScreenX = 1;
+  private facingScreenY = 0;
   private animKind: AnimKind = 'idle';
   private moving = false;
   private textureKey: string;
@@ -103,6 +110,15 @@ export class Player {
     applyFlipFacing(this.sprite, this.facing);
   }
 
+  private setFacingState(next: SpriteFacing): void {
+    this.facing = next.sign;
+    this.facingOctant = next.octant;
+    this.facingLean = next.lean;
+    this.facingScreenX = next.screenX;
+    this.facingScreenY = next.screenY;
+    this.applyFacing();
+  }
+
   private applyClassTint(): void {
     if (isPaintedSprite(this.textureKey)) {
       this.sprite.clearTint();
@@ -133,8 +149,9 @@ export class Player {
       return;
     }
     this.moving = true;
-    this.facing = spriteFacingFromDelta(dx, dy, this.facing).sign;
-    this.applyFacing();
+    this.setFacingState(
+      spriteFacingFromDelta(dx, dy, this.facing, this.facingOctant),
+    );
 
     const len = Math.hypot(dx, dy) || 1;
     // Touch stick encodes 0..1 speed in vector length; WASD stays unit-length.
@@ -159,10 +176,12 @@ export class Player {
     gameState.worldX = this.worldX;
     gameState.worldY = this.worldY;
     if (this.animKind !== 'attack') this.playAnim('walk');
-    // Stride bob + slight lean so painted sheets still feel alive
+    // Stride bob + octant lean so diagonals read vs cardinals
     this.walkPhase += dt * 16;
     this.sprite.y = -4 + Math.abs(Math.sin(this.walkPhase)) * 2.4;
-    this.sprite.setRotation(Math.sin(this.walkPhase) * 0.05 * this.facing);
+    this.sprite.setRotation(
+      this.facingLean + Math.sin(this.walkPhase) * 0.05 * this.facing,
+    );
     this.syncScreen();
   }
 
@@ -171,20 +190,19 @@ export class Player {
     return this.facing;
   }
 
+  /** Current 8-way screen octant (for debug / future sheet rows). */
+  getFacingOctant(): FacingOctant {
+    return this.facingOctant;
+  }
+
   /** Face toward a world point (click-attack / skills). */
   faceToward(worldX: number, worldY: number): void {
     const dx = worldX - this.worldX;
     const dy = worldY - this.worldY;
     if (Math.abs(dx) + Math.abs(dy) < 0.05) return;
-    // Prefer screen-X so click-aim flips; else sticky 2-dir helper.
-    const screenDx = dx - dy;
-    this.facing =
-      Math.abs(screenDx) >= 0.08
-        ? screenDx >= 0
-          ? 1
-          : -1
-        : spriteFacingFromDelta(dx, dy, this.facing).sign;
-    this.applyFacing();
+    this.setFacingState(
+      spriteFacingFromDelta(dx, dy, this.facing, this.facingOctant),
+    );
   }
 
   playAttack(): void {
@@ -193,12 +211,11 @@ export class Player {
     playCombatBurst(this.scene, this.worldX, this.worldY, 'slash', this.facing);
     // Punch the sprite forward slightly so the swing reads in-world.
     // Drop walk lean so the swing isn't tilted mid-strafe.
-    this.sprite.setRotation(0);
-    const dir = this.facing;
+    this.sprite.setRotation(this.facingLean);
     const base = figureDrawScale();
     this.sprite.setScale(base * 1.16);
-    this.sprite.x = dir * 9;
-    this.sprite.y = -7;
+    this.sprite.x = this.facingScreenX * 9;
+    this.sprite.y = -7 + this.facingScreenY * 4;
     this.scene.time.delayedCall(95, () => {
       this.applyScale();
       this.sprite.x = 0;
@@ -228,23 +245,26 @@ export class Player {
   private showSlash(): void {
     this.slash.clear();
     const dir = this.facing;
+    const sx = this.facingScreenX;
+    const sy = this.facingScreenY;
     const cls = gameState.progression.classId;
     const color = Phaser.Display.Color.HexStringToColor(
       gameState.progression.classDef().color,
     ).color;
-    const ox = dir * 8;
-    const oy = -12;
+    // Aim slash along the 8-way screen vector (not just ±X).
+    const ox = sx * 10;
+    const oy = -12 + sy * 8;
     if (cls === 'mage') {
       // Bolt-style radial burst
       this.slash.lineStyle(4, color, 0.95);
-      this.slash.strokeCircle(ox + dir * 18, oy, 12);
+      this.slash.strokeCircle(ox + sx * 18, oy + sy * 10, 12);
       this.slash.lineStyle(2, 0xe8f0ff, 0.8);
       this.slash.beginPath();
       this.slash.moveTo(ox, oy);
-      this.slash.lineTo(ox + dir * 36, oy - 4);
+      this.slash.lineTo(ox + sx * 36, oy + sy * 20 - 2);
       this.slash.strokePath();
       this.slash.fillStyle(color, 0.45);
-      this.slash.fillCircle(ox + dir * 32, oy - 2, 6);
+      this.slash.fillCircle(ox + sx * 32, oy + sy * 16, 6);
     } else if (cls === 'mystic') {
       // Twin crescent
       this.slash.lineStyle(4, color, 0.9);
@@ -266,7 +286,7 @@ export class Player {
       this.slash.arc(ox, oy, 30, -1.1, 0.6, dir < 0);
       this.slash.strokePath();
       this.slash.fillStyle(0xffffff, 0.85);
-      this.slash.fillCircle(ox + dir * 28, oy + 8, 4);
+      this.slash.fillCircle(ox + sx * 28, oy + sy * 14 + 4, 4);
     }
     this.slashUntil = this.scene.time.now + 210;
   }

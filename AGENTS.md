@@ -75,7 +75,7 @@ Do not rely on paste-a-screenshot alone after map/POI edits — prefer smoke + `
 - **Ember Shrine:** **E** near altar → timed damage buff (`SkillSystem.applyShrineBuff`), 90s shrine cooldown.
 - **Ash Scout:** elite; kill toast names rarity; gear floor magic+.
 - **Chests:** **E** to open — gold / mats / gear by `lootTier`.
-- **Facing:** `facingFromDelta` in `IsoMath.ts` — flip sprites toward move/attack (screen X).
+- **Facing:** `spriteFacingFromDelta` in `IsoMath.ts` — 8-way octant + lean; sheets still 2-dir `flipX` (sticky on pure N/S).
 - **Passive HP regen:** `GameState.tickRegen` — none for ~5s after a hit; out of combat regenerates fast (~3.5–5.5% max HP/s + STA), stronger in town.
 - **Inventory icons:** `ItemIcons.ts` maps gear/materials to `public/assets/icons/` (LootLoop-sourced painted icons).
 - **Vendor:** Mira shop Buy/Sell tabs; item `sellValue` + `gearSellValue()`; **Sort** in bag; Esc → Settings → Auto-sell junk (common gear → gold on loot).
