@@ -69,7 +69,7 @@ existing data / systems — no new frameworks.
 | --- | ------------------------- | ----------------------------------------- | ------------------------------------------------------------------ |
 | ✓   | **Biome pack identity**   | Biomes tint floors; packs fight alike     | Shipped: opening packs (grind / kite / rush / poke) + skewed mixes |
 | ✓   | **Boss signature beats**  | Arena looks special; fight is one pattern | Shipped: hop / wail / charge / volley on shared beat cadence       |
-| 3   | **Set chase readability** | Loot pops; keeping gear is thin           | 2pc is a mid-session goal (drop bias + bag/HUD “need X”)           |
+| ✓   | **Set chase readability** | Loot pops; keeping gear is thin           | Shipped: missing-slot drop bias + HUD/bag “need X” from 1pc        |
 
 Skip inventing new frameworks — extend `MapGen` / `WorldScene` /
 `SaveStore` / NPCs / `server/index.ts` / `src/data/*` / `src/render/*`.

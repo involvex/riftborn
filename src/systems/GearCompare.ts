@@ -1,7 +1,8 @@
 import type { GearInstance, GearStats } from '../types/game';
-import type { EquipmentSlots } from '../types/save';
+import type { EquipmentSlots, InventorySlot } from '../types/save';
 import { rarityCss } from './RarityVisual';
 import { countSetPieces } from './SetBonus';
+import { missingSetSlots, ownedSetSlots, slotShortLabel } from './SetChase';
 import setsData from '../data/sets.json';
 
 const sets = setsData as Record<
@@ -16,11 +17,13 @@ const sets = setsData as Record<
 
 /**
  * Set name + progress if this item is worn. `equipment` is the full loadout,
- * so the count reflects the swap (candidate replaces its own slot).
+ * so the count reflects the swap (candidate replaces its own slot). Bag
+ * pieces count toward "need X" so chase reads in the inventory panel.
  */
 export function setTooltipLines(
   item: GearInstance,
   equipment?: EquipmentSlots | null,
+  bag: InventorySlot[] = [],
 ): { text: string; color: string }[] {
   if (!item.setId) return [];
   const def = sets[item.setId];
@@ -31,11 +34,26 @@ export function setTooltipLines(
   const before = equipment
     ? (countSetPieces(equipment).get(item.setId) ?? 0)
     : 0;
-  const out = [{ text: `Set ${def.name} · ${after}/4`, color: def.color }];
+  const owned = ownedSetSlots(item.setId, next, bag);
+  owned.add(item.slot);
+  const collection = owned.size;
+  const out = [
+    {
+      text: `Set ${def.name} · ${collection}/4`,
+      color: def.color,
+    },
+  ];
   if (after >= 4 && before < 4) {
     out.push({ text: `4pc: ${def.fourPiece.label}`, color: '#f0d090' });
   } else if (after >= 2 && before < 2) {
     out.push({ text: `2pc: ${def.twoPiece.label}`, color: '#f0d090' });
+  }
+  const missing = missingSetSlots(owned);
+  if (missing.length) {
+    out.push({
+      text: `Need ${missing.map(slotShortLabel).join(', ')}`,
+      color: '#c8b898',
+    });
   }
   return out;
 }
@@ -140,6 +158,7 @@ export function buildGearTooltipLines(
     sellGold?: number;
     hint?: string;
     equipment?: EquipmentSlots | null;
+    bag?: InventorySlot[];
   } = {},
 ): TooltipLine[] {
   const lines: TooltipLine[] = [
@@ -148,7 +167,7 @@ export function buildGearTooltipLines(
       color: rarityCss(item.rarity),
     },
   ];
-  for (const setLine of setTooltipLines(item, opts.equipment)) {
+  for (const setLine of setTooltipLines(item, opts.equipment, opts.bag ?? [])) {
     lines.push(setLine);
   }
   lines.push({

@@ -3,7 +3,7 @@ import { uiFontPx, uiFontSize } from '../core/UiFont';
 import { uiFont } from '../core/UiScale';
 import { gameState } from '../systems/GameState';
 import { MAX_LEVEL, xpForLevel } from '../systems/ProgressionSystem';
-import { resolveSetBonuses } from '../systems/SetBonus';
+import { hudSetChaseLines } from '../systems/SetChase';
 import { shouldShowTouchControls } from './TouchControls';
 import { computeTouchLayout } from './TouchLayout';
 
@@ -151,23 +151,27 @@ export class HudBars {
   }
 
   /**
-   * Active set readout (2pc+) below the bounty line. Rebuilds only when the
-   * set composition changes; hides itself without any active bonus.
+   * Set chase readout below the bounty line — from 1pc in bag/equip with
+   * "need X", plus worn 2pc+ from other sets. Rebuilds on change.
    */
   private refreshSets(): void {
-    const active = resolveSetBonuses(gameState.inventory.equipment);
-    const key = active.map((s) => `${s.setId}:${s.pieces}`).join(',');
+    const lines = hudSetChaseLines(
+      gameState.progression.classId,
+      gameState.inventory.equipment,
+      gameState.inventory.slots,
+    );
+    const key = lines.map((l) => `${l.text}|${l.color}`).join(';');
     if (key === this.setKey) return;
     this.setKey = key;
     for (const t of this.setTexts) t.destroy();
     this.setTexts = [];
-    if (active.length === 0) return;
+    if (lines.length === 0) return;
     const touch = shouldShowTouchControls();
     const y = touch ? 90 : 94;
     let x = 0;
-    for (const s of active) {
+    for (const s of lines) {
       const t = this.scene.add
-        .text(x, y, `${s.name} ${s.pieces}/4`, {
+        .text(x, y, s.text, {
           fontFamily: UI_FONT,
           fontSize: uiFontPx('caption', touch ? 'touch' : 'desktop'),
           color: s.color,

@@ -31,6 +31,7 @@ import {
   rarityWantsBurst,
   rarityWantsCameraFlash,
 } from '../systems/RarityVisual';
+import { setChaseDropBias, setChaseStatus } from '../systems/SetChase';
 import { gameState } from '../systems/GameState';
 import {
   ASSIST_RANGE,
@@ -3324,8 +3325,17 @@ export class WorldScene extends Phaser.Scene {
       this.safeCameraFlash(70, (c >> 16) & 0xff, (c >> 8) & 0xff, c & 0xff);
     }
     gameState.persist();
+    const chase =
+      g.setId &&
+      setChaseStatus(
+        g.setId,
+        gameState.inventory.equipment,
+        gameState.inventory.slots,
+      );
     gameEvents.emit('ui:toast', {
-      text: `Picked up · ${g.name}`,
+      text: chase
+        ? `Picked up · ${g.name} · ${chase.line}`
+        : `Picked up · ${g.name}`,
       color: rarityCss(g.rarity),
     });
     return true;
@@ -3432,12 +3442,19 @@ export class WorldScene extends Phaser.Scene {
     const parts = [`+${gold}g`, `scrap×${scrap}`];
     const gearOdds = Math.min(0.95, gearDropChance(tier, tier >= 4) + 0.25);
     if (Math.random() < gearOdds) {
+      const chase = setChaseDropBias(
+        gameState.progression.classId,
+        gameState.inventory.equipment,
+        gameState.inventory.slots,
+      );
       const gear = rollGearDrop(gameState.progression.level, {
         elite: tier >= 4,
-        preferArmor: Math.random() > 0.35,
+        preferArmor: chase.preferSlots?.length ? true : Math.random() > 0.35,
         forClass: gameState.progression.classId,
         lootTier: tier,
         minRarity: tier >= 3 ? 'magic' : undefined,
+        preferSetId: chase.preferSetId,
+        preferSlots: chase.preferSlots,
       });
       this.spawnGearDrop(chest.worldX, chest.worldY, gear);
       parts.push(`${gear.rarity} ${gear.name} (ground)`);

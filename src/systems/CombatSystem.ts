@@ -9,6 +9,7 @@ import loottables from '../data/loottables.json';
 import type { InventorySystem } from './InventorySystem';
 import { gearDropChance, rollGearDrop } from './ItemGen';
 import type { ProgressionSystem } from './ProgressionSystem';
+import { setChaseDropBias } from './SetChase';
 
 const tables = loottables as Record<string, LootTableDef>;
 
@@ -89,6 +90,7 @@ export class CombatSystem {
         opts.onGear?.(gear);
       }
     };
+    const chase = this.setChaseDropOpts();
     const gearChance = opts.guaranteedMinRarity
       ? 1
       : gearDropChance(tier, opts.elite);
@@ -96,24 +98,40 @@ export class CombatSystem {
       deliver(
         rollGearDrop(this.progression.level, {
           elite: opts.elite || tier >= 4,
-          preferArmor: Math.random() > (tier === 1 ? 0.4 : 0.28),
+          preferArmor: chase.preferSlots?.length
+            ? true
+            : Math.random() > (tier === 1 ? 0.4 : 0.28),
           forClass: this.progression.classId,
           lootTier: tier,
           minRarity: opts.guaranteedMinRarity,
+          preferSetId: chase.preferSetId,
+          preferSlots: chase.preferSlots,
         }),
       );
     }
     // Boss / high tier: chance at a second piece
     if (tier >= 4 && Math.random() < 0.45) {
+      const chase2 = this.setChaseDropOpts();
       deliver(
         rollGearDrop(this.progression.level, {
           elite: true,
-          preferArmor: Math.random() > 0.5,
+          preferArmor: chase2.preferSlots?.length ? true : Math.random() > 0.5,
           forClass: this.progression.classId,
           lootTier: 4,
+          preferSetId: chase2.preferSetId,
+          preferSlots: chase2.preferSlots,
         }),
       );
     }
     gameEvents.emit(Events.ENEMY_DIED, { xp, drops, lootTier: tier });
+  }
+
+  /** Prefer missing class-set slots so 2pc stays a mid-session goal. */
+  private setChaseDropOpts() {
+    return setChaseDropBias(
+      this.progression.classId,
+      this.inventory.equipment,
+      this.inventory.slots,
+    );
   }
 }

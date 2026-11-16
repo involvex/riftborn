@@ -131,6 +131,7 @@ describe('GearCompare', () => {
     expect(lines[1]?.text).toBe('Set Ashen · 2/4');
     expect(lines[1]?.color).toBe('#8B5A2B');
     expect(lines[2]?.text).toBe('2pc: +6 DEX, +5% skill power');
+    expect(lines.some((l) => l.text === 'Need Legs, Feet')).toBe(true);
     expect(lines.some((l) => l.text.startsWith('Set ashen'))).toBe(false);
     expect(lines.some((l) => l.text.includes('ilvl 1'))).toBe(true);
   });

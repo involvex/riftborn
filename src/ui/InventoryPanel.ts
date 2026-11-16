@@ -291,6 +291,7 @@ export class InventoryPanel {
         sellGold: gearSellValue(item),
         hint,
         equipment: gameState.inventory.equipment,
+        bag: gameState.inventory.slots,
       }),
     );
   }

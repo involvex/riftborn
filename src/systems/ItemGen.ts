@@ -264,6 +264,10 @@ export function rollGearDrop(
     lootTier?: LootTier;
     /** Floor rarity (e.g. scout always magic+). */
     minRarity?: GearRarity;
+    /** Bias toward this armor set (class chase). */
+    preferSetId?: string;
+    /** Prefer these missing set slots when preferSetId is set. */
+    preferSlots?: GearSlot[];
     rnd?: () => number;
   } = {},
 ): GearInstance {
@@ -285,10 +289,14 @@ export function rollGearDrop(
 
   const forClass = opts.forClass;
   const all = Object.values(bases);
+  const chasingSet =
+    !!opts.preferSetId && !!opts.preferSlots && opts.preferSlots.length > 0;
   const preferArmor =
     opts.preferArmor !== undefined
       ? opts.preferArmor
-      : rnd() > (tier === 1 ? 0.35 : 0.22);
+      : chasingSet
+        ? true
+        : rnd() > (tier === 1 ? 0.35 : 0.22);
   let pool = all.filter((b) =>
     preferArmor ? ARMOR_SLOTS.includes(b.slot) : b.slot === 'weapon',
   );
@@ -312,6 +320,23 @@ export function rollGearDrop(
   } else if (forClass && opts.anyClass && rnd() < 0.7) {
     const classPool = pool.filter((b) => b.classId === forClass);
     if (classPool.length) pool = classPool;
+  }
+
+  // Set chase: bias armor rolls toward missing class-set slots.
+  if (opts.preferSetId && preferArmor) {
+    let setPool = pool.filter((b) => b.setId === opts.preferSetId);
+    if (opts.preferSlots?.length) {
+      const miss = setPool.filter((b) => opts.preferSlots!.includes(b.slot));
+      if (miss.length) setPool = miss;
+    }
+    const bias = chasingSet
+      ? tier >= 3 || opts.elite
+        ? 0.78
+        : 0.55
+      : tier >= 3 || opts.elite
+        ? 0.55
+        : 0.35;
+    if (setPool.length && rnd() < bias) pool = setPool;
   }
 
   const base = pool[Math.floor(rnd() * pool.length)] ?? all[0]!;
