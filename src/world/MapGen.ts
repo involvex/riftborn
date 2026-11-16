@@ -298,22 +298,31 @@ export function generateHub(seed = 1): ZoneLayout {
     paths.push({ x: Math.round(rc.x), y: Math.round(rc.y) });
   }
 
-  // Plaza props (2–4 / 10×10 — keep walkways clear)
+  // Plaza props — keep crossroads clear; NPCs stand south of buildings.
+  // No stall/pillar/campfire on the square (those read as camp clutter).
   decor.push({ kind: 'well', x: 32.5, y: 32.5 });
   decor.push({ kind: 'lantern', x: 28.5, y: 28.5 });
   decor.push({ kind: 'lantern', x: 36.5, y: 28.5 });
   decor.push({ kind: 'lantern', x: 28.5, y: 36.5 });
   decor.push({ kind: 'lantern', x: 36.5, y: 36.5 });
-  decor.push({ kind: 'stall', x: 30.5, y: 30.5 });
-  decor.push({ kind: 'crate', x: 34.5, y: 30.5 });
-  decor.push({ kind: 'crate', x: 35.5, y: 31.5 });
+  // Side storage only — never on Mira / Bram / board tiles
+  decor.push({ kind: 'crate', x: 28.5, y: 30.5 });
+  decor.push({ kind: 'crate', x: 36.5, y: 30.5 });
+  decor.push({ kind: 'crate', x: 29.5, y: 28.5 });
+  decor.push({ kind: 'crate', x: 35.5, y: 28.5 });
+  // Apron planting — softens the stone→grass edge
+  decor.push({ kind: 'bush', x: 27.5, y: 32.5 });
+  decor.push({ kind: 'bush', x: 37.5, y: 32.5 });
+  decor.push({ kind: 'bush', x: 27.5, y: 30.5 });
+  decor.push({ kind: 'bush', x: 37.5, y: 30.5 });
+  decor.push({ kind: 'bush', x: 30.5, y: 27.5 });
+  decor.push({ kind: 'bush', x: 34.5, y: 27.5 });
+  decor.push({ kind: 'bush', x: 30.5, y: 37.5 });
+  decor.push({ kind: 'bush', x: 34.5, y: 37.5 });
+  decor.push({ kind: 'rock', x: 27.5, y: 34.5 });
+  decor.push({ kind: 'rock', x: 37.5, y: 34.5 });
+  // Road lamp toward the rift obelisk (north)
   decor.push({ kind: 'lantern', x: 32.5, y: 20.5 });
-  decor.push({ kind: 'pillar', x: 29.5, y: 35.5 });
-  // Lager / craft flank (shop-side crates + lanterns)
-  decor.push({ kind: 'crate', x: 34.5, y: 34.5 });
-  decor.push({ kind: 'crate', x: 35.5, y: 35.5 });
-  decor.push({ kind: 'lantern', x: 33.5, y: 36.5 });
-  decor.push({ kind: 'campfire', x: 36.5, y: 34.5 });
 
   // —— Ashbandit Camp (SW) — denser camp (5–7 / 10×10) ——
   decor.push({ kind: 'campfire', x: 10.5, y: 54.5 });
@@ -423,8 +432,9 @@ export function generateHub(seed = 1): ZoneLayout {
     if (inPlaza(dx, dy) || nearPoi(dx, dy, pois) || nearRoad(dx, dy)) {
       continue;
     }
+    // Path edges: bush/rock only — random lanterns looked like rift props.
     decor.push({
-      kind: rnd() > 0.55 ? 'bush' : rnd() > 0.4 ? 'rock' : 'lantern',
+      kind: rnd() > 0.55 ? 'bush' : 'rock',
       x: dx + 0.5,
       y: dy + 0.5,
     });
@@ -479,15 +489,13 @@ export function generateHub(seed = 1): ZoneLayout {
     if (nearTown(x, y, 6)) continue;
     const roll = rnd();
     const kind =
-      roll > 0.72
+      roll > 0.7
         ? 'tree'
-        : roll > 0.48
+        : roll > 0.42
           ? 'bush'
-          : roll > 0.22
+          : roll > 0.18
             ? 'rock'
-            : roll > 0.1
-              ? 'crystal_vein'
-              : 'lantern';
+            : 'crystal_vein';
     decor.push({
       kind,
       x: Math.floor(x) + 0.5,
@@ -598,7 +606,8 @@ export function generateHub(seed = 1): ZoneLayout {
     nodes,
     packs,
     portal: { x: 32.5, y: 18.5 },
-    bench: { x: 34.5, y: 31.5 },
+    // Beside Bram — not under him (avoids the gold ellipse stacking).
+    bench: { x: 36.5, y: 31.5 },
     elite: null,
     spawn: { ...HUB_SPAWN },
     npcs: [
@@ -606,14 +615,14 @@ export function generateHub(seed = 1): ZoneLayout {
         id: 'vendor_mira',
         role: 'vendor',
         name: 'Mira',
-        x: 30.5,
+        x: 29.5,
         y: 31.5,
       },
       {
         id: 'crafter_bram',
         role: 'crafter',
         name: 'Bram',
-        x: 34.5,
+        x: 35.5,
         y: 31.5,
       },
       {
@@ -628,7 +637,7 @@ export function generateHub(seed = 1): ZoneLayout {
         role: 'trader',
         name: 'Nix',
         x: 28.5,
-        y: 34.5,
+        y: 33.5,
       },
     ],
     paths,

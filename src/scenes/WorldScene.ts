@@ -1003,14 +1003,16 @@ export class WorldScene extends Phaser.Scene {
 
     if (!gameState.inRift) {
       const b = snapToTile(layout.bench.x, layout.bench.y);
-      this.benchMarker = this.makeMarker(b.x, b.y, 0xc4a574, 'Forge');
+      this.benchMarker = this.makeCraftSpot(b.x, b.y);
       for (const n of layout.npcs ?? []) {
         const p = snapToTile(n.x, n.y);
         this.npcs.push(new Npc(this, n.id, n.role, n.name, p.x, p.y));
       }
-      this.makeBuilding(30.5, 30.5, 0x3a3028, 'Shop');
-      this.makeBuilding(34.5, 30.5, 0x2a3a32, 'Forge');
-      this.makeBuilding(32.5, 35.5, 0x2a2838, 'Inn');
+      // North row buildings; NPCs stand one tile south (iso front).
+      this.makeBuilding(29.5, 29.5, 0x3a3028, 'Shop');
+      this.makeBuilding(35.5, 29.5, 0x2a3a32, 'Forge');
+      // Inn east of the board — never share the board tile.
+      this.makeBuilding(35.5, 35.5, 0x2a2838, 'Inn');
       for (const d of layout.decor ?? []) this.makeHubDecor(d);
       this.wildernessPois = layout.pois ?? [];
       this.announcedPois.clear();
@@ -1145,7 +1147,16 @@ export class WorldScene extends Phaser.Scene {
     const p = snapToTile(d.x, d.y);
     const { screenX, screenY } = worldToScreen(p.x, p.y);
     const propKey = DECOR_PROP_KEY[d.kind];
-    if (propKey && hasArt(this, propKey)) {
+    // Near-town keeps warm procedural props — painted lanterns/wells/crates/
+    // rocks are purple void art that fights the cobble square.
+    const townish =
+      nearTown(Math.floor(p.x), Math.floor(p.y), 8) &&
+      (d.kind === 'lantern' ||
+        d.kind === 'pillar' ||
+        d.kind === 'well' ||
+        d.kind === 'crate' ||
+        d.kind === 'rock');
+    if (propKey && hasArt(this, propKey) && !townish) {
       const img = this.add
         .image(0, 0, propKey)
         .setOrigin(0.5, 1)
@@ -1291,26 +1302,88 @@ export class WorldScene extends Phaser.Scene {
     const p = snapToTile(wx, wy);
     const { screenX, screenY } = worldToScreen(p.x, p.y);
     const g = this.add.graphics();
-    g.fillStyle(color, 0.88);
-    g.fillRect(-22, -40, 44, 36);
-    g.fillStyle(0x1a1410, 0.92);
-    g.fillTriangle(-26, -40, 26, -40, 0, -58);
-    g.lineStyle(1, 0xc4a574, 0.4);
-    g.strokeRect(-22, -40, 44, 36);
+    const roof =
+      label === 'Forge' ? 0x3a2820 : label === 'Inn' ? 0x2a2438 : 0x2a2218;
+    const side = ((color >> 1) & 0x7f7f7f) | 0x101010;
+    const trim = 0xc4a574;
+    // ~2× old stub — buildings must dwarf the player / bush props.
+    g.fillStyle(0x000000, 0.38);
+    g.fillEllipse(0, 16, 92, 28);
+    g.fillStyle(0x4a4034, 0.95);
+    g.fillEllipse(0, 10, 82, 22);
+    // Side wall (iso depth)
+    g.fillStyle(side, 1);
+    g.fillRect(14, -70, 36, 68);
+    // Front wall
+    g.fillStyle(color, 1);
+    g.fillRect(-44, -70, 60, 68);
+    g.lineStyle(1, 0x1a1410, 0.28);
+    for (let i = 0; i < 6; i++) {
+      g.lineBetween(-40, -58 + i * 10, 12, -58 + i * 10);
+    }
+    // Door + stoop
+    g.fillStyle(0x1a1410, 0.95);
+    g.fillRect(-14, -28, 18, 28);
+    g.fillStyle(trim, 0.5);
+    g.fillRect(-10, -20, 4, 6);
+    g.fillStyle(0x5a5040, 0.95);
+    g.fillRect(-18, 0, 26, 6);
+    // Warm window glow
+    g.fillStyle(0xe6c35c, 0.65);
+    g.fillRect(-36, -54, 12, 12);
+    g.fillRect(22, -54, 12, 12);
+    g.fillRect(-36, -36, 12, 10);
+    g.lineStyle(1, 0x1a1410, 0.55);
+    g.strokeRect(-36, -54, 12, 12);
+    g.strokeRect(22, -54, 12, 12);
+    g.strokeRect(-36, -36, 12, 10);
+    // Roof + ridge
+    g.fillStyle(0x1a1410, 0.95);
+    g.fillTriangle(-52, -70, 56, -70, 6, -112);
+    g.fillStyle(roof, 0.95);
+    g.fillTriangle(-44, -70, 48, -70, 6, -104);
+    g.lineStyle(1, trim, 0.45);
+    g.strokeTriangle(-44, -70, 48, -70, 6, -104);
+    if (label === 'Forge') {
+      g.fillStyle(0x3a3028, 1);
+      g.fillRect(28, -96, 10, 22);
+      g.fillStyle(0x2a2218, 1);
+      g.fillRect(26, -100, 14, 6);
+    }
     const t = this.add
-      .text(0, -62, label, {
-        fontFamily: 'Segoe UI, sans-serif',
-        fontSize: '9px',
-        color: '#9a9080',
+      .text(0, -118, label, {
+        fontFamily: 'Georgia, serif',
+        fontSize: '13px',
+        color: '#e0d4bc',
         stroke: '#0a0c10',
-        strokeThickness: 3,
+        strokeThickness: 4,
       })
       .setOrigin(0.5)
-      .setAlpha(0.75);
+      .setAlpha(0.92);
     const c = this.add.container(screenX, screenY, [g, t]);
     // Slightly behind foot depth so player/NPC draw in front when overlapping
     c.setDepth(depthFromWorld(p.x, p.y) - 40);
     this.decor.push(c);
+  }
+
+  /** Quiet craft interact point — anvil only, no always-on label. */
+  private makeCraftSpot(wx: number, wy: number): Phaser.GameObjects.Container {
+    const p = snapToTile(wx, wy);
+    const { screenX, screenY } = worldToScreen(p.x, p.y);
+    const g = this.add.graphics();
+    g.fillStyle(0x000000, 0.28);
+    g.fillEllipse(0, 4, 22, 10);
+    g.fillStyle(0x5a5040, 0.95);
+    g.fillRect(-8, -6, 16, 8);
+    g.fillStyle(0x8a7a60, 0.9);
+    g.fillRect(-6, -10, 12, 5);
+    g.lineStyle(1, 0xc4a574, 0.5);
+    g.strokeRect(-8, -6, 16, 8);
+    const c = this.add.container(screenX, screenY, [g]);
+    c.setDepth(depthFromWorld(p.x, p.y) - 15);
+    c.setData('wx', p.x);
+    c.setData('wy', p.y);
+    return c;
   }
 
   /** Town rift opener — tall obelisk players use with R. */
@@ -1470,22 +1543,24 @@ export class WorldScene extends Phaser.Scene {
       y: number,
       band: 'plaza' | 'road' | 'transition' | 'wild',
     ): string => {
-      // Plaza = Pflaster, Strassen/Spurs = Weg, Wildnis/Fringe = Gras
+      // Asset truth (files ≠ old docs names):
+      //   0 = green grass, 1 = dark stone, 2 = packed dirt,
+      //   3 = mossy mix, 4 = dark fringe.
+      // Plaza MUST use stone — hub_0 here made town look like a meadow.
       if (band === 'plaza') {
         const n = valueNoise(x, y, 4);
-        return n < 0.85 ? 'tile_hub_0' : 'tile_hub_1';
+        return n < 0.82 ? 'tile_hub_1' : 'tile_hub_2';
       }
       if (band === 'road') {
         const n = valueNoise(x, y, 3);
-        return n < 0.85 ? 'tile_hub_1' : 'tile_hub_2';
+        return n < 0.8 ? 'tile_hub_2' : 'tile_hub_3';
       }
       if (band === 'transition') {
         const n = valueNoise(x, y, 3.5);
-        return n < 0.85 ? 'tile_hub_2' : 'tile_hub_3';
+        return n < 0.55 ? 'tile_hub_0' : n < 0.85 ? 'tile_hub_3' : 'tile_hub_2';
       }
-      // wild/fringe = grass
       const n = valueNoise(x, y, 4);
-      return n < 0.85 ? 'tile_hub_4' : 'tile_hub_3';
+      return n < 0.78 ? 'tile_hub_0' : 'tile_hub_3';
     };
 
     for (let y = 0; y < size; y++) {
@@ -1509,19 +1584,30 @@ export class WorldScene extends Phaser.Scene {
           let band: 'plaza' | 'road' | 'transition' | 'wild';
           let fallback: number;
           let tint: number | undefined;
+          // 2-tile stone apron so the square doesn't drop into meadow.
+          const plazaApron =
+            !plaza &&
+            x >= PLAZA.x0 - 2 &&
+            x <= PLAZA.x1 + 2 &&
+            y >= PLAZA.y0 - 2 &&
+            y <= PLAZA.y1 + 2;
           if (plaza) {
             band = 'plaza';
-            fallback = 0xd8d8d8;
+            fallback = 0x6a6460;
+            tint = 0xd8d0c0; // warm cobble wash on dark stone art
+          } else if (plazaApron) {
+            band = 'plaza';
+            fallback = 0x5a5448;
+            tint = 0xc8c0b0;
           } else if (onPath) {
-            // Pflaster in der Stadt, Erdweg ausserhalb
             if (nearTown(x, y, 16)) {
-              band = 'plaza'; // paved in town vicinity
-              fallback = 0xd8d8d8;
-              tint = 0xf0e4c8; // warmer stone/pavement
+              band = 'plaza';
+              fallback = 0x6a6460;
+              tint = 0xd0c8b8;
             } else {
-              band = 'road'; // dirt/earth road outside
+              band = 'road';
               fallback = 0xb8a080;
-              tint = 0xd0b080; // earth road — more contrast vs grass
+              tint = 0xd8c098;
             }
           } else if (nearTown(x, y, 14)) {
             band = 'transition';

@@ -1,0 +1,36 @@
+/**
+ * Hub floor band → texture key.
+ * Asset truth (files ≠ older docs): hub_0 grass, hub_1 stone,
+ * hub_2 packed dirt, hub_3 mossy mix, hub_4 dark fringe.
+ */
+
+export type HubFloorBand = 'plaza' | 'road' | 'transition' | 'wild';
+
+export type HubTileKey =
+  'tile_hub_0' | 'tile_hub_1' | 'tile_hub_2' | 'tile_hub_3' | 'tile_hub_4';
+
+/** Deterministic 0..n-1 from tile coords + seed. */
+export function tileVariant(
+  x: number,
+  y: number,
+  seed: number,
+  n: number,
+): number {
+  const h = (x * 73856093) ^ (y * 19349663) ^ (seed * 83492791);
+  return Math.abs(h) % n;
+}
+
+export function pickHubTileKey(
+  x: number,
+  y: number,
+  band: HubFloorBand,
+): HubTileKey {
+  const pairs: Record<HubFloorBand, [HubTileKey, HubTileKey]> = {
+    plaza: ['tile_hub_1', 'tile_hub_2'],
+    road: ['tile_hub_2', 'tile_hub_3'],
+    transition: ['tile_hub_0', 'tile_hub_3'],
+    wild: ['tile_hub_0', 'tile_hub_3'],
+  };
+  const [a, b] = pairs[band];
+  return tileVariant(x, y, 42, 2) === 0 ? a : b;
+}
