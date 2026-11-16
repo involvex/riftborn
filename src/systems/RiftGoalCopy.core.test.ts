@@ -36,6 +36,17 @@ describe('RiftGoalCopy', () => {
     expect(text).toContain('Packs swell');
   });
 
+  test('enter toast can lead with biome name', () => {
+    const text = riftEnterToastText({
+      depthLabel: 'Depth 1',
+      modName: 'Calm Rift',
+      modBlurb: 'No special rules.',
+      biomeName: 'Kristallhöhle',
+    });
+    expect(text.startsWith('Kristallhöhle')).toBe(true);
+    expect(text).toContain(RIFT_GOAL_LINE);
+  });
+
   test('veil toast names the lock layer and shift bind', () => {
     const text = veiledWrongLayerToast({
       modName: 'Ashen Veil',

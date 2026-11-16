@@ -16,24 +16,24 @@ export const COMBAT_FEEL = {
 
   hitstopEnabled: true,
   /** Short freeze on a normal pack connect (ms, wall-clock). */
-  hitstopLightMs: 28,
+  hitstopLightMs: 36,
   /** Freeze when taking a hit / multi-cleave. */
-  hitstopMs: 48,
+  hitstopMs: 58,
   /** Stronger freeze on crit / boss / death. */
-  hitstopCritMs: 72,
+  hitstopCritMs: 90,
 
   shakeEnabled: true,
-  shakeHitMs: 55,
-  shakeHitIntensity: 0.0025,
-  shakeCritMs: 90,
-  shakeCritIntensity: 0.006,
-  shakeBossMs: 130,
-  shakeBossIntensity: 0.009,
-  shakePlayerHitMs: 110,
-  shakePlayerHitIntensity: 0.004,
+  shakeHitMs: 70,
+  shakeHitIntensity: 0.0032,
+  shakeCritMs: 110,
+  shakeCritIntensity: 0.0075,
+  shakeBossMs: 160,
+  shakeBossIntensity: 0.011,
+  shakePlayerHitMs: 130,
+  shakePlayerHitIntensity: 0.005,
 
   /** Absolute damage ≥ this reads as a crit for juice (matches burst VFX). */
-  critDamageThreshold: 15,
+  critDamageThreshold: 12,
   /** Hitting this many foes in one swing upgrades juice to multi-cleave. */
   multiHitJuiceCount: 2,
 
@@ -43,9 +43,9 @@ export const COMBAT_FEEL = {
     playerColor: '#ff6b6b',
     stroke: '#0a0c10',
     strokeThickness: 4,
-    fontEnemy: '17px',
-    fontCrit: '22px',
-    fontPlayer: '16px',
+    fontEnemy: '19px',
+    fontCrit: '24px',
+    fontPlayer: '17px',
   },
 } as const;
 

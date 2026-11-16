@@ -236,39 +236,39 @@ export class Player {
     const oy = -12;
     if (cls === 'mage') {
       // Bolt-style radial burst
-      this.slash.lineStyle(3, color, 0.9);
-      this.slash.strokeCircle(ox + dir * 18, oy, 10);
-      this.slash.lineStyle(2, 0xe8f0ff, 0.7);
+      this.slash.lineStyle(4, color, 0.95);
+      this.slash.strokeCircle(ox + dir * 18, oy, 12);
+      this.slash.lineStyle(2, 0xe8f0ff, 0.8);
       this.slash.beginPath();
       this.slash.moveTo(ox, oy);
-      this.slash.lineTo(ox + dir * 34, oy - 4);
+      this.slash.lineTo(ox + dir * 36, oy - 4);
       this.slash.strokePath();
-      this.slash.fillStyle(color, 0.35);
-      this.slash.fillCircle(ox + dir * 30, oy - 2, 5);
+      this.slash.fillStyle(color, 0.45);
+      this.slash.fillCircle(ox + dir * 32, oy - 2, 6);
     } else if (cls === 'mystic') {
       // Twin crescent
-      this.slash.lineStyle(3, color, 0.85);
+      this.slash.lineStyle(4, color, 0.9);
       this.slash.beginPath();
-      this.slash.arc(ox, oy, 30, -1.2, 0.7, dir < 0);
+      this.slash.arc(ox, oy, 32, -1.2, 0.7, dir < 0);
       this.slash.strokePath();
-      this.slash.lineStyle(2, 0xd0ffe0, 0.55);
+      this.slash.lineStyle(2, 0xd0ffe0, 0.7);
       this.slash.beginPath();
-      this.slash.arc(ox, oy + 2, 22, -1.0, 0.5, dir < 0);
+      this.slash.arc(ox, oy + 2, 24, -1.0, 0.5, dir < 0);
       this.slash.strokePath();
     } else {
       // Warrior sword arc + tip flare
-      this.slash.lineStyle(5, color, 0.55);
+      this.slash.lineStyle(6, color, 0.65);
       this.slash.beginPath();
-      this.slash.arc(ox, oy, 34, -1.25, 0.75, dir < 0);
+      this.slash.arc(ox, oy, 36, -1.25, 0.75, dir < 0);
       this.slash.strokePath();
-      this.slash.lineStyle(3, 0xfff0d0, 0.9);
+      this.slash.lineStyle(3, 0xfff0d0, 0.95);
       this.slash.beginPath();
-      this.slash.arc(ox, oy, 28, -1.1, 0.6, dir < 0);
+      this.slash.arc(ox, oy, 30, -1.1, 0.6, dir < 0);
       this.slash.strokePath();
-      this.slash.fillStyle(0xffffff, 0.75);
-      this.slash.fillCircle(ox + dir * 26, oy + 8, 3);
+      this.slash.fillStyle(0xffffff, 0.85);
+      this.slash.fillCircle(ox + dir * 28, oy + 8, 4);
     }
-    this.slashUntil = this.scene.time.now + 170;
+    this.slashUntil = this.scene.time.now + 210;
   }
 
   private playAnim(kind: AnimKind, force = false): void {

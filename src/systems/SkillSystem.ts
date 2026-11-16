@@ -16,6 +16,8 @@ import {
   passiveBarrierMult as barrierPassiveMult,
   passiveSkillPower as attuneSkillPower,
 } from './SkillPassives';
+import { isCombatCrit } from '../render/CombatFeel';
+import { playCombatBurst } from '../render/CombatVfx';
 
 export { ACTIVE_SLOTS, classAbilityIds, getClassTree };
 
@@ -265,6 +267,12 @@ export class SkillSystem {
     const hitEnemy = (enemy: Enemy, dmg: number): void => {
       const { screenX, screenY } = worldToScreen(enemy.worldX, enemy.worldY);
       ctx.combat.emitDamageNumber(screenX, screenY - 18, dmg, 'enemy');
+      playCombatBurst(
+        enemy.body.scene,
+        enemy.worldX,
+        enemy.worldY,
+        isCombatCrit(dmg) ? 'crit' : 'hit',
+      );
       const killed = enemy.applyDamage(dmg);
       if (killed) ctx.onKill(enemy);
     };

@@ -754,40 +754,57 @@ export class Enemy {
     if (this.hp !== before) this.redrawBar();
   }
 
-  /** Hit frames when available; tint + nudge as fallback. */
+  /** Hit frames + warm flash/knock so connects read even on pale sheets. */
   flashHit(): void {
     if (!this.alive) return;
     const hitKey = `${this.textureKey}_hit`;
-    if (this.sprite.scene.anims.exists(hitKey)) {
+    const hasHit = this.sprite.scene.anims.exists(hitKey);
+    if (hasHit) {
       this.playAnim('hit', true);
-      this.sprite.scene.time.delayedCall(120, () => {
+      this.sprite.scene.time.delayedCall(140, () => {
         if (!this.alive || this.animKind !== 'hit') return;
         this.animKind =
           this.state === 'chase' || this.state === 'patrol' ? 'walk' : 'idle';
         this.sprite.play(`${this.textureKey}_${this.animKind}`, true);
       });
-      return;
     }
-    this.sprite.setTint(0xffffff);
+    // White flash is invisible on light sprites — use a warm punch tint.
+    this.sprite.setTint(0xff7050);
     const ox = this.sprite.x;
-    this.sprite.x = ox + (Math.random() > 0.5 ? 3 : -3);
-    this.sprite.scene.time.delayedCall(70, () => {
+    const baseScale =
+      this.isBoss || this.def.isElite || this.elitePack
+        ? figureEliteDrawScale()
+        : figureDrawScale();
+    const knock = this.facing * 6;
+    this.sprite.x = ox + knock;
+    this.sprite.setScale(baseScale * 1.14);
+    this.sprite.scene.time.delayedCall(hasHit ? 110 : 90, () => {
       if (!this.alive) return;
-      this.sprite.x = ox;
-      this.applyBaseTint();
+      this.sprite.x = 0;
+      this.sprite.setScale(baseScale);
+      if (!this.ghosted) this.applyBaseTint();
     });
   }
 
   private playDeath(): void {
+    this.sprite.setTint(0xffe8d0);
     const deathKey = `${this.textureKey}_death`;
     if (this.sprite.scene.anims.exists(deathKey)) {
       this.animKind = 'death';
       this.sprite.play(deathKey, false);
+      this.sprite.scene.tweens.add({
+        targets: this.body,
+        alpha: 0.15,
+        scaleX: 0.85,
+        scaleY: 0.85,
+        duration: 320,
+        ease: 'Quad.easeIn',
+      });
       this.sprite.once(Phaser.Animations.Events.ANIMATION_COMPLETE, () => {
         this.body.setVisible(false);
       });
       // Safety hide if complete never fires
-      this.sprite.scene.time.delayedCall(450, () => {
+      this.sprite.scene.time.delayedCall(480, () => {
         this.body.setVisible(false);
       });
       return;
@@ -795,9 +812,9 @@ export class Enemy {
     this.sprite.scene.tweens.add({
       targets: this.body,
       alpha: 0,
-      scaleX: 0.55,
-      scaleY: 0.55,
-      duration: 180,
+      scaleX: 0.45,
+      scaleY: 0.45,
+      duration: 220,
       ease: 'Quad.easeIn',
       onComplete: () => {
         this.body.setVisible(false);

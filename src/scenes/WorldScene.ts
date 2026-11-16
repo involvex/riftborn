@@ -48,11 +48,21 @@ import {
   type WildernessPoi,
   type ZoneLayout,
 } from '../world/MapGen';
+import { isDungeonFloorEdge } from '../world/HubOptics';
+import { findPoiNear, hubPoiFloorOverride } from '../world/HubPoiFloors';
 import {
-  HUB_TRANSITION_FLOOR_TINT,
-  HUB_WILD_FLOOR_TINT,
-  isDungeonFloorEdge,
-} from '../world/HubOptics';
+  HUB_DIRT_ROAD_EDGE,
+  HUB_DIRT_ROAD_EDGE_ALPHA,
+  HUB_PLAZA_EDGE_ALPHA,
+  HUB_PLAZA_EDGE_COLOR,
+  HUB_PLAZA_EDGE_RADIUS,
+  HUB_PLAZA_GLOW_ALPHA,
+  HUB_PLAZA_GLOW_COLOR,
+  HUB_PLAZA_GLOW_EVERY,
+  HUB_PLAZA_GLOW_RADIUS,
+  hubBandTint,
+  hubPoiFloorTint,
+} from '../render/HubLook';
 import type {
   CharacterClassId,
   GearInstance,
@@ -64,7 +74,6 @@ import {
   generateDungeon,
   type DungeonMap,
 } from '../world/DungeonGen';
-import { hubPoiFloorOverride } from '../world/HubPoiFloors';
 import { isWalkableOnLayer } from '../world/ShiftGateMap';
 import { netClient } from '../net/NetClient';
 import { bindAction, formatHotkey } from '../core/Hotkeys';
@@ -135,6 +144,7 @@ import {
   propArtScale,
   TILE_ART_SCALE,
 } from '../render/WorldArt';
+import { biomeLook, type BiomeLook } from '../render/BiomeLook';
 import { ShiftSystem } from '../systems/ShiftSystem';
 import { BossShiftBrain } from '../systems/BossShift';
 import { cancelShiftTransition, playShiftTransition } from '../render/ShiftFx';
@@ -220,6 +230,8 @@ export class WorldScene extends Phaser.Scene {
   private deathPending = false;
   private riftMod: RiftModifier = getRiftModifier('none');
   private depthRule: DepthRule = depthRuleFor(1);
+  /** Active rift biome palette (null in hub). */
+  private biomeLookActive: BiomeLook | null = null;
   private bossAnchor: { x: number; y: number } | null = null;
   private hubLayout: ZoneLayout | null = null;
   /** POI ambushes already triggered this visit. */
@@ -722,6 +734,8 @@ export class WorldScene extends Phaser.Scene {
       this.riftMod = rollRiftModifierForDepth(this.riftDepth);
       this.depthRule = depthRuleFor(this.riftDepth);
       this.dungeon = generateDungeon(seed, this.riftDepth);
+      this.biomeLookActive = biomeLook(this.dungeon.biome.id);
+      this.cameras.main.setBackgroundColor(this.biomeLookActive.background);
       this.player.maxX = this.dungeon.width - 1.5;
       this.player.maxY = this.dungeon.height - 1.5;
       this.player.walkCheck = (x, y) => {
@@ -749,6 +763,8 @@ export class WorldScene extends Phaser.Scene {
       this.dungeon = null;
       this.riftMod = getRiftModifier('none');
       this.depthRule = depthRuleFor(1);
+      this.biomeLookActive = null;
+      this.cameras.main.setBackgroundColor('#12161c');
       this.hubLayout = generateHub(42);
       this.hubSize = this.hubLayout.size ?? DEFAULT_HUB_SIZE;
       this.player.maxX = this.hubSize - 0.5;
@@ -868,11 +884,18 @@ export class WorldScene extends Phaser.Scene {
         s.setTint(blendTint(floorTint, tileTint, Math.min(1, 0.75 * i)));
       }
     }
-    const propTint = layerPropTint(layer, i);
+    const washProp = layerPropTint(layer, i);
     for (const d of this.decor) {
+      const baseProp =
+        (d.getData('biomePropTint') as number | undefined) ?? 0xffffff;
       d.iterate((obj: Phaser.GameObjects.GameObject) => {
         const img = obj as Phaser.GameObjects.Image;
-        if (typeof img.setTint === 'function') img.setTint(propTint);
+        if (typeof img.setTint !== 'function') return;
+        if (washProp === 0xffffff) {
+          img.setTint(baseProp);
+        } else {
+          img.setTint(blendTint(baseProp, washProp, Math.min(1, 0.75 * i)));
+        }
       });
     }
     const alpha = layerOverlayAlpha(layer, i);
@@ -892,8 +915,9 @@ export class WorldScene extends Phaser.Scene {
         .setVisible(true);
     }
     this.shiftOverlay.setFillStyle(wash, alpha);
+    const ashBg = this.biomeLookActive?.background ?? '#12161c';
     this.cameras.main.setBackgroundColor(
-      layer === 'shadow' ? '#12101c' : '#12161c',
+      layer === 'shadow' ? '#12101c' : ashBg,
     );
   }
 
@@ -1174,21 +1198,30 @@ export class WorldScene extends Phaser.Scene {
         .image(0, 0, propKey)
         .setOrigin(0.5, 1)
         .setScale(propArtScale(d.kind));
+      const propTint = this.biomeLookActive?.propTint ?? 0xffffff;
+      if (propTint !== 0xffffff) img.setTint(propTint);
       const c = this.add.container(screenX, screenY, [img]);
       c.setDepth(depthFromWorld(p.x, p.y) - 20);
+      c.setData('biomePropTint', propTint);
       this.decor.push(c);
       return;
     }
     const g = this.add.graphics();
     switch (d.kind) {
-      case 'lantern':
+      case 'lantern': {
+        const plazaLamp = inPlaza(Math.floor(p.x), Math.floor(p.y));
         g.fillStyle(0x1a1410, 0.9);
         g.fillRect(-2, -18, 4, 16);
         g.fillStyle(0xe6c35c, 0.95);
         g.fillCircle(0, -22, 5);
-        g.fillStyle(0xfff0c0, 0.25);
-        g.fillCircle(0, -22, 12);
+        g.fillStyle(0xfff0c0, plazaLamp ? 0.38 : 0.25);
+        g.fillCircle(0, -22, plazaLamp ? 18 : 12);
+        if (plazaLamp) {
+          g.fillStyle(0xffe080, 0.12);
+          g.fillCircle(0, -22, 28);
+        }
         break;
+      }
       case 'well':
         g.fillStyle(0x000000, 0.3);
         g.fillEllipse(0, 4, 36, 14);
@@ -1303,6 +1336,7 @@ export class WorldScene extends Phaser.Scene {
     }
     const c = this.add.container(screenX, screenY, [g]);
     c.setDepth(depthFromWorld(p.x, p.y) - 20);
+    c.setData('biomePropTint', this.biomeLookActive?.propTint ?? 0xffffff);
     this.decor.push(c);
   }
 
@@ -1592,11 +1626,13 @@ export class WorldScene extends Phaser.Scene {
               })
             : null;
         if (poiOverride) {
-          this.placeFloorTile(x, y, poiOverride, 0xd8d8d8, null);
+          const poi = findPoiNear(x, y, this.hubLayout?.pois ?? []);
+          const tint = poi ? hubPoiFloorTint(poi.kind) : 0xd8d8d8;
+          this.placeFloorTile(x, y, poiOverride, tint, null, tint);
         } else {
-          let band: 'plaza' | 'road' | 'transition' | 'wild';
-          let fallback: number;
-          let tint: number | undefined;
+          let tileBand: 'plaza' | 'road' | 'transition' | 'wild';
+          let lookBand:
+            'plaza' | 'apron' | 'townRoad' | 'dirtRoad' | 'transition' | 'wild';
           // 2-tile stone apron so the square doesn't drop into meadow.
           const plazaApron =
             !plaza &&
@@ -1605,48 +1641,59 @@ export class WorldScene extends Phaser.Scene {
             y >= PLAZA.y0 - 2 &&
             y <= PLAZA.y1 + 2;
           if (plaza) {
-            band = 'plaza';
-            fallback = 0x6a6460;
-            tint = 0xd8d0c0; // warm cobble wash on dark stone art
+            tileBand = 'plaza';
+            lookBand = 'plaza';
           } else if (plazaApron) {
-            band = 'plaza';
-            fallback = 0x5a5448;
-            tint = 0xc8c0b0;
+            tileBand = 'plaza';
+            lookBand = 'apron';
           } else if (onPath) {
             if (nearTown(x, y, 16)) {
-              band = 'plaza';
-              fallback = 0x6a6460;
-              tint = 0xd0c8b8;
+              tileBand = 'plaza';
+              lookBand = 'townRoad';
             } else {
-              band = 'road';
-              fallback = 0xb8a080;
-              tint = 0xd8c098;
+              tileBand = 'road';
+              lookBand = 'dirtRoad';
             }
           } else if (nearTown(x, y, 14)) {
-            band = 'transition';
-            fallback = 0xd0dcc0;
-            tint = HUB_TRANSITION_FLOOR_TINT;
+            tileBand = 'transition';
+            lookBand = 'transition';
           } else {
-            band = 'wild';
-            fallback = 0xb8d0a0;
-            tint = HUB_WILD_FLOOR_TINT;
+            tileBand = 'wild';
+            lookBand = 'wild';
           }
+          const look = hubBandTint(lookBand);
           this.placeFloorTile(
             x,
             y,
-            pickClusteredTile(x, y, band),
-            fallback,
+            pickClusteredTile(x, y, tileBand),
+            look.fallback,
             null,
-            tint,
+            look.tint,
           );
+          if (lookBand === 'dirtRoad') {
+            this.strokeIsoTileOutline(
+              this.tiles,
+              x,
+              y,
+              HUB_DIRT_ROAD_EDGE,
+              HUB_DIRT_ROAD_EDGE_ALPHA,
+            );
+          }
         }
-        if (
-          plaza &&
-          (x === PLAZA.x0 || x === PLAZA.x1 || y === PLAZA.y0 || y === PLAZA.y1)
-        ) {
+        if (plaza) {
           const { screenX, screenY } = worldToScreen(x, y);
-          this.tiles.fillStyle(0xc4a574, 0.12);
-          this.tiles.fillCircle(screenX, screenY, 4);
+          const onEdge =
+            x === PLAZA.x0 ||
+            x === PLAZA.x1 ||
+            y === PLAZA.y0 ||
+            y === PLAZA.y1;
+          if (onEdge) {
+            this.tiles.fillStyle(HUB_PLAZA_EDGE_COLOR, HUB_PLAZA_EDGE_ALPHA);
+            this.tiles.fillCircle(screenX, screenY, HUB_PLAZA_EDGE_RADIUS);
+          } else if ((x + y) % HUB_PLAZA_GLOW_EVERY === 0) {
+            this.tiles.fillStyle(HUB_PLAZA_GLOW_COLOR, HUB_PLAZA_GLOW_ALPHA);
+            this.tiles.fillCircle(screenX, screenY, HUB_PLAZA_GLOW_RADIUS);
+          }
         }
       }
     }
@@ -1681,30 +1728,13 @@ export class WorldScene extends Phaser.Scene {
     };
 
     const biome = map.biome;
+    const look = biomeLook(biome.id);
     const w0 = biome.tileWeights.tile_dungeon_0 ?? 0.6;
     const w1 = biome.tileWeights.tile_dungeon_1 ?? 0.3;
     const w2 = biome.tileWeights.tile_dungeon_2 ?? 0.1;
     const wSum = Math.max(0.0001, w0 + w1 + w2);
     const t0 = w0 / wSum;
     const t1 = t0 + w1 / wSum;
-    const fallbackTint =
-      biome.id === 'crystal_cavern'
-        ? 0xc8e8ff
-        : biome.id === 'shattered_woods'
-          ? 0xd8e8d0
-          : biome.id === 'ashen_crypt'
-            ? 0xe8d8c0
-            : biome.id === 'salt_wastes'
-              ? 0xf0ebe0
-              : 0xd8d8d8;
-    const accent =
-      biome.id === 'crystal_cavern'
-        ? 0x80c0ff
-        : biome.id === 'shattered_woods'
-          ? 0x80a080
-          : biome.id === 'salt_wastes'
-            ? 0xc8b890
-            : 0x3a6088;
 
     for (let y = 0; y < map.height; y++) {
       for (let x = 0; x < map.width; x++) {
@@ -1719,14 +1749,21 @@ export class WorldScene extends Phaser.Scene {
           key = 'tile_dungeon_2';
         }
         const gate = map.layerGates[y]![x] ?? null;
-        this.placeFloorTile(x, y, key, fallbackTint, gate);
+        // Floor tint is the main biome read — painted sheets alone look identical.
+        this.placeFloorTile(x, y, key, look.floorTint, gate, look.floorTint);
         if (!gate && isDungeonFloorEdge(map.cells, x, y)) {
-          this.strokeIsoTileOutline(this.tiles, x, y, accent, 0.35);
+          this.strokeIsoTileOutline(
+            this.tiles,
+            x,
+            y,
+            look.accent,
+            look.edgeAlpha,
+          );
         }
-        if ((x * 17 + y * 31) % 19 === 0 && !gate) {
+        if ((x * 17 + y * 31) % look.speckEvery === 0 && !gate) {
           const { screenX, screenY } = worldToScreen(x, y);
-          this.tiles.fillStyle(accent, 0.45);
-          this.tiles.fillCircle(screenX, screenY, 3.5);
+          this.tiles.fillStyle(look.accent, look.speckAlpha);
+          this.tiles.fillCircle(screenX, screenY, look.speckRadius);
         }
       }
     }
@@ -2535,7 +2572,16 @@ export class WorldScene extends Phaser.Scene {
     }
     gameState.persist();
     this.lifeKills += 1;
-    this.triggerCombatShake(enemy.isBoss ? 'boss' : 'hit');
+    if (enemy.isBoss) {
+      this.triggerCombatShake('boss');
+      this.triggerHitstop('crit');
+      playCombatBurst(this, enemy.worldX, enemy.worldY, 'crit');
+    } else if (enemy.awardsEliteLoot) {
+      this.triggerCombatShake('crit');
+      playCombatBurst(this, enemy.worldX, enemy.worldY, 'crit');
+    } else {
+      this.triggerCombatShake('hit');
+    }
     if (!gameState.inRift) return;
 
     if (
@@ -2624,9 +2670,21 @@ export class WorldScene extends Phaser.Scene {
         depthLabel: riftDepthLabel(this.riftDepth),
       }),
     });
-    // W1: emerge reads as a setpiece, not a quiet spawn flash.
+    // Emerge: scale-in + crit burst so the spawn reads as a setpiece.
+    boss.body.setScale(0.4);
+    boss.body.setAlpha(0.35);
+    this.tweens.add({
+      targets: boss.body,
+      scaleX: 1,
+      scaleY: 1,
+      alpha: 1,
+      duration: 420,
+      ease: 'Back.easeOut',
+    });
+    playCombatBurst(this, boss.worldX, boss.worldY, 'crit');
     this.safeCameraFlash(220, 160, 60, 120);
     this.triggerCombatShake('boss');
+    this.triggerHitstop('crit');
     audioBus.skill();
     playEnemyTelegraph(this, 'wail', 'impact', boss.worldX, boss.worldY);
     this.emitRiftProgress();
@@ -3215,6 +3273,7 @@ export class WorldScene extends Phaser.Scene {
             this.depthRule.id === 'none' ? undefined : this.depthRule.name,
           ruleBlurb:
             this.depthRule.id === 'none' ? undefined : this.depthRule.blurb,
+          biomeName: this.dungeon?.biome.name,
         }),
       });
       this.emitRiftProgress();

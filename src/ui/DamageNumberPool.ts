@@ -54,7 +54,7 @@ export class DamageNumberPool {
       resolution: profile.textResolution,
     });
     t.setAlpha(1);
-    t.setScale(toPlayer ? 1 : crit ? 1.25 : 1.15);
+    t.setScale(toPlayer ? 1 : crit ? 1.35 : 1.2);
     t.setVisible(true);
     this.activeCount += 1;
 
@@ -63,11 +63,11 @@ export class DamageNumberPool {
     this.scene.tweens.killTweensOf(t);
     this.scene.tweens.add({
       targets: t,
-      y: startY - (toPlayer ? 36 : crit ? 52 : 44),
+      y: startY - (toPlayer ? 36 : crit ? 58 : 48),
       x: startX + drift * 1.4,
       alpha: 0,
-      scale: toPlayer ? 0.85 : crit ? 1.05 : 0.95,
-      duration: toPlayer ? 640 : crit ? 700 : 560,
+      scale: toPlayer ? 0.85 : crit ? 1.12 : 1.0,
+      duration: toPlayer ? 640 : crit ? 760 : 600,
       ease: 'Cubic.easeOut',
       onComplete: () => this.release(t),
     });
