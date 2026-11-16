@@ -37,6 +37,7 @@ Solo evenings, one shippable slice at a time. Prefer **feel → content → syst
 - Fourth rift biome **Salzwüste** (`salt_wastes`) + **Salt Warden** + salt shard craft sink
 - **One passive per class** (Iron Will / Rift Attunement / Arcane Reservoir)
 - **BiomeLook** — rift floors tinted per biome + accents + void background
+- **HubLook** — plaza glow, POI floor washes, dirt-road edges, warmer plaza lanterns
 
 ## Next — feel & look (core loop)
 
@@ -47,7 +48,7 @@ earn their keep in feel.
 | #   | Slice                    | Why it matters               | Done when                                                              |
 | --- | ------------------------ | ---------------------------- | ---------------------------------------------------------------------- |
 | ✓   | **Rift biomes readable** | Same tiles — biomes alike    | Shipped: `BiomeLook` floor tint / accents / void bg + enter biome name |
-| 2   | **Hub atmosphere**       | Town still reads flat        | Plaza glow / stronger POI floors / readable roads without new systems  |
+| ✓   | **Hub atmosphere**       | Town still reads flat        | Shipped: `HubLook` plaza glow / POI tints / dirt-road edges / lanterns |
 | 3   | **Combat readability**   | Hits/boss moments still soft | Hit/death/boss emerge juice pass on existing sheets + VFX              |
 
 Skip inventing new frameworks — extend `MapGen` / `WorldScene` /

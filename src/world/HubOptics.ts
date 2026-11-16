@@ -13,10 +13,10 @@ export const HUB_FRINGE_DECOR_ATTEMPTS = 48;
 export const HUB_PATH_EDGE_DECOR_CHANCE = 0.1;
 
 /** Soft green wash on wilderness floor tiles. */
-export const HUB_WILD_FLOOR_TINT = 0xc4e0b8;
-
-/** Soft transition wash between town and fringe. */
-export const HUB_TRANSITION_FLOOR_TINT = 0xd8e4c8;
+export {
+  HUB_TRANSITION_FLOOR_TINT,
+  HUB_WILD_FLOOR_TINT,
+} from '../render/HubLook';
 
 /** True when a walkable dungeon cell borders void/wall. */
 export function isDungeonFloorEdge(

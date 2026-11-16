@@ -48,11 +48,21 @@ import {
   type WildernessPoi,
   type ZoneLayout,
 } from '../world/MapGen';
+import { isDungeonFloorEdge } from '../world/HubOptics';
+import { findPoiNear, hubPoiFloorOverride } from '../world/HubPoiFloors';
 import {
-  HUB_TRANSITION_FLOOR_TINT,
-  HUB_WILD_FLOOR_TINT,
-  isDungeonFloorEdge,
-} from '../world/HubOptics';
+  HUB_DIRT_ROAD_EDGE,
+  HUB_DIRT_ROAD_EDGE_ALPHA,
+  HUB_PLAZA_EDGE_ALPHA,
+  HUB_PLAZA_EDGE_COLOR,
+  HUB_PLAZA_EDGE_RADIUS,
+  HUB_PLAZA_GLOW_ALPHA,
+  HUB_PLAZA_GLOW_COLOR,
+  HUB_PLAZA_GLOW_EVERY,
+  HUB_PLAZA_GLOW_RADIUS,
+  hubBandTint,
+  hubPoiFloorTint,
+} from '../render/HubLook';
 import type {
   CharacterClassId,
   GearInstance,
@@ -64,7 +74,6 @@ import {
   generateDungeon,
   type DungeonMap,
 } from '../world/DungeonGen';
-import { hubPoiFloorOverride } from '../world/HubPoiFloors';
 import { isWalkableOnLayer } from '../world/ShiftGateMap';
 import { netClient } from '../net/NetClient';
 import { bindAction, formatHotkey } from '../core/Hotkeys';
@@ -1199,14 +1208,20 @@ export class WorldScene extends Phaser.Scene {
     }
     const g = this.add.graphics();
     switch (d.kind) {
-      case 'lantern':
+      case 'lantern': {
+        const plazaLamp = inPlaza(Math.floor(p.x), Math.floor(p.y));
         g.fillStyle(0x1a1410, 0.9);
         g.fillRect(-2, -18, 4, 16);
         g.fillStyle(0xe6c35c, 0.95);
         g.fillCircle(0, -22, 5);
-        g.fillStyle(0xfff0c0, 0.25);
-        g.fillCircle(0, -22, 12);
+        g.fillStyle(0xfff0c0, plazaLamp ? 0.38 : 0.25);
+        g.fillCircle(0, -22, plazaLamp ? 18 : 12);
+        if (plazaLamp) {
+          g.fillStyle(0xffe080, 0.12);
+          g.fillCircle(0, -22, 28);
+        }
         break;
+      }
       case 'well':
         g.fillStyle(0x000000, 0.3);
         g.fillEllipse(0, 4, 36, 14);
@@ -1611,11 +1626,13 @@ export class WorldScene extends Phaser.Scene {
               })
             : null;
         if (poiOverride) {
-          this.placeFloorTile(x, y, poiOverride, 0xd8d8d8, null);
+          const poi = findPoiNear(x, y, this.hubLayout?.pois ?? []);
+          const tint = poi ? hubPoiFloorTint(poi.kind) : 0xd8d8d8;
+          this.placeFloorTile(x, y, poiOverride, tint, null, tint);
         } else {
-          let band: 'plaza' | 'road' | 'transition' | 'wild';
-          let fallback: number;
-          let tint: number | undefined;
+          let tileBand: 'plaza' | 'road' | 'transition' | 'wild';
+          let lookBand:
+            'plaza' | 'apron' | 'townRoad' | 'dirtRoad' | 'transition' | 'wild';
           // 2-tile stone apron so the square doesn't drop into meadow.
           const plazaApron =
             !plaza &&
@@ -1624,48 +1641,59 @@ export class WorldScene extends Phaser.Scene {
             y >= PLAZA.y0 - 2 &&
             y <= PLAZA.y1 + 2;
           if (plaza) {
-            band = 'plaza';
-            fallback = 0x6a6460;
-            tint = 0xd8d0c0; // warm cobble wash on dark stone art
+            tileBand = 'plaza';
+            lookBand = 'plaza';
           } else if (plazaApron) {
-            band = 'plaza';
-            fallback = 0x5a5448;
-            tint = 0xc8c0b0;
+            tileBand = 'plaza';
+            lookBand = 'apron';
           } else if (onPath) {
             if (nearTown(x, y, 16)) {
-              band = 'plaza';
-              fallback = 0x6a6460;
-              tint = 0xd0c8b8;
+              tileBand = 'plaza';
+              lookBand = 'townRoad';
             } else {
-              band = 'road';
-              fallback = 0xb8a080;
-              tint = 0xd8c098;
+              tileBand = 'road';
+              lookBand = 'dirtRoad';
             }
           } else if (nearTown(x, y, 14)) {
-            band = 'transition';
-            fallback = 0xd0dcc0;
-            tint = HUB_TRANSITION_FLOOR_TINT;
+            tileBand = 'transition';
+            lookBand = 'transition';
           } else {
-            band = 'wild';
-            fallback = 0xb8d0a0;
-            tint = HUB_WILD_FLOOR_TINT;
+            tileBand = 'wild';
+            lookBand = 'wild';
           }
+          const look = hubBandTint(lookBand);
           this.placeFloorTile(
             x,
             y,
-            pickClusteredTile(x, y, band),
-            fallback,
+            pickClusteredTile(x, y, tileBand),
+            look.fallback,
             null,
-            tint,
+            look.tint,
           );
+          if (lookBand === 'dirtRoad') {
+            this.strokeIsoTileOutline(
+              this.tiles,
+              x,
+              y,
+              HUB_DIRT_ROAD_EDGE,
+              HUB_DIRT_ROAD_EDGE_ALPHA,
+            );
+          }
         }
-        if (
-          plaza &&
-          (x === PLAZA.x0 || x === PLAZA.x1 || y === PLAZA.y0 || y === PLAZA.y1)
-        ) {
+        if (plaza) {
           const { screenX, screenY } = worldToScreen(x, y);
-          this.tiles.fillStyle(0xc4a574, 0.12);
-          this.tiles.fillCircle(screenX, screenY, 4);
+          const onEdge =
+            x === PLAZA.x0 ||
+            x === PLAZA.x1 ||
+            y === PLAZA.y0 ||
+            y === PLAZA.y1;
+          if (onEdge) {
+            this.tiles.fillStyle(HUB_PLAZA_EDGE_COLOR, HUB_PLAZA_EDGE_ALPHA);
+            this.tiles.fillCircle(screenX, screenY, HUB_PLAZA_EDGE_RADIUS);
+          } else if ((x + y) % HUB_PLAZA_GLOW_EVERY === 0) {
+            this.tiles.fillStyle(HUB_PLAZA_GLOW_COLOR, HUB_PLAZA_GLOW_ALPHA);
+            this.tiles.fillCircle(screenX, screenY, HUB_PLAZA_GLOW_RADIUS);
+          }
         }
       }
     }
