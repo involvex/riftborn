@@ -1,9 +1,13 @@
 import { describe, expect, test } from 'bun:test';
 import {
   RARITY_COLORS,
+  rarityBeamHeight,
   rarityCss,
+  rarityDropScale,
   rarityGlowAlpha,
   rarityPhaser,
+  rarityWantsBurst,
+  rarityWantsCameraFlash,
 } from './RarityVisual';
 
 describe('RarityVisual', () => {
@@ -27,11 +31,23 @@ describe('RarityVisual', () => {
     }
   });
 
-  test('higher rarity glows brighter', () => {
+  test('higher rarity glows brighter and taller', () => {
     expect(rarityGlowAlpha('magic')).toBeGreaterThan(rarityGlowAlpha('common'));
     expect(rarityGlowAlpha('rare')).toBeGreaterThan(rarityGlowAlpha('magic'));
     expect(rarityGlowAlpha('legendary')).toBeGreaterThan(
       rarityGlowAlpha('rare'),
     );
+    expect(rarityBeamHeight('legendary')).toBeGreaterThan(
+      rarityBeamHeight('common'),
+    );
+    expect(rarityDropScale('rare')).toBeGreaterThan(rarityDropScale('common'));
+  });
+
+  test('camera flash and burst gate commons / low tiers', () => {
+    expect(rarityWantsCameraFlash('common')).toBe(false);
+    expect(rarityWantsCameraFlash('magic')).toBe(true);
+    expect(rarityWantsBurst('magic')).toBe(false);
+    expect(rarityWantsBurst('rare')).toBe(true);
+    expect(rarityWantsBurst('legendary')).toBe(true);
   });
 });

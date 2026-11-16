@@ -23,12 +23,50 @@ export function rarityCss(rarity: GearRarity): string {
 export function rarityGlowAlpha(rarity: GearRarity): number {
   switch (rarity) {
     case 'legendary':
-      return 0.85;
+      return 0.95;
     case 'rare':
-      return 0.7;
+      return 0.82;
     case 'magic':
-      return 0.55;
+      return 0.68;
     default:
-      return 0.35;
+      return 0.32;
   }
+}
+
+/** Vertical beam height in screen px for world drops. */
+export function rarityBeamHeight(rarity: GearRarity): number {
+  switch (rarity) {
+    case 'legendary':
+      return 72;
+    case 'rare':
+      return 60;
+    case 'magic':
+      return 48;
+    default:
+      return 36;
+  }
+}
+
+/** Pop-in / idle scale for ground drops. */
+export function rarityDropScale(rarity: GearRarity): number {
+  switch (rarity) {
+    case 'legendary':
+      return 1.22;
+    case 'rare':
+      return 1.12;
+    case 'magic':
+      return 1.04;
+    default:
+      return 1;
+  }
+}
+
+/** Camera flash on spawn — skip commons in Dense packs. */
+export function rarityWantsCameraFlash(rarity: GearRarity): boolean {
+  return rarity !== 'common';
+}
+
+/** Combat-style burst on spawn / boss open. */
+export function rarityWantsBurst(rarity: GearRarity): boolean {
+  return rarity === 'rare' || rarity === 'legendary';
 }

@@ -25,7 +25,12 @@ import { Npc } from '../entities/Npc';
 import { Player } from '../entities/Player';
 import { ResourceNode } from '../entities/ResourceNode';
 import { describeGear, gearDropChance, rollGearDrop } from '../systems/ItemGen';
-import { rarityCss } from '../systems/RarityVisual';
+import {
+  rarityCss,
+  rarityPhaser,
+  rarityWantsBurst,
+  rarityWantsCameraFlash,
+} from '../systems/RarityVisual';
 import { gameState } from '../systems/GameState';
 import {
   ASSIST_RANGE,
@@ -2823,10 +2828,15 @@ export class WorldScene extends Phaser.Scene {
     this.chests.push(
       new LootChest(this, `chest_boss_${this.chestSeq++}`, p.x, p.y, tier),
     );
-    this.playLootJuice('rare');
+    this.playLootJuice('legendary', p.x, p.y);
+    this.triggerCombatShake('crit');
   }
 
-  private playLootJuice(rarity: GearRarity): void {
+  private playLootJuice(
+    rarity: GearRarity,
+    worldX?: number,
+    worldY?: number,
+  ): void {
     const tone =
       rarity === 'legendary'
         ? 'legendary'
@@ -2836,20 +2846,26 @@ export class WorldScene extends Phaser.Scene {
             ? 'magic'
             : 'common';
     audioBus.loot(tone);
+    if (!rarityWantsCameraFlash(rarity)) return;
     const flash =
       rarity === 'legendary'
         ? [255, 180, 60]
         : rarity === 'rare'
           ? [120, 160, 255]
-          : rarity === 'magic'
-            ? [80, 200, 140]
-            : [200, 200, 200];
-    this.safeCameraFlash(
-      rarity === 'common' ? 60 : 140,
-      flash[0],
-      flash[1],
-      flash[2],
-    );
+          : [80, 200, 140];
+    this.safeCameraFlash(140, flash[0], flash[1], flash[2]);
+    if (
+      rarityWantsBurst(rarity) &&
+      worldX !== undefined &&
+      worldY !== undefined
+    ) {
+      playCombatBurst(
+        this,
+        worldX,
+        worldY,
+        rarity === 'legendary' ? 'crit' : 'hit',
+      );
+    }
   }
 
   private openExitPortal(): void {
@@ -3127,7 +3143,7 @@ export class WorldScene extends Phaser.Scene {
     const p = snapToTile(nearX + jitter(), nearY + jitter());
     const drop = new GroundLoot(this, `loot_${this.lootSeq++}`, p.x, p.y, item);
     this.groundLoot.push(drop);
-    this.playLootJuice(item.rarity);
+    this.playLootJuice(item.rarity, p.x, p.y);
   }
 
   private tryClickLoot(screenX: number, screenY: number): boolean {
@@ -3167,16 +3183,19 @@ export class WorldScene extends Phaser.Scene {
     const g = drop.item;
     drop.playPickup();
     this.groundLoot = this.groundLoot.filter((d) => d !== drop);
-    audioBus.loot(
-      g.rarity === 'legendary'
-        ? 'legendary'
-        : g.rarity === 'rare'
-          ? 'rare'
-          : g.rarity === 'magic'
-            ? 'magic'
-            : 'common',
-    );
-    this.safeCameraFlash(80, 220, 220, 200);
+    if (g.rarity === 'common') {
+      audioBus.uiClick();
+    } else {
+      audioBus.loot(
+        g.rarity === 'legendary'
+          ? 'legendary'
+          : g.rarity === 'rare'
+            ? 'rare'
+            : 'magic',
+      );
+      const c = rarityPhaser(g.rarity);
+      this.safeCameraFlash(70, (c >> 16) & 0xff, (c >> 8) & 0xff, c & 0xff);
+    }
     gameState.persist();
     gameEvents.emit('ui:toast', {
       text: `Picked up · ${g.name}`,
@@ -3298,10 +3317,16 @@ export class WorldScene extends Phaser.Scene {
     }
 
     chest.markLooted();
+    chest.playOpenPop();
     if (!gameState.inRift) gameState.bounties.noteChestOpen();
     audioBus.open();
-    audioBus.loot(tier >= 4 ? 'rare' : tier >= 3 ? 'magic' : 'common');
-    this.triggerHitShake(60, 0.003);
+    if (chest.isBossChest || tier >= 4) {
+      this.playLootJuice('legendary', chest.worldX, chest.worldY);
+      this.triggerCombatShake('crit');
+    } else {
+      audioBus.loot(tier >= 3 ? 'magic' : 'common');
+      this.triggerHitShake(60, 0.003);
+    }
     gameState.persist();
     gameEvents.emit('ui:toast', {
       text: `Chest — ${parts.join(' · ')}`,

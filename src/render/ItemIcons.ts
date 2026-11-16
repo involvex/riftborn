@@ -45,7 +45,7 @@ export function preloadItemIcons(scene: Phaser.Scene): void {
   }
 }
 
-function hasIcon(scene: Phaser.Scene, id: ItemIconId): boolean {
+export function hasIcon(scene: Phaser.Scene, id: ItemIconId): boolean {
   return scene.textures.exists(iconTextureKey(id));
 }
 
@@ -95,7 +95,8 @@ function stackIconId(itemId: string): ItemIconId | null {
   }
 }
 
-function gearIconId(item: GearInstance): ItemIconId {
+/** Bag + world-drop icon id for a gear instance. */
+export function gearIconId(item: GearInstance): ItemIconId {
   const rare = item.rarity === 'rare' || item.rarity === 'legendary';
   const cls: CharacterClassId | null = resolveGearClass(item);
   switch (item.slot) {
