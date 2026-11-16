@@ -12,6 +12,7 @@ export class RiftProgressHud {
   private readonly label: Phaser.GameObjects.Text;
   private readonly barH = 160;
   private readonly barW = 14;
+  private lastPhase: 'fill' | 'boss' | 'exit' | null = null;
 
   constructor(scene: Phaser.Scene) {
     this.scene = scene;
@@ -83,6 +84,24 @@ export class RiftProgressHud {
       this.fill.height = this.barH - 2;
       this.label.setText(`${dTag}\nExit`);
     }
+    if (phase !== this.lastPhase) {
+      this.lastPhase = phase;
+      this.pulsePhase();
+    }
+  }
+
+  /** Short scale punch when Kill → Boss → Exit advances. */
+  private pulsePhase(): void {
+    this.scene.tweens.killTweensOf(this.root);
+    this.root.setScale(1);
+    this.scene.tweens.add({
+      targets: this.root,
+      scaleX: 1.14,
+      scaleY: 1.14,
+      duration: 140,
+      yoyo: true,
+      ease: 'Quad.easeOut',
+    });
   }
 }
 

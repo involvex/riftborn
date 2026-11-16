@@ -39,6 +39,7 @@ Solo evenings, one shippable slice at a time. Prefer **feel → content → syst
 - **BiomeLook** — rift floors tinted per biome + accents + void background
 - **HubLook** — plaza glow, POI floor washes, dirt-road edges, warmer plaza lanterns
 - **Combat readability** — warmer hit flash/knock, Low-tier hit bursts, skill hit VFX, boss scale-in + crit kill juice
+- **LoopBeat / portals** — zone fade + portal sting; exit gate at boss anchor; HUD phase pulse
 
 ## Next — feel & look (core loop)
 
@@ -51,6 +52,9 @@ earn their keep in feel.
 | ✓   | **Rift biomes readable** | Same tiles — biomes alike    | Shipped: `BiomeLook` floor tint / accents / void bg + enter biome name                               |
 | ✓   | **Hub atmosphere**       | Town still reads flat        | Shipped: `HubLook` plaza glow / POI tints / dirt-road edges / lanterns                               |
 | ✓   | **Combat readability**   | Hits/boss moments still soft | Shipped: warmer hit flash/knock, Low-tier hit bursts, skill hit VFX, boss scale-in + crit kill juice |
+| ✓   | **LoopBeat / portals**   | Enter/clear/exit still soft  | Shipped: zone fade + portal sting; exit gate at boss anchor; HUD phase pulse                         |
+| 5   | **Loot readability**     | Payoff after combat soft     | Magic+ world drops + boss-chest juice match combat feedback                                          |
+| 6   | **Boss arena beat**      | Boss room = any hall         | Biome wash / spotlight in boss room + clearer phase cues                                             |
 
 Skip inventing new frameworks — extend `MapGen` / `WorldScene` /
 `SaveStore` / NPCs / `server/index.ts` / `src/data/*` / `src/render/*`.

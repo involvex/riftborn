@@ -118,6 +118,24 @@ class AudioBus {
     this.playSfx(SFX_KEYS.open, () => this.playTone(300, 0.08, 'triangle'));
   }
 
+  /** Hub → rift portal sting (rising). */
+  portalEnter(): void {
+    this.playSfx(SFX_KEYS.skill, () => {
+      this.playTone(260, 0.09, 'sine');
+      setTimeout(() => this.playTone(400, 0.1, 'triangle'), 55);
+      setTimeout(() => this.playTone(560, 0.12, 'sine'), 120);
+    });
+  }
+
+  /** Exit portal open / leave rift (falling). */
+  portalExit(): void {
+    this.playSfx(SFX_KEYS.open, () => {
+      this.playTone(520, 0.08, 'sine');
+      setTimeout(() => this.playTone(360, 0.1, 'triangle'), 70);
+      setTimeout(() => this.playTone(240, 0.12, 'sine'), 140);
+    });
+  }
+
   skill(): void {
     this.playSfx(SFX_KEYS.skill, () => {
       this.playTone(320, 0.07, 'sawtooth');

@@ -86,6 +86,8 @@ import {
 } from '../systems/BiomeMatFeedback';
 import { playSkillVfx } from '../render/SkillVfx';
 import { playCombatBurst } from '../render/CombatVfx';
+import { playPortalReveal, playZoneWash } from '../render/PortalFx';
+import { pickExitPortalPoint } from '../render/PortalPlacement';
 import { screenDirToWorldDelta } from '../systems/SkillAim';
 import type { SkillAimHint } from '../systems/SkillSystem';
 import { shouldShowRangeHint } from '../systems/SkillRangeGate';
@@ -209,6 +211,8 @@ export class WorldScene extends Phaser.Scene {
   /** Painted floor tile sprites (cleared on zone reload). */
   private tileSprites: Phaser.GameObjects.Image[] = [];
   private portalMarker: Phaser.GameObjects.Container | null = null;
+  /** Blocks double portal / B while fade swap runs. */
+  private zoneBusy = false;
   private benchMarker: Phaser.GameObjects.Container | null = null;
   private npcs: Npc[] = [];
   private decor: Phaser.GameObjects.Container[] = [];
@@ -1034,7 +1038,7 @@ export class WorldScene extends Phaser.Scene {
     if (layout.portal) {
       const p = snapToTile(layout.portal.x, layout.portal.y);
       this.portalMarker = gameState.inRift
-        ? this.makeMarker(p.x, p.y, 0x4db6ff, 'Exit · R')
+        ? this.makeExitPortal(p.x, p.y)
         : this.makeObelisk(p.x, p.y);
     }
 
@@ -1445,6 +1449,9 @@ export class WorldScene extends Phaser.Scene {
     g.fillTriangle(-10, -52, 10, -52, 0, -72);
     g.lineStyle(2, 0x8ec8ff, 0.9);
     g.strokeRect(-8, -52, 16, 54);
+    const glow = this.add.graphics();
+    glow.lineStyle(2, 0x8ec8ff, 0.55);
+    glow.strokeEllipse(0, 2, 34, 14);
     const t = this.add
       .text(0, -82, 'Rift Obelisk · R', {
         fontFamily: 'Segoe UI, sans-serif',
@@ -1454,39 +1461,63 @@ export class WorldScene extends Phaser.Scene {
         strokeThickness: 3,
       })
       .setOrigin(0.5);
-    const c = this.add.container(screenX, screenY, [g, t]);
+    const c = this.add.container(screenX, screenY, [g, glow, t]);
     c.setDepth(depthFromWorld(wx, wy));
     c.setData('wx', wx);
     c.setData('wy', wy);
+    this.tweens.add({
+      targets: glow,
+      alpha: 0.35,
+      duration: 900,
+      yoyo: true,
+      repeat: -1,
+      ease: 'Sine.easeInOut',
+    });
     return c;
   }
 
-  private makeMarker(
-    wx: number,
-    wy: number,
-    color: number,
-    label: string,
-  ): Phaser.GameObjects.Container {
+  /** Rift exit — standing gate, not a flat floor ellipse. */
+  private makeExitPortal(wx: number, wy: number): Phaser.GameObjects.Container {
     const p = snapToTile(wx, wy);
     const { screenX, screenY } = worldToScreen(p.x, p.y);
     const g = this.add.graphics();
-    g.fillStyle(color, 0.35);
-    g.fillEllipse(0, 0, 40, 20);
-    g.lineStyle(2, color, 0.9);
-    g.strokeEllipse(0, 0, 40, 20);
+    g.fillStyle(0x000000, 0.4);
+    g.fillEllipse(0, 6, 36, 16);
+    g.fillStyle(0x1a3858, 0.95);
+    g.fillRect(-12, -58, 8, 60);
+    g.fillRect(4, -58, 8, 60);
+    g.fillStyle(0x4db6ff, 0.35);
+    g.fillRect(-4, -54, 8, 52);
+    g.lineStyle(2, 0x8ec8ff, 0.95);
+    g.strokeRect(-12, -58, 24, 60);
+    g.fillStyle(0xb8e4ff, 0.9);
+    g.fillTriangle(-14, -58, 14, -58, 0, -78);
+    const ring = this.add.graphics();
+    ring.lineStyle(2.5, 0x7ad0ff, 0.85);
+    ring.strokeEllipse(0, 4, 42, 18);
+    ring.lineStyle(1.5, 0xe8f6ff, 0.55);
+    ring.strokeEllipse(0, -20, 22, 28);
     const t = this.add
-      .text(0, -22, label, {
+      .text(0, -90, 'Exit · R', {
         fontFamily: 'Segoe UI, sans-serif',
         fontSize: '11px',
-        color: '#e8e4d8',
+        color: '#b8e8ff',
         stroke: '#0a0c10',
         strokeThickness: 3,
       })
       .setOrigin(0.5);
-    const c = this.add.container(screenX, screenY, [g, t]);
+    const c = this.add.container(screenX, screenY, [g, ring, t]);
     c.setDepth(depthFromWorld(p.x, p.y));
     c.setData('wx', p.x);
     c.setData('wy', p.y);
+    this.tweens.add({
+      targets: ring,
+      alpha: 0.4,
+      duration: 700,
+      yoyo: true,
+      repeat: -1,
+      ease: 'Sine.easeInOut',
+    });
     return c;
   }
 
@@ -1836,6 +1867,10 @@ export class WorldScene extends Phaser.Scene {
 
   update(_time: number, delta: number): void {
     if (this.deathPending) {
+      this.player.syncScreen();
+      return;
+    }
+    if (this.zoneBusy) {
       this.player.syncScreen();
       return;
     }
@@ -2321,23 +2356,32 @@ export class WorldScene extends Phaser.Scene {
 
   /** Always available (B): leave rift / reset to plaza. */
   private returnToTown(reward = false, silent = false): void {
+    // Death / forced exits must not wait on an enter fade.
+    if (this.zoneBusy && !silent) return;
     const wasRift = gameState.inRift;
-    if (wasRift && reward && this.riftCleared) {
-      gameState.progression.addXp(50);
-      gameState.inventory.add('rift_shard', 1);
-      gameState.inventory.add('gold', 20);
-    } else if (wasRift && !silent) {
-      gameState.progression.addXp(8);
+    if (!wasRift) {
+      if (!silent) {
+        gameEvents.emit('ui:toast', { text: 'Already in town' });
+      }
+      return;
     }
-    gameState.inRift = false;
-    gameState.riftSeed = null;
-    gameState.worldX = TOWN_SPAWN.x;
-    gameState.worldY = TOWN_SPAWN.y;
-    this.player.worldX = TOWN_SPAWN.x;
-    this.player.worldY = TOWN_SPAWN.y;
-    this.loadZone(false);
-    gameState.persist();
-    if (wasRift) {
+
+    const finish = (): void => {
+      if (reward && this.riftCleared) {
+        gameState.progression.addXp(50);
+        gameState.inventory.add('rift_shard', 1);
+        gameState.inventory.add('gold', 20);
+      } else if (!silent) {
+        gameState.progression.addXp(8);
+      }
+      gameState.inRift = false;
+      gameState.riftSeed = null;
+      gameState.worldX = TOWN_SPAWN.x;
+      gameState.worldY = TOWN_SPAWN.y;
+      this.player.worldX = TOWN_SPAWN.x;
+      this.player.worldY = TOWN_SPAWN.y;
+      this.loadZone(false);
+      gameState.persist();
       gameEvents.emit(Events.RIFT_CLEARED, {
         cleared: reward && this.riftCleared,
       });
@@ -2349,10 +2393,50 @@ export class WorldScene extends Phaser.Scene {
               : 'Returned to town',
         });
       }
-    } else if (!silent) {
-      gameEvents.emit('ui:toast', { text: 'Already in town' });
+      this.emitRiftProgress();
+    };
+
+    if (silent) {
+      finish();
+      return;
     }
-    this.emitRiftProgress();
+    audioBus.portalExit();
+    this.runZoneTransition('exit', finish);
+  }
+
+  /** Fade out → swap zone → fade in. Blocks stacked portal / B presses. */
+  private runZoneTransition(kind: 'enter' | 'exit', work: () => void): void {
+    if (this.zoneBusy) return;
+    this.zoneBusy = true;
+    this.resetCameraFx();
+    const outMs = 160;
+    const inMs = 220;
+    const rgb =
+      kind === 'enter' ? ([18, 36, 72] as const) : ([8, 14, 28] as const);
+    try {
+      this.cameras.main.fadeOut(outMs, rgb[0], rgb[1], rgb[2]);
+    } catch {
+      work();
+      this.zoneBusy = false;
+      return;
+    }
+    this.cameras.main.once(
+      Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE,
+      () => {
+        try {
+          work();
+          playZoneWash(this, kind);
+        } catch (err) {
+          console.warn('[WorldScene] zone transition failed', err);
+        }
+        try {
+          this.cameras.main.fadeIn(inMs, rgb[0], rgb[1], rgb[2]);
+        } catch {
+          /* ignore */
+        }
+        this.zoneBusy = false;
+      },
+    );
   }
 
   private isPointerOverUi(pointer: Phaser.Input.Pointer): boolean {
@@ -2770,8 +2854,30 @@ export class WorldScene extends Phaser.Scene {
 
   private openExitPortal(): void {
     this.portalMarker?.destroy(true);
-    const p = snapToTile(this.player.worldX, this.player.worldY - 1.5);
-    this.portalMarker = this.makeMarker(p.x, p.y, 0x4db6ff, 'Exit · R');
+    const layer = this.shiftSystem.layer;
+    const point = pickExitPortalPoint({
+      preferred: this.bossAnchor,
+      fallback: {
+        x: this.player.worldX,
+        y: this.player.worldY - 1.5,
+      },
+      isWalkable: (tx, ty) => {
+        if (!this.dungeon) return true;
+        return isWalkableOnLayer(
+          this.dungeon.cells,
+          this.dungeon.layerGates,
+          tx,
+          ty,
+          layer,
+        );
+      },
+    });
+    const p = snapToTile(point.x, point.y);
+    this.portalMarker = this.makeExitPortal(p.x, p.y);
+    audioBus.portalExit();
+    playPortalReveal(this, p.x, p.y);
+    this.safeCameraFlash(180, 70, 150, 230);
+    this.emitMapSnapshot();
   }
 
   private emitRiftProgress(): void {
@@ -3229,6 +3335,7 @@ export class WorldScene extends Phaser.Scene {
   }
 
   private tryPortal(): void {
+    if (this.zoneBusy) return;
     if (!this.portalMarker) {
       if (gameState.inRift && !this.riftBossDead) {
         gameEvents.emit('ui:toast', {
@@ -3259,31 +3366,37 @@ export class WorldScene extends Phaser.Scene {
       }
       gameState.inRift = true;
       gameState.riftSeed = (Date.now() ^ (Math.random() * 1e9)) >>> 0;
-      this.loadZone(true);
-      gameEvents.emit(Events.RIFT_ENTERED, {
-        seed: gameState.riftSeed,
-        depth: this.riftDepth,
+      audioBus.portalEnter();
+      this.runZoneTransition('enter', () => {
+        this.loadZone(true);
+        gameEvents.emit(Events.RIFT_ENTERED, {
+          seed: gameState.riftSeed,
+          depth: this.riftDepth,
+        });
+        gameEvents.emit('ui:toast', {
+          text: riftEnterToastText({
+            depthLabel: riftDepthLabel(this.riftDepth),
+            modName: this.riftMod.name,
+            modBlurb: this.riftMod.blurb,
+            ruleName:
+              this.depthRule.id === 'none' ? undefined : this.depthRule.name,
+            ruleBlurb:
+              this.depthRule.id === 'none' ? undefined : this.depthRule.blurb,
+            biomeName: this.dungeon?.biome.name,
+          }),
+        });
+        this.emitRiftProgress();
+        gameState.persist();
       });
-      gameEvents.emit('ui:toast', {
-        text: riftEnterToastText({
-          depthLabel: riftDepthLabel(this.riftDepth),
-          modName: this.riftMod.name,
-          modBlurb: this.riftMod.blurb,
-          ruleName:
-            this.depthRule.id === 'none' ? undefined : this.depthRule.name,
-          ruleBlurb:
-            this.depthRule.id === 'none' ? undefined : this.depthRule.blurb,
-          biomeName: this.dungeon?.biome.name,
-        }),
-      });
-      this.emitRiftProgress();
-    } else if (this.riftBossDead) {
-      this.returnToTown(true);
-    } else {
-      gameEvents.emit('ui:toast', {
-        text: 'Defeat the boss to open the Exit (B abandons)',
-      });
+      return;
     }
+    if (this.riftBossDead) {
+      this.returnToTown(true);
+      return;
+    }
+    gameEvents.emit('ui:toast', {
+      text: 'Defeat the boss to open the Exit (B abandons)',
+    });
     gameState.persist();
   }
 
