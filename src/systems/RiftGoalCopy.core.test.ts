@@ -24,6 +24,18 @@ describe('RiftGoalCopy', () => {
     );
   });
 
+  test('enter toast appends a depth rule when present', () => {
+    const text = riftEnterToastText({
+      depthLabel: 'Depth 7',
+      modName: 'Dense Packs',
+      modBlurb: 'More foes in every room.',
+      ruleName: 'Relentless Tide',
+      ruleBlurb: 'Packs swell and chase harder.',
+    });
+    expect(text).toContain('Relentless Tide');
+    expect(text).toContain('Packs swell');
+  });
+
   test('veil toast names the lock layer and shift bind', () => {
     const text = veiledWrongLayerToast({
       modName: 'Ashen Veil',

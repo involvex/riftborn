@@ -61,3 +61,50 @@ describe('BountySystem shrine', () => {
     expect(b.statusLine()).toBeNull();
   });
 });
+
+describe('BountySystem forge contract', () => {
+  test('forge pays a craft-sink item and persists', () => {
+    const b = new BountySystem();
+    b.load({
+      bounty: {
+        kind: 'forge',
+        label: 'Forge contract — cull for Bram',
+        target: 2,
+        progress: 0,
+        rewardGold: 25,
+        rewardXp: 35,
+        rewardItemId: 'crystal_lens',
+      },
+      lastKind: 'cull',
+      cooldownLeft: 0,
+    });
+    expect(b.noteWildernessKill()).toBeNull();
+    const done = b.noteWildernessKill();
+    expect(done?.kind).toBe('forge');
+    expect(done?.rewardItemId).toBe('crystal_lens');
+    expect(b.statusLine()).toBeNull();
+  });
+
+  test('forge contract survives toSave/load with rewardItemId', () => {
+    const b = new BountySystem();
+    b.load({
+      bounty: {
+        kind: 'forge',
+        label: 'Forge contract — cull for Bram',
+        target: 10,
+        progress: 3,
+        rewardGold: 25,
+        rewardXp: 35,
+        rewardItemId: 'grove_tonic',
+      },
+      lastKind: 'scout',
+      cooldownLeft: 0,
+    });
+    const slice = b.toSave();
+    const b2 = new BountySystem();
+    b2.load(slice);
+    expect(b2.active?.kind).toBe('forge');
+    expect(b2.active?.rewardItemId).toBe('grove_tonic');
+    expect(b2.active?.progress).toBe(3);
+  });
+});

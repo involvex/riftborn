@@ -93,12 +93,14 @@ import {
 import classesData from '../data/classes.json';
 import {
   clampLootTier,
+  depthRuleFor,
   earlyBiomeBossDmgMult,
   earlyBiomeBossHpMult,
   riftDepthFromLevel,
   riftDepthLabel,
   riftLootTierBump,
   riftPackBonus,
+  type DepthRule,
 } from '../systems/RiftDepth';
 import {
   getRiftModifier,
@@ -217,6 +219,7 @@ export class WorldScene extends Phaser.Scene {
   private lifeKills = 0;
   private deathPending = false;
   private riftMod: RiftModifier = getRiftModifier('none');
+  private depthRule: DepthRule = depthRuleFor(1);
   private bossAnchor: { x: number; y: number } | null = null;
   private hubLayout: ZoneLayout | null = null;
   /** POI ambushes already triggered this visit. */
@@ -717,6 +720,7 @@ export class WorldScene extends Phaser.Scene {
       const seed = gameState.riftSeed ?? Date.now();
       this.riftDepth = riftDepthFromLevel(gameState.progression.level);
       this.riftMod = rollRiftModifierForDepth(this.riftDepth);
+      this.depthRule = depthRuleFor(this.riftDepth);
       this.dungeon = generateDungeon(seed, this.riftDepth);
       this.player.maxX = this.dungeon.width - 1.5;
       this.player.maxY = this.dungeon.height - 1.5;
@@ -744,6 +748,7 @@ export class WorldScene extends Phaser.Scene {
     } else {
       this.dungeon = null;
       this.riftMod = getRiftModifier('none');
+      this.depthRule = depthRuleFor(1);
       this.hubLayout = generateHub(42);
       this.hubSize = this.hubLayout.size ?? DEFAULT_HUB_SIZE;
       this.player.maxX = this.hubSize - 0.5;
@@ -934,7 +939,9 @@ export class WorldScene extends Phaser.Scene {
       const isSupport = pack.enemyId === 'rift_mender';
       const count =
         pack.count +
-        (gameState.inRift && !isSupport ? this.riftMod.packCountBonus : 0);
+        (gameState.inRift && !isSupport
+          ? this.riftMod.packCountBonus + this.depthRule.packCountBonus
+          : 0);
       for (let i = 0; i < count; i++) {
         let p = snapToTile(pack.x, pack.y);
         if (!gameState.inRift) {
@@ -962,9 +969,15 @@ export class WorldScene extends Phaser.Scene {
           {
             elitePack: gameState.inRift ? elitePack : false,
             levelScale: gameState.progression.level,
-            hpMult: gameState.inRift ? this.riftMod.hpMult : 1,
-            dmgMult: gameState.inRift ? this.riftMod.dmgMult : 1,
-            speedMult: gameState.inRift ? this.riftMod.speedMult : 1,
+            hpMult: gameState.inRift
+              ? this.riftMod.hpMult * this.depthRule.hpMult
+              : 1,
+            dmgMult: gameState.inRift
+              ? this.riftMod.dmgMult * this.depthRule.dmgMult
+              : 1,
+            speedMult: gameState.inRift
+              ? this.riftMod.speedMult * this.depthRule.speedMult
+              : 1,
           },
         );
         const layerLock = gameState.inRift
@@ -1681,13 +1694,17 @@ export class WorldScene extends Phaser.Scene {
           ? 0xd8e8d0
           : biome.id === 'ashen_crypt'
             ? 0xe8d8c0
-            : 0xd8d8d8;
+            : biome.id === 'salt_wastes'
+              ? 0xf0ebe0
+              : 0xd8d8d8;
     const accent =
       biome.id === 'crystal_cavern'
         ? 0x80c0ff
         : biome.id === 'shattered_woods'
           ? 0x80a080
-          : 0x3a6088;
+          : biome.id === 'salt_wastes'
+            ? 0xc8b890
+            : 0x3a6088;
 
     for (let y = 0; y < map.height; y++) {
       for (let x = 0; x < map.width; x++) {
@@ -2460,7 +2477,9 @@ export class WorldScene extends Phaser.Scene {
   private onEnemyKilled(enemy: Enemy): void {
     if (gameState.inRift) this.shiftSystem.onKill();
     const depthBump = gameState.inRift
-      ? riftLootTierBump(this.riftDepth) + this.riftMod.lootBump
+      ? riftLootTierBump(this.riftDepth) +
+        this.riftMod.lootBump +
+        this.depthRule.lootBump
       : 0;
     const tier = clampLootTier(
       (enemy.def.lootTier ?? 2) +
@@ -2468,8 +2487,11 @@ export class WorldScene extends Phaser.Scene {
         (enemy.isBoss ? 1 : 0) +
         depthBump,
     );
-    if (gameState.inRift && this.riftMod.goldOnKill > 0) {
-      gameState.inventory.add('gold', this.riftMod.goldOnKill);
+    const goldOnKill = gameState.inRift
+      ? this.riftMod.goldOnKill + this.depthRule.goldOnKill
+      : 0;
+    if (goldOnKill > 0) {
+      gameState.inventory.add('gold', goldOnKill);
     }
     this.grantBiomeMaterial(enemy);
     const scoutKill = enemy.def.id === 'ash_scout';
@@ -2530,6 +2552,8 @@ export class WorldScene extends Phaser.Scene {
         depth: this.riftDepth,
         kills: this.riftKills,
         modName: this.riftMod.name,
+        ruleName:
+          this.depthRule.id === 'none' ? undefined : this.depthRule.name,
         gold: gameState.inventory.count('gold'),
         level: gameState.progression.level,
       });
@@ -2709,6 +2733,7 @@ export class WorldScene extends Phaser.Scene {
       phase,
       depth: this.riftDepth,
       modName: this.riftMod.name,
+      ruleName: this.depthRule.id === 'none' ? undefined : this.depthRule.name,
     });
   }
 
@@ -3016,8 +3041,11 @@ export class WorldScene extends Phaser.Scene {
     if (!b) return;
     audioBus.uiClick();
     gameState.persist();
+    const itemBit = b.rewardItemId
+      ? ` + ${b.rewardItemId.replace(/_/g, ' ')}`
+      : '';
     gameEvents.emit('ui:toast', {
-      text: `Bounty: ${b.label} · reward ${b.rewardGold}g + ${b.rewardXp} XP`,
+      text: `Bounty: ${b.label} · reward ${b.rewardGold}g + ${b.rewardXp} XP${itemBit}`,
     });
   }
 
@@ -3183,6 +3211,10 @@ export class WorldScene extends Phaser.Scene {
           depthLabel: riftDepthLabel(this.riftDepth),
           modName: this.riftMod.name,
           modBlurb: this.riftMod.blurb,
+          ruleName:
+            this.depthRule.id === 'none' ? undefined : this.depthRule.name,
+          ruleBlurb:
+            this.depthRule.id === 'none' ? undefined : this.depthRule.blurb,
         }),
       });
       this.emitRiftProgress();

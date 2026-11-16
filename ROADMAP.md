@@ -14,7 +14,7 @@ Solo evenings, one shippable slice at a time. Prefer **feel → content → syst
 - **SHIFT (Q)** Ash/Shadow layers in rifts; biome mats toast into craft sink
 - **Rift depth 1–10** from level (packs / HP / dmg / loot); Rift Lord + boss chest
 - Death flash/shake + rarity loot sting; **3 character slots** on boot
-- Plaza **Bounty Board** (scout / chests / cull / shrine / bramble)
+- Plaza **Bounty Board** (scout / chests / cull / shrine / bramble / **forge contract**)
 - **Rift modifiers** (Dense / Glass / Gilded)
 - **Nix** material / repair trader (supplies, mat buyback, patch-up)
 - **Bounties persist** across reload (active + board cooldown)
@@ -27,28 +27,33 @@ Solo evenings, one shippable slice at a time. Prefer **feel → content → syst
 - **A1b jam audio** — ChipTone-style SFX + hub/combat loops (CC0 synth)
 - Game Off itch pack (`docs/ITCH_PAGE.md`, `bun run build:itch`)
 - **Co-op Fix-light** — hub sandbox clamps/spawns on full **64×64** (`clampHubCoord`)
-- Biome craft sinks: **Ashen Charm / Crystal Lens / Grove Tonic**
+- Biome craft sinks: **Ashen Charm / Crystal Lens / Grove Tonic / Salt Charm**
 - Hub elite **Ash Bramble** (grove); also in shattered_woods rift mix
 - Inventory **drag-to-equip** (desktop); double-click / double-tap still work
 - Craft / bounty / shrine **SFX juice**
 - CI: typecheck + lint + format + unit + smoke (`.github/workflows/ci.yml`)
+- **Depth rules** D4 Hardened / D7 Relentless / D10 Apex (stack on rift mods + HUD)
+- **Forge contract** bounty pays a craft-sink item (ashen/crystal/grove)
+- Fourth rift biome **Salzwüste** (`salt_wastes`) + **Salt Warden** + salt shard craft sink
+- **One passive per class** (Iron Will / Rift Attunement / Arcane Reservoir)
 
 ## Next — post-jam
 
-| #   | Slice               | Why it matters                  | Done when                                 |
-| --- | ------------------- | ------------------------------- | ----------------------------------------- |
-| 1   | **Friend feedback** | One external playtest complaint | Next evening fixes that **one** item only |
+| #   | Slice               | Why it matters                       | Done when                                       |
+| --- | ------------------- | ------------------------------------ | ----------------------------------------------- |
+| —   | **Friend feedback** | _(skipped — no external playtester)_ | Resume when a friend can give one top complaint |
 
-**Playtest slot:** share a build (`SHARE.md`), ask for **one** top complaint, put that complaint in this table as #1 for the next session — do not invent extras the same night.
+Skip inventing new frameworks — extend `MapGen` / `WorldScene` /
+`SaveStore` / NPCs / `server/index.ts` / `src/data/*`.
 
-Skip inventing new frameworks — extend `MapGen` / `WorldScene` / `SaveStore` / NPCs / `server/index.ts` / `src/data/*`.
+## Later (parked — until the solo loop is repeatable)
 
-## Later (parked)
-
+- Co-op rifts + authoritative loot / gear sync (hub sandbox stays prototype)
+- Full rift progress across reload (`HubResume` boots hub on purpose today)
+- True 8-dir facing + dedicated hit/death frames (screen-X flip + fade now)
 - App Store packaging for Expo shell
-- Authoritative co-op loot / gear sync / rift co-op (beyond Fix-light)
 - Seasons, trading, seamless open world
-- Full new painted attack sheets (needs art time; VFX covers the gap for now)
+- `GraphicsQuality` `renderScale: 0.65` remains a probe until a device breaks Low juice caps
 
 ## Pace guide (solo)
 

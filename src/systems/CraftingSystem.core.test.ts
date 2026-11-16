@@ -42,7 +42,7 @@ describe('recipes data', () => {
     expect(mailMats).toContain('grove_sap');
   });
 
-  test('biome mat craft sinks exist for bone, crystal, and sap', () => {
+  test('biome mat craft sinks exist for bone, crystal, sap, and salt', () => {
     expect(recipes['ashen_charm']!.ingredients.map((i) => i.itemId)).toContain(
       'ashen_bone',
     );
@@ -51,6 +51,9 @@ describe('recipes data', () => {
     );
     expect(recipes['grove_tonic']!.ingredients.map((i) => i.itemId)).toContain(
       'grove_sap',
+    );
+    expect(recipes['salt_charm']!.ingredients.map((i) => i.itemId)).toContain(
+      'salt_shard',
     );
   });
 });

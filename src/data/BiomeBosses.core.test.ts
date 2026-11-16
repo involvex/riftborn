@@ -4,6 +4,7 @@ import {
   ASHEN_CRYPT_BIOME,
   CRYSTAL_CAVERN_BIOME,
   RIFT_BIOMES,
+  SALT_WASTES_BIOME,
   SHATTERED_WOODS_BIOME,
 } from './biomes';
 import { generateDungeon } from '../world/DungeonGen';
@@ -26,7 +27,12 @@ describe('biome bosses (P2)', () => {
   });
 
   test('biome bosses reuse existing sheets (no new art)', () => {
-    for (const bossId of ['rift_lord', 'crystal_lord', 'grove_alpha']) {
+    for (const bossId of [
+      'rift_lord',
+      'crystal_lord',
+      'grove_alpha',
+      'salt_warden',
+    ]) {
       const key = enemySpriteKey(bossId);
       expect(key).not.toBe('spr_shade');
       expect(key).toMatch(/^spr_/);
@@ -37,11 +43,13 @@ describe('biome bosses (P2)', () => {
     expect(ASHEN_CRYPT_BIOME.bossId).toBe('rift_lord');
     expect(CRYSTAL_CAVERN_BIOME.bossId).toBe('crystal_lord');
     expect(SHATTERED_WOODS_BIOME.bossId).toBe('grove_alpha');
+    expect(SALT_WASTES_BIOME.bossId).toBe('salt_warden');
   });
 
   test('new boss defs are visible on both shift layers', () => {
     expect(ENEMY_SHIFT_LAYER.crystal_lord).toBe('both');
     expect(ENEMY_SHIFT_LAYER.grove_alpha).toBe('both');
+    expect(ENEMY_SHIFT_LAYER.salt_warden).toBe('both');
   });
 
   test('generated rifts carry the biome boss id', () => {

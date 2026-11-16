@@ -13,12 +13,14 @@ export type EnemyId =
   | 'rift_lord'
   | 'crystal_lord'
   | 'grove_alpha'
+  | 'salt_warden'
   | 'enemy_rift_goblin'
   | 'enemy_shadow_wolf'
   | 'enemy_bone_archer'
   | 'enemy_rift_wraith';
 
-export type BiomeId = 'ashen_crypt' | 'crystal_cavern' | 'shattered_woods';
+export type BiomeId =
+  'ashen_crypt' | 'crystal_cavern' | 'shattered_woods' | 'salt_wastes';
 
 export type BiomeEnemyMixEntry = {
   enemyId: EnemyId | string;
@@ -166,10 +168,42 @@ export const SHATTERED_WOODS_BIOME: BiomeDef = {
   decorRules: ['natural_flow', 'totems_at_junctions', 'broken_ground'],
 };
 
+export const SALT_WASTES_BIOME: BiomeDef = {
+  id: 'salt_wastes',
+  name: 'Salzwüste',
+  bossId: 'salt_warden',
+  lootMaterial: 'salt_shard',
+  tileWeights: {
+    tile_dungeon_0: 0.55,
+    tile_dungeon_1: 0.3,
+    tile_dungeon_2: 0.15,
+  },
+  propWeights: {
+    rock: 0.35,
+    rubble: 0.25,
+    pillar: 0.15,
+    crate: 0.1,
+    lantern: 0.08,
+    totem: 0.07,
+  },
+  propsPer10x10: { min: 4, max: 7 },
+  enemyMix: [
+    { enemyId: 'enemy_bone_archer', weight: 0.3, minCount: 2, maxCount: 3 },
+    { enemyId: 'enemy_rift_goblin', weight: 0.3, minCount: 2, maxCount: 4 },
+    { enemyId: 'shade', weight: 0.25, minCount: 2, maxCount: 3 },
+    { enemyId: 'wisp', weight: 0.15, minCount: 1, maxCount: 2 },
+    { enemyId: 'enemy_rift_wraith', weight: 0.12, minCount: 1, maxCount: 2 },
+    { enemyId: 'rift_mender', weight: 0.1, minCount: 1, maxCount: 1 },
+  ],
+  roomTypeRules: ['wide_flats', 'eroded_halls', 'salt_ridges', 'boss_basin'],
+  decorRules: ['sparse_props', 'bleached_stone', 'open_sightlines'],
+};
+
 export const RIFT_BIOMES: readonly BiomeDef[] = [
   ASHEN_CRYPT_BIOME,
   CRYSTAL_CAVERN_BIOME,
   SHATTERED_WOODS_BIOME,
+  SALT_WASTES_BIOME,
 ];
 
 /** Stable biome pick for a seed+depth pair. */

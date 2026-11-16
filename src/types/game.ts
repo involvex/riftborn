@@ -156,7 +156,8 @@ export type AbilityKind =
   | 'leap'
   | 'bolt'
   | 'barrier'
-  | 'chain';
+  | 'chain'
+  | 'passive';
 
 export type AbilityDef = {
   id: string;

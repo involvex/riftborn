@@ -78,6 +78,18 @@ function stackIconId(itemId: string): ItemIconId | null {
       return 'armor';
     case 'rift_mail':
       return 'armor_rare';
+    case 'salt_shard':
+    case 'salt_charm':
+      return 'gem_green';
+    case 'ashen_charm':
+    case 'ashen_bone':
+      return 'tome';
+    case 'crystal_lens':
+    case 'rift_crystal':
+      return 'gem_blue';
+    case 'grove_tonic':
+    case 'grove_sap':
+      return 'potion_green';
     default:
       return null;
   }
@@ -265,6 +277,27 @@ function drawStackFallback(
         cy + s * 0.15,
         cx - s * 0.62,
         cy + s * 0.15,
+      );
+      break;
+    case 'salt_shard':
+    case 'salt_charm':
+      g.fillStyle(0xe8e4d8, 1);
+      g.fillTriangle(
+        cx,
+        cy - s * 1.0,
+        cx + s * 0.75,
+        cy + s * 0.85,
+        cx - s * 0.75,
+        cy + s * 0.85,
+      );
+      g.fillStyle(0xffffff, 0.85);
+      g.fillTriangle(
+        cx,
+        cy - s * 1.0,
+        cx + s * 0.28,
+        cy + s * 0.05,
+        cx - s * 0.2,
+        cy + s * 0.05,
       );
       break;
     default:
