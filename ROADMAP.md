@@ -46,6 +46,7 @@ Solo evenings, one shippable slice at a time. Prefer **feel → content → syst
 - **Boss signature beats** — Ash hop / Crystal wail / Grove charge / Salt volley
 - **Full rift resume** — mid-rift reload restores seed/mod/progress/foes/loot/SHIFT/fog/skill CDs/barrier/shrine buff (`riftRun` v5)
 - **8-dir facing** — screen octant + lean + slash aim; sheets remain 2-dir flipX
+- **Share-ready** — `SHARE.md` + `docs/ITCH_PAGE.md` current loop; co-op hub toasts (`CoopGate`)
 
 ## Done — feel & look (core loop)
 
@@ -90,6 +91,7 @@ Skip inventing new frameworks — extend `MapGen` / `WorldScene` /
 | --- | -------------------- | ----------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
 | ✓   | **Full rift resume** | Reload mid-rift wiped the run | Shipped: `riftRun` v5 snapshot (seed/mod/foes/loot/SHIFT/fog/skill CDs/barrier/shrine buff); HubResume plaza only if blob corrupt |
 | ✓   | **8-dir facing**     | Only screen-X flip read flat  | Shipped: octant + lean + slash aim vector; sheets still 2-dir flip (hit/death frames already derived)                             |
+| ✓   | **Share-ready**      | Friend build + copy stale     | Shipped: SHARE + itch copy (resume/biomes/sets/co-op); leave/connect hub toasts                                                   |
 
 ## Pace guide (solo)
 

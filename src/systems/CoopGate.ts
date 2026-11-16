@@ -21,3 +21,12 @@ export function coopWelcomeToast(host: boolean): string {
   const role = host ? 'Hosting' : 'Joined';
   return `${role} co-op hub sandbox 64×64 (prototype — no rifts)`;
 }
+
+/** Leave / disconnect copy — keep hub-only expectation clear. */
+export function coopLeftToast(): string {
+  return 'Left co-op hub sandbox';
+}
+
+export function coopConnectingToast(url: string): string {
+  return `Connecting hub co-op… ${url}`;
+}

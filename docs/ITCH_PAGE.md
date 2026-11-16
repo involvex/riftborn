@@ -11,21 +11,24 @@ Shadow layers mid-rift, phase through foes, open layer gates, clear the boss.
 ## Full description
 
 **Riftborn** is a Diablo-leaning isometric ARPG: safe hub town, wilderness
-POIs, and procedural rifts.
+POIs, and procedural rifts across four biomes.
 
 **Theme — SHIFT:** Kills fill shift energy. Press **Q** (or the SHIFT button
-on touch) to swap between **Asche** and **Schatten**. Enemies on the other
+on touch) to swap between **Ash** and **Shadow**. Enemies on the other
 layer cannot hurt you — and you cannot hurt them. Layer-locked gates need
-the matching world. Rift goal: **Kill → Boss → Exit**.
+the matching world. Rift goal: **Kill packs → Boss → Exit portal**.
 
 **Play loop (10–20 min):** explore town → enter the Obelisk (**R**) → clear
-packs → slay the Rift Lord → take the Exit → sell/craft biom materials at
-the bench (**F**).
+packs → slay the Rift Lord → take the Exit → sell/craft biome materials at
+the bench (**F**). Mid-rift reloads **resume** the same run (seed, foes,
+loot, SHIFT, skill CDs).
 
-**Classes:** Warrior, Mystic, Mage — four active abilities each (keys 1–4).
+**Classes:** Warrior, Mystic, Mage — four active abilities each (keys 1–4)
+plus one passive. Depth **D1–D10** scales packs/HP/loot; random rift mods
+(Dense / Glass / Gilded). Chase class armor sets via HUD “need X” hints.
 
-**Also:** set gear, bounties, Mira/Nix vendors, fog map, optional local co-op
-prototype (**P** — hub sandbox only).
+**Also:** bounties, Mira/Nix vendors, fog map, set gear, optional local
+co-op prototype (**P** — hub sandbox only, no rifts).
 
 ### Controls
 
@@ -39,6 +42,7 @@ prototype (**P** — hub sandbox only).
 | R               | Rift portal                   |
 | B               | Town                          |
 | F               | Craft at bench                |
+| P               | Co-op hub sandbox (prototype) |
 | I / M / K / Esc | Bag / Map / Skills / Settings |
 
 Touch: stick · ATK · E · DASH · SHIFT · abilities.
@@ -63,3 +67,4 @@ Touch: stick · ATK · E · DASH · SHIFT · abilities.
 
 - Source: https://github.com/involvex/riftborn
 - Play (Pages): https://involvex.github.io/riftborn/play/
+- Share kit (builds + friend ask): `SHARE.md` in the repo

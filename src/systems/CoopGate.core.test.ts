@@ -1,7 +1,9 @@
 import { describe, expect, test } from 'bun:test';
 import {
   COOP_PROTOTYPE,
+  coopConnectingToast,
   coopJoinBlockedReason,
+  coopLeftToast,
   coopRiftBlockedReason,
   coopWelcomeToast,
 } from './CoopGate';
@@ -25,5 +27,13 @@ describe('CoopGate', () => {
     expect(coopWelcomeToast(true)).toContain('prototype');
     expect(coopWelcomeToast(false)).toContain('hub sandbox');
     expect(coopWelcomeToast(true)).toContain('64');
+  });
+
+  test('leave/connect toasts stay hub-prototype clear', () => {
+    expect(coopLeftToast()).toMatch(/hub sandbox/i);
+    expect(coopConnectingToast('ws://localhost:8787')).toMatch(/hub co-op/i);
+    expect(coopConnectingToast('ws://localhost:8787')).toContain(
+      'ws://localhost:8787',
+    );
   });
 });

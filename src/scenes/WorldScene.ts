@@ -136,7 +136,9 @@ import {
   veiledWrongLayerToast,
 } from '../systems/RiftGoalCopy';
 import {
+  coopConnectingToast,
   coopJoinBlockedReason,
+  coopLeftToast,
   coopRiftBlockedReason,
   coopWelcomeToast,
 } from '../systems/CoopGate';
@@ -3892,7 +3894,7 @@ export class WorldScene extends Phaser.Scene {
   private toggleCoop(): void {
     if (netClient.connected) {
       netClient.requestLeave();
-      gameEvents.emit('ui:toast', { text: 'Left co-op session' });
+      gameEvents.emit('ui:toast', { text: coopLeftToast() });
       this.unsubNet?.();
       this.unsubNet = null;
       for (const g of this.remoteGhosts.values()) g.destroy(true);
@@ -3927,7 +3929,7 @@ export class WorldScene extends Phaser.Scene {
     });
     void netClient.resolveUrl().then((url) => {
       netClient.connect(url);
-      gameEvents.emit('ui:toast', { text: `Connecting to ${url} …` });
+      gameEvents.emit('ui:toast', { text: coopConnectingToast(url) });
     });
   }
 
