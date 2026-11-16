@@ -19,12 +19,13 @@ type SlotMeta = { activeSlot: number };
 
 type LegacySave = Omit<
   CharacterSave,
-  'version' | 'unspentSkillPoints' | 'skillRanks' | 'gender'
+  'version' | 'unspentSkillPoints' | 'skillRanks' | 'gender' | 'riftRun'
 > & {
   version: number;
   gender?: CharacterSave['gender'];
   unspentSkillPoints?: number;
   skillRanks?: Record<string, number>;
+  riftRun?: CharacterSave['riftRun'];
 };
 
 function readMeta(): SlotMeta {
@@ -53,7 +54,7 @@ function writeMeta(meta: SlotMeta): void {
 function migrateLegacy(old: LegacySave): CharacterSave {
   const level = old.level ?? 1;
   return {
-    version: 4,
+    version: 5,
     name: old.name,
     classId: old.classId,
     gender: old.gender ?? 'male',
@@ -76,7 +77,52 @@ function migrateLegacy(old: LegacySave): CharacterSave {
     bountyLastKind: null,
     bountyCooldownLeft: 0,
     hubExplored: null,
+    riftRun: null,
   };
+}
+
+/** v4 (and loose) saves → v5 with optional riftRun. */
+export function migrateCharacterSave(
+  raw: LegacySave | CharacterSave,
+): CharacterSave | null {
+  if (!raw || typeof raw !== 'object') return null;
+  if (raw.version === 5) {
+    return {
+      ...(raw as CharacterSave),
+      riftRun: (raw as CharacterSave).riftRun ?? null,
+    };
+  }
+  if (raw.version === 4) {
+    const v4 = raw as LegacySave;
+    return {
+      version: 5,
+      name: v4.name,
+      classId: v4.classId,
+      gender: v4.gender ?? 'male',
+      level: v4.level,
+      xp: v4.xp,
+      unspentStatPoints: v4.unspentStatPoints,
+      unspentSkillPoints: v4.unspentSkillPoints ?? 0,
+      skillRanks: v4.skillRanks ?? {},
+      stats: v4.stats,
+      hp: v4.hp,
+      maxHp: v4.maxHp,
+      inventory: v4.inventory,
+      equipment: v4.equipment,
+      worldX: v4.worldX,
+      worldY: v4.worldY,
+      inRift: v4.inRift,
+      riftSeed: v4.riftSeed,
+      playTimeSec: v4.playTimeSec,
+      bounty: v4.bounty ?? null,
+      bountyLastKind: v4.bountyLastKind ?? null,
+      bountyCooldownLeft: v4.bountyCooldownLeft ?? 0,
+      hubExplored: v4.hubExplored ?? null,
+      riftRun: null,
+    };
+  }
+  if (raw.version < 4) return migrateLegacy(raw as LegacySave);
+  return null;
 }
 
 /** Pull pre-slot saves into slot 0 once. */
@@ -87,10 +133,8 @@ function migrateSingleIntoSlots(): void {
     if (!raw) continue;
     try {
       const old = JSON.parse(raw) as LegacySave | CharacterSave;
-      const data =
-        old.version === 4
-          ? (old as CharacterSave)
-          : migrateLegacy(old as LegacySave);
+      const data = migrateCharacterSave(old);
+      if (!data) continue;
       localStorage.setItem(slotKey(0), JSON.stringify(data));
       writeMeta({ activeSlot: 0 });
       localStorage.removeItem(key);
@@ -133,9 +177,8 @@ export class LocalSaveStore implements SaveStore {
     try {
       const raw = localStorage.getItem(slotKey(index));
       if (!raw) return null;
-      const data = JSON.parse(raw) as CharacterSave;
-      if (data.version === 4) return data;
-      return null;
+      const data = JSON.parse(raw) as LegacySave | CharacterSave;
+      return migrateCharacterSave(data);
     } catch {
       return null;
     }

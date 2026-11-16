@@ -5,7 +5,7 @@ import type {
   CharacterGender,
   GearInstance,
 } from '../types/game';
-import type { CharacterSave } from '../types/save';
+import type { CharacterSave, RiftRunSave } from '../types/save';
 import { CombatSystem } from './CombatSystem';
 import { CraftingSystem } from './CraftingSystem';
 import { GatheringSystem } from './GatheringSystem';
@@ -17,6 +17,7 @@ import { ShopSystem } from './ShopSystem';
 import { SkillSystem } from './SkillSystem';
 import { TraderSystem } from './TraderSystem';
 import { HUB_RESUME_SPAWN, hubResumeFromSave } from './HubResume';
+import { parseRiftRun } from './RiftRunPersist';
 
 export class GameState {
   readonly inventory = new InventorySystem();
@@ -37,6 +38,10 @@ export class GameState {
   worldY = HUB_RESUME_SPAWN.y;
   inRift = false;
   riftSeed: number | null = null;
+  /** Mid-rift living snapshot; null in town. */
+  riftRun: RiftRunSave | null = null;
+  /** Set when applySave resumed into a rift (one-shot toast). */
+  pendingRiftResumeToast = false;
   playTimeSec = 0;
   /** Base64 hub fog; null until first explore persist. */
   hubExplored: string | null = null;
@@ -73,11 +78,19 @@ export class GameState {
     this.worldY = 33.5;
     this.inRift = false;
     this.riftSeed = null;
+    this.riftRun = null;
+    this.pendingRiftResumeToast = false;
     this.playTimeSec = 0;
     this.hubExplored = null;
     this.pendingSessionToken = null;
     this.bounties.load(null);
     this.persist();
+  }
+
+  clearRiftRun(): void {
+    this.riftRun = null;
+    this.riftSeed = null;
+    this.inRift = false;
   }
 
   tryLoad(): boolean {
@@ -105,11 +118,20 @@ export class GameState {
     this.inventory.load(data.inventory, data.equipment);
     this.recalcMaxHp();
     this.hp = Math.min(data.hp, this.maxHp);
-    const resume = hubResumeFromSave(data);
+    const parsedRun = parseRiftRun(data.riftRun ?? null);
+    const resume = hubResumeFromSave({
+      inRift: data.inRift,
+      worldX: data.worldX,
+      worldY: data.worldY,
+      riftSeed: data.riftSeed,
+      riftRun: parsedRun,
+    });
     this.worldX = resume.worldX;
     this.worldY = resume.worldY;
     this.inRift = resume.inRift;
     this.riftSeed = resume.riftSeed;
+    this.riftRun = resume.riftRun;
+    this.pendingRiftResumeToast = resume.resumedRift;
     this.playTimeSec = data.playTimeSec;
     this.hubExplored = data.hubExplored ?? null;
     this.bounties.load({
@@ -122,7 +144,7 @@ export class GameState {
   toSave(): CharacterSave {
     const bountySlice = this.bounties.toSave();
     return {
-      version: 4,
+      version: 5,
       name: this.name,
       classId: this.progression.classId,
       gender: this.gender,
@@ -166,6 +188,7 @@ export class GameState {
       bountyLastKind: bountySlice.lastKind,
       bountyCooldownLeft: bountySlice.cooldownLeft,
       hubExplored: this.hubExplored,
+      riftRun: this.riftRun,
     };
   }
 

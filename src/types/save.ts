@@ -1,9 +1,48 @@
+import type { ShiftLayerId } from '../data/shiftLayers';
+import type { RiftModifierId } from '../systems/RiftModifiers';
 import type {
   CharacterClassId,
   CharacterGender,
   GearInstance,
+  LootTier,
   PlayerStats,
 } from './game';
+
+export type RiftRunEnemySave = {
+  defId: string;
+  x: number;
+  y: number;
+  hp: number;
+  elitePack: boolean;
+  boss: boolean;
+  combatLayer: ShiftLayerId | 'both';
+};
+
+/** Mid-rift snapshot — geometry regenerates from seed; living state from here. */
+export type RiftRunSave = {
+  seed: number;
+  depth: number;
+  modId: RiftModifierId;
+  kills: number;
+  bossSpawned: boolean;
+  bossDead: boolean;
+  cleared: boolean;
+  shiftLayer: ShiftLayerId;
+  shiftEnergy: number;
+  shiftCooldownLeft: number;
+  /** Rift fog bit-pack (same encoding as hubExplored). */
+  explored: string | null;
+  enemies: RiftRunEnemySave[];
+  groundLoot: { x: number; y: number; item: GearInstance }[];
+  bossChest: {
+    x: number;
+    y: number;
+    looted: boolean;
+    lootTier: LootTier;
+  } | null;
+  /** Resource nodes still in the run (id = defId). */
+  nodes: { id: string; x: number; y: number; hp: number }[];
+};
 
 export type BountyKind =
   'scout' | 'chests' | 'cull' | 'shrine' | 'bramble' | 'forge';
@@ -42,7 +81,7 @@ export type EquipmentSlots = {
 };
 
 export type CharacterSave = {
-  version: 4;
+  version: 5;
   name: string;
   classId: CharacterClassId;
   gender: CharacterGender;
@@ -69,7 +108,8 @@ export type CharacterSave = {
   bountyCooldownLeft?: number;
   /**
    * Hub fog of war — base64 bit-pack of explored tiles (hub size²).
-   * Rift fog is per-run and not saved.
    */
   hubExplored?: string | null;
+  /** Mid-rift living state; null when in town. */
+  riftRun?: RiftRunSave | null;
 };

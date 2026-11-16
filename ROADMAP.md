@@ -44,6 +44,7 @@ Solo evenings, one shippable slice at a time. Prefer **feel → content → syst
 - **Boss arena beat** — biome wash + phase ring in boss room (idle → boss → exit)
 - **Biome pack identity** — opening packs per biome (grind / kite / rush / poke)
 - **Boss signature beats** — Ash hop / Crystal wail / Grove charge / Salt volley
+- **Full rift resume** — mid-rift reload restores seed/mod/progress/foes/loot/SHIFT/fog (`riftRun` v5)
 
 ## Done — feel & look (core loop)
 
@@ -77,11 +78,16 @@ Skip inventing new frameworks — extend `MapGen` / `WorldScene` /
 ## Later (parked)
 
 - Co-op rifts + authoritative loot / gear sync (hub sandbox stays prototype)
-- Full rift progress across reload (`HubResume` boots hub on purpose today)
 - True 8-dir facing + dedicated hit/death frames (screen-X flip + fade now)
 - App Store packaging for Expo shell
 - Seasons, trading, seamless open world
 - `GraphicsQuality` `renderScale: 0.65` remains a probe until a device breaks Low juice caps
+
+## Done — systems polish
+
+| #   | Slice                | Why it matters                | Done when                                                                                           |
+| --- | -------------------- | ----------------------------- | --------------------------------------------------------------------------------------------------- |
+| ✓   | **Full rift resume** | Reload mid-rift wiped the run | Shipped: `riftRun` v5 snapshot (seed/mod/foes/loot/SHIFT/fog); HubResume plaza only if blob corrupt |
 
 ## Pace guide (solo)
 

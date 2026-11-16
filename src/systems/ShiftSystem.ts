@@ -98,4 +98,15 @@ export class ShiftSystem {
     this._cooldownLeft = 0;
     this._enabled = true;
   }
+
+  /** Restore mid-rift SHIFT state after zone load (no event). */
+  restoreState(opts: {
+    layer: ShiftLayerId;
+    energy: number;
+    cooldownLeft: number;
+  }): void {
+    this._layer = opts.layer;
+    this._energy = Math.max(0, Math.min(SHIFT_MAX_ENERGY, opts.energy));
+    this._cooldownLeft = Math.max(0, opts.cooldownLeft);
+  }
 }

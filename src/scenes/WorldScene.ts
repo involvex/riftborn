@@ -126,6 +126,11 @@ import {
   type RiftModifier,
 } from '../systems/RiftModifiers';
 import {
+  cloneGearInstance,
+  sanitizeRiftEnemies,
+} from '../systems/RiftRunPersist';
+import type { RiftRunSave } from '../types/save';
+import {
   bossPhaseToastText,
   riftEnterToastText,
   veiledWrongLayerToast,
@@ -335,6 +340,12 @@ export class WorldScene extends Phaser.Scene {
     );
 
     this.loadZone(gameState.inRift);
+    if (gameState.pendingRiftResumeToast) {
+      gameState.pendingRiftResumeToast = false;
+      gameEvents.emit('ui:toast', {
+        text: `Rift resumed · ${riftDepthLabel(this.riftDepth)} · ${this.riftMod.name}`,
+      });
+    }
     this.setupInput();
     this.bindWebglRecovery();
     // Tighter follow on touch — soft lerp reads as input lag
@@ -469,6 +480,8 @@ export class WorldScene extends Phaser.Scene {
     if (gameState.inRift) return true;
     if (coopRiftBlockedReason(netClient.connected)) return false;
     gameState.inRift = true;
+    gameState.riftRun = null;
+    gameState.pendingRiftResumeToast = false;
     // Prefer a seed known to have narrow diagonal corridors (M1e screenshots).
     gameState.riftSeed = 99;
     this.loadZone(true);
@@ -749,6 +762,8 @@ export class WorldScene extends Phaser.Scene {
   private loadZone(rift: boolean): void {
     cancelShiftTransition();
     this.clearEnemyShots();
+    for (const l of this.groundLoot) l.destroy();
+    this.groundLoot = [];
     this.mapCells = null;
     this.mapW = 0;
     this.mapH = 0;
@@ -763,9 +778,17 @@ export class WorldScene extends Phaser.Scene {
     this.bossShift.reset();
     audioBus.playMusic(rift ? 'combat' : 'hub');
     if (rift) {
-      const seed = gameState.riftSeed ?? Date.now();
-      this.riftDepth = riftDepthFromLevel(gameState.progression.level);
-      this.riftMod = rollRiftModifierForDepth(this.riftDepth);
+      const resume =
+        gameState.riftRun && gameState.pendingRiftResumeToast
+          ? gameState.riftRun
+          : null;
+      const seed = resume?.seed ?? gameState.riftSeed ?? Date.now();
+      gameState.riftSeed = seed;
+      this.riftDepth =
+        resume?.depth ?? riftDepthFromLevel(gameState.progression.level);
+      this.riftMod = resume
+        ? getRiftModifier(resume.modId)
+        : rollRiftModifierForDepth(this.riftDepth);
       this.depthRule = depthRuleFor(this.riftDepth);
       this.dungeon = generateDungeon(seed, this.riftDepth);
       this.biomeLookActive = biomeLook(this.dungeon.biome.id);
@@ -785,14 +808,28 @@ export class WorldScene extends Phaser.Scene {
         );
       };
       this.drawDungeonTiles(this.dungeon);
-      const spawn = this.dungeon.layout.spawn;
-      if (spawn) {
-        this.player.worldX = spawn.x;
-        this.player.worldY = spawn.y;
-        gameState.worldX = spawn.x;
-        gameState.worldY = spawn.y;
+      if (resume) {
+        const snapped = snapToTile(gameState.worldX, gameState.worldY);
+        this.player.worldX = snapped.x;
+        this.player.worldY = snapped.y;
+        gameState.worldX = snapped.x;
+        gameState.worldY = snapped.y;
+        this.spawnFromLayout(this.dungeon.layout, {
+          skipPacks: true,
+          skipNodes: true,
+        });
+        this.applyRiftRun(resume);
+      } else {
+        const spawn = this.dungeon.layout.spawn;
+        if (spawn) {
+          this.player.worldX = spawn.x;
+          this.player.worldY = spawn.y;
+          gameState.worldX = spawn.x;
+          gameState.worldY = spawn.y;
+        }
+        this.spawnFromLayout(this.dungeon.layout);
+        this.syncRiftRunToState();
       }
-      this.spawnFromLayout(this.dungeon.layout);
     } else {
       this.dungeon = null;
       this.riftMod = getRiftModifier('none');
@@ -823,6 +860,7 @@ export class WorldScene extends Phaser.Scene {
       gameState.worldX = snapped.x;
       gameState.worldY = snapped.y;
       this.spawnFromLayout(this.hubLayout);
+      gameState.riftRun = null;
     }
     this.player.syncScreen();
     this.applyShiftVisuals(this.shiftSystem.layer);
@@ -956,7 +994,10 @@ export class WorldScene extends Phaser.Scene {
     );
   }
 
-  private spawnFromLayout(layout: ZoneLayout): void {
+  private spawnFromLayout(
+    layout: ZoneLayout,
+    opts: { skipPacks?: boolean; skipNodes?: boolean } = {},
+  ): void {
     for (const n of this.nodes) n.destroy();
     for (const e of this.enemies) e.destroy();
     for (const c of this.chests) c.destroy();
@@ -982,74 +1023,79 @@ export class WorldScene extends Phaser.Scene {
     this.bossAnchor = layout.elite ? { ...layout.elite } : null;
     this.shrineReadyAt = 0;
 
-    for (const n of layout.nodes) {
-      const p = snapToTile(n.x, n.y);
-      this.nodes.push(
-        new ResourceNode(this, `node_${this.nodeSeq++}`, n.defId, p.x, p.y),
-      );
+    if (!opts.skipNodes) {
+      for (const n of layout.nodes) {
+        const p = snapToTile(n.x, n.y);
+        this.nodes.push(
+          new ResourceNode(this, `node_${this.nodeSeq++}`, n.defId, p.x, p.y),
+        );
+      }
     }
 
     // Hub fringe + rifts both use packs; plaza never hosts enemies.
     // Rift packs are already footprint-reachable (RiftEnemyPlacement) —
     // keep them on their tile; hub still jitters around the pack center.
-    for (const pack of layout.packs) {
-      if (!gameState.inRift && inPlaza(pack.x, pack.y)) continue;
-      // Support foes stay lone priority targets — mods never clone them.
-      const isSupport = pack.enemyId === 'rift_mender';
-      const count =
-        pack.count +
-        (gameState.inRift && !isSupport
-          ? this.riftMod.packCountBonus + this.depthRule.packCountBonus
-          : 0);
-      for (let i = 0; i < count; i++) {
-        let p = snapToTile(pack.x, pack.y);
-        if (!gameState.inRift) {
-          const ox = (Math.random() - 0.5) * 1.8;
-          const oy = (Math.random() - 0.5) * 1.8;
-          p = snapToTile(pack.x + ox, pack.y + oy);
-          if (inPlaza(p.x, p.y)) continue;
-        } else if (i > 0) {
-          // Extra mod bonus foes: nudge within the same floor tile family
-          const ox = (Math.random() - 0.5) * 0.6;
-          const oy = (Math.random() - 0.5) * 0.6;
-          const cand = snapToTile(pack.x + ox, pack.y + oy);
-          if (this.player.walkCheck?.(cand.x, cand.y)) p = cand;
+    // Resume path skips packs and restores living foes from riftRun.
+    if (!opts.skipPacks) {
+      for (const pack of layout.packs) {
+        if (!gameState.inRift && inPlaza(pack.x, pack.y)) continue;
+        // Support foes stay lone priority targets — mods never clone them.
+        const isSupport = pack.enemyId === 'rift_mender';
+        const count =
+          pack.count +
+          (gameState.inRift && !isSupport
+            ? this.riftMod.packCountBonus + this.depthRule.packCountBonus
+            : 0);
+        for (let i = 0; i < count; i++) {
+          let p = snapToTile(pack.x, pack.y);
+          if (!gameState.inRift) {
+            const ox = (Math.random() - 0.5) * 1.8;
+            const oy = (Math.random() - 0.5) * 1.8;
+            p = snapToTile(pack.x + ox, pack.y + oy);
+            if (inPlaza(p.x, p.y)) continue;
+          } else if (i > 0) {
+            // Extra mod bonus foes: nudge within the same floor tile family
+            const ox = (Math.random() - 0.5) * 0.6;
+            const oy = (Math.random() - 0.5) * 0.6;
+            const cand = snapToTile(pack.x + ox, pack.y + oy);
+            if (this.player.walkCheck?.(cand.x, cand.y)) p = cand;
+          }
+          const eliteChance = gameState.inRift
+            ? riftPackBonus(this.riftDepth).eliteChance
+            : 0.14;
+          const elitePack = Math.random() < eliteChance;
+          const enemy = new Enemy(
+            this,
+            `enemy_${this.enemySeq++}`,
+            pack.enemyId,
+            p.x,
+            p.y,
+            {
+              elitePack: gameState.inRift ? elitePack : false,
+              levelScale: gameState.progression.level,
+              hpMult: gameState.inRift
+                ? this.riftMod.hpMult * this.depthRule.hpMult
+                : 1,
+              dmgMult: gameState.inRift
+                ? this.riftMod.dmgMult * this.depthRule.dmgMult
+                : 1,
+              speedMult: gameState.inRift
+                ? this.riftMod.speedMult * this.depthRule.speedMult
+                : 1,
+            },
+          );
+          const layerLock = gameState.inRift
+            ? riftModLayerLock(this.riftMod)
+            : null;
+          if (layerLock) enemy.setCombatLayer(layerLock);
+          enemy.maxBound = gameState.inRift
+            ? (this.dungeon?.width ?? 22) - 1.5
+            : this.hubSize - 0.5;
+          if (gameState.inRift) {
+            enemy.syncShiftLayer(this.shiftSystem.layer);
+          }
+          this.enemies.push(enemy);
         }
-        const eliteChance = gameState.inRift
-          ? riftPackBonus(this.riftDepth).eliteChance
-          : 0.14;
-        const elitePack = Math.random() < eliteChance;
-        const enemy = new Enemy(
-          this,
-          `enemy_${this.enemySeq++}`,
-          pack.enemyId,
-          p.x,
-          p.y,
-          {
-            elitePack: gameState.inRift ? elitePack : false,
-            levelScale: gameState.progression.level,
-            hpMult: gameState.inRift
-              ? this.riftMod.hpMult * this.depthRule.hpMult
-              : 1,
-            dmgMult: gameState.inRift
-              ? this.riftMod.dmgMult * this.depthRule.dmgMult
-              : 1,
-            speedMult: gameState.inRift
-              ? this.riftMod.speedMult * this.depthRule.speedMult
-              : 1,
-          },
-        );
-        const layerLock = gameState.inRift
-          ? riftModLayerLock(this.riftMod)
-          : null;
-        if (layerLock) enemy.setCombatLayer(layerLock);
-        enemy.maxBound = gameState.inRift
-          ? (this.dungeon?.width ?? 22) - 1.5
-          : this.hubSize - 0.5;
-        if (gameState.inRift) {
-          enemy.syncShiftLayer(this.shiftSystem.layer);
-        }
-        this.enemies.push(enemy);
       }
     }
 
@@ -2116,7 +2162,7 @@ export class WorldScene extends Phaser.Scene {
     this.saveTimer += dt;
     if (this.saveTimer > 8) {
       this.saveTimer = 0;
-      gameState.persist();
+      this.persistGame();
     }
 
     this.revealFogAroundPlayer();
@@ -2207,6 +2253,11 @@ export class WorldScene extends Phaser.Scene {
           unpackExplored(gameState.hubExplored, width * height),
         );
       }
+    } else if (gameState.riftRun?.explored) {
+      mergeExplored(
+        this.explored,
+        unpackExplored(gameState.riftRun.explored, width * height),
+      );
     }
   }
 
@@ -2444,7 +2495,7 @@ export class WorldScene extends Phaser.Scene {
       gameState.worldX = TOWN_SPAWN.x;
       gameState.worldY = TOWN_SPAWN.y;
       this.player.syncScreen();
-      gameState.persist();
+      this.persistGame();
     }
     this.lifeKills = 0;
     this.deathPending = false;
@@ -2470,14 +2521,13 @@ export class WorldScene extends Phaser.Scene {
       } else if (!silent) {
         gameState.progression.addXp(8);
       }
-      gameState.inRift = false;
-      gameState.riftSeed = null;
+      gameState.clearRiftRun();
       gameState.worldX = TOWN_SPAWN.x;
       gameState.worldY = TOWN_SPAWN.y;
       this.player.worldX = TOWN_SPAWN.x;
       this.player.worldY = TOWN_SPAWN.y;
       this.loadZone(false);
-      gameState.persist();
+      this.persistGame();
       gameEvents.emit(Events.RIFT_CLEARED, {
         cleared: reward && this.riftCleared,
       });
@@ -2750,7 +2800,7 @@ export class WorldScene extends Phaser.Scene {
       else if (brambleKill) gameState.bounties.noteBrambleKill();
       else gameState.bounties.noteWildernessKill();
     }
-    gameState.persist();
+    this.persistGame();
     this.lifeKills += 1;
     if (enemy.isBoss) {
       this.triggerCombatShake('boss');
@@ -2995,7 +3045,7 @@ export class WorldScene extends Phaser.Scene {
     }
   }
 
-  private openExitPortal(): void {
+  private openExitPortal(opts: { silent?: boolean } = {}): void {
     this.portalMarker?.destroy(true);
     const layer = this.shiftSystem.layer;
     const point = pickExitPortalPoint({
@@ -3017,9 +3067,11 @@ export class WorldScene extends Phaser.Scene {
     });
     const p = snapToTile(point.x, point.y);
     this.portalMarker = this.makeExitPortal(p.x, p.y);
-    audioBus.portalExit();
-    playPortalReveal(this, p.x, p.y);
-    this.safeCameraFlash(180, 70, 150, 230);
+    if (!opts.silent) {
+      audioBus.portalExit();
+      playPortalReveal(this, p.x, p.y);
+      this.safeCameraFlash(180, 70, 150, 230);
+    }
     this.paintBossArenaRing('exit');
     this.emitMapSnapshot();
   }
@@ -3043,6 +3095,194 @@ export class WorldScene extends Phaser.Scene {
       modName: this.riftMod.name,
       ruleName: this.depthRule.id === 'none' ? undefined : this.depthRule.name,
     });
+  }
+
+  /** Snapshot living rift state into GameState before disk write. */
+  private syncRiftRunToState(): void {
+    if (!gameState.inRift || !this.dungeon) {
+      gameState.riftRun = null;
+      return;
+    }
+    gameState.riftRun = this.captureRiftRun();
+    gameState.riftSeed = gameState.riftRun.seed;
+  }
+
+  private persistGame(): void {
+    if (this.player) {
+      gameState.worldX = this.player.worldX;
+      gameState.worldY = this.player.worldY;
+    }
+    this.syncRiftRunToState();
+    gameState.persist();
+  }
+
+  private captureRiftRun(): RiftRunSave {
+    const seed = gameState.riftSeed ?? 0;
+    const enemies = sanitizeRiftEnemies(
+      this.enemies
+        .filter((e) => e.alive && e.hp > 0)
+        .map((e) => ({
+          defId: e.def.id,
+          x: e.worldX,
+          y: e.worldY,
+          hp: e.hp,
+          elitePack: e.elitePack,
+          boss: e.isBoss,
+          combatLayer: e.shiftLayer,
+        })),
+    );
+    const groundLoot = this.groundLoot
+      .filter((d) => !d.picked)
+      .map((d) => ({
+        x: d.worldX,
+        y: d.worldY,
+        item: cloneGearInstance(d.item),
+      }));
+    const bossChestEntity = this.chests.find((c) => c.isBossChest) ?? null;
+    const bossChest = bossChestEntity
+      ? {
+          x: bossChestEntity.worldX,
+          y: bossChestEntity.worldY,
+          looted: bossChestEntity.looted,
+          lootTier: bossChestEntity.lootTier,
+        }
+      : null;
+    const nodes = this.nodes
+      .filter((n) => !n.depleted && n.hp > 0)
+      .map((n) => ({
+        id: n.defId,
+        x: n.worldX,
+        y: n.worldY,
+        hp: n.hp,
+      }));
+    const exploredPacked =
+      this.explored.length > 0 ? packExplored(this.explored) : null;
+    return {
+      seed,
+      depth: this.riftDepth,
+      modId: this.riftMod.id,
+      kills: this.riftKills,
+      bossSpawned: this.riftBossSpawned,
+      bossDead: this.riftBossDead,
+      cleared: this.riftCleared,
+      shiftLayer: this.shiftSystem.layer,
+      shiftEnergy: this.shiftSystem.energy,
+      shiftCooldownLeft: this.shiftSystem.cooldownLeft,
+      explored: exploredPacked,
+      enemies,
+      groundLoot,
+      bossChest,
+      nodes,
+    };
+  }
+
+  /** Restore living state after dungeon geometry is built. */
+  private applyRiftRun(run: RiftRunSave): void {
+    this.riftKills = run.kills;
+    this.riftBossSpawned = run.bossSpawned;
+    this.riftBossDead = run.bossDead;
+    this.riftCleared = run.cleared;
+    this.riftBossId = null;
+
+    this.shiftSystem.restoreState({
+      layer: run.shiftLayer,
+      energy: run.shiftEnergy,
+      cooldownLeft: run.shiftCooldownLeft,
+    });
+
+    for (const e of this.enemies) e.destroy();
+    this.enemies = [];
+    const rows = sanitizeRiftEnemies(run.enemies);
+    for (const row of rows) {
+      const p = snapToTile(row.x, row.y);
+      const enemy = new Enemy(
+        this,
+        `enemy_${this.enemySeq++}`,
+        row.defId,
+        p.x,
+        p.y,
+        {
+          elitePack: row.elitePack,
+          boss: row.boss,
+          levelScale: row.boss
+            ? gameState.progression.level + 2 + this.riftDepth
+            : gameState.progression.level,
+          hpMult: row.boss
+            ? earlyBiomeBossHpMult(this.riftDepth, row.defId)
+            : this.riftMod.hpMult * this.depthRule.hpMult,
+          dmgMult: row.boss
+            ? earlyBiomeBossDmgMult(this.riftDepth, row.defId)
+            : this.riftMod.dmgMult * this.depthRule.dmgMult,
+          speedMult: this.riftMod.speedMult * this.depthRule.speedMult,
+        },
+      );
+      enemy.hp = Math.min(row.hp, enemy.maxHp);
+      if (row.combatLayer === 'ash' || row.combatLayer === 'shadow') {
+        enemy.setCombatLayer(row.combatLayer);
+      }
+      enemy.maxBound = (this.dungeon?.width ?? 22) - 1.5;
+      enemy.syncShiftLayer(this.shiftSystem.layer);
+      this.enemies.push(enemy);
+      if (row.boss) {
+        this.riftBossId = enemy.id;
+        this.riftBossDefId = row.defId;
+        this.riftBossSpawned = true;
+      }
+    }
+
+    for (const n of this.nodes) n.destroy();
+    this.nodes = [];
+    for (const row of run.nodes) {
+      if (row.hp <= 0) continue;
+      const p = snapToTile(row.x, row.y);
+      const node = new ResourceNode(
+        this,
+        `node_${this.nodeSeq++}`,
+        row.id,
+        p.x,
+        p.y,
+      );
+      node.hp = Math.min(row.hp, node.maxHp);
+      node.redraw();
+      this.nodes.push(node);
+    }
+
+    for (const c of this.chests) c.destroy();
+    this.chests = [];
+    if (run.bossChest) {
+      const p = snapToTile(run.bossChest.x, run.bossChest.y);
+      const chest = new LootChest(
+        this,
+        `chest_boss_${this.chestSeq++}`,
+        p.x,
+        p.y,
+        run.bossChest.lootTier,
+      );
+      if (run.bossChest.looted) chest.markLooted();
+      this.chests.push(chest);
+    }
+
+    for (const l of this.groundLoot) l.destroy();
+    this.groundLoot = [];
+    for (const drop of run.groundLoot) {
+      this.spawnGearDrop(drop.x, drop.y, cloneGearInstance(drop.item), {
+        silent: true,
+        exact: true,
+      });
+    }
+
+    gameState.riftRun = run;
+    if (run.bossDead) {
+      this.portalMarker?.destroy(true);
+      this.portalMarker = null;
+      this.openExitPortal({ silent: true });
+    } else if (run.bossSpawned) {
+      this.paintBossArenaRing('boss');
+    } else {
+      this.paintBossArenaRing('idle');
+    }
+
+    this.emitRiftProgress();
   }
 
   private tryCastSkill(
@@ -3266,12 +3506,15 @@ export class WorldScene extends Phaser.Scene {
     nearX: number,
     nearY: number,
     item: GearInstance,
+    opts: { silent?: boolean; exact?: boolean } = {},
   ): void {
     const jitter = () => (Math.random() - 0.5) * 0.9;
-    const p = snapToTile(nearX + jitter(), nearY + jitter());
+    const p = opts.exact
+      ? snapToTile(nearX, nearY)
+      : snapToTile(nearX + jitter(), nearY + jitter());
     const drop = new GroundLoot(this, `loot_${this.lootSeq++}`, p.x, p.y, item);
     this.groundLoot.push(drop);
-    this.playLootJuice(item.rarity, p.x, p.y);
+    if (!opts.silent) this.playLootJuice(item.rarity, p.x, p.y);
   }
 
   private tryClickLoot(screenX: number, screenY: number): boolean {
@@ -3324,7 +3567,7 @@ export class WorldScene extends Phaser.Scene {
       const c = rarityPhaser(g.rarity);
       this.safeCameraFlash(70, (c >> 16) & 0xff, (c >> 8) & 0xff, c & 0xff);
     }
-    gameState.persist();
+    this.persistGame();
     const chase =
       g.setId &&
       setChaseStatus(
@@ -3360,7 +3603,7 @@ export class WorldScene extends Phaser.Scene {
     const b = gameState.bounties.accept();
     if (!b) return;
     audioBus.uiClick();
-    gameState.persist();
+    this.persistGame();
     const itemBit = b.rewardItemId
       ? ` + ${b.rewardItemId.replace(/_/g, ' ')}`
       : '';
@@ -3471,7 +3714,7 @@ export class WorldScene extends Phaser.Scene {
       audioBus.loot(tier >= 3 ? 'magic' : 'common');
       this.triggerHitShake(60, 0.003);
     }
-    gameState.persist();
+    this.persistGame();
     gameEvents.emit('ui:toast', {
       text: `Chest — ${parts.join(' · ')}`,
     });
@@ -3534,6 +3777,8 @@ export class WorldScene extends Phaser.Scene {
         return;
       }
       gameState.inRift = true;
+      gameState.riftRun = null;
+      gameState.pendingRiftResumeToast = false;
       gameState.riftSeed = (Date.now() ^ (Math.random() * 1e9)) >>> 0;
       audioBus.portalEnter();
       this.runZoneTransition('enter', () => {
@@ -3555,7 +3800,7 @@ export class WorldScene extends Phaser.Scene {
           }),
         });
         this.emitRiftProgress();
-        gameState.persist();
+        this.persistGame();
       });
       return;
     }
@@ -3566,7 +3811,7 @@ export class WorldScene extends Phaser.Scene {
     gameEvents.emit('ui:toast', {
       text: 'Defeat the boss to open the Exit (B abandons)',
     });
-    gameState.persist();
+    this.persistGame();
   }
 
   private tryDash(dx: number, dy: number): void {
