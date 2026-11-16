@@ -9,12 +9,15 @@ export function riftEnterToastText(opts: {
   modBlurb: string;
   ruleName?: string;
   ruleBlurb?: string;
+  /** Human biome name (e.g. Kristallhöhle) — optional loop clarity. */
+  biomeName?: string;
 }): string {
+  const biome = opts.biomeName ? `${opts.biomeName} · ` : '';
   const rule =
     opts.ruleName && opts.ruleBlurb
       ? ` · ${opts.ruleName} — ${opts.ruleBlurb}`
       : '';
-  return `Rift ${opts.depthLabel} · ${RIFT_GOAL_LINE} · ${opts.modName} — ${opts.modBlurb}${rule}`;
+  return `${biome}Rift ${opts.depthLabel} · ${RIFT_GOAL_LINE} · ${opts.modName} — ${opts.modBlurb}${rule}`;
 }
 
 /**

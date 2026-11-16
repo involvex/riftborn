@@ -135,6 +135,7 @@ import {
   propArtScale,
   TILE_ART_SCALE,
 } from '../render/WorldArt';
+import { biomeLook, type BiomeLook } from '../render/BiomeLook';
 import { ShiftSystem } from '../systems/ShiftSystem';
 import { BossShiftBrain } from '../systems/BossShift';
 import { cancelShiftTransition, playShiftTransition } from '../render/ShiftFx';
@@ -220,6 +221,8 @@ export class WorldScene extends Phaser.Scene {
   private deathPending = false;
   private riftMod: RiftModifier = getRiftModifier('none');
   private depthRule: DepthRule = depthRuleFor(1);
+  /** Active rift biome palette (null in hub). */
+  private biomeLookActive: BiomeLook | null = null;
   private bossAnchor: { x: number; y: number } | null = null;
   private hubLayout: ZoneLayout | null = null;
   /** POI ambushes already triggered this visit. */
@@ -722,6 +725,8 @@ export class WorldScene extends Phaser.Scene {
       this.riftMod = rollRiftModifierForDepth(this.riftDepth);
       this.depthRule = depthRuleFor(this.riftDepth);
       this.dungeon = generateDungeon(seed, this.riftDepth);
+      this.biomeLookActive = biomeLook(this.dungeon.biome.id);
+      this.cameras.main.setBackgroundColor(this.biomeLookActive.background);
       this.player.maxX = this.dungeon.width - 1.5;
       this.player.maxY = this.dungeon.height - 1.5;
       this.player.walkCheck = (x, y) => {
@@ -749,6 +754,8 @@ export class WorldScene extends Phaser.Scene {
       this.dungeon = null;
       this.riftMod = getRiftModifier('none');
       this.depthRule = depthRuleFor(1);
+      this.biomeLookActive = null;
+      this.cameras.main.setBackgroundColor('#12161c');
       this.hubLayout = generateHub(42);
       this.hubSize = this.hubLayout.size ?? DEFAULT_HUB_SIZE;
       this.player.maxX = this.hubSize - 0.5;
@@ -868,11 +875,18 @@ export class WorldScene extends Phaser.Scene {
         s.setTint(blendTint(floorTint, tileTint, Math.min(1, 0.75 * i)));
       }
     }
-    const propTint = layerPropTint(layer, i);
+    const washProp = layerPropTint(layer, i);
     for (const d of this.decor) {
+      const baseProp =
+        (d.getData('biomePropTint') as number | undefined) ?? 0xffffff;
       d.iterate((obj: Phaser.GameObjects.GameObject) => {
         const img = obj as Phaser.GameObjects.Image;
-        if (typeof img.setTint === 'function') img.setTint(propTint);
+        if (typeof img.setTint !== 'function') return;
+        if (washProp === 0xffffff) {
+          img.setTint(baseProp);
+        } else {
+          img.setTint(blendTint(baseProp, washProp, Math.min(1, 0.75 * i)));
+        }
       });
     }
     const alpha = layerOverlayAlpha(layer, i);
@@ -892,8 +906,9 @@ export class WorldScene extends Phaser.Scene {
         .setVisible(true);
     }
     this.shiftOverlay.setFillStyle(wash, alpha);
+    const ashBg = this.biomeLookActive?.background ?? '#12161c';
     this.cameras.main.setBackgroundColor(
-      layer === 'shadow' ? '#12101c' : '#12161c',
+      layer === 'shadow' ? '#12101c' : ashBg,
     );
   }
 
@@ -1174,8 +1189,11 @@ export class WorldScene extends Phaser.Scene {
         .image(0, 0, propKey)
         .setOrigin(0.5, 1)
         .setScale(propArtScale(d.kind));
+      const propTint = this.biomeLookActive?.propTint ?? 0xffffff;
+      if (propTint !== 0xffffff) img.setTint(propTint);
       const c = this.add.container(screenX, screenY, [img]);
       c.setDepth(depthFromWorld(p.x, p.y) - 20);
+      c.setData('biomePropTint', propTint);
       this.decor.push(c);
       return;
     }
@@ -1303,6 +1321,7 @@ export class WorldScene extends Phaser.Scene {
     }
     const c = this.add.container(screenX, screenY, [g]);
     c.setDepth(depthFromWorld(p.x, p.y) - 20);
+    c.setData('biomePropTint', this.biomeLookActive?.propTint ?? 0xffffff);
     this.decor.push(c);
   }
 
@@ -1681,30 +1700,13 @@ export class WorldScene extends Phaser.Scene {
     };
 
     const biome = map.biome;
+    const look = biomeLook(biome.id);
     const w0 = biome.tileWeights.tile_dungeon_0 ?? 0.6;
     const w1 = biome.tileWeights.tile_dungeon_1 ?? 0.3;
     const w2 = biome.tileWeights.tile_dungeon_2 ?? 0.1;
     const wSum = Math.max(0.0001, w0 + w1 + w2);
     const t0 = w0 / wSum;
     const t1 = t0 + w1 / wSum;
-    const fallbackTint =
-      biome.id === 'crystal_cavern'
-        ? 0xc8e8ff
-        : biome.id === 'shattered_woods'
-          ? 0xd8e8d0
-          : biome.id === 'ashen_crypt'
-            ? 0xe8d8c0
-            : biome.id === 'salt_wastes'
-              ? 0xf0ebe0
-              : 0xd8d8d8;
-    const accent =
-      biome.id === 'crystal_cavern'
-        ? 0x80c0ff
-        : biome.id === 'shattered_woods'
-          ? 0x80a080
-          : biome.id === 'salt_wastes'
-            ? 0xc8b890
-            : 0x3a6088;
 
     for (let y = 0; y < map.height; y++) {
       for (let x = 0; x < map.width; x++) {
@@ -1719,14 +1721,21 @@ export class WorldScene extends Phaser.Scene {
           key = 'tile_dungeon_2';
         }
         const gate = map.layerGates[y]![x] ?? null;
-        this.placeFloorTile(x, y, key, fallbackTint, gate);
+        // Floor tint is the main biome read — painted sheets alone look identical.
+        this.placeFloorTile(x, y, key, look.floorTint, gate, look.floorTint);
         if (!gate && isDungeonFloorEdge(map.cells, x, y)) {
-          this.strokeIsoTileOutline(this.tiles, x, y, accent, 0.35);
+          this.strokeIsoTileOutline(
+            this.tiles,
+            x,
+            y,
+            look.accent,
+            look.edgeAlpha,
+          );
         }
-        if ((x * 17 + y * 31) % 19 === 0 && !gate) {
+        if ((x * 17 + y * 31) % look.speckEvery === 0 && !gate) {
           const { screenX, screenY } = worldToScreen(x, y);
-          this.tiles.fillStyle(accent, 0.45);
-          this.tiles.fillCircle(screenX, screenY, 3.5);
+          this.tiles.fillStyle(look.accent, look.speckAlpha);
+          this.tiles.fillCircle(screenX, screenY, look.speckRadius);
         }
       }
     }
@@ -3215,6 +3224,7 @@ export class WorldScene extends Phaser.Scene {
             this.depthRule.id === 'none' ? undefined : this.depthRule.name,
           ruleBlurb:
             this.depthRule.id === 'none' ? undefined : this.depthRule.blurb,
+          biomeName: this.dungeon?.biome.name,
         }),
       });
       this.emitRiftProgress();
