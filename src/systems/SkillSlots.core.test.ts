@@ -25,6 +25,7 @@ type TreeNodeLike = {
   row: number;
   requires: string[];
   starter: boolean;
+  replacesAbilityId?: string;
 };
 
 const abilities = skillsData.abilities as Record<string, AbilityDefLike>;
@@ -63,9 +64,10 @@ describe('four active abilities per class', () => {
   });
 
   for (const cls of CLASSES) {
-    test(`${cls}: four starters + one passive; slots stay four`, () => {
+    test(`${cls}: four starters + fork + passive; slots stay four`, () => {
       const tree = trees[cls]!;
-      expect(tree.length).toBe(5);
+      // 4 starters, 1 bar fork, 1 passive.
+      expect(tree.length).toBe(6);
       expect(classAbilityIds(cls).length).toBe(4);
       expect(classAbilityIds(cls)).not.toContain(PASSIVE[cls]!.abilityId);
 
@@ -76,6 +78,7 @@ describe('four active abilities per class', () => {
       expect(starters.length).toBe(4);
       for (const node of starters) {
         expect(node.requires.length).toBe(0);
+        expect(node.replacesAbilityId).toBeUndefined();
         const def = abilities[node.abilityId];
         expect(def, `${node.abilityId} def missing`).toBeDefined();
         expect(def!.classId).toBe(cls);
@@ -87,9 +90,22 @@ describe('four active abilities per class', () => {
         );
       }
 
+      const forks = tree.filter((n) => n.replacesAbilityId);
+      expect(forks.length).toBe(1);
+      const fork = forks[0]!;
+      expect(fork.starter).toBe(false);
+      expect(starters.some((s) => s.abilityId === fork.replacesAbilityId)).toBe(
+        true,
+      );
+      const forkDef = abilities[fork.abilityId];
+      expect(forkDef, `${fork.abilityId} def missing`).toBeDefined();
+      expect(forkDef!.classId).toBe(cls);
+      expect(forkDef!.kind).not.toBe('passive');
+
       const passive = tree.find((n) => n.id === PASSIVE[cls]!.nodeId);
       expect(passive, `${cls} passive node`).toBeDefined();
       expect(passive!.starter).toBe(false);
+      expect(passive!.replacesAbilityId).toBeUndefined();
       expect(passive!.requires).toEqual([PASSIVE[cls]!.requires]);
       expect(abilities[passive!.abilityId]!.kind).toBe('passive');
     });
