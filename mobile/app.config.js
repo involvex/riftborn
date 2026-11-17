@@ -5,7 +5,7 @@ const gameUrl = process.env.EXPO_PUBLIC_GAME_URL?.trim() || '';
 export default {
   name: 'Riftborn',
   slug: 'riftborn',
-  version: '0.1.0',
+  version: '0.2.0',
   orientation: 'default',
   icon: './assets/icon.png',
   userInterfaceStyle: 'dark',

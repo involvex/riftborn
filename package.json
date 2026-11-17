@@ -1,7 +1,7 @@
 {
   "name": "riftborn",
   "private": true,
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Riftborn — 2.5D isometric ARPG",
   "author": "involvex",
   "type": "module",
