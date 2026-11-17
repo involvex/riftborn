@@ -18,6 +18,7 @@ import { SkillSystem } from './SkillSystem';
 import { TraderSystem } from './TraderSystem';
 import { HUB_RESUME_SPAWN, hubResumeFromSave } from './HubResume';
 import { parseRiftRun } from './RiftRunPersist';
+import { clampPressureStep } from './RiftPressure';
 
 export class GameState {
   readonly inventory = new InventorySystem();
@@ -43,6 +44,8 @@ export class GameState {
   /** Set when applySave resumed into a rift (one-shot toast). */
   pendingRiftResumeToast = false;
   playTimeSec = 0;
+  /** Post-cap pressure ladder (0 for fresh / legacy saves). */
+  pressureStep = 0;
   /** Base64 hub fog; null until first explore persist. */
   hubExplored: string | null = null;
   pendingSessionToken: string | null = null;
@@ -134,6 +137,7 @@ export class GameState {
     this.pendingRiftResumeToast = resume.resumedRift;
     this.playTimeSec = data.playTimeSec;
     this.hubExplored = data.hubExplored ?? null;
+    this.pressureStep = clampPressureStep(data.pressureStep);
     this.bounties.load({
       bounty: data.bounty ?? null,
       lastKind: data.bountyLastKind ?? null,
@@ -189,6 +193,7 @@ export class GameState {
       bountyCooldownLeft: bountySlice.cooldownLeft,
       hubExplored: this.hubExplored,
       riftRun: this.riftRun,
+      pressureStep: this.pressureStep,
     };
   }
 

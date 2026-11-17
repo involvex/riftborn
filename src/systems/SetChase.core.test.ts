@@ -100,7 +100,9 @@ describe('SetChase', () => {
         piece('ashen', 'feet'),
       ]),
     );
-    expect(full).toEqual({});
+    expect(full.preferSetId).toBe('ashen');
+    expect(full.preferUpgrade).toBe(true);
+    expect(full.preferSlots).toBeUndefined();
   });
 
   test('HUD shows class chase from 1pc', () => {

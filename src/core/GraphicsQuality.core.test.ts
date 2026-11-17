@@ -48,29 +48,24 @@ describe('render scale vs world FOV', () => {
     expect(gLow.height).toBe(cssH);
   });
 
-  test('low profile (renderScale 0.65) resize target is CSS viewport, not buffer', () => {
+  test('low profile (renderScale 0.65) live resize target is the buffer', () => {
     const cssW = 1024;
     const cssH = 473;
-    const zoom = 1.05;
     const low = profileForTier('low');
     const high = profileForTier('high');
     expect(low.renderScale).toBe(0.65);
 
-    // Live path must pass CSS/logical to scale.resize (never floor(CSS*scale)).
+    // Logical helper stays CSS (FOV reference); buffer is what scale.resize gets.
     const gLow = gameSizeForProfile(cssW, cssH, low.renderScale);
     const gHigh = gameSizeForProfile(cssW, cssH, high.renderScale);
     expect(gLow).toEqual({ width: cssW, height: cssH });
     expect(gHigh).toEqual({ width: cssW, height: cssH });
-    expect(gLow.width).not.toBe(Math.floor(cssW * low.renderScale));
 
-    // Pure helper documents split; live path must not apply buffer to game size.
     const bufLow = bufferSizeForProfile(cssW, cssH, low.renderScale);
+    expect(bufLow.width).toBe(Math.floor(cssW * low.renderScale));
+    expect(bufLow.height).toBe(Math.floor(cssH * low.renderScale));
     expect(bufLow.width).toBeLessThan(gLow.width);
     expect(bufLow.height).toBeLessThan(gLow.height);
-
-    expect(visibleWorldTileSpan(gLow.width, gLow.height, zoom)).toEqual(
-      visibleWorldTileSpan(gHigh.width, gHigh.height, zoom),
-    );
   });
 
   test('computeGraphicsResize splits logical (CSS) from buffer (CSS*scale)', () => {
@@ -119,8 +114,8 @@ describe('render scale vs world FOV', () => {
 });
 
 describe('getAppliedCameraZoom', () => {
-  test('returns base zoom (game size is always CSS/logical)', () => {
-    // Low fillrate shrinks the drawing buffer only — no zoom×scale.
+  test('defaults to base zoom before a profile is applied (scale 1)', () => {
+    // appliedScale starts at 1; Low multiplies after applyGraphicsProfile.
     expect(getAppliedCameraZoom(1.1)).toBeCloseTo(1.1, 5);
     expect(getAppliedCameraZoom(1)).toBe(1);
   });

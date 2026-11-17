@@ -3,6 +3,7 @@ import {
   ASSIST_RANGE,
   directionTo,
   pickEnemiesAround,
+  pickFacingEnemyIndex,
   pickNearestEnemyIndex,
   shouldApproach,
 } from './AutoTarget';
@@ -90,5 +91,16 @@ describe('AutoTarget', () => {
   test('directionTo fallback for near-zero distance', () => {
     const d = directionTo({ x: 0, y: 0 }, { x: 1e-9, y: 0 });
     expect(d).toEqual({ x: 1, y: 0 });
+  });
+
+  test('pickFacingEnemyIndex prefers the foe in aim direction', () => {
+    const enemies = [
+      { x: 0, y: 2, alive: true },
+      { x: 2.2, y: 0, alive: true },
+    ];
+    // Aim +X — prefer the slightly farther foe on that axis.
+    expect(pickFacingEnemyIndex(enemies, 0, 0, 8, 1, 0)).toBe(1);
+    // No aim — nearest wins (index 0 at dist 2).
+    expect(pickFacingEnemyIndex(enemies, 0, 0, 8, 0, 0)).toBe(0);
   });
 });

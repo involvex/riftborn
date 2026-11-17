@@ -27,7 +27,8 @@ function liveCueCount(scene: Phaser.Scene, now: number): number {
 
 /** World-tile radius → screen px (matches SkillVfx ground rings). */
 function radiusPx(worldRadius: number): number {
-  return Math.max(14, worldRadius * 28);
+  // Floor high enough that Low-tier melee/pounce rings stay readable on phones.
+  return Math.max(22, worldRadius * 30);
 }
 
 /**
@@ -51,26 +52,24 @@ export function playEnemyTelegraph(
   const g = scene.add.graphics().setDepth(9_480).setPosition(screenX, screenY);
 
   if (style.shape === 'ring') {
-    g.lineStyle(low ? 2 : 3, style.color, 0.85);
+    g.lineStyle(low ? 2.5 : 3, style.color, 0.9);
     g.strokeEllipse(0, 4, r * 2, r);
-    if (!low) {
-      g.lineStyle(1, 0xffffff, 0.35);
-      g.strokeEllipse(0, 4, r * 2 + 6, r + 3);
-    }
+    g.lineStyle(1, 0xffffff, low ? 0.45 : 0.35);
+    g.strokeEllipse(0, 4, r * 2 + 6, r + 3);
   } else if (style.shape === 'burst') {
-    g.fillStyle(style.color, low ? 0.22 : 0.32);
+    g.fillStyle(style.color, low ? 0.28 : 0.32);
     g.fillEllipse(0, 2, r * 2, r);
-    g.lineStyle(low ? 2 : 3, style.color, 0.9);
+    g.lineStyle(low ? 2.5 : 3, style.color, 0.9);
     g.strokeEllipse(0, 2, r * 2, r);
   } else {
     g.fillStyle(style.color, 0.85);
-    g.fillCircle(0, -10, Math.max(3, r * 0.35));
+    g.fillCircle(0, -10, Math.max(4, r * 0.35));
     g.lineStyle(2, style.color, 0.7);
     g.strokeCircle(0, -10, r);
   }
 
   const duration = low
-    ? Math.max(120, style.durationMs - 60)
+    ? Math.max(160, style.durationMs - 40)
     : style.durationMs;
   liveCues(scene).push(now + duration);
   const scale = phase === 'impact' ? 1.6 : 1.1;

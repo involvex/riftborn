@@ -1,6 +1,7 @@
 import type {
   CharacterClassId,
   GearInstance,
+  GearNamedAffix,
   GearRarity,
   GearSlot,
   GearStats,
@@ -121,6 +122,30 @@ export function migrateGearInstance(item: GearInstance): GearInstance {
   };
 }
 
+const CLASS_SKILL_AFFIXES: Record<
+  CharacterClassId,
+  { skillId: string; name: string }[]
+> = {
+  warrior: [
+    { skillId: 'war_cleave', name: 'Cleaving' },
+    { skillId: 'war_leap', name: 'Leaping' },
+    { skillId: 'war_bash', name: 'Bashing' },
+    { skillId: 'war_whirl', name: 'Whirling' },
+  ],
+  mystic: [
+    { skillId: 'mys_pulse', name: 'Pulsing' },
+    { skillId: 'mys_rift', name: 'Rifting' },
+    { skillId: 'mys_seal', name: 'Sealing' },
+    { skillId: 'mys_lance', name: 'Lancing' },
+  ],
+  mage: [
+    { skillId: 'mag_bolt', name: 'Bolting' },
+    { skillId: 'mag_nova', name: 'Nova' },
+    { skillId: 'mag_chain', name: 'Chaining' },
+    { skillId: 'mag_meteor', name: 'Meteor' },
+  ],
+};
+
 function rollAffix(
   stats: GearStats,
   itemLevel: number,
@@ -153,6 +178,69 @@ function rollAffix(
   } else {
     stats[key] += amount;
   }
+}
+
+/** One named skill affix for rare/legendary rolls. */
+export function rollNamedSkillAffix(
+  classId: CharacterClassId | null,
+  rnd: () => number = Math.random,
+): GearNamedAffix | null {
+  if (!classId) return null;
+  const pool = CLASS_SKILL_AFFIXES[classId];
+  if (!pool?.length) return null;
+  const pick = pool[Math.floor(rnd() * pool.length)]!;
+  const kinds: GearNamedAffix['kind'][] = ['cooldown', 'targets', 'power'];
+  const kind = kinds[Math.floor(rnd() * kinds.length)]!;
+  const value =
+    kind === 'cooldown'
+      ? 0.4 + rnd() * 0.6
+      : kind === 'targets'
+        ? 1
+        : 0.12 + rnd() * 0.18;
+  return {
+    id: `aff_${pick.skillId}_${kind}`,
+    name: `${pick.name} ${kind === 'cooldown' ? 'Haste' : kind === 'targets' ? 'Reach' : 'Force'}`,
+    skillId: pick.skillId,
+    kind,
+    value: Math.round(value * 100) / 100,
+  };
+}
+
+/**
+ * Re-roll anonymous + named affixes onto an existing piece (shard sink).
+ * Keeps base, slot, rarity, and item level.
+ */
+export function rollAffixesOnto(
+  item: GearInstance,
+  rnd: () => number = Math.random,
+): GearInstance {
+  const stats = emptyGearStats();
+  // Preserve inherent weapon damage / armor from the base roll band.
+  if (item.slot === 'weapon') {
+    stats.damage = Math.max(2, item.stats.damage);
+  } else {
+    stats.armor = Math.max(1, item.stats.armor);
+  }
+  const classId = item.classId;
+  if (classId) {
+    const key = CLASS_PRIMARY[classId];
+    stats[key] += 1 + Math.floor(item.itemLevel / 6);
+  }
+  const affixCount =
+    (RARITY_WEIGHTS.find((r) => r.rarity === item.rarity)?.affixes ?? 0) + 1;
+  for (let i = 0; i < affixCount; i++) {
+    rollAffix(stats, item.itemLevel, classId, rnd);
+  }
+  const affixes: GearNamedAffix[] = [];
+  if (item.rarity === 'rare' || item.rarity === 'legendary') {
+    const named = rollNamedSkillAffix(classId, rnd);
+    if (named) affixes.push(named);
+  }
+  return {
+    ...item,
+    stats,
+    affixes: affixes.length ? affixes : undefined,
+  };
 }
 
 export function createStarterWeapon(
@@ -268,6 +356,8 @@ export function rollGearDrop(
     preferSetId?: string;
     /** Prefer these missing set slots when preferSetId is set. */
     preferSlots?: GearSlot[];
+    /** After 4pc: bias toward higher ilvl upgrades of the same set. */
+    preferUpgrade?: boolean;
     rnd?: () => number;
   } = {},
 ): GearInstance {
@@ -333,14 +423,18 @@ export function rollGearDrop(
       ? tier >= 3 || opts.elite
         ? 0.78
         : 0.55
-      : tier >= 3 || opts.elite
-        ? 0.55
-        : 0.35;
+      : opts.preferUpgrade
+        ? 0.7
+        : tier >= 3 || opts.elite
+          ? 0.55
+          : 0.35;
     if (setPool.length && rnd() < bias) pool = setPool;
   }
 
   const base = pool[Math.floor(rnd() * pool.length)] ?? all[0]!;
   const classId = base.classId;
+  const upgradeBump = opts.preferUpgrade ? 2 + Math.floor(rnd() * 3) : 0;
+  const rollLevel = effectiveLevel + upgradeBump;
   const tierMult = tier === 1 ? 0.75 : tier === 2 ? 1 : tier === 3 ? 1.2 : 1.45;
 
   const stats = emptyGearStats();
@@ -348,28 +442,36 @@ export function rollGearDrop(
     const bias = base.damageBias ?? 1;
     stats.damage = Math.max(
       2,
-      Math.floor((4 + effectiveLevel * 1.4) * bias * tierMult + rnd() * 3),
+      Math.floor((4 + rollLevel * 1.4) * bias * tierMult + rnd() * 3),
     );
   } else {
     stats.armor = Math.max(
       1,
-      Math.floor(
-        (2 + effectiveLevel * 0.9) * base.armorBias * tierMult + rnd() * 2,
-      ),
+      Math.floor((2 + rollLevel * 0.9) * base.armorBias * tierMult + rnd() * 2),
     );
   }
 
   if (classId) {
     const key = CLASS_PRIMARY[classId];
-    stats[key] += 1 + Math.floor(effectiveLevel / 6) + (tier >= 3 ? 1 : 0);
+    stats[key] += 1 + Math.floor(rollLevel / 6) + (tier >= 3 ? 1 : 0);
   }
 
   for (let i = 0; i < affixCount; i++) {
-    rollAffix(stats, effectiveLevel, classId, rnd);
+    rollAffix(stats, rollLevel, classId, rnd);
   }
 
   if (tier >= 3 && rnd() < 0.4) {
     stats.skillPower += 2 + Math.floor(rnd() * tier);
+  }
+
+  const namedAffixes: GearNamedAffix[] = [];
+  if (
+    (rarity === 'rare' || rarity === 'legendary') &&
+    classId &&
+    rnd() < (rarity === 'legendary' ? 0.85 : 0.55)
+  ) {
+    const named = rollNamedSkillAffix(classId, rnd);
+    if (named) namedAffixes.push(named);
   }
 
   const rarityPrefix =
@@ -399,9 +501,10 @@ export function rollGearDrop(
     setId: base.setId,
     classId,
     rarity,
-    itemLevel: effectiveLevel,
+    itemLevel: rollLevel,
     stats,
     attackRange: base.slot === 'weapon' ? 1.2 + rnd() * 0.3 : undefined,
+    affixes: namedAffixes.length ? namedAffixes : undefined,
   };
 }
 

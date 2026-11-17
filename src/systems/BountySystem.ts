@@ -60,6 +60,27 @@ const POOL: Array<Omit<ActiveBounty, 'progress'>> = [
     rewardXp: 35,
     rewardItemId: 'ashen_charm',
   },
+  {
+    kind: 'rift_clear',
+    label: 'Clear a rift (Kill→Boss→Exit)',
+    target: 1,
+    rewardGold: 55,
+    rewardXp: 50,
+  },
+  {
+    kind: 'rift_boss',
+    label: 'Slay a Rift Lord',
+    target: 1,
+    rewardGold: 60,
+    rewardXp: 55,
+  },
+  {
+    kind: 'rift_mat',
+    label: 'Gather biome mats in a rift',
+    target: 4,
+    rewardGold: 40,
+    rewardXp: 35,
+  },
 ];
 
 const KINDS: BountyKind[] = [
@@ -69,6 +90,9 @@ const KINDS: BountyKind[] = [
   'shrine',
   'bramble',
   'forge',
+  'rift_clear',
+  'rift_boss',
+  'rift_mat',
 ];
 
 function isBountyKind(v: unknown): v is BountyKind {
@@ -200,6 +224,18 @@ export class BountySystem {
 
   noteShrineUse(): ActiveBounty | null {
     return this.bump('shrine', 1);
+  }
+
+  noteRiftClear(): ActiveBounty | null {
+    return this.bump('rift_clear', 1);
+  }
+
+  noteRiftBoss(): ActiveBounty | null {
+    return this.bump('rift_boss', 1);
+  }
+
+  noteRiftMat(amount = 1): ActiveBounty | null {
+    return this.bump('rift_mat', amount);
   }
 
   noteBrambleKill(): ActiveBounty | null {

@@ -32,16 +32,30 @@ import {
   rarityWantsCameraFlash,
 } from '../systems/RarityVisual';
 import { setChaseDropBias, setChaseStatus } from '../systems/SetChase';
+import { setSkillFamilyMult } from '../systems/SetBonus';
+import {
+  namedAffixCooldown,
+  namedAffixPower,
+  namedAffixTargets,
+} from '../systems/GearSkillAffix';
 import { gameState } from '../systems/GameState';
+import {
+  applyPressureToRule,
+  nextPressureStep,
+  pressureMults,
+} from '../systems/RiftPressure';
 import {
   ASSIST_RANGE,
   directionTo,
+  pickFacingEnemyIndex,
   pickNearestEnemyIndex,
 } from '../systems/AutoTarget';
 import {
   canRepeatBasicAttack,
   shouldStartDesktopAttack,
 } from '../systems/AttackHold';
+import { DASH_INVULN_SEC, blendStickWithAssist } from '../systems/CombatWeight';
+import { hapticTap } from '../core/Haptics';
 import {
   generateHub,
   HUB_SIZE,
@@ -791,7 +805,10 @@ export class WorldScene extends Phaser.Scene {
       this.riftMod = resume
         ? getRiftModifier(resume.modId)
         : rollRiftModifierForDepth(this.riftDepth);
-      this.depthRule = depthRuleFor(this.riftDepth);
+      this.depthRule = applyPressureToRule(
+        depthRuleFor(this.riftDepth),
+        gameState.pressureStep,
+      );
       this.dungeon = generateDungeon(seed, this.riftDepth);
       this.biomeLookActive = biomeLook(this.dungeon.biome.id);
       this.cameras.main.setBackgroundColor(this.biomeLookActive.background);
@@ -1489,10 +1506,14 @@ export class WorldScene extends Phaser.Scene {
         strokeThickness: 4,
       })
       .setOrigin(0.5)
-      .setAlpha(0.92);
+      .setAlpha(0.92)
+      .setVisible(false);
     const c = this.add.container(screenX, screenY, [g, t]);
     // Slightly behind foot depth so player/NPC draw in front when overlapping
     c.setDepth(depthFromWorld(p.x, p.y) - 40);
+    c.setData('wx', p.x);
+    c.setData('wy', p.y);
+    c.setData('proximityLabel', t);
     this.decor.push(c);
   }
 
@@ -1539,11 +1560,13 @@ export class WorldScene extends Phaser.Scene {
         stroke: '#0a0c10',
         strokeThickness: 3,
       })
-      .setOrigin(0.5);
+      .setOrigin(0.5)
+      .setVisible(false);
     const c = this.add.container(screenX, screenY, [g, glow, t]);
     c.setDepth(depthFromWorld(wx, wy));
     c.setData('wx', wx);
     c.setData('wy', wy);
+    c.setData('proximityLabel', t);
     this.tweens.add({
       targets: glow,
       alpha: 0.35,
@@ -2052,7 +2075,8 @@ export class WorldScene extends Phaser.Scene {
     }
 
     const manualMove = dx !== 0 || dy !== 0;
-    if (manualMove) {
+    // Stick alone cancels chase; stick + hold-attack blends toward the foe.
+    if (manualMove && !this.attackHeld) {
       this.assistChase = false;
     }
     if (
@@ -2062,9 +2086,8 @@ export class WorldScene extends Phaser.Scene {
       })
     ) {
       this.tryAttack();
-      if (manualMove) this.assistChase = false;
     }
-    if (!manualMove && this.assistChase && !netClient.connected) {
+    if (this.assistChase && !netClient.connected) {
       const targetables = this.enemies.map((e) => ({
         x: e.worldX,
         y: e.worldY,
@@ -2086,8 +2109,19 @@ export class WorldScene extends Phaser.Scene {
         );
         const weaponRange = gameState.inventory.weaponRange();
         if (dist <= weaponRange) {
-          this.tryAttack();
-        } else {
+          if (!this.attackHeld) this.tryAttack();
+        } else if (this.attackHeld && manualMove) {
+          const blended = blendStickWithAssist(
+            dx,
+            dy,
+            nearest.worldX,
+            nearest.worldY,
+            this.player.worldX,
+            this.player.worldY,
+          );
+          dx = blended.x;
+          dy = blended.y;
+        } else if (!manualMove) {
           const dir = directionTo(
             { x: this.player.worldX, y: this.player.worldY },
             { x: nearest.worldX, y: nearest.worldY },
@@ -2360,6 +2394,7 @@ export class WorldScene extends Phaser.Scene {
   }
 
   private damagePlayer(rawDamage: number): void {
+    if (this.player.isDashInvulnerable) return;
     const dealt = gameState.takeDamage(rawDamage);
     const { screenX, screenY } = worldToScreen(
       this.player.worldX,
@@ -2517,9 +2552,15 @@ export class WorldScene extends Phaser.Scene {
 
     const finish = (): void => {
       if (reward && this.riftCleared) {
-        gameState.progression.addXp(50);
-        gameState.inventory.add('rift_shard', 1);
-        gameState.inventory.add('gold', 20);
+        const pay = pressureMults(gameState.pressureStep);
+        gameState.progression.addXp(50 + gameState.pressureStep * 5);
+        gameState.inventory.add('rift_shard', pay.clearShards);
+        gameState.inventory.add('gold', pay.clearGold);
+        gameState.bounties.noteRiftClear();
+        // Apex / depth-10 clears raise the post-cap ladder.
+        if (this.riftDepth >= 10) {
+          gameState.pressureStep = nextPressureStep(gameState.pressureStep);
+        }
       } else if (!silent) {
         gameState.progression.addXp(8);
       }
@@ -2636,11 +2677,15 @@ export class WorldScene extends Phaser.Scene {
       y: e.worldY,
       alive: e.alive && !e.isGhosted,
     }));
-    const nearestIdx = pickNearestEnemyIndex(
+    const aimX = this.touchDx;
+    const aimY = this.touchDy;
+    const nearestIdx = pickFacingEnemyIndex(
       targetables,
       this.player.worldX,
       this.player.worldY,
       ASSIST_RANGE,
+      aimX,
+      aimY,
     );
 
     if (nearestIdx >= 0) {
@@ -2671,13 +2716,25 @@ export class WorldScene extends Phaser.Scene {
         let hitCount = 0;
         let anyCrit = false;
         let anyBoss = false;
-        for (const enemy of this.enemies) {
+        // Prefer the facing target first, then the rest of the cleave circle.
+        const ordered = [nearest, ...this.enemies.filter((e) => e !== nearest)];
+        for (const enemy of ordered) {
           if (!enemy.alive || enemy.isGhosted) continue;
           const d = worldDistance(
             { x: this.player.worldX, y: this.player.worldY },
             { x: enemy.worldX, y: enemy.worldY },
           );
           if (d > range) continue;
+          // Stick-facing cone: skip foes clearly behind when aiming.
+          if (Math.hypot(aimX, aimY) > 0.12) {
+            const tdx = enemy.worldX - this.player.worldX;
+            const tdy = enemy.worldY - this.player.worldY;
+            const tLen = Math.hypot(tdx, tdy) || 1;
+            const aLen = Math.hypot(aimX, aimY) || 1;
+            const dot =
+              (tdx / tLen) * (aimX / aLen) + (tdy / tLen) * (aimY / aLen);
+            if (dot < -0.15 && enemy !== nearest) continue;
+          }
           hitCount += 1;
           const crit = isCombatCrit(dmg);
           if (crit) anyCrit = true;
@@ -2702,6 +2759,7 @@ export class WorldScene extends Phaser.Scene {
         }
         if (hitCount > 0) {
           audioBus.hit();
+          hapticTap(hitCount > 1 ? 22 : 16);
           const juice = {
             anyCrit,
             anyBoss,
@@ -2723,24 +2781,13 @@ export class WorldScene extends Phaser.Scene {
       }
     }
 
-    // No enemy in assist range: pointer fallback + whiff
+    // No enemy in assist range: face the pointer but do not spend cooldown
+    // (hold-attack on a phone should not lock out while walking into a pack).
     this.assistChase = false;
-    this.player.attackCooldown = gameState.progression.attackCooldown();
     const { screenX } = worldToScreen(this.player.worldX, this.player.worldY);
-    const aimX = this.player.worldX + (pointer.worldX >= screenX ? 1 : -1);
-    const aimY = this.player.worldY;
-    this.player.faceToward(aimX, aimY);
-    this.player.playAttack();
-    audioBus.swing();
-    if (netClient.connected) {
-      netClient.sendInput({
-        dx: 0,
-        dy: 0,
-        attack: true,
-        gather: false,
-        skill: false,
-      });
-    }
+    const faceX = this.player.worldX + (pointer.worldX >= screenX ? 1 : -1);
+    const faceY = this.player.worldY;
+    this.player.faceToward(faceX, faceY);
   }
 
   private onEnemyKilled(enemy: Enemy): void {
@@ -2826,6 +2873,7 @@ export class WorldScene extends Phaser.Scene {
       this.openExitPortal();
       this.safeCameraFlash(220, 80, 160, 220);
       this.emitRiftProgress();
+      gameState.bounties.noteRiftBoss();
       gameEvents.emit(Events.RIFT_BOSS_SUMMARY, {
         depth: this.riftDepth,
         kills: this.riftKills,
@@ -2857,6 +2905,7 @@ export class WorldScene extends Phaser.Scene {
     if (Math.random() > (elite ? 0.85 : 0.35)) return;
     const qty = elite ? 2 + Math.floor(Math.random() * 2) : 1;
     if (!gameState.inventory.add(itemId, qty)) return;
+    gameState.bounties.noteRiftMat(qty);
     const itemName = getItemDef(itemId)?.name ?? itemId;
     const toast = biomeMatDropToast({
       itemName,
@@ -3320,6 +3369,7 @@ export class WorldScene extends Phaser.Scene {
         worldY: this.player.worldY + dy * reach,
       };
     }
+    const eq = gameState.inventory.equipment;
     const result = gameState.skills.cast(slot, {
       player: this.player,
       enemies: this.enemies,
@@ -3328,6 +3378,10 @@ export class WorldScene extends Phaser.Scene {
       gearSkillPower: gameState.inventory.totalGearStats().skillPower,
       onKill: (enemy) => this.onEnemyKilled(enemy),
       aim,
+      namedAffixPower: (id) => namedAffixPower(eq, id),
+      namedAffixCooldown: (id) => namedAffixCooldown(eq, id),
+      namedAffixTargets: (id) => namedAffixTargets(eq, id),
+      setFamilyMult: (id) => setSkillFamilyMult(eq, id),
     });
     if (!result.ok) {
       if (result.reason === 'out_of_range') {
@@ -3832,6 +3886,7 @@ export class WorldScene extends Phaser.Scene {
   private tryDash(dx: number, dy: number): void {
     if (this.player.skillCooldown > 0) return;
     this.player.skillCooldown = 2.5;
+    this.player.grantDashInvuln(DASH_INVULN_SEC);
     let mx = dx;
     let my = dy;
     if (mx === 0 && my === 0) {
@@ -3876,6 +3931,40 @@ export class WorldScene extends Phaser.Scene {
       if (near && dist < best) {
         best = dist;
         this.nearNpc = npc;
+      }
+    }
+    for (const chest of this.chests) {
+      const dist = worldDistance(
+        { x: this.player.worldX, y: this.player.worldY },
+        { x: chest.worldX, y: chest.worldY },
+      );
+      chest.setNear(dist < 2.2);
+    }
+    // Building / obelisk titles only when close (clears plaza chrome).
+    for (const d of this.decor) {
+      const label = d.getData('proximityLabel') as
+        Phaser.GameObjects.Text | undefined;
+      if (!label) continue;
+      const wx = d.getData('wx') as number | undefined;
+      const wy = d.getData('wy') as number | undefined;
+      if (wx == null || wy == null) continue;
+      const dist = worldDistance(
+        { x: this.player.worldX, y: this.player.worldY },
+        { x: wx, y: wy },
+      );
+      label.setVisible(dist < 5.5);
+    }
+    if (this.portalMarker) {
+      const label = this.portalMarker.getData('proximityLabel') as
+        Phaser.GameObjects.Text | undefined;
+      if (label) {
+        const wx = this.portalMarker.getData('wx') as number;
+        const wy = this.portalMarker.getData('wy') as number;
+        const dist = worldDistance(
+          { x: this.player.worldX, y: this.player.worldY },
+          { x: wx, y: wy },
+        );
+        label.setVisible(dist < 5.5);
       }
     }
     if (!this.benchMarker) {

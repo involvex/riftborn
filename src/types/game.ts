@@ -92,6 +92,17 @@ export type GearStats = {
   skillPower: number;
 };
 
+/** Rare/legendary skill-touching affix (changes one button). */
+export type GearNamedAffix = {
+  id: string;
+  name: string;
+  /** Ability id this modifies (e.g. war_cleave). */
+  skillId: string;
+  /** Cooldown seconds removed, extra targets, or rank-like damage. */
+  kind: 'cooldown' | 'targets' | 'power';
+  value: number;
+};
+
 export type GearInstance = {
   uid: string;
   baseId: string;
@@ -104,6 +115,8 @@ export type GearInstance = {
   itemLevel: number;
   stats: GearStats;
   attackRange?: number;
+  /** Optional named skill affixes (rare+). */
+  affixes?: GearNamedAffix[];
 };
 
 export type ArmorSetDef = {
@@ -131,6 +144,10 @@ export type ArmorSetDef = {
     damage?: number;
     maxHp?: number;
     skillPower?: number;
+    /** Ability ids (or kind tags) that receive skillFamilyMult. */
+    skillFamily?: string[];
+    /** Extra damage multiplier for matching skills (e.g. 0.2 = +20%). */
+    skillFamilyMult?: number;
   };
 };
 
@@ -184,6 +201,8 @@ export type AbilityDef = {
 export type SkillNodeDef = {
   id: string;
   abilityId: string;
+  /** When ranked, this ability replaces `replacesAbilityId` on the bar. */
+  replacesAbilityId?: string;
   name: string;
   blurb: string;
   col: number;

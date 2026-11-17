@@ -65,7 +65,8 @@ export class Npc {
         stroke: '#0a0c10',
         strokeThickness: 3,
       })
-      .setOrigin(0.5);
+      .setOrigin(0.5)
+      .setVisible(false);
 
     const job =
       role === 'vendor'
@@ -102,8 +103,13 @@ export class Npc {
   }
 
   setNear(near: boolean): void {
-    // Hide hints unless in range — stops plaza label pile-up on small screens
+    // Hide name + hint unless in range — stops plaza label pile-up on phones.
     this.prompt.setVisible(near);
+    const label = this.body.list.find(
+      (c): c is Phaser.GameObjects.Text =>
+        c instanceof Phaser.GameObjects.Text && c !== this.prompt,
+    );
+    label?.setVisible(near);
   }
 
   syncScreen(): void {

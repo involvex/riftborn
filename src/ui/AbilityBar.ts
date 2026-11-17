@@ -12,8 +12,10 @@ import {
   updateSkillAim,
   type SkillAimState,
 } from '../systems/SkillAim';
+import { hasIcon, iconTextureKey } from '../render/ItemIcons';
 import { cooldownSweepProgress } from './CooldownOverlay';
 import { shortTouchSkillLabel, touchSkillFontPx } from './SkillLabels';
+import { skillIconId } from './SkillIcons';
 import { shouldShowTouchControls } from './TouchControls';
 import { computeTouchLayout } from './TouchLayout';
 
@@ -32,6 +34,7 @@ export class AbilityBar {
     ring?: Phaser.GameObjects.Arc;
     /** Filled pie covering remaining cooldown (touch). */
     sweep?: Phaser.GameObjects.Arc;
+    icon?: Phaser.GameObjects.Image;
     cx: number;
     cy: number;
     r: number;
@@ -72,6 +75,7 @@ export class AbilityBar {
         const sweep = scene.add
           .arc(0, 0, 30, -90, -90, false, 0x05080c, 0.78)
           .setVisible(false);
+        const icon = scene.add.image(0, 0, '').setVisible(false).setAlpha(0.95);
         const name = scene.add
           .text(0, -2, '', {
             fontFamily: 'Segoe UI, sans-serif',
@@ -96,11 +100,12 @@ export class AbilityBar {
           key,
           ring,
           sweep,
+          icon,
           cx: 0,
           cy: 0,
           r: 30,
         });
-        this.root.add([ring, sweep, name, cd]);
+        this.root.add([ring, icon, sweep, name, cd]);
       } else {
         const bg = scene.add.rectangle(0, 0, 96, 52, 0x121820, 0.92);
         bg.setStrokeStyle(1, 0x4a6070, 0.9);
@@ -275,12 +280,17 @@ export class AbilityBar {
         s.sweep.setPosition(x, y);
         s.sweep.setRadius(r - 1);
       }
-      s.name.setPosition(x, y - 2);
-      const label = s.name.text || 'XXXX';
-      s.name.setFontSize(touchSkillFontPx(label, r, maxFont));
-      s.cd.setPosition(x, y + Math.round(r * 0.38));
+      if (s.icon) {
+        s.icon.setPosition(x, y - 1);
+        const size = Math.max(18, Math.round(r * 1.15));
+        s.icon.setDisplaySize(size, size);
+      }
+      // Icon pads hide the word label; CD digits stay under the pie.
+      s.name.setVisible(false);
+      s.cd.setPosition(x, y + Math.round(r * 0.42));
       s.cd.setFontSize(uiFontPx('caption', 'touch'));
       s.key.setVisible(false);
+      void maxFont;
     });
   }
 
@@ -298,6 +308,7 @@ export class AbilityBar {
         slot.name.setColor('#5a6a7a');
         slot.cd.setText('');
         slot.sweep?.setVisible(false);
+        slot.icon?.setVisible(false);
         if (slot.ring) slot.ring.setStrokeStyle(2, 0x3a4a5a, 0.7);
         else if (slot.bg instanceof Phaser.GameObjects.Rectangle) {
           slot.bg.setStrokeStyle(1, 0x3a4a5a, 0.7);
@@ -307,11 +318,23 @@ export class AbilityBar {
       const label = this.touchMode
         ? shortTouchSkillLabel(def.name)
         : shortAbilityName(def.name);
-      slot.name.setText(label);
-      slot.name.setColor('#e8e4d8');
-      if (this.touchMode) {
-        slot.name.setFontSize(touchSkillFontPx(label, slot.r, maxFont));
+      if (this.touchMode && slot.icon) {
+        const iconId = skillIconId(def.id);
+        if (hasIcon(this.scene, iconId)) {
+          slot.icon.setTexture(iconTextureKey(iconId));
+          slot.icon.setVisible(true);
+          slot.name.setVisible(false);
+        } else {
+          slot.icon.setVisible(false);
+          slot.name.setVisible(true);
+          slot.name.setText(label);
+          slot.name.setFontSize(touchSkillFontPx(label, slot.r, maxFont));
+        }
+      } else {
+        slot.name.setText(label);
+        slot.name.setVisible(true);
       }
+      slot.name.setColor('#e8e4d8');
       slot.cd.setText(cd > 0 ? `${Math.ceil(cd)}` : '');
       if (slot.sweep) {
         const total = Math.max(0.01, def.cooldown);

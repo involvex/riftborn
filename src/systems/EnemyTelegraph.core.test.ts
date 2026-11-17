@@ -7,7 +7,7 @@ import {
   type EnemyTelegraphPhase,
 } from './EnemyTelegraph';
 
-const KINDS: EnemyTelegraphKind[] = ['pounce', 'wail', 'shot', 'rush'];
+const KINDS: EnemyTelegraphKind[] = ['pounce', 'wail', 'shot', 'rush', 'melee'];
 const PHASES: EnemyTelegraphPhase[] = ['windup', 'impact'];
 
 describe('enemyTelegraphKind', () => {
@@ -18,7 +18,7 @@ describe('enemyTelegraphKind', () => {
     expect(enemyTelegraphKind('enemy_rift_goblin')).toBe('rush');
   });
 
-  it('returns null for regular foes', () => {
+  it('returns null for regular foes (melee cue is played directly)', () => {
     expect(enemyTelegraphKind('shade')).toBeNull();
     expect(enemyTelegraphKind('ash_scamp')).toBeNull();
   });
@@ -42,9 +42,13 @@ describe('enemyTelegraphStyle', () => {
     expect(windup.radius).toBeGreaterThanOrEqual(3);
   });
 
-  it('keeps pounce and rush cues tight', () => {
+  it('keeps pounce, rush, and melee cues tight', () => {
     expect(enemyTelegraphStyle('pounce', 'windup').radius).toBeLessThan(1);
     expect(enemyTelegraphStyle('rush', 'windup').radius).toBeLessThan(1);
+    expect(enemyTelegraphStyle('melee', 'windup').radius).toBeLessThan(1);
+    expect(
+      enemyTelegraphStyle('melee', 'windup').durationMs,
+    ).toBeGreaterThanOrEqual(280);
   });
 
   it('gives archers a readable shot windup in melee packs', () => {

@@ -12,6 +12,8 @@ export type ActiveSetBonus = {
   pieces: number;
   labels: string[];
   stats: GearStats & { maxHp: number };
+  skillFamily?: string[];
+  skillFamilyMult?: number;
 };
 
 function empty(): GearStats & { maxHp: number } {
@@ -40,9 +42,13 @@ export function resolveSetBonuses(equipment: EquipmentSlots): ActiveSetBonus[] {
       labels.push(`2pc: ${def.twoPiece.label}`);
       mergeBonus(stats, def.twoPiece);
     }
+    let skillFamily: string[] | undefined;
+    let skillFamilyMult: number | undefined;
     if (pieces >= 4) {
       labels.push(`4pc: ${def.fourPiece.label}`);
       mergeBonus(stats, def.fourPiece);
+      skillFamily = def.fourPiece.skillFamily;
+      skillFamilyMult = def.fourPiece.skillFamilyMult;
     }
     active.push({
       setId,
@@ -51,9 +57,24 @@ export function resolveSetBonuses(equipment: EquipmentSlots): ActiveSetBonus[] {
       pieces,
       labels,
       stats,
+      skillFamily,
+      skillFamilyMult,
     });
   }
   return active;
+}
+
+/** Extra skill damage from 4pc family match (0 if none). */
+export function setSkillFamilyMult(
+  equipment: EquipmentSlots,
+  abilityId: string,
+): number {
+  let bonus = 0;
+  for (const b of resolveSetBonuses(equipment)) {
+    if (!b.skillFamily?.includes(abilityId)) continue;
+    bonus += b.skillFamilyMult ?? 0;
+  }
+  return bonus;
 }
 
 function mergeBonus(

@@ -3,7 +3,7 @@
  * Enemy.update + WorldScene use these to pick a readable cue per phase.
  */
 
-export type EnemyTelegraphKind = 'pounce' | 'wail' | 'shot' | 'rush';
+export type EnemyTelegraphKind = 'pounce' | 'wail' | 'shot' | 'rush' | 'melee';
 export type EnemyTelegraphPhase = 'windup' | 'impact';
 
 export type EnemyTelegraphStyle = {
@@ -31,8 +31,12 @@ const STYLES: Record<
     impact: { radius: 0.55, durationMs: 200, color: 0xf4e4c8, shape: 'burst' },
   },
   rush: {
-    windup: { radius: 0.7, durationMs: 240, color: 0xe0a070, shape: 'ring' },
+    windup: { radius: 0.7, durationMs: 280, color: 0xe0a070, shape: 'ring' },
     impact: { radius: 0.5, durationMs: 180, color: 0xe0a070, shape: 'burst' },
+  },
+  melee: {
+    windup: { radius: 0.65, durationMs: 300, color: 0xf0c080, shape: 'ring' },
+    impact: { radius: 0.55, durationMs: 160, color: 0xffd0a0, shape: 'burst' },
   },
 };
 
@@ -68,5 +72,5 @@ export function enemyTelegraphStyle(
 
 /** Low tier keeps windups but trims concurrent cues harder than high. */
 export function telegraphCap(profile: { tier: 'high' | 'low' }): number {
-  return profile.tier === 'low' ? 4 : 12;
+  return profile.tier === 'low' ? 7 : 12;
 }

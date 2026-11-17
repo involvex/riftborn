@@ -46,6 +46,14 @@ export type SkillCastContext = {
   gearSkillPower?: number;
   /** Touch / aimed cast; omit for keyboard auto-target. */
   aim?: SkillAimHint;
+  /** Named gear affix: extra damage mult for this ability. */
+  namedAffixPower?: (abilityId: string) => number;
+  /** Named gear affix: cooldown seconds removed. */
+  namedAffixCooldown?: (abilityId: string) => number;
+  /** Named gear affix: extra max targets. */
+  namedAffixTargets?: (abilityId: string) => number;
+  /** 4pc set family mult for this ability. */
+  setFamilyMult?: (abilityId: string) => number;
 };
 
 export type SkillCastResult = {
@@ -119,7 +127,7 @@ export class SkillSystem {
   }
 
   slotAbilityId(slot: number): string | null {
-    const ids = classAbilityIds(this.classId);
+    const ids = classAbilityIds(this.classId, this.ranks);
     return ids[slot] ?? null;
   }
 
@@ -257,6 +265,10 @@ export class SkillSystem {
     if (!this.canSpendOn(nodeId)) return false;
     const node = getClassTree(this.classId).find((n) => n.id === nodeId)!;
     this.ranks[node.abilityId] = (this.ranks[node.abilityId] ?? 0) + 1;
+    // First rank of a fork puts it on the bar (replaces the starter).
+    if (node.replacesAbilityId && this.ranks[node.abilityId] === 1) {
+      // Keep the replaced skill's ranks for refunds; the bar reads the fork.
+    }
     this.unspentSkillPoints -= 1;
     gameEvents.emit(Events.SKILL_CHANGED, {
       ranks: { ...this.ranks },
@@ -297,7 +309,12 @@ export class SkillSystem {
       return { ok: false, reason: 'Passive — not castable' };
     }
 
-    const mult = def.damageMult + def.rankBonus * (rank - 1);
+    const affixPower = ctx.namedAffixPower?.(abilityId) ?? 0;
+    const familyMult = ctx.setFamilyMult?.(abilityId) ?? 0;
+    const cdCut = ctx.namedAffixCooldown?.(abilityId) ?? 0;
+    const extraTargets = ctx.namedAffixTargets?.(abilityId) ?? 0;
+    const mult =
+      def.damageMult + def.rankBonus * (rank - 1) + affixPower + familyMult;
     const gearSkill =
       1 + ((ctx.gearSkillPower ?? 0) + this.passiveSkillPower()) / 100;
     const base = Math.max(
@@ -310,6 +327,7 @@ export class SkillSystem {
       ),
     );
     const range = def.range ?? 2;
+    const maxTargets = (def.maxTargets ?? 4) + Math.floor(extraTargets);
     const rangeKind = skillRangeKind(def.kind);
     const px = ctx.player.worldX;
     const py = ctx.player.worldY;
@@ -438,7 +456,7 @@ export class SkillSystem {
           center.x,
           center.y,
           def.range ?? range,
-          def.maxTargets ?? 6,
+          maxTargets || 6,
         );
         for (const idx of targetIdxs) {
           const e = ctx.enemies[idx];
@@ -481,7 +499,7 @@ export class SkillSystem {
           def.dash ?? 3.4,
           dashToward ? { x: dashToward.worldX, y: dashToward.worldY } : null,
         );
-        const after = enemiesInRange(range, def.maxTargets ?? 5);
+        const after = enemiesInRange(range, maxTargets || 5);
         for (const e of after) hitEnemy(e, Math.floor(base * 1.05));
         break;
       }
@@ -494,7 +512,7 @@ export class SkillSystem {
           def.dash ?? 2,
           dashToward ? { x: dashToward.worldX, y: dashToward.worldY } : null,
         );
-        const after = enemiesInRange(range, def.maxTargets ?? 3);
+        const after = enemiesInRange(range, maxTargets || 3);
         for (const e of after) hitEnemy(e, base);
         break;
       }
@@ -511,7 +529,7 @@ export class SkillSystem {
           })),
           first.id,
           def.chainRange ?? 3,
-          def.maxTargets ?? 4,
+          maxTargets || 4,
         );
         for (const id of linkedIds) {
           const e = ctx.enemies.find((x) => x.id === id);
@@ -537,7 +555,7 @@ export class SkillSystem {
         return { ok: false, reason: 'Unknown ability' };
     }
 
-    const cd = Math.max(1, def.cooldown - (rank - 1) * 0.35);
+    const cd = Math.max(1, def.cooldown - (rank - 1) * 0.35 - cdCut);
     this.cooldownLeft[slot] = cd;
     ctx.player.playAttack();
     gameEvents.emit(Events.SKILL_CAST, { slot, abilityId, name: def.name });

@@ -1,8 +1,8 @@
 /**
  * Phone HUD geometry (landscape-first) as pure rectangles / circles.
  *
- * Left:  stick + DASH
- * Right: skills column | E | ATK
+ * Left:  stick + DASH + SHIFT
+ * Right: ATK + E + four skills fanned around ATK
  * Top:   status (HP/XP) left; minimap right; chrome under minimap
  *        (never over the status strip).
  */
@@ -20,7 +20,7 @@ export type TouchLayout = {
   shift: TouchPoint;
   atk: TouchPoint;
   interact: TouchPoint;
-  /** [0]=top, [1]=mid, [2]=bottom, [3]=lowest — column left of E. */
+  /** [0]=slot1 … [3]=slot4 — fan around ATK (thumb reach). */
   skillSlots: TouchPoint[];
   /** BAG / CHAR / SKILL / MAP / MENU — ≥44px diameter. */
   chromeButtons: TouchPoint[];
@@ -94,7 +94,7 @@ export function computeTouchLayout(width: number, height: number): TouchLayout {
     r: shiftR,
   };
 
-  // —— Right combat: ATK + E + skill column ——
+  // —— Right combat: ATK + E + skills fanned around ATK ——
   const atkR = Math.max(
     22,
     landscape
@@ -115,30 +115,42 @@ export function computeTouchLayout(width: number, height: number): TouchLayout {
     r: eR,
   };
 
-  const skillsX = interact.x - eR - skillR - gap;
-  const skillPitch = skillR * 2 + gap;
-
-  // Four ability pads stacked from the bottom edge; the column tightens
-  // its pitch when the viewport is too short to clear the minimap.
-  const skillBottom = height - pad - skillR;
-  const skillTopFloor = minimap.y + minimap.h + skillR + 16;
-  const skillAvail = skillBottom - skillTopFloor;
-  const skillMaxPitch = Math.max(
-    skillR * 2 + 2,
-    Math.floor((skillAvail - skillR * 2) / 3),
-  );
-  const pitch = Math.min(skillPitch, skillMaxPitch);
-  const skillSlots: TouchPoint[] = [
-    { x: skillsX, y: skillBottom, r: skillR },
-    { x: skillsX, y: skillBottom - pitch, r: skillR },
-    { x: skillsX, y: skillBottom - pitch * 2, r: skillR },
-    { x: skillsX, y: skillBottom - pitch * 3, r: skillR },
-  ];
-
   // ≥44px diameter chrome — row under minimap, right-aligned (clears status).
+  // Computed before skills so short landscape can clear the chrome row.
   const chromeR = 22;
   const chromeGap = chromeR * 2 + 8;
   const chromeY = minimap.y + minimap.h + pad + chromeR;
+
+  // Skill fan next to ATK. Prefer a short stack above E (thumb reach).
+  // On short landscape, fall back to a 2×2 cluster left of E.
+  const skillPitch = skillR * 2 + Math.max(6, Math.round(gap * 0.65));
+  const chromeBottom = chromeY + chromeR;
+  const yFloor = chromeBottom + skillR + 6;
+  const skill0Y = interact.y - interact.r - skillR - Math.max(6, gap - 2);
+  const stackFits = skill0Y - 3 * skillPitch >= yFloor - 1;
+  let skillSlots: TouchPoint[];
+  if (stackFits) {
+    skillSlots = [0, 1, 2, 3].map((i) => ({
+      x: interact.x,
+      y: skill0Y - i * skillPitch,
+      r: skillR,
+    }));
+  } else {
+    const pitch = skillR * 2 + Math.max(6, Math.round(gap * 0.7));
+    const rightX = interact.x - interact.r - skillR - Math.max(6, gap - 2);
+    const bottomY = Math.min(atk.y, height - pad - skillR);
+    const topY = bottomY - pitch;
+    skillSlots = [
+      { x: rightX, y: bottomY, r: skillR },
+      { x: rightX - pitch, y: bottomY, r: skillR },
+      { x: rightX, y: topY, r: skillR },
+      { x: rightX - pitch, y: topY, r: skillR },
+    ].map((s) => ({
+      x: Math.max(skillR + 2, Math.min(width - skillR - 2, s.x)),
+      y: Math.max(yFloor, Math.min(height - pad - skillR, s.y)),
+      r: skillR,
+    }));
+  }
   const chromeButtons: TouchPoint[] = [];
   const rightmostX = minimap.x + minimap.w - chromeR;
   for (let i = 0; i < TOUCH_CHROME_COUNT; i++) {

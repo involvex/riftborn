@@ -8,6 +8,8 @@ export const RUSH_DURATION = 0.9; // seconds
 export const RUSH_COOLDOWN = 2.4; // seconds
 export const RUSH_MIN_RANGE = 1.2; // tiles
 export const RUSH_TRIGGER_RANGE = 4.8; // tiles
+/** Pause before the sprint so the windup ring is readable. */
+export const RUSH_WINDUP = 0.28;
 
 export function isRushEnemy(defId: string): boolean {
   // Grove boss digs in and charges as its signature tell.

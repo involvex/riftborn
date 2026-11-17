@@ -16,6 +16,12 @@ import {
   playerSpriteKey,
 } from '../render/SpriteAtlas';
 import { playCombatBurst } from '../render/CombatVfx';
+import {
+  DASH_INVULN_SEC,
+  SWING_SLOW_SEC,
+  swingMoveMult,
+  tickTimer,
+} from '../systems/CombatWeight';
 import { gameState } from '../systems/GameState';
 
 type AnimKind = 'idle' | 'walk' | 'attack' | 'hit';
@@ -27,6 +33,8 @@ export class Player {
   speed = 4.2;
   attackCooldown = 0;
   skillCooldown = 0;
+  /** Remaining dash i-frames (seconds). */
+  dashInvuln = 0;
   readonly gatherRange = 1.4;
   maxX = 23.5;
   maxY = 23.5;
@@ -49,6 +57,8 @@ export class Player {
   private bobPhase = 0;
   private walkPhase = 0;
   private hitFlashUntil = 0;
+  /** Remaining basic-swing move slow (seconds). */
+  private swingSlow = 0;
   /** Bumps so stale attack ANIMATION_COMPLETE handlers no-op. */
   private attackGen = 0;
 
@@ -65,6 +75,9 @@ export class Player {
     this.sprite.setOrigin(0.5, 0.88);
     this.applyScale();
     this.slash = scene.add.graphics();
+    const shadow = scene.add.graphics();
+    shadow.fillStyle(0x000000, 0.32);
+    shadow.fillEllipse(0, 4, 26, 11);
     this.label = scene.add
       .text(0, -64, gameState.name, {
         fontFamily: 'Georgia, serif',
@@ -75,6 +88,7 @@ export class Player {
       })
       .setOrigin(0.5);
     this.body = scene.add.container(0, 0, [
+      shadow,
       this.sprite,
       this.slash,
       this.label,
@@ -155,7 +169,7 @@ export class Player {
 
     const len = Math.hypot(dx, dy) || 1;
     // Touch stick encodes 0..1 speed in vector length; WASD stays unit-length.
-    const speedMul = Math.min(1, len);
+    const speedMul = Math.min(1, len) * swingMoveMult(this.swingSlow);
     const stepX = (dx / len) * this.speed * speedMul * dt;
     const stepY = (dy / len) * this.speed * speedMul * dt;
     if (this.walkCheck) {
@@ -208,6 +222,7 @@ export class Player {
   playAttack(): void {
     this.playAnim('attack', true);
     this.showSlash();
+    this.swingSlow = Math.max(this.swingSlow, SWING_SLOW_SEC);
     playCombatBurst(this.scene, this.worldX, this.worldY, 'slash', this.facing);
     // Punch the sprite forward slightly so the swing reads in-world.
     // Drop walk lean so the swing isn't tilted mid-strafe.
@@ -221,6 +236,15 @@ export class Player {
       this.sprite.x = 0;
       this.sprite.y = -4;
     });
+  }
+
+  /** Grant dash i-frames (blink distance / CD stay in WorldScene). */
+  grantDashInvuln(seconds = DASH_INVULN_SEC): void {
+    this.dashInvuln = Math.max(this.dashInvuln, seconds);
+  }
+
+  get isDashInvulnerable(): boolean {
+    return this.dashInvuln > 0;
   }
 
   /** Hit frames (sheet) with light tint fallback if anim missing. */
@@ -317,6 +341,8 @@ export class Player {
     this.moving = false;
     this.slash.clear();
     this.slashUntil = 0;
+    this.swingSlow = 0;
+    this.dashInvuln = 0;
     this.sprite.x = 0;
     this.sprite.y = -4;
     this.sprite.setRotation(0);
@@ -328,6 +354,8 @@ export class Player {
   tick(dt: number): void {
     this.attackCooldown = Math.max(0, this.attackCooldown - dt);
     this.skillCooldown = Math.max(0, this.skillCooldown - dt);
+    this.dashInvuln = tickTimer(this.dashInvuln, dt);
+    this.swingSlow = tickTimer(this.swingSlow, dt);
     this.speed = 4.2 * gameState.progression.moveSpeedMult();
     if (this.slashUntil && this.scene.time.now > this.slashUntil) {
       this.slash.clear();

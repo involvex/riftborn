@@ -27,6 +27,46 @@ export function pickNearestEnemyIndex(
   return best;
 }
 
+/**
+ * Prefer foes in the stick / facing direction. Score =
+ * distance − facingBias * max(0, dot) * maxRange.
+ * Falls back to nearest when aimX/aimY are ~0.
+ */
+export function pickFacingEnemyIndex(
+  enemies: readonly Targetable[],
+  playerX: number,
+  playerY: number,
+  maxRange: number,
+  aimX: number,
+  aimY: number,
+  facingBias = 0.55,
+): number {
+  const aimLen = Math.hypot(aimX, aimY);
+  if (aimLen < 0.08) {
+    return pickNearestEnemyIndex(enemies, playerX, playerY, maxRange);
+  }
+  const ax = aimX / aimLen;
+  const ay = aimY / aimLen;
+  let best = -1;
+  let bestScore = Infinity;
+  for (let i = 0; i < enemies.length; i++) {
+    const e = enemies[i]!;
+    if (!e.alive) continue;
+    const dx = e.x - playerX;
+    const dy = e.y - playerY;
+    const d = Math.hypot(dx, dy);
+    if (d > maxRange) continue;
+    const dirLen = d > 1e-6 ? d : 1;
+    const dot = (dx / dirLen) * ax + (dy / dirLen) * ay;
+    const score = d - facingBias * Math.max(0, dot) * maxRange;
+    if (score < bestScore) {
+      bestScore = score;
+      best = i;
+    }
+  }
+  return best;
+}
+
 /** Indices of alive targets within radius of (cx,cy), sorted by distance, capped. */
 export function pickEnemiesAround(
   enemies: readonly Targetable[],

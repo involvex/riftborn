@@ -165,6 +165,45 @@
       "rankBonus": 0.18,
       "maxTargets": 4
     },
+    "war_whirl": {
+      "id": "war_whirl",
+      "classId": "warrior",
+      "name": "Whirlwind",
+      "blurb": "Spin through nearby foes — alternate to Cleaving Strike.",
+      "maxRank": 3,
+      "cooldown": 5,
+      "kind": "cleave",
+      "range": 2.5,
+      "damageMult": 1.2,
+      "rankBonus": 0.18,
+      "maxTargets": 6
+    },
+    "mys_lance": {
+      "id": "mys_lance",
+      "classId": "mystic",
+      "name": "Rift Lance",
+      "blurb": "Pierce a line of foes — alternate to Binding Seal.",
+      "maxRank": 3,
+      "cooldown": 7,
+      "kind": "bolt",
+      "range": 5.5,
+      "damageMult": 1.55,
+      "rankBonus": 0.2
+    },
+    "mag_meteor": {
+      "id": "mag_meteor",
+      "classId": "mage",
+      "name": "Rift Meteor",
+      "blurb": "Call a meteor slam — alternate to Frost Nova.",
+      "maxRank": 3,
+      "cooldown": 10,
+      "kind": "leap",
+      "range": 3.2,
+      "dash": 0.2,
+      "damageMult": 1.85,
+      "rankBonus": 0.22,
+      "maxTargets": 5
+    },
     "war_ironwill": {
       "id": "war_ironwill",
       "classId": "warrior",
@@ -242,6 +281,17 @@
         "starter": true
       },
       {
+        "id": "w_whirl",
+        "abilityId": "war_whirl",
+        "replacesAbilityId": "war_cleave",
+        "name": "Whirlwind",
+        "blurb": "Fork. Replaces Cleaving Strike on the bar.",
+        "col": -2,
+        "row": 2,
+        "requires": ["w_cleave"],
+        "starter": false
+      },
+      {
         "id": "w_iron",
         "abilityId": "war_ironwill",
         "name": "Iron Will",
@@ -294,6 +344,17 @@
         "starter": true
       },
       {
+        "id": "m_lance",
+        "abilityId": "mys_lance",
+        "replacesAbilityId": "mys_seal",
+        "name": "Rift Lance",
+        "blurb": "Fork. Replaces Binding Seal on the bar.",
+        "col": 2,
+        "row": 2,
+        "requires": ["m_seal"],
+        "starter": false
+      },
+      {
         "id": "m_attune",
         "abilityId": "mys_riftattune",
         "name": "Rift Attunement",
@@ -344,6 +405,17 @@
         "row": 2,
         "requires": [],
         "starter": true
+      },
+      {
+        "id": "g_meteor",
+        "abilityId": "mag_meteor",
+        "replacesAbilityId": "mag_nova",
+        "name": "Rift Meteor",
+        "blurb": "Fork. Replaces Frost Nova on the bar.",
+        "col": -2,
+        "row": 2,
+        "requires": ["g_nova"],
+        "starter": false
       },
       {
         "id": "g_res",

@@ -5,6 +5,7 @@ import {
   RUSH_MIN_RANGE,
   RUSH_SPEED_MULT,
   RUSH_TRIGGER_RANGE,
+  RUSH_WINDUP,
   isRushEnemy,
   rushSpeed,
   shouldStartRush,
@@ -35,6 +36,8 @@ describe('EnemyRush', () => {
     expect(RUSH_COOLDOWN).toBe(2.4);
     expect(RUSH_MIN_RANGE).toBe(1.2);
     expect(RUSH_TRIGGER_RANGE).toBe(4.8);
+    expect(RUSH_WINDUP).toBeGreaterThanOrEqual(0.25);
+    expect(RUSH_WINDUP).toBeLessThanOrEqual(0.35);
   });
 
   test('rushSpeed applies multiplier to base speed', () => {

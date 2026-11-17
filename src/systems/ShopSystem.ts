@@ -57,8 +57,17 @@ export class ShopSystem {
     this.inventory = inventory;
   }
 
-  listOffers(): ShopOffer[] {
-    return STOCK;
+  listOffers(playerLevel = 1): ShopOffer[] {
+    const lv = Math.max(1, Math.floor(playerLevel));
+    const base = 2 + Math.floor((lv - 1) / 5);
+    return STOCK.map((o) => ({
+      ...o,
+      itemLevel: Math.max(o.itemLevel, base + (o.itemLevel >= 5 ? 3 : 0)),
+      blurb:
+        o.itemLevel >= 5
+          ? `Better roll · ilvl ${Math.max(o.itemLevel, base + 3)}`
+          : `Random piece · ilvl ${Math.max(o.itemLevel, base)}`,
+    }));
   }
 
   gold(): number {
@@ -68,8 +77,9 @@ export class ShopSystem {
   buy(
     offerId: string,
     forClass?: CharacterClassId,
+    playerLevel = 1,
   ): { ok: true; gear: GearInstance } | { ok: false; reason: string } {
-    const offer = STOCK.find((o) => o.id === offerId);
+    const offer = this.listOffers(playerLevel).find((o) => o.id === offerId);
     if (!offer) return { ok: false, reason: 'Unknown offer' };
     if (this.gold() < offer.price) {
       return { ok: false, reason: `Need ${offer.price} gold` };

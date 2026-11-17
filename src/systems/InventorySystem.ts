@@ -194,6 +194,26 @@ export class InventorySystem {
     return slot.item;
   }
 
+  /** Swap a bag or equipped piece in place (affix reroll). */
+  replaceGearUid(uid: string, next: GearInstance): boolean {
+    const bagIdx = this.slots.findIndex(
+      (s) => s.kind === 'gear' && s.item.uid === uid,
+    );
+    if (bagIdx >= 0) {
+      this.slots[bagIdx] = { kind: 'gear', item: next };
+      gameEvents.emit(Events.ITEM_ADDED, { gear: next, reroll: true });
+      return true;
+    }
+    for (const slot of ['weapon', 'hat', 'chest', 'legs', 'feet'] as const) {
+      const cur = this.equipment[slot];
+      if (cur?.uid !== uid) continue;
+      this.equipment[slot] = next;
+      gameEvents.emit(Events.EQUIP_CHANGED, { ...this.equipment });
+      return true;
+    }
+    return false;
+  }
+
   canEquipGear(item: GearInstance, classId: CharacterClassId): boolean {
     const req = resolveGearClass(item);
     return !req || req === classId;

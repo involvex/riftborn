@@ -167,14 +167,20 @@ export function chaseLineAfterGain(
   return status?.line ?? null;
 }
 
-/** Drop-roll bias toward missing class-set slots. */
+/** Drop-roll bias toward missing class-set slots (or upgrades after 4pc). */
 export function setChaseDropBias(
   classId: CharacterClassId,
   equipment: EquipmentSlots,
   bag: InventorySlot[] = [],
-): { preferSetId?: string; preferSlots?: GearSlot[] } {
+): {
+  preferSetId?: string;
+  preferSlots?: GearSlot[];
+  preferUpgrade?: boolean;
+} {
   const setId = classSetId(classId);
   const missing = missingSetSlots(ownedSetSlots(setId, equipment, bag));
-  if (!missing.length) return {};
+  if (!missing.length) {
+    return { preferSetId: setId, preferUpgrade: true };
+  }
   return { preferSetId: setId, preferSlots: missing };
 }

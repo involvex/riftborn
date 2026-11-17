@@ -13,7 +13,15 @@
       "label": "+12 DEX, +15% Rift skills, +25 Max HP",
       "dexterity": 12,
       "skillPower": 15,
-      "maxHp": 25
+      "maxHp": 25,
+      "skillFamily": [
+        "mys_pulse",
+        "mys_rift",
+        "mys_seal",
+        "mys_riftstep",
+        "mys_lance"
+      ],
+      "skillFamilyMult": 0.15
     }
   },
   "riftbound": {
@@ -30,7 +38,15 @@
       "label": "+14 INT, +18% Arc skills, +20 Max HP",
       "intellect": 14,
       "skillPower": 18,
-      "maxHp": 20
+      "maxHp": 20,
+      "skillFamily": [
+        "mag_bolt",
+        "mag_nova",
+        "mag_barrier",
+        "mag_chain",
+        "mag_meteor"
+      ],
+      "skillFamilyMult": 0.18
     }
   },
   "bone": {
@@ -47,7 +63,15 @@
       "label": "+14 STR, +20% Whirlwind skills, +30 Max HP",
       "strength": 14,
       "skillPower": 20,
-      "maxHp": 30
+      "maxHp": 30,
+      "skillFamily": [
+        "war_leap",
+        "war_cleave",
+        "war_bash",
+        "war_battlecry",
+        "war_whirl"
+      ],
+      "skillFamilyMult": 0.2
     }
   }
 }

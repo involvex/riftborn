@@ -44,7 +44,8 @@ export class LootChest {
           strokeThickness: 3,
         },
       )
-      .setOrigin(0.5);
+      .setOrigin(0.5)
+      .setVisible(false);
     this.body = scene.add.container(0, 0, [this.lid, this.label]);
     if (this.isBoss) {
       this.body.setScale(1.12);
@@ -58,6 +59,14 @@ export class LootChest {
       });
     }
     this.syncScreen();
+  }
+
+  setNear(near: boolean): void {
+    if (this.looted) {
+      this.label.setVisible(false);
+      return;
+    }
+    this.label.setVisible(near);
   }
 
   get isBossChest(): boolean {

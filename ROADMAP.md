@@ -63,16 +63,25 @@ earn their keep in feel.
 | ✓   | **Loot readability**     | Payoff after combat soft     | Shipped: magic+ drop icons/beams, boss chest look, rarity-gated loot juice                           |
 | ✓   | **Boss arena beat**      | Boss room = any hall         | Shipped: biome wash + phase ring in boss room (idle → boss → exit)                                   |
 
-## Next — content (keep after feel)
-
-Looks are distinct; **fights and chase** should earn another run. Still extend
-existing data / systems — no new frameworks.
+## Done — content (keep after feel)
 
 | #   | Slice                     | Why it matters                            | Done when                                                          |
 | --- | ------------------------- | ----------------------------------------- | ------------------------------------------------------------------ |
 | ✓   | **Biome pack identity**   | Biomes tint floors; packs fight alike     | Shipped: opening packs (grind / kite / rush / poke) + skewed mixes |
 | ✓   | **Boss signature beats**  | Arena looks special; fight is one pattern | Shipped: hop / wail / charge / volley on shared beat cadence       |
 | ✓   | **Set chase readability** | Loot pops; keeping gear is thin           | Shipped: missing-slot drop bias + HUD/bag “need X” from 1pc        |
+
+## Next — lite mobile ARPG loop
+
+Phone-first feel, post-cap chase, plaza that reads as a game. Itch / store /
+co-op rifts stay parked. Extend existing systems only.
+
+| #   | Slice                   | Why it matters                                                     | Done when                                                                          |
+| --- | ----------------------- | ------------------------------------------------------------------ | ---------------------------------------------------------------------------------- |
+| ✓   | **Phone combat weight** | Stick cancels chase; dash has no i-frames; trash hits with no tell | Dash i-frames, melee/rush windups, stick+ATK blend, Low buffer scale               |
+| ✓   | **Thumb layout**        | Skills far from ATK; word pads                                     | Skill fan by ATK, icon pads, stick-biased cleave, hit haptic                       |
+| ✓   | **Replay ladder**       | Depth 10 / L50 plateaus                                            | Pressure step, skill forks, named affixes, set family, shard reroll, rift bounties |
+| ✓   | **Plaza / boss look**   | Vector town + reskin bosses                                        | Proximity labels, figure shadows, boss silhouette accents                          |
 
 Skip inventing new frameworks — extend `MapGen` / `WorldScene` /
 `SaveStore` / NPCs / `server/index.ts` / `src/data/*` / `src/render/*`.
@@ -82,8 +91,8 @@ Skip inventing new frameworks — extend `MapGen` / `WorldScene` /
 - Co-op rifts + authoritative loot / gear sync (hub sandbox stays prototype)
 - App Store packaging for Expo shell
 - Seasons, trading, seamless open world
-- `GraphicsQuality` `renderScale: 0.65` remains a probe until a device breaks Low juice caps
 - Dedicated 8-dir **sprite rows** (logic/octant shipped; sheets still 2-dir flipX)
+- Painted iso plaza buildings / NPC sheets (labels + shadows shipped first)
 
 ## Done — systems polish
 

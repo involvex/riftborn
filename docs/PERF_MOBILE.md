@@ -19,14 +19,11 @@ Setting: **Graphics** = Auto / Low / High (Settings + title).
 
 - **Auto** → Low when `?touch=1` / coarse pointer / small screen; else High.
 - **Low** (`src/core/GraphicsQuality.ts`):
-  - Phaser **game size stays CSS/logical** (never buffer-sized — that
-    overscaled or cropped the title UI)
-  - Canvas matches game size (shrinking the drawing buffer below game size
-    cropped the scene)
-  - Camera zoom stays base (`getAppliedCameraZoom(1.1)` → `1.1`)
-  - Fillrate wins come from juice budget: damage-number pool (8), particle
-    cap (3), hitstop/shake ~40%, text resolution 1
-  - Profile still exposes `renderScale: 0.65` for probes / future work
+  - Phaser **game size = buffer** (`CSS × renderScale`, default 0.65)
+  - Canvas CSS stretches to 100% of the parent (full viewport)
+  - Camera zoom is `base × renderScale` so FOV matches High
+  - Juice budget still cuts: damage-number pool (8), particle cap (3),
+    hitstop/shake ~40%, text resolution 1
 - **High**: full CSS pixels + juice budget
 
 ## Stick feel (touch)

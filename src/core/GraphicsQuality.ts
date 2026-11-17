@@ -226,12 +226,12 @@ let resizeHooked = false;
 let gameRef: Phaser.Game | null = null;
 
 /**
- * M7b: FOV-safe Low fillrate.
- * - Phaser game size stays at CSS/logical (UI + world coords unchanged).
- * - Canvas matches game size — do **not** shrink the drawing buffer below
- *   game size (that crops the scene and parks UI in a corner).
- * - Low still cuts juice/particles/text budget via the profile caps.
- * - Cameras keep base zoom because game size == CSS.
+ * FOV-safe Low fillrate:
+ * - Phaser game size = buffer (CSS × renderScale) for GPU fill-rate.
+ * - Canvas CSS stretches to 100% of the parent (full viewport).
+ * - Cameras use getAppliedCameraZoom(base) = base × renderScale so the
+ *   visible world tile span matches High.
+ * - Juice/particles/text caps still cut via the profile.
  * Requires Phaser.Scale.NONE (see main.ts).
  */
 export function applyGraphicsProfile(game: Phaser.Game): void {
@@ -249,9 +249,9 @@ export function applyGraphicsProfile(game: Phaser.Game): void {
     const vp = readCssViewport();
     const sizes = computeGraphicsResize(vp.width, vp.height, p.renderScale);
     appliedLogical = sizes.logical;
-    // Applied buffer == logical: independent canvas downscale crops UI.
-    appliedBuffer = { ...sizes.logical };
-    gameRef.scale.resize(sizes.logical.width, sizes.logical.height);
+    appliedBuffer = { ...sizes.buffer };
+    // Resize the game to the buffer; CSS stretch below fills the viewport.
+    gameRef.scale.resize(sizes.buffer.width, sizes.buffer.height);
     const parent = gameRef.canvas?.parentElement;
     if (parent) {
       parent.style.width = '100%';
@@ -261,8 +261,7 @@ export function applyGraphicsProfile(game: Phaser.Game): void {
     }
     const c = gameRef.canvas;
     if (c) {
-      // Force display size to CSS viewport — Phaser/WebView can leave
-      // style.width at buffer×DPR and clip the title menu.
+      // Stretch the smaller buffer up to the CSS viewport so UI is not cropped.
       c.style.position = 'absolute';
       c.style.left = '0';
       c.style.top = '0';
@@ -296,12 +295,12 @@ export function getAppliedRenderScale(): number {
 }
 
 /**
- * Camera zoom for world FOV. Game size is always CSS/logical, so Low no
- * longer multiplies zoom by renderScale (that was for buffer-sized games).
+ * Camera zoom for world FOV. When Low shrinks the game to the buffer,
+ * multiply base zoom by renderScale so tile span matches High.
  * Pair with `cameras.main.setZoom(getAppliedCameraZoom(1.1))`.
  */
 export function getAppliedCameraZoom(baseZoom: number): number {
-  return baseZoom;
+  return baseZoom * appliedScale;
 }
 
 /** Live sizes for probes / Playwright (FOV + fillrate checks). */

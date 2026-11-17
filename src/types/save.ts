@@ -55,7 +55,15 @@ export type RiftRunSave = {
 };
 
 export type BountyKind =
-  'scout' | 'chests' | 'cull' | 'shrine' | 'bramble' | 'forge';
+  | 'scout'
+  | 'chests'
+  | 'cull'
+  | 'shrine'
+  | 'bramble'
+  | 'forge'
+  | 'rift_clear'
+  | 'rift_boss'
+  | 'rift_mat';
 
 export type ActiveBounty = {
   kind: BountyKind;
@@ -122,4 +130,9 @@ export type CharacterSave = {
   hubExplored?: string | null;
   /** Mid-rift living state; null when in town. */
   riftRun?: RiftRunSave | null;
+  /**
+   * Post-cap pressure step (optional; missing = 0 for legacy saves).
+   * Raised on Apex clears after depth 10 / level 50.
+   */
+  pressureStep?: number;
 };

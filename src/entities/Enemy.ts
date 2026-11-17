@@ -48,10 +48,12 @@ import {
 import {
   RUSH_COOLDOWN,
   RUSH_DURATION,
+  RUSH_WINDUP,
   isRushEnemy,
   rushSpeed,
   shouldStartRush,
 } from '../systems/EnemyRush';
+import { MELEE_WINDUP_SEC } from '../systems/CombatWeight';
 import {
   MENDER_SIGHT,
   MENDER_WINDUP,
@@ -98,8 +100,10 @@ export class Enemy {
   private pounce: PounceState | null = null;
   private wailWindup = 0;
   private rushRemaining = 0;
+  private rushWindup = 0;
   private rushReadyIn = 0;
   private menderWindup = 0;
+  private meleeWindup = 0;
   private readonly kiteStrafeSign: 1 | -1;
   /** Runtime elite (random pack upgrade), distinct from boss defs. */
   readonly elitePack: boolean;
@@ -163,7 +167,21 @@ export class Enemy {
     this.sprite.setScale(drawScale);
     this.applyBaseTint();
     this.bar = scene.add.graphics();
-    this.body = scene.add.container(0, 0, [this.sprite, this.bar]);
+    const shadow = scene.add.graphics();
+    const sw = this.isBoss ? 36 : this.def.isElite || this.elitePack ? 30 : 24;
+    shadow.fillStyle(0x000000, this.isBoss ? 0.4 : 0.3);
+    shadow.fillEllipse(0, 5, sw, sw * 0.42);
+    // Boss silhouette accent — unique crown/horn so reskins read apart.
+    const accent = scene.add.graphics();
+    if (this.isBoss) {
+      drawBossSilhouetteAccent(accent, this.def.id);
+    }
+    this.body = scene.add.container(0, 0, [
+      shadow,
+      this.sprite,
+      accent,
+      this.bar,
+    ]);
     this.playAnim('idle');
     this.redrawBar();
     this.syncScreen();
@@ -276,14 +294,17 @@ export class Enemy {
     if (this.slowTimer <= 0) this.slowMult = 1;
 
     const pouncing = !!this.pounce || this.pounceWindup > 0;
-    const rushing = this.rushRemaining > 0;
+    const rushing =
+      this.rushRemaining > 0 || this.rushWindup > 0 || this.meleeWindup > 0;
 
     if (this.ghosted) {
       this.pounceWindup = 0;
       this.pounce = null;
       this.wailWindup = 0;
       this.rushRemaining = 0;
+      this.rushWindup = 0;
       this.menderWindup = 0;
+      this.meleeWindup = 0;
       this.applyBaseTint();
       this.playAnim('idle');
       this.syncScreen();
@@ -319,7 +340,9 @@ export class Enemy {
       this.pounce = null;
       this.wailWindup = 0;
       this.rushRemaining = 0;
+      this.rushWindup = 0;
       this.menderWindup = 0;
+      this.meleeWindup = 0;
       this.applyBaseTint();
       this.playAnim('idle');
       this.syncScreen();
@@ -423,8 +446,12 @@ export class Enemy {
       this.state = 'patrol';
     }
 
-    if (this.state === 'attack' && this.rushRemaining > 0) {
+    if (
+      this.state === 'attack' &&
+      (this.rushRemaining > 0 || this.rushWindup > 0)
+    ) {
       this.rushRemaining = 0;
+      this.rushWindup = 0;
       this.rushReadyIn = RUSH_COOLDOWN;
       this.applyBaseTint();
       playEnemyTelegraph(
@@ -434,6 +461,39 @@ export class Enemy {
         this.worldX,
         this.worldY,
       );
+    }
+
+    // Basic melee windup — leave attack range cancels the swing.
+    if (this.state !== 'attack' && this.meleeWindup > 0) {
+      this.meleeWindup = 0;
+      this.applyBaseTint();
+    }
+    if (this.state === 'attack' && this.meleeWindup > 0) {
+      this.setFacingToward(playerX, playerY);
+      this.meleeWindup -= dt;
+      if (this.meleeWindup <= 0) {
+        this.meleeWindup = 0;
+        this.attackTimer = this.def.attackCooldown;
+        this.playAnim('attack', true);
+        this.applyBaseTint();
+        playEnemyTelegraph(
+          this.scene,
+          'melee',
+          'impact',
+          this.worldX,
+          this.worldY,
+        );
+        this.worldX = Phaser.Math.Clamp(this.worldX, 0.5, this.maxBound);
+        this.worldY = Phaser.Math.Clamp(this.worldY, 0.5, this.maxBound);
+        this.syncScreen();
+        return {
+          hitPlayer: true,
+          damage: this.meleeDamage(),
+          shot: null,
+        };
+      }
+      this.syncScreen();
+      return { hitPlayer: false, damage: 0, shot: null };
     }
 
     if (
@@ -482,8 +542,8 @@ export class Enemy {
       return { hitPlayer: false, damage: 0, shot: null };
     }
 
-    let hitPlayer = false;
-    let damage = 0;
+    const hitPlayer = false;
+    const damage = 0;
     let shot: EnemyShot | null = null;
 
     if (this.state === 'patrol') {
@@ -515,6 +575,21 @@ export class Enemy {
         this.playAnim('walk');
       } else if (isRushEnemy(this.def.id)) {
         let moveSpd = spd;
+        if (this.rushWindup > 0) {
+          this.rushWindup -= dt;
+          this.sprite.setTint(0xe0a070);
+          this.setFacingToward(playerX, playerY);
+          if (this.rushWindup <= 0) {
+            this.rushWindup = 0;
+            this.rushRemaining = RUSH_DURATION;
+            moveSpd = rushSpeed(this.def.speed);
+          } else {
+            // Plant feet during the tell so the ring is readable.
+            this.playAnim('attack', true);
+            this.syncScreen();
+            return { hitPlayer: false, damage: 0, shot: null };
+          }
+        }
         if (this.rushRemaining > 0) {
           this.rushRemaining -= dt;
           moveSpd = rushSpeed(this.def.speed);
@@ -531,10 +606,14 @@ export class Enemy {
               this.worldY,
             );
           }
-        } else if (this.rushReadyIn <= 0 && shouldStartRush(dist)) {
-          this.rushRemaining = RUSH_DURATION;
+        } else if (
+          this.rushWindup <= 0 &&
+          this.rushReadyIn <= 0 &&
+          shouldStartRush(dist)
+        ) {
+          this.rushWindup = RUSH_WINDUP;
           this.sprite.setTint(0xe0a070);
-          moveSpd = rushSpeed(this.def.speed);
+          this.playAnim('attack', true);
           playEnemyTelegraph(
             this.scene,
             'rush',
@@ -542,6 +621,8 @@ export class Enemy {
             this.worldX,
             this.worldY,
           );
+          this.syncScreen();
+          return { hitPlayer: false, damage: 0, shot: null };
         }
         const dx = playerX - this.worldX;
         const dy = playerY - this.worldY;
@@ -561,7 +642,7 @@ export class Enemy {
       }
     } else if (this.state === 'attack') {
       this.setFacingToward(playerX, playerY);
-      if (this.attackTimer <= 0) {
+      if (this.attackTimer <= 0 && this.meleeWindup <= 0) {
         const dealt = this.meleeDamage();
         if (isRangedEnemy(this.def.id)) {
           this.attackTimer = this.def.attackCooldown;
@@ -579,12 +660,18 @@ export class Enemy {
             dealt,
           );
         } else {
-          hitPlayer = true;
-          damage = dealt;
-          this.attackTimer = this.def.attackCooldown;
+          this.meleeWindup = MELEE_WINDUP_SEC;
           this.playAnim('attack', true);
+          this.sprite.setTint(0xf0c080);
+          playEnemyTelegraph(
+            this.scene,
+            'melee',
+            'windup',
+            this.worldX,
+            this.worldY,
+          );
         }
-      } else if (this.animKind !== 'attack') {
+      } else if (this.animKind !== 'attack' && this.meleeWindup <= 0) {
         this.playAnim('idle');
       }
     }
@@ -857,6 +944,35 @@ export class Enemy {
   destroy(): void {
     this.body.destroy(true);
   }
+}
+
+/** Cheap crown/horn so biome bosses read apart on shared sheets. */
+function drawBossSilhouetteAccent(
+  g: Phaser.GameObjects.Graphics,
+  defId: string,
+): void {
+  if (defId === 'crystal_lord') {
+    g.fillStyle(0xa8e0ff, 0.95);
+    g.fillTriangle(-10, -36, -2, -36, -6, -52);
+    g.fillTriangle(2, -36, 10, -36, 6, -50);
+    return;
+  }
+  if (defId === 'grove_alpha') {
+    g.fillStyle(0x4a8030, 0.95);
+    g.fillTriangle(-12, -32, -4, -32, -10, -48);
+    g.fillTriangle(4, -32, 12, -32, 10, -48);
+    return;
+  }
+  if (defId === 'salt_warden') {
+    g.fillStyle(0xe8d8a0, 0.95);
+    g.fillRect(-8, -48, 16, 6);
+    g.fillRect(-3, -56, 6, 10);
+    return;
+  }
+  // Rift Lord — violet horns
+  g.fillStyle(0x8060c0, 0.95);
+  g.fillTriangle(-11, -34, -3, -34, -8, -50);
+  g.fillTriangle(3, -34, 11, -34, 8, -50);
 }
 
 export function getEnemyDef(id: string): EnemyDef {

@@ -108,3 +108,58 @@ describe('BountySystem forge contract', () => {
     expect(b2.active?.progress).toBe(3);
   });
 });
+
+describe('BountySystem rift contracts', () => {
+  test('rift clear and boss complete from notes', () => {
+    const clear = new BountySystem();
+    clear.load({
+      bounty: {
+        kind: 'rift_clear',
+        label: 'Clear a rift',
+        target: 1,
+        progress: 0,
+        rewardGold: 55,
+        rewardXp: 50,
+      },
+      lastKind: 'cull',
+      cooldownLeft: 0,
+    });
+    expect(clear.noteRiftClear()?.kind).toBe('rift_clear');
+    expect(clear.statusLine()).toBeNull();
+
+    const boss = new BountySystem();
+    boss.load({
+      bounty: {
+        kind: 'rift_boss',
+        label: 'Slay a Rift Lord',
+        target: 1,
+        progress: 0,
+        rewardGold: 60,
+        rewardXp: 55,
+      },
+      lastKind: 'rift_clear',
+      cooldownLeft: 0,
+    });
+    expect(boss.noteRiftBoss()?.kind).toBe('rift_boss');
+  });
+
+  test('rift mat accumulates to target', () => {
+    const b = new BountySystem();
+    b.load({
+      bounty: {
+        kind: 'rift_mat',
+        label: 'Gather biome mats in a rift',
+        target: 4,
+        progress: 0,
+        rewardGold: 40,
+        rewardXp: 35,
+      },
+      lastKind: 'rift_boss',
+      cooldownLeft: 0,
+    });
+    expect(b.noteRiftMat(2)).toBeNull();
+    expect(b.active?.progress).toBe(2);
+    expect(b.noteRiftMat(2)?.kind).toBe('rift_mat');
+    expect(b.statusLine()).toBeNull();
+  });
+});
