@@ -3,6 +3,8 @@
  * TOUCH_FONT_MIN_PX so HUD copy stays legible on 1024×473 phones.
  */
 
+import { getAppliedRenderScale } from './GraphicsQuality';
+
 export const TOUCH_FONT_MIN_PX = 12;
 
 export const UI_FONT_ROLES = [
@@ -63,7 +65,28 @@ export function uiFontPx(role: UiFontRole, profile: UiFontProfile): number {
   return base;
 }
 
+/**
+ * Font size in Phaser game pixels. On Low touch the canvas is a
+ * shrunk buffer stretched to CSS — scale type down so it matches
+ * CSS-intent `uiFontPx` after stretch.
+ */
+export function uiFontGamePx(role: UiFontRole, profile: UiFontProfile): number {
+  const px = uiFontPx(role, profile);
+  if (profile !== 'touch') return px;
+  const s = getAppliedRenderScale();
+  if (s >= 0.99) return px;
+  return Math.max(9, Math.round(px * s));
+}
+
 /** Phaser-ready `Npx` string. */
 export function uiFontSize(role: UiFontRole, profile: UiFontProfile): string {
   return `${uiFontPx(role, profile)}px`;
+}
+
+/** Phaser-ready size for live game coordinates (see uiFontGamePx). */
+export function uiFontGameSize(
+  role: UiFontRole,
+  profile: UiFontProfile,
+): string {
+  return `${uiFontGamePx(role, profile)}px`;
 }

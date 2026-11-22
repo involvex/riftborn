@@ -1,4 +1,5 @@
 import type { Scene } from 'phaser';
+import { getAppliedRenderScale } from './GraphicsQuality';
 
 /** Responsive UI helpers based on the current game scale. */
 export function uiFont(scene: Scene, base: number, min = 12, max = 72): string {
@@ -22,5 +23,25 @@ export function uiPanelSize(
   return {
     w: Math.min(maxW, Math.floor(scene.scale.width * widthFrac)),
     h: Math.min(maxH, Math.floor(scene.scale.height * heightFrac)),
+  };
+}
+
+/**
+ * Panel size in Phaser game pixels. Caps are CSS-intent; result is
+ * shrunk by renderScale so Low-buffer stretch does not overscale UI.
+ */
+export function uiPanelSizeGame(
+  scene: Scene,
+  widthFrac: number,
+  heightFrac: number,
+  maxWCss: number,
+  maxHCss: number,
+): { w: number; h: number } {
+  const s = Math.min(1, Math.max(0.35, getAppliedRenderScale() || 1));
+  const cssW = scene.scale.width / s;
+  const cssH = scene.scale.height / s;
+  return {
+    w: Math.max(120, Math.round(Math.min(maxWCss, cssW * widthFrac) * s)),
+    h: Math.max(120, Math.round(Math.min(maxHCss, cssH * heightFrac) * s)),
   };
 }

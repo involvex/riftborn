@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import {
   computeTouchLayout,
+  scaleTouchLayout,
   circleRect,
   rectsOverlap,
   type Rect,
@@ -123,5 +124,44 @@ describe('computeTouchLayout', () => {
       expect(town.x - town.r).toBeGreaterThanOrEqual(-0.5);
       expect(town.y - town.r).toBeGreaterThanOrEqual(-0.5);
     }
+  });
+
+  test('landscape skills stay in bottom 45% (2×2 cluster near ATK)', () => {
+    for (const vp of VIEWPORTS) {
+      const layout = computeTouchLayout(vp.w, vp.h);
+      expect(layout.landscape).toBe(true);
+      const floor = vp.h * 0.55;
+      for (const s of layout.skillSlots) {
+        expect(s.y).toBeGreaterThanOrEqual(floor);
+      }
+      // Compact map so forge is not buried under chrome.
+      expect(layout.mapSize).toBeLessThanOrEqual(96);
+    }
+  });
+
+  test('scaleTouchLayout shrinks CSS-intent pads for Low buffer', () => {
+    const css = computeTouchLayout(1024, 473);
+    const buf = scaleTouchLayout(css, 0.65);
+    expect(buf.atk.r).toBeCloseTo(css.atk.r * 0.65, 5);
+    expect(buf.stick.r).toBeCloseTo(css.stick.r * 0.65, 5);
+    expect(buf.status.h).toBeCloseTo(css.status.h * 0.65, 5);
+    expect(buf.skillSlots[0]!.x).toBeCloseTo(css.skillSlots[0]!.x * 0.65, 5);
+  });
+
+  test('portrait may stack skills; landscape always clusters', () => {
+    const portrait = computeTouchLayout(473, 1024);
+    expect(portrait.landscape).toBe(false);
+    // Portrait stack: same x as interact when it fits.
+    const stacked = portrait.skillSlots.every(
+      (s) => Math.abs(s.x - portrait.interact.x) < 0.5,
+    );
+    const clustered = new Set(portrait.skillSlots.map((s) => s.x)).size > 1;
+    expect(stacked || clustered).toBe(true);
+
+    const land = computeTouchLayout(1024, 473);
+    const xs = new Set(land.skillSlots.map((s) => Math.round(s.x)));
+    const ys = new Set(land.skillSlots.map((s) => Math.round(s.y)));
+    expect(xs.size).toBe(2);
+    expect(ys.size).toBe(2);
   });
 });

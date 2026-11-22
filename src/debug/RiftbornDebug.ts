@@ -8,7 +8,7 @@ import { settingsStore } from '../core/SettingsStore';
 import { gameState } from '../systems/GameState';
 import {
   circleRect,
-  computeTouchLayout,
+  computeGameTouchLayout,
   type Rect,
   type TouchPoint,
 } from '../ui/TouchLayout';
@@ -206,7 +206,7 @@ export function collectTouchHits(
   width = typeof window !== 'undefined' ? window.innerWidth : 1280,
   height = typeof window !== 'undefined' ? window.innerHeight : 720,
 ): TouchHit[] {
-  const layout = computeTouchLayout(width, height);
+  const layout = computeGameTouchLayout(width, height);
   const out: TouchHit[] = [
     hitFromCircle('stick', layout.stick),
     hitFromCircle('dash', layout.dash),

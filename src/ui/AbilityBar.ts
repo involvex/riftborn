@@ -17,7 +17,8 @@ import { cooldownSweepProgress } from './CooldownOverlay';
 import { shortTouchSkillLabel, touchSkillFontPx } from './SkillLabels';
 import { skillIconId } from './SkillIcons';
 import { shouldShowTouchControls } from './TouchControls';
-import { computeTouchLayout } from './TouchLayout';
+import { computeGameTouchLayout } from './TouchLayout';
+import { uiFontGamePx } from '../core/UiFont';
 
 /**
  * Desktop: bottom hotkey strip. Touch: round skill buttons with
@@ -259,12 +260,12 @@ export class AbilityBar {
   }
 
   private layoutTouch(): void {
-    const m = computeTouchLayout(
+    const m = computeGameTouchLayout(
       this.scene.scale.width,
       this.scene.scale.height,
     );
     this.root.setPosition(0, 0);
-    const maxFont = uiFontPx('skill', 'touch');
+    const maxFont = uiFontGamePx('skill', 'touch');
     this.slots.forEach((s, i) => {
       const slot = m.skillSlots[i];
       if (!slot) return;
@@ -282,13 +283,13 @@ export class AbilityBar {
       }
       if (s.icon) {
         s.icon.setPosition(x, y - 1);
-        const size = Math.max(18, Math.round(r * 1.15));
+        const size = Math.max(12, Math.round(r * 1.15));
         s.icon.setDisplaySize(size, size);
       }
       // Icon pads hide the word label; CD digits stay under the pie.
       s.name.setVisible(false);
       s.cd.setPosition(x, y + Math.round(r * 0.42));
-      s.cd.setFontSize(uiFontPx('caption', 'touch'));
+      s.cd.setFontSize(uiFontGamePx('caption', 'touch'));
       s.key.setVisible(false);
       void maxFont;
     });
@@ -296,7 +297,9 @@ export class AbilityBar {
 
   refresh(): void {
     const accent = classAccent(gameState.progression.classId);
-    const maxFont = uiFontPx('skill', this.touchMode ? 'touch' : 'desktop');
+    const maxFont = this.touchMode
+      ? uiFontGamePx('skill', 'touch')
+      : uiFontPx('skill', 'desktop');
     for (let i = 0; i < ACTIVE_SLOTS; i++) {
       const id = gameState.skills.slotAbilityId(i);
       const def = id ? getAbilityDef(id) : undefined;
@@ -322,6 +325,9 @@ export class AbilityBar {
         const iconId = skillIconId(def.id);
         if (hasIcon(this.scene, iconId)) {
           slot.icon.setTexture(iconTextureKey(iconId));
+          // setTexture resets display size to the frame — clamp to the pad.
+          const size = Math.max(12, Math.round(slot.r * 1.15));
+          slot.icon.setDisplaySize(size, size);
           slot.icon.setVisible(true);
           slot.name.setVisible(false);
         } else {

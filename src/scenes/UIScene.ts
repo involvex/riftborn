@@ -8,6 +8,7 @@ import {
 } from '../core/Hotkeys';
 import {
   cycleGraphicsQuality,
+  getAppliedRenderScale,
   graphicsQualityLabel,
   refreshGraphicsProfile,
 } from '../core/GraphicsQuality';
@@ -53,7 +54,7 @@ import {
   type FirstSessionStep,
 } from '../systems/FirstSession';
 import { formatPlayTime, SummaryOverlay } from '../ui/SummaryOverlay';
-import { uiPanelSize } from '../core/UiScale';
+import { uiPanelSize, uiPanelSizeGame } from '../core/UiScale';
 import {
   computeCraftPanelLayout,
   craftPanelFromViewport,
@@ -1008,20 +1009,21 @@ export class UIScene extends Phaser.Scene {
 
   private layoutMenuPanel(): void {
     const touch = shouldShowTouchControls();
-    const { w, h } = uiPanelSize(
-      this,
-      touch ? 0.78 : 0.58,
-      touch ? 0.9 : 0.82,
-      touch ? 400 : 440,
-      touch ? 500 : 540,
-    );
+    const { w, h } = touch
+      ? uiPanelSizeGame(this, 0.62, 0.78, 320, 360)
+      : uiPanelSize(this, 0.58, 0.82, 440, 540);
     this.menuBg.setSize(w, h);
-    this.menuTitle.setPosition(0, -h / 2 + (touch ? 28 : 36));
-    this.menuTitle.setFontSize(touch ? '22px' : '26px');
-    this.rebindHint.setPosition(0, h / 2 - (touch ? 28 : 32));
+    const s = getAppliedRenderScale();
+    this.menuTitle.setPosition(0, -h / 2 + (touch ? Math.round(22 * s) : 36));
+    this.menuTitle.setFontSize(
+      touch ? `${Math.max(14, Math.round(20 * s))}px` : '26px',
+    );
+    this.rebindHint.setPosition(0, h / 2 - (touch ? Math.round(22 * s) : 32));
     this.menuDismiss?.layout(w, h);
     if (this.menuOpen) {
       this.menuPanel.setPosition(this.scale.width / 2, this.scale.height / 2);
+      // Re-flow root buttons for the live panel height.
+      if (this.menuPage === 'root') this.renderMenuPage();
     }
   }
 
@@ -1036,8 +1038,11 @@ export class UIScene extends Phaser.Scene {
     opts?: { fontSize?: string; padY?: number },
   ): Phaser.GameObjects.Text {
     const touch = shouldShowTouchControls();
-    const fontSize = opts?.fontSize ?? (touch ? '15px' : '18px');
-    const padY = opts?.padY ?? (touch ? 5 : 8);
+    const s = getAppliedRenderScale();
+    const fontSize =
+      opts?.fontSize ??
+      (touch ? `${Math.max(11, Math.round(14 * s))}px` : '18px');
+    const padY = opts?.padY ?? (touch ? Math.max(3, Math.round(5 * s)) : 8);
     const btn = this.add
       .text(0, y, label, {
         fontFamily: 'Georgia, serif',
@@ -1064,16 +1069,21 @@ export class UIScene extends Phaser.Scene {
     this.rebindHint.setText('');
     if (this.menuPage === 'root') {
       this.menuTitle.setText('Paused');
-      this.menuButton(-100, 'Resume', () => this.hideMenu());
-      this.menuButton(-30, 'Settings', () => {
+      const h = this.menuBg.height;
+      const touch = shouldShowTouchControls();
+      // Four rows between title and bottom edge — no fixed CSS Y.
+      const top = -h / 2 + (touch ? Math.round(h * 0.22) : 70);
+      const gap = Math.max(36, Math.round((h * (touch ? 0.55 : 0.5)) / 3));
+      this.menuButton(top, 'Resume', () => this.hideMenu());
+      this.menuButton(top + gap, 'Settings', () => {
         this.menuPage = 'settings';
         this.renderMenuPage();
       });
-      this.menuButton(40, 'Co-op', () => {
+      this.menuButton(top + gap * 2, 'Co-op', () => {
         this.hideMenu();
         gameEvents.emit('ui:toggleCoop', {});
       });
-      this.menuButton(110, 'Back to title', () => {
+      this.menuButton(top + gap * 3, 'Back to title', () => {
         gameState.persist();
         this.hideMenu();
         this.scene.stop('WorldScene');
@@ -1086,7 +1096,15 @@ export class UIScene extends Phaser.Scene {
     if (this.menuPage === 'settings') {
       this.menuTitle.setText('Settings');
       const s = settingsStore.get();
-      const row = (i: number) => -175 + i * 36;
+      const rs = getAppliedRenderScale();
+      const panelH = this.menuBg.height;
+      const row0 =
+        -panelH / 2 + Math.round((shouldShowTouchControls() ? 48 : 56) * rs);
+      const rowStep = Math.max(
+        22,
+        Math.round((shouldShowTouchControls() ? 28 : 36) * rs),
+      );
+      const row = (i: number) => row0 + i * rowStep;
       this.menuButton(
         row(0),
         `Master vol: ${Math.round(s.masterVolume * 100)}%`,

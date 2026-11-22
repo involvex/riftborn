@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { getAppliedRenderScale } from '../core/GraphicsQuality';
 import { shouldShowTouchControls } from './TouchControls';
 
 const UI_FONT = 'Segoe UI, sans-serif';
@@ -28,7 +29,10 @@ export function attachOverlayDismiss(
     .setInteractive();
   scrim.on('pointerup', () => onClose());
 
-  const size = shouldShowTouchControls() ? 44 : 36;
+  const s = getAppliedRenderScale();
+  const size = shouldShowTouchControls()
+    ? Math.max(28, Math.round(40 * s))
+    : 36;
   const bg = scene.add
     .rectangle(0, 0, size, size, 0x1a2430, 0.95)
     .setStrokeStyle(2, 0xc4a574, 0.9)
@@ -36,7 +40,9 @@ export function attachOverlayDismiss(
   const mark = scene.add
     .text(0, 0, opts?.label ?? '✕', {
       fontFamily: UI_FONT,
-      fontSize: shouldShowTouchControls() ? '22px' : '18px',
+      fontSize: shouldShowTouchControls()
+        ? `${Math.max(14, Math.round(20 * s))}px`
+        : '18px',
       color: '#e8e4d8',
       fontStyle: 'bold',
     })
@@ -55,9 +61,19 @@ export function attachOverlayDismiss(
     const sw = scene.scale.width;
     const sh = scene.scale.height;
     scrim.setSize(sw + 4, sh + 4);
-    const pad = shouldShowTouchControls() ? 10 : 8;
-    const btn = shouldShowTouchControls() ? 44 : 36;
+    const rs = getAppliedRenderScale();
+    const pad = shouldShowTouchControls()
+      ? Math.max(6, Math.round(10 * rs))
+      : 8;
+    const btn = shouldShowTouchControls()
+      ? Math.max(28, Math.round(40 * rs))
+      : 36;
     bg.setSize(btn, btn);
+    mark.setFontSize(
+      shouldShowTouchControls()
+        ? `${Math.max(14, Math.round(20 * rs))}px`
+        : '18px',
+    );
     closeX.setPosition(panelW / 2 - pad - btn / 2, -panelH / 2 + pad + btn / 2);
   };
 

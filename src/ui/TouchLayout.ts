@@ -2,10 +2,16 @@
  * Phone HUD geometry (landscape-first) as pure rectangles / circles.
  *
  * Left:  stick + DASH + SHIFT
- * Right: ATK + E + four skills fanned around ATK
- * Top:   status (HP/XP) left; minimap right; chrome under minimap
- *        (never over the status strip).
+ * Right: ATK + E + four skills (2×2 cluster landscape; stack portrait)
+ * Top:   status (HP/XP/bounty/set + FPS) left; minimap right; chrome
+ *        under minimap (never over the status strip).
+ *
+ * Sizes are CSS-intent. On Low graphics the Phaser game is the buffer
+ * (CSS × renderScale) stretched to the viewport — use
+ * `computeGameTouchLayout` at runtime so pads are not overscaled.
  */
+
+import { getAppliedGraphicsSizes } from '../core/GraphicsQuality';
 
 export type TouchPoint = { x: number; y: number; r: number };
 
@@ -36,6 +42,9 @@ export type TouchLayout = {
 
 export const TOUCH_CHROME_COUNT = 5;
 
+/** Meta + bars + bounty + set + FPS strip height. */
+export const TOUCH_STATUS_H = 128;
+
 export function rectsOverlap(a: Rect, b: Rect): boolean {
   return (
     a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y
@@ -46,15 +55,73 @@ export function circleRect(c: TouchPoint): Rect {
   return { x: c.x - c.r, y: c.y - c.r, w: c.r * 2, h: c.r * 2 };
 }
 
+export function scaleTouchPoint(p: TouchPoint, s: number): TouchPoint {
+  return { x: p.x * s, y: p.y * s, r: Math.max(1, p.r * s) };
+}
+
+export function scaleRect(r: Rect, s: number): Rect {
+  return { x: r.x * s, y: r.y * s, w: r.w * s, h: r.h * s };
+}
+
+/** Map a CSS-intent layout into Phaser buffer coordinates. */
+export function scaleTouchLayout(layout: TouchLayout, s: number): TouchLayout {
+  if (Math.abs(s - 1) < 1e-6) return layout;
+  return {
+    pad: layout.pad * s,
+    landscape: layout.landscape,
+    stick: scaleTouchPoint(layout.stick, s),
+    dash: scaleTouchPoint(layout.dash, s),
+    shift: scaleTouchPoint(layout.shift, s),
+    atk: scaleTouchPoint(layout.atk, s),
+    interact: scaleTouchPoint(layout.interact, s),
+    skillSlots: layout.skillSlots.map((p) => scaleTouchPoint(p, s)),
+    chromeButtons: layout.chromeButtons.map((p) => scaleTouchPoint(p, s)),
+    chrome: {
+      y: layout.chrome.y * s,
+      r: Math.max(1, layout.chrome.r * s),
+      gap: layout.chrome.gap * s,
+      count: layout.chrome.count,
+    },
+    mapSize: layout.mapSize * s,
+    minimap: scaleRect(layout.minimap, s),
+    status: scaleRect(layout.status, s),
+    menuBadge: scaleTouchPoint(layout.menuBadge, s),
+    townButton: scaleTouchPoint(layout.townButton, s),
+  };
+}
+
+/**
+ * Runtime HUD layout for the live Phaser game size (often the Low
+ * buffer). Metrics stay CSS-intent, then shrink by renderScale so
+ * canvas stretch does not inflate pads / menus.
+ */
+export function computeGameTouchLayout(
+  gameW: number,
+  gameH: number,
+): TouchLayout {
+  const { logical, buffer, renderScale } = getAppliedGraphicsSizes();
+  const s = renderScale > 0.01 ? Math.min(1, Math.max(0.35, renderScale)) : 1;
+  const useLogical =
+    buffer.width > 0 &&
+    buffer.height > 0 &&
+    Math.abs(buffer.width - gameW) < 2.5 &&
+    Math.abs(buffer.height - gameH) < 2.5 &&
+    logical.width > 0 &&
+    logical.height > 0;
+  const cssW = useLogical ? logical.width : Math.round(gameW / s);
+  const cssH = useLogical ? logical.height : Math.round(gameH / s);
+  return scaleTouchLayout(computeTouchLayout(cssW, cssH), s);
+}
+
 export function computeTouchLayout(width: number, height: number): TouchLayout {
   const landscape = width >= height;
   const short = Math.min(width, height);
   const pad = Math.max(8, Math.round(short * 0.022));
-  const gap = Math.max(10, Math.round(short * 0.028));
+  const gap = Math.max(8, Math.round(short * 0.024));
 
   const mapSize = landscape
-    ? Math.min(132, Math.round(short * 0.36))
-    : Math.min(118, Math.round(short * 0.28));
+    ? Math.min(96, Math.round(short * 0.24))
+    : Math.min(88, Math.round(short * 0.22));
 
   const minimap: Rect = {
     x: width - mapSize - 8,
@@ -64,24 +131,24 @@ export function computeTouchLayout(width: number, height: number): TouchLayout {
   };
 
   // Status strip (HudBars + Fps) — top-left, clear of chrome/minimap.
-  const statusW = Math.round(Math.min(160, Math.max(120, width * 0.22)));
+  const statusW = Math.round(Math.min(148, Math.max(112, width * 0.2)));
   const status: Rect = {
     x: 8,
     y: 6,
     w: statusW + 24,
-    h: 86,
+    h: TOUCH_STATUS_H,
   };
 
   // —— Left: stick + dash ——
   const stickR = landscape
-    ? Math.round(Math.min(52, short * 0.145))
-    : Math.round(Math.min(46, short * 0.13));
+    ? Math.round(Math.min(44, short * 0.12))
+    : Math.round(Math.min(40, short * 0.115));
   const stick = {
     x: pad + stickR + 2,
     y: height - pad - stickR - (landscape ? 2 : 10),
     r: stickR,
   };
-  const dashR = Math.max(22, Math.round(stickR * 0.52));
+  const dashR = Math.max(22, Math.round(stickR * 0.5));
   const dash = {
     x: stick.x + stickR + dashR + gap,
     y: stick.y,
@@ -90,19 +157,19 @@ export function computeTouchLayout(width: number, height: number): TouchLayout {
   const shiftR = Math.max(22, Math.round(dashR * 0.95));
   const shiftBtn: TouchPoint = {
     x: dash.x,
-    y: dash.y - dashR * 2.4,
+    y: dash.y - dashR * 2.35,
     r: shiftR,
   };
 
-  // —— Right combat: ATK + E + skills fanned around ATK ——
+  // —— Right combat: ATK + E + skills ——
   const atkR = Math.max(
     22,
     landscape
-      ? Math.round(Math.min(40, short * 0.11))
-      : Math.round(Math.min(38, short * 0.1)),
+      ? Math.round(Math.min(34, short * 0.092))
+      : Math.round(Math.min(32, short * 0.088)),
   );
   const skillR = Math.max(22, Math.round(atkR * 0.58));
-  const eR = Math.max(22, Math.round(atkR * 0.55));
+  const eR = Math.max(22, Math.round(atkR * 0.6));
 
   const atk = {
     x: width - pad - atkR - 4,
@@ -121,13 +188,12 @@ export function computeTouchLayout(width: number, height: number): TouchLayout {
   const chromeGap = chromeR * 2 + 8;
   const chromeY = minimap.y + minimap.h + pad + chromeR;
 
-  // Skill fan next to ATK. Prefer a short stack above E (thumb reach).
-  // On short landscape, fall back to a 2×2 cluster left of E.
+  // Skills: landscape always 2×2 next to ATK; portrait may use a short stack.
   const skillPitch = skillR * 2 + Math.max(6, Math.round(gap * 0.65));
   const chromeBottom = chromeY + chromeR;
   const yFloor = chromeBottom + skillR + 6;
   const skill0Y = interact.y - interact.r - skillR - Math.max(6, gap - 2);
-  const stackFits = skill0Y - 3 * skillPitch >= yFloor - 1;
+  const stackFits = !landscape && skill0Y - 3 * skillPitch >= yFloor - 1;
   let skillSlots: TouchPoint[];
   if (stackFits) {
     skillSlots = [0, 1, 2, 3].map((i) => ({

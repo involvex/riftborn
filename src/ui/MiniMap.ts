@@ -2,7 +2,7 @@ import Phaser from 'phaser';
 import { gameEvents } from '../core/EventBus';
 import { MAP_CELL_COLOR, MAP_MARKER_COLOR, type MapSnapshot } from './MapModel';
 import { shouldShowTouchControls } from './TouchControls';
-import { computeTouchLayout } from './TouchLayout';
+import { computeGameTouchLayout } from './TouchLayout';
 
 const SIZE = 140;
 const PAD = 3;
@@ -92,7 +92,7 @@ export class MiniMap {
     const sw = this.scene.scale.width;
     const touch = shouldShowTouchControls();
     const layout = touch
-      ? computeTouchLayout(sw, this.scene.scale.height)
+      ? computeGameTouchLayout(sw, this.scene.scale.height)
       : null;
     const size = layout
       ? layout.mapSize
@@ -144,7 +144,7 @@ export class MiniMap {
     }
     const sw = scene.scale.width;
     if (shouldShowTouchControls()) {
-      return computeTouchLayout(sw, scene.scale.height).mapSize;
+      return computeGameTouchLayout(sw, scene.scale.height).mapSize;
     }
     if (sw < 900) return 100;
     if (sw < 1100) return 120;

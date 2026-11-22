@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
-import { uiFontSize } from '../core/UiFont';
+import { uiFontGameSize, uiFontSize } from '../core/UiFont';
 import { shouldShowTouchControls } from './TouchControls';
-import { computeTouchLayout } from './TouchLayout';
+import { computeGameTouchLayout } from './TouchLayout';
 
 /**
  * Corner FPS readout. Top-left under HP strip on phones so it isn't
@@ -18,13 +18,13 @@ export class FpsHud {
   constructor(scene: Phaser.Scene) {
     this.scene = scene;
     this.root = scene.add.container(0, 0).setScrollFactor(0).setDepth(10_050);
+    const touch = shouldShowTouchControls();
     this.label = scene.add
       .text(0, 0, '— fps', {
         fontFamily: 'Consolas, monospace',
-        fontSize: uiFontSize(
-          'fps',
-          shouldShowTouchControls() ? 'touch' : 'desktop',
-        ),
+        fontSize: touch
+          ? uiFontGameSize('fps', 'touch')
+          : uiFontSize('fps', 'desktop'),
         color: '#8a9aaa',
         backgroundColor: '#0a0c10aa',
         padding: { x: 5, y: 2 },
@@ -36,14 +36,16 @@ export class FpsHud {
 
   layout(): void {
     const touch = shouldShowTouchControls();
-    // Under HP/XP chrome on touch; bottom-left on desktop
+    // Just under the status block (bars + bounty + set) on touch
     if (touch) {
-      const m = computeTouchLayout(
+      const m = computeGameTouchLayout(
         this.scene.scale.width,
         this.scene.scale.height,
       );
-      this.label.setOrigin(0, 0);
-      this.root.setPosition(m.status.x, m.status.y + m.status.h - 16);
+      this.label.setFontSize(uiFontGameSize('fps', 'touch'));
+      // Bottom of the reserved status block (below set chase line).
+      this.label.setOrigin(0, 1);
+      this.root.setPosition(m.status.x, m.status.y + m.status.h - 4);
     } else {
       this.label.setOrigin(0, 1);
       this.root.setPosition(10, this.scene.scale.height - 8);

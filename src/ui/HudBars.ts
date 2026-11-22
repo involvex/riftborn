@@ -1,11 +1,12 @@
 import Phaser from 'phaser';
-import { uiFontPx, uiFontSize } from '../core/UiFont';
+import { getAppliedRenderScale } from '../core/GraphicsQuality';
+import { uiFontGamePx, uiFontPx, uiFontSize } from '../core/UiFont';
 import { uiFont } from '../core/UiScale';
 import { gameState } from '../systems/GameState';
 import { MAX_LEVEL, xpForLevel } from '../systems/ProgressionSystem';
 import { hudSetChaseLines } from '../systems/SetChase';
 import { shouldShowTouchControls } from './TouchControls';
-import { computeTouchLayout } from './TouchLayout';
+import { computeGameTouchLayout } from './TouchLayout';
 
 const UI_FONT = 'Consolas, "Courier New", monospace';
 
@@ -26,7 +27,9 @@ export class HudBars {
   private setKey = '';
   private readonly xpFlash: Phaser.GameObjects.Rectangle;
   private barW = 220;
-  private readonly barH = 18;
+  private barH = 18;
+  /** Touch vertical scale (Low buffer → CSS stretch). */
+  private touchScale = 1;
 
   constructor(scene: Phaser.Scene) {
     this.scene = scene;
@@ -121,32 +124,58 @@ export class HudBars {
 
   layout(): void {
     const touch = shouldShowTouchControls();
+    this.touchScale = touch ? getAppliedRenderScale() : 1;
+    const s = this.touchScale;
     if (touch) {
-      const m = computeTouchLayout(
+      const m = computeGameTouchLayout(
         this.scene.scale.width,
         this.scene.scale.height,
       );
-      this.barW = Math.round(Math.min(160, Math.max(120, m.status.w - 24)));
+      this.barW = Math.round(
+        Math.min(160 * s, Math.max(120 * s, m.status.w - 24 * s)),
+      );
+      this.barH = Math.max(10, Math.round(18 * s));
       this.root.setPosition(m.status.x, m.status.y);
     } else {
       this.barW = this.computeBarW();
+      this.barH = 18;
       this.root.setPosition(14, 12);
     }
-    this.hpBg.width = this.barW;
-    this.xpBg.width = this.barW;
-    this.hpText.setX(this.barW / 2);
-    this.xpText.setX(this.barW / 2);
+    const hpY = Math.round(30 * s);
+    const xpY = Math.round(54 * s);
+    const xpH = Math.max(8, Math.round(14 * s));
+    this.hpBg.setPosition(0, hpY);
+    this.hpBg.setSize(this.barW, this.barH);
+    this.hpFill.setPosition(2, hpY);
+    this.hpFill.setSize(this.barW - 4, this.barH - 4);
+    this.xpBg.setPosition(0, xpY);
+    this.xpBg.setSize(this.barW, xpH);
+    this.xpFill.setPosition(2, xpY);
+    this.xpFill.setSize(this.barW - 4, Math.max(6, xpH - 4));
+    this.xpFlash.setPosition(2, xpY);
+    this.xpFlash.height = Math.max(6, xpH - 4);
+    this.hpText.setPosition(this.barW / 2, hpY);
+    this.xpText.setPosition(this.barW / 2, xpY);
     this.meta.setFontSize(
-      touch ? `${uiFontPx('meta', 'touch')}px` : uiFont(this.scene, 15, 12, 18),
+      touch
+        ? `${uiFontGamePx('meta', 'touch')}px`
+        : uiFont(this.scene, 15, 12, 18),
     );
     this.meta.setWordWrapWidth(
-      Math.min(this.barW + 24, this.scene.scale.width * 0.4),
+      Math.min(this.barW + 24 * s, this.scene.scale.width * 0.4),
     );
-    this.bounty.setY(touch ? 68 : 72);
-    this.bounty.setFontSize(uiFontPx('label', touch ? 'touch' : 'desktop'));
+    this.bounty.setY(touch ? Math.round(68 * s) : 72);
+    this.bounty.setFontSize(
+      touch ? uiFontGamePx('label', 'touch') : uiFontPx('label', 'desktop'),
+    );
+    this.bounty.setWordWrapWidth(this.barW);
     this.refreshSets();
-    this.hpText.setFontSize(uiFontPx('hud', touch ? 'touch' : 'desktop'));
-    this.xpText.setFontSize(uiFontPx('caption', touch ? 'touch' : 'desktop'));
+    this.hpText.setFontSize(
+      touch ? uiFontGamePx('hud', 'touch') : uiFontPx('hud', 'desktop'),
+    );
+    this.xpText.setFontSize(
+      touch ? uiFontGamePx('caption', 'touch') : uiFontPx('caption', 'desktop'),
+    );
     this.refresh();
   }
 
@@ -167,13 +196,16 @@ export class HudBars {
     this.setTexts = [];
     if (lines.length === 0) return;
     const touch = shouldShowTouchControls();
-    const y = touch ? 90 : 94;
+    // Leave room under bounty for FPS (parked at status bottom on touch).
+    const y = touch ? Math.round(86 * this.touchScale) : 94;
     let x = 0;
     for (const s of lines) {
       const t = this.scene.add
         .text(x, y, s.text, {
           fontFamily: UI_FONT,
-          fontSize: uiFontPx('caption', touch ? 'touch' : 'desktop'),
+          fontSize: touch
+            ? uiFontGamePx('caption', 'touch')
+            : uiFontPx('caption', 'desktop'),
           color: s.color,
           resolution: 2,
           stroke: '#0a0c10',
@@ -182,7 +214,7 @@ export class HudBars {
         .setScrollFactor(0);
       this.root.add(t);
       this.setTexts.push(t);
-      x += t.width + 16;
+      x += t.width + Math.round(16 * this.touchScale);
     }
   }
 

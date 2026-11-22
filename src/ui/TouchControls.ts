@@ -4,11 +4,12 @@ import { audioBus } from '../core/AudioBus';
 import { hapticTap } from '../core/Haptics';
 import { uiFontPx } from '../core/UiFont';
 import {
-  computeTouchLayout,
+  computeGameTouchLayout,
   TOUCH_CHROME_COUNT,
   type TouchLayout,
   type TouchPoint,
 } from './TouchLayout';
+import { getAppliedRenderScale } from '../core/GraphicsQuality';
 import {
   clampStickKnobOffset,
   getStickRestPosition,
@@ -189,7 +190,8 @@ export class TouchControls {
   setInteractHint(label: string, dimmed: boolean): void {
     this.interactDimmed = dimmed;
     this.interact.label.setText(label);
-    const base = uiFontPx('pad', 'touch');
+    const s = getAppliedRenderScale();
+    const base = Math.max(9, Math.round(uiFontPx('pad', 'touch') * s));
     const font =
       label.length >= 5
         ? `${base}px`
@@ -218,11 +220,14 @@ export class TouchControls {
 
   layout(): void {
     if (!this.active && !shouldShowTouchControls()) return;
-    const m = computeTouchLayout(
+    const m = computeGameTouchLayout(
       this.scene.scale.width,
       this.scene.scale.height,
     );
     this.metrics = m;
+    const s = getAppliedRenderScale();
+    const padFont = (cssPx: number) =>
+      `${Math.max(8, Math.round(cssPx * Math.min(1, s)))}px`;
 
     this.stickR = m.stick.r;
     const rest = getStickRestPosition(m);
@@ -243,24 +248,24 @@ export class TouchControls {
       this.resetKnob();
     }
 
-    this.placeBtn(this.dash, m.dash.x, m.dash.y, m.dash.r, '11px');
-    this.placeBtn(this.shiftBtn, m.shift.x, m.shift.y, m.shift.r, '10px');
-    this.placeBtn(this.atk, m.atk.x, m.atk.y, m.atk.r, '15px');
+    this.placeBtn(this.dash, m.dash.x, m.dash.y, m.dash.r, padFont(11));
+    this.placeBtn(this.shiftBtn, m.shift.x, m.shift.y, m.shift.r, padFont(10));
+    this.placeBtn(this.atk, m.atk.x, m.atk.y, m.atk.r, padFont(15));
     this.placeBtn(
       this.interact,
       m.interact.x,
       m.interact.y,
       m.interact.r,
-      this.interactDimmed ? '14px' : '12px',
+      padFont(this.interactDimmed ? 14 : 12),
     );
 
     this.chromeBtns.forEach((b, i) => {
       const c = m.chromeButtons[i];
       if (!c) return;
-      this.placeBtn(b, c.x, c.y, c.r, c.r >= 22 ? '10px' : '9px');
+      this.placeBtn(b, c.x, c.y, c.r, padFont(c.r / s >= 20 ? 10 : 9));
     });
     const town = m.townButton;
-    this.placeBtn(this.townBtn, town.x, town.y, town.r, '18px');
+    this.placeBtn(this.townBtn, town.x, town.y, town.r, padFont(18));
     this.townBtn.root.setVisible(this.active && this.townVisible);
     this.applyChromeVisibility();
   }
