@@ -91,6 +91,52 @@ export function pickEnemiesAround(
   return out;
 }
 
+/**
+ * Forward cone from the player: alive foes within radius whose direction
+ * from the caster has dot ≥ minDot with the aim vector. Sorted by distance.
+ * minDot 0 ≈ half-plane; 0.15 ≈ ~80° half-angle wedge.
+ */
+export function pickEnemiesInForwardArc(
+  enemies: readonly Targetable[],
+  playerX: number,
+  playerY: number,
+  radius: number,
+  dirX: number,
+  dirY: number,
+  minDot: number,
+  cap: number,
+): number[] {
+  const dirLen = Math.hypot(dirX, dirY);
+  const ax = dirLen > 1e-6 ? dirX / dirLen : 1;
+  const ay = dirLen > 1e-6 ? dirY / dirLen : 0;
+  const hits: { i: number; d: number }[] = [];
+  for (let i = 0; i < enemies.length; i++) {
+    const e = enemies[i]!;
+    if (!e.alive) continue;
+    const dx = e.x - playerX;
+    const dy = e.y - playerY;
+    const d = Math.hypot(dx, dy);
+    if (d > radius) continue;
+    if (d < 1e-6) {
+      hits.push({ i, d: 0 });
+      continue;
+    }
+    const dot = (dx / d) * ax + (dy / d) * ay;
+    if (dot < minDot) continue;
+    hits.push({ i, d });
+  }
+  hits.sort((a, b) => a.d - b.d);
+  const limit = Math.max(0, cap);
+  const out: number[] = [];
+  for (let j = 0; j < hits.length && j < limit; j++) {
+    out.push(hits[j]!.i);
+  }
+  return out;
+}
+
+/** Default minDot for Cleaving Strike forward arc (~80° half-angle). */
+export const CLEAVE_ARC_MIN_DOT = 0.15;
+
 /** True when target is outside weapon range but within assist range. */
 export function shouldApproach(dist: number, weaponRange: number): boolean {
   return dist > weaponRange && dist <= ASSIST_RANGE;

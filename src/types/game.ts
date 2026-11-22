@@ -192,6 +192,13 @@ export type AbilityDef = {
   duration?: number;
   stun?: number;
   slow?: number;
+  /** Root duration (seconds) — move locked, windups paused. */
+  root?: number;
+  /**
+   * Cleave that only hits foes in a forward cone (Cleaving Strike).
+   * Whirlwind and other radius cleaves omit this.
+   */
+  forwardArc?: boolean;
   barrierHp?: number;
   rankBarrier?: number;
   /** Chain kind: world-tile jump distance between linked foes. */

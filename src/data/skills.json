@@ -18,14 +18,15 @@
       "id": "war_cleave",
       "classId": "warrior",
       "name": "Cleaving Strike",
-      "blurb": "Sweep nearby foes with a heavy arc.",
+      "blurb": "Sweep a forward arc — face the pack, then cut.",
       "maxRank": 3,
       "cooldown": 4,
       "kind": "cleave",
       "range": 2.3,
       "damageMult": 1.35,
       "rankBonus": 0.2,
-      "maxTargets": 4
+      "maxTargets": 4,
+      "forwardArc": true
     },
     "war_bash": {
       "id": "war_bash",
@@ -73,15 +74,14 @@
       "id": "mys_seal",
       "classId": "mystic",
       "name": "Binding Seal",
-      "blurb": "Heavy slow nova — longer duration than Pulse.",
+      "blurb": "Root nearby foes in place — stop a pack cold.",
       "maxRank": 3,
       "cooldown": 10,
       "kind": "slow_nova",
       "range": 3.2,
       "damageMult": 0.7,
       "rankBonus": 0.15,
-      "slow": 0.5,
-      "duration": 4.5,
+      "root": 1.2,
       "maxTargets": 8
     },
     "mag_bolt": {

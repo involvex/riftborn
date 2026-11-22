@@ -96,12 +96,15 @@ export class Enemy {
   private slowMult = 1;
   private slowTimer = 0;
   private stunTimer = 0;
+  private rootTimer = 0;
   private pounceWindup = 0;
   private pounce: PounceState | null = null;
   private wailWindup = 0;
   private rushRemaining = 0;
   private rushWindup = 0;
   private rushReadyIn = 0;
+  /** Signature charge: one hit when the sprint enters attack range. */
+  private rushContactHit = false;
   private menderWindup = 0;
   private meleeWindup = 0;
   private readonly kiteStrafeSign: 1 | -1;
@@ -270,7 +273,13 @@ export class Enemy {
     this.attackTimer = Math.max(this.attackTimer, duration);
   }
 
-  private meleeDamage(): number {
+  /** Binding Seal — move locked; windups cancelled while rooted. */
+  applyRoot(duration: number): void {
+    this.rootTimer = Math.max(this.rootTimer, duration);
+  }
+
+  /** Scaled attack damage (level / rift / elite / boss). */
+  meleeDamage(): number {
     return Math.floor(
       this.def.damage *
         this.levelMult *
@@ -290,6 +299,7 @@ export class Enemy {
     this.attackTimer = Math.max(0, this.attackTimer - dt);
     this.slowTimer = Math.max(0, this.slowTimer - dt);
     this.stunTimer = Math.max(0, this.stunTimer - dt);
+    this.rootTimer = Math.max(0, this.rootTimer - dt);
     this.rushReadyIn = Math.max(0, this.rushReadyIn - dt);
     if (this.slowTimer <= 0) this.slowMult = 1;
 
@@ -303,6 +313,7 @@ export class Enemy {
       this.wailWindup = 0;
       this.rushRemaining = 0;
       this.rushWindup = 0;
+      this.rushContactHit = false;
       this.menderWindup = 0;
       this.meleeWindup = 0;
       this.applyBaseTint();
@@ -341,6 +352,22 @@ export class Enemy {
       this.wailWindup = 0;
       this.rushRemaining = 0;
       this.rushWindup = 0;
+      this.rushContactHit = false;
+      this.menderWindup = 0;
+      this.meleeWindup = 0;
+      this.applyBaseTint();
+      this.playAnim('idle');
+      this.syncScreen();
+      return { hitPlayer: false, damage: 0, shot: null };
+    }
+
+    if (this.rootTimer > 0) {
+      this.pounceWindup = 0;
+      this.pounce = null;
+      this.wailWindup = 0;
+      this.rushRemaining = 0;
+      this.rushWindup = 0;
+      this.rushContactHit = false;
       this.menderWindup = 0;
       this.meleeWindup = 0;
       this.applyBaseTint();
@@ -450,9 +477,11 @@ export class Enemy {
       this.state === 'attack' &&
       (this.rushRemaining > 0 || this.rushWindup > 0)
     ) {
+      const contact = this.rushContactHit && this.rushRemaining > 0;
       this.rushRemaining = 0;
       this.rushWindup = 0;
       this.rushReadyIn = RUSH_COOLDOWN;
+      this.rushContactHit = false;
       this.applyBaseTint();
       playEnemyTelegraph(
         this.scene,
@@ -461,6 +490,18 @@ export class Enemy {
         this.worldX,
         this.worldY,
       );
+      if (contact) {
+        this.attackTimer = this.def.attackCooldown;
+        this.playAnim('attack', true);
+        this.worldX = Phaser.Math.Clamp(this.worldX, 0.5, this.maxBound);
+        this.worldY = Phaser.Math.Clamp(this.worldY, 0.5, this.maxBound);
+        this.syncScreen();
+        return {
+          hitPlayer: true,
+          damage: this.meleeDamage(),
+          shot: null,
+        };
+      }
     }
 
     // Basic melee windup — leave attack range cancels the swing.
@@ -859,18 +900,21 @@ export class Enemy {
     this.playAnim('attack', true);
   }
 
-  /** Boss beat (Grove): dig in and sprint at the player. */
+  /** Boss beat (Grove): plant windup, then sprint — one contact hit on arrive. */
   forceSignatureRush(playerX: number, playerY: number): void {
     if (!this.alive || this.ghosted) return;
     this.pounce = null;
     this.pounceWindup = 0;
     this.wailWindup = 0;
-    this.rushRemaining = RUSH_DURATION;
+    this.rushRemaining = 0;
+    this.rushWindup = RUSH_WINDUP;
     this.rushReadyIn = RUSH_COOLDOWN;
+    this.rushContactHit = true;
     this.state = 'chase';
     this.setFacingToward(playerX, playerY);
     this.sprite.setTint(0xe0a070);
     this.playAnim('attack', true);
+    playEnemyTelegraph(this.scene, 'rush', 'windup', this.worldX, this.worldY);
   }
 
   /** Hit frames + warm flash/knock so connects read even on pale sheets. */

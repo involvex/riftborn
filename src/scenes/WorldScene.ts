@@ -3062,8 +3062,8 @@ export class WorldScene extends Phaser.Scene {
       playEnemyTelegraph(this, 'wail', 'impact', boss.worldX, boss.worldY);
       this.triggerHitShake(90, 0.004);
     } else if (kind === 'charge') {
+      // Windup telegraph lives inside forceSignatureRush.
       boss.forceSignatureRush(this.player.worldX, this.player.worldY);
-      playEnemyTelegraph(this, 'rush', 'impact', boss.worldX, boss.worldY);
       this.triggerCombatShake('crit');
     } else {
       this.fireBossVolley(boss);
@@ -3084,7 +3084,7 @@ export class WorldScene extends Phaser.Scene {
   private fireBossVolley(boss: Enemy): void {
     const from = { x: boss.worldX, y: boss.worldY };
     const to = { x: this.player.worldX, y: this.player.worldY };
-    const dmg = Math.max(1, Math.floor(boss.def.damage * 0.85));
+    const dmg = Math.max(1, Math.floor(boss.meleeDamage() * 0.85));
     for (const angle of BOSS_VOLLEY_SPREAD) {
       const aim = volleyAimPoint(from, to, angle);
       const shot = createEnemyShot(from, aim, dmg);

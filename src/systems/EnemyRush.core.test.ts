@@ -38,6 +38,8 @@ describe('EnemyRush', () => {
     expect(RUSH_TRIGGER_RANGE).toBe(4.8);
     expect(RUSH_WINDUP).toBeGreaterThanOrEqual(0.25);
     expect(RUSH_WINDUP).toBeLessThanOrEqual(0.35);
+    // Grove signature reuses this windup so the plant is readable.
+    expect(RUSH_WINDUP).toBeCloseTo(0.28, 5);
   });
 
   test('rushSpeed applies multiplier to base speed', () => {

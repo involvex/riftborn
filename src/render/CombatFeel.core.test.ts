@@ -9,8 +9,11 @@ import {
 } from './CombatFeel';
 
 describe('isCombatCrit', () => {
-  test('threshold is mid-teen so early packs can pop', () => {
-    expect(COMBAT_FEEL.critDamageThreshold).toBeLessThanOrEqual(16);
+  test('threshold sits above level-1 basics so skills punch', () => {
+    expect(COMBAT_FEEL.critDamageThreshold).toBeGreaterThanOrEqual(18);
+    expect(COMBAT_FEEL.critDamageThreshold).toBeLessThanOrEqual(22);
+    expect(isCombatCrit(12)).toBe(false);
+    expect(isCombatCrit(13)).toBe(false);
     expect(isCombatCrit(COMBAT_FEEL.critDamageThreshold - 1)).toBe(false);
     expect(isCombatCrit(COMBAT_FEEL.critDamageThreshold)).toBe(true);
   });

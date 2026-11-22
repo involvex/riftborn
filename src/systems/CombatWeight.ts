@@ -6,6 +6,24 @@
 /** Dash invulnerability after a successful blink. */
 export const DASH_INVULN_SEC = 0.3;
 
+/**
+ * Short travel i-frames on class movement skills (War Leap / Rift Slash /
+ * Rift Step). Shorter than Space dash; Meteor's 0.2 dash is excluded via
+ * {@link skillMoveInvulnSec}.
+ */
+export const SKILL_MOVE_INVULN_SEC = 0.18;
+
+/** Min dash tiles before a leap / blink / dash_strike grants travel i-frames. */
+export const SKILL_MOVE_INVULN_MIN_DASH = 1;
+
+/**
+ * Travel i-frame duration for a skill dash, or 0 when the dash is too short
+ * (Meteor) or missing.
+ */
+export function skillMoveInvulnSec(dash: number | undefined): number {
+  return (dash ?? 0) >= SKILL_MOVE_INVULN_MIN_DASH ? SKILL_MOVE_INVULN_SEC : 0;
+}
+
 /** Move-speed multiplier while a basic swing commits. */
 export const SWING_SLOW_MULT = 0.45;
 

@@ -8,7 +8,12 @@ import skillsData from '../data/skills.json';
 import type { CombatSystem } from './CombatSystem';
 import { pickAimedEnemyIndex } from './SkillAim';
 import { pickChainTargetIds } from './SkillChain';
-import { ASSIST_RANGE, pickEnemiesAround } from './AutoTarget';
+import {
+  ASSIST_RANGE,
+  CLEAVE_ARC_MIN_DOT,
+  pickEnemiesAround,
+  pickEnemiesInForwardArc,
+} from './AutoTarget';
 import { decideSkillRangeGate, skillRangeKind } from './SkillRangeGate';
 import { ACTIVE_SLOTS, classAbilityIds, getClassTree } from './SkillSlots';
 import {
@@ -16,6 +21,8 @@ import {
   passiveBarrierMult as barrierPassiveMult,
   passiveSkillPower as attuneSkillPower,
 } from './SkillPassives';
+import { skillMoveInvulnSec } from './CombatWeight';
+import { mergeDamageBuff } from './SkillDamageBuff';
 import { isCombatCrit } from '../render/CombatFeel';
 import { playCombatBurst } from '../render/CombatVfx';
 
@@ -230,6 +237,22 @@ export class SkillSystem {
     return { mult, duration: durationSec };
   }
 
+  /**
+   * Battle Cry / skill buff — never shorten a longer shrine window.
+   * Keeps the higher mult and the longer remaining duration.
+   */
+  applySkillDamageBuff(mult: number, durationSec: number): void {
+    const remaining = Math.max(0, this.damageBuffUntil - this.now);
+    const next = mergeDamageBuff({
+      remaining,
+      currentMult: this.damageBuffMult,
+      nextMult: mult,
+      nextDuration: durationSec,
+    });
+    this.damageBuffMult = next.mult;
+    this.damageBuffUntil = this.now + next.duration;
+  }
+
   shrineBuffRemaining(): number {
     return Math.max(0, this.damageBuffUntil - this.now);
   }
@@ -439,7 +462,63 @@ export class SkillSystem {
     let originPos = { x: px, y: py };
 
     switch (def.kind) {
-      case 'cleave':
+      case 'cleave': {
+        const focus = nearestInRange(range);
+        if (focus) ctx.player.faceToward(focus.worldX, focus.worldY);
+        const listed = ctx.enemies.map((e) => ({
+          x: e.worldX,
+          y: e.worldY,
+          alive: e.alive && !e.isGhosted,
+        }));
+        let targetIdxs: number[];
+        if (def.forwardArc) {
+          let dirX: number;
+          let dirY: number;
+          if (ctx.aim) {
+            dirX = ctx.aim.dirX;
+            dirY = ctx.aim.dirY;
+          } else if (focus) {
+            dirX = focus.worldX - px;
+            dirY = focus.worldY - py;
+          } else {
+            const facing = ctx.player.getFacing();
+            dirX = facing * 0.75;
+            dirY = 0.35;
+          }
+          targetIdxs = pickEnemiesInForwardArc(
+            listed,
+            px,
+            py,
+            def.range ?? range,
+            dirX,
+            dirY,
+            CLEAVE_ARC_MIN_DOT,
+            maxTargets || 6,
+          );
+          originPos = { x: px, y: py };
+          targetPos = focus
+            ? { x: focus.worldX, y: focus.worldY }
+            : { x: px + dirX, y: py + dirY };
+        } else {
+          const center = focus
+            ? { x: focus.worldX, y: focus.worldY }
+            : { x: px, y: py };
+          targetIdxs = pickEnemiesAround(
+            listed,
+            center.x,
+            center.y,
+            def.range ?? range,
+            maxTargets || 6,
+          );
+          originPos = center;
+          targetPos = center;
+        }
+        for (const idx of targetIdxs) {
+          const e = ctx.enemies[idx];
+          if (e) hitEnemy(e, base);
+        }
+        break;
+      }
       case 'slow_nova':
       case 'pulse': {
         const focus = nearestInRange(range);
@@ -462,11 +541,9 @@ export class SkillSystem {
           const e = ctx.enemies[idx];
           if (!e) continue;
           hitEnemy(e, base);
-          if (
-            (def.kind === 'slow_nova' || def.kind === 'pulse') &&
-            def.slow &&
-            def.duration
-          ) {
+          if (def.root) {
+            e.applyRoot(def.root + (rank - 1) * 0.2);
+          } else if (def.slow && def.duration) {
             e.applySlow(def.slow, def.duration + (rank - 1) * 0.4);
           }
         }
@@ -499,6 +576,8 @@ export class SkillSystem {
           def.dash ?? 3.4,
           dashToward ? { x: dashToward.worldX, y: dashToward.worldY } : null,
         );
+        const leapInvuln = skillMoveInvulnSec(def.dash);
+        if (leapInvuln > 0) ctx.player.grantDashInvuln(leapInvuln);
         const after = enemiesInRange(range, maxTargets || 5);
         for (const e of after) hitEnemy(e, Math.floor(base * 1.05));
         break;
@@ -512,6 +591,8 @@ export class SkillSystem {
           def.dash ?? 2,
           dashToward ? { x: dashToward.worldX, y: dashToward.worldY } : null,
         );
+        const moveInvuln = skillMoveInvulnSec(def.dash);
+        if (moveInvuln > 0) ctx.player.grantDashInvuln(moveInvuln);
         const after = enemiesInRange(range, maxTargets || 3);
         for (const e of after) hitEnemy(e, base);
         break;
@@ -540,8 +621,7 @@ export class SkillSystem {
         break;
       }
       case 'buff': {
-        this.damageBuffMult = mult;
-        this.damageBuffUntil = this.now + (def.duration ?? 5) + (rank - 1);
+        this.applySkillDamageBuff(mult, (def.duration ?? 5) + (rank - 1));
         break;
       }
       case 'barrier': {

@@ -4,10 +4,13 @@ import {
   DASH_INVULN_SEC,
   MELEE_WINDUP_SEC,
   RUSH_WINDUP_SEC,
+  SKILL_MOVE_INVULN_MIN_DASH,
+  SKILL_MOVE_INVULN_SEC,
   SWING_SLOW_MULT,
   SWING_SLOW_SEC,
   blendStickWithAssist,
   isDashInvulnerable,
+  skillMoveInvulnSec,
   swingMoveMult,
   tickTimer,
 } from './CombatWeight';
@@ -18,6 +21,16 @@ describe('CombatWeight timers', () => {
     expect(MELEE_WINDUP_SEC).toBeCloseTo(0.3, 5);
     expect(RUSH_WINDUP_SEC).toBeGreaterThanOrEqual(0.25);
     expect(RUSH_WINDUP_SEC).toBeLessThanOrEqual(0.35);
+  });
+
+  test('skill travel i-frames are shorter than Space dash', () => {
+    expect(SKILL_MOVE_INVULN_SEC).toBeCloseTo(0.18, 5);
+    expect(SKILL_MOVE_INVULN_SEC).toBeLessThan(DASH_INVULN_SEC);
+    expect(skillMoveInvulnSec(3.4)).toBe(SKILL_MOVE_INVULN_SEC);
+    expect(skillMoveInvulnSec(2.2)).toBe(SKILL_MOVE_INVULN_SEC);
+    expect(skillMoveInvulnSec(0.2)).toBe(0);
+    expect(skillMoveInvulnSec(undefined)).toBe(0);
+    expect(SKILL_MOVE_INVULN_MIN_DASH).toBe(1);
   });
 
   test('isDashInvulnerable gates on remaining time', () => {

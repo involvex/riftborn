@@ -1,8 +1,10 @@
 import { describe, expect, test } from 'bun:test';
 import {
   ASSIST_RANGE,
+  CLEAVE_ARC_MIN_DOT,
   directionTo,
   pickEnemiesAround,
+  pickEnemiesInForwardArc,
   pickFacingEnemyIndex,
   pickNearestEnemyIndex,
   shouldApproach,
@@ -102,5 +104,28 @@ describe('AutoTarget', () => {
     expect(pickFacingEnemyIndex(enemies, 0, 0, 8, 1, 0)).toBe(1);
     // No aim — nearest wins (index 0 at dist 2).
     expect(pickFacingEnemyIndex(enemies, 0, 0, 8, 0, 0)).toBe(0);
+  });
+
+  test('pickEnemiesInForwardArc keeps foes ahead and drops behind', () => {
+    const enemies = [
+      { x: 2, y: 0, alive: true },
+      { x: -2, y: 0, alive: true },
+      { x: 1.5, y: 0.5, alive: true },
+      { x: 0.5, y: 2, alive: true },
+    ];
+    const hits = pickEnemiesInForwardArc(
+      enemies,
+      0,
+      0,
+      3,
+      1,
+      0,
+      CLEAVE_ARC_MIN_DOT,
+      6,
+    );
+    expect(hits).toContain(0);
+    expect(hits).toContain(2);
+    expect(hits).not.toContain(1);
+    expect(CLEAVE_ARC_MIN_DOT).toBeGreaterThan(0);
   });
 });

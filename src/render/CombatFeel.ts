@@ -32,8 +32,11 @@ export const COMBAT_FEEL = {
   shakePlayerHitMs: 130,
   shakePlayerHitIntensity: 0.005,
 
-  /** Absolute damage ≥ this reads as a crit for juice (matches burst VFX). */
-  critDamageThreshold: 12,
+  /**
+   * Absolute damage ≥ this reads as a crit for juice (matches burst VFX).
+   * Above level-1 basics (~10–13) so only skills / scaled hits punch.
+   */
+  critDamageThreshold: 18,
   /** Hitting this many foes in one swing upgrades juice to multi-cleave. */
   multiHitJuiceCount: 2,
 
