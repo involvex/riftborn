@@ -71,10 +71,10 @@ earn their keep in feel.
 | ✓   | **Boss signature beats**  | Arena looks special; fight is one pattern | Shipped: hop / wail / charge / volley on shared beat cadence       |
 | ✓   | **Set chase readability** | Loot pops; keeping gear is thin           | Shipped: missing-slot drop bias + HUD/bag “need X” from 1pc        |
 
-## Next — lite mobile ARPG loop
+## Done — lite mobile ARPG loop (v0.2.0)
 
-Phone-first feel, post-cap chase, plaza that reads as a game. Itch / store /
-co-op rifts stay parked. Extend existing systems only.
+Phone-first feel, post-cap chase, plaza chrome trimmed. Itch / store /
+co-op rifts stayed parked.
 
 | #   | Slice                   | Why it matters                                                     | Done when                                                                          |
 | --- | ----------------------- | ------------------------------------------------------------------ | ---------------------------------------------------------------------------------- |
@@ -83,8 +83,21 @@ co-op rifts stay parked. Extend existing systems only.
 | ✓   | **Replay ladder**       | Depth 10 / L50 plateaus                                            | Pressure step, skill forks, named affixes, set family, shard reroll, rift bounties |
 | ✓   | **Plaza / boss look**   | Vector town + reskin bosses                                        | Proximity labels, figure shadows, boss silhouette accents                          |
 
-Skip inventing new frameworks — extend `MapGen` / `WorldScene` /
-`SaveStore` / NPCs / `server/index.ts` / `src/data/*` / `src/render/*`.
+## Next — painted plaza
+
+Hub still draws Shop / Forge / Inn / NPCs / chest / obelisk as Phaser
+shapes beside painted heroes. Match the warm cobble (`HubLook`), not
+purple wilderness props. Playtest fixes from the phone loop land here
+too when they show up.
+
+| #   | Slice                      | Why it matters                          | Done when                                                              |
+| --- | -------------------------- | --------------------------------------- | ---------------------------------------------------------------------- |
+| ✓   | **Plaza building sprites** | Rectangle inns beside the hero          | Shop / Forge / Inn use iso PNGs (`sprites:plaza`); smoke hub size OK   |
+| ✓   | **Plaza NPC + props**      | Triangle Mira / board / chest / obelisk | Mira, Bram, Nix, board, chest, obelisk + warm lantern/well/crate/anvil |
+| 3   | **Playtest combat nits**   | Phone loop shipped; feel TBD on device  | Fix 2–3 notes from landscape `/?touch=1` or APK play                   |
+
+Skip inventing new frameworks — extend `WorldArt` / `WorldScene` /
+`Npc` / `LootChest` / `public/assets/props/`.
 
 ## Later (parked)
 
@@ -92,7 +105,6 @@ Skip inventing new frameworks — extend `MapGen` / `WorldScene` /
 - App Store packaging for Expo shell
 - Seasons, trading, seamless open world
 - Dedicated 8-dir **sprite rows** (logic/octant shipped; sheets still 2-dir flipX)
-- Painted iso plaza buildings / NPC sheets (labels + shadows shipped first)
 
 ## Done — systems polish
 

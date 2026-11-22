@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { tileVariant } from './HubTileBands';
+import { PLAZA_PROP_KEYS } from './PlazaArt';
 
 /** Hub / dungeon floor tiles (public/assets/tiles/{key}.png). */
 export const WORLD_TILE_KEYS = [
@@ -33,6 +34,15 @@ export const WORLD_PROP_KEYS = [
 export type WorldTileKey = (typeof WORLD_TILE_KEYS)[number];
 export type WorldPropKey = (typeof WORLD_PROP_KEYS)[number];
 
+export {
+  PLAZA_PROP_KEYS,
+  PLAZA_BUILDING_KEY,
+  PLAZA_DECOR_KEY,
+  PLAZA_NPC_KEY,
+  plazaArtScale,
+  type PlazaPropKey,
+} from './PlazaArt';
+
 /** Source diamonds are 128×64; IsoMath tiles are 64×32. */
 export const TILE_ART_SCALE = 0.515;
 
@@ -61,6 +71,9 @@ export function preloadWorldArt(scene: Phaser.Scene): void {
   for (const key of WORLD_PROP_KEYS) {
     scene.load.image(key, `assets/props/${key}.png`);
   }
+  for (const key of PLAZA_PROP_KEYS) {
+    scene.load.image(key, `assets/props/${key}.png`);
+  }
 }
 
 /** True when the texture finished loading (fallback → graphics). */
@@ -70,7 +83,11 @@ export function hasArt(scene: Phaser.Scene, key: string): boolean {
 
 /** Pixel-art: nearest-neighbor, no smoothing. */
 export function applyWorldArtFilters(scene: Phaser.Scene): void {
-  for (const key of [...WORLD_TILE_KEYS, ...WORLD_PROP_KEYS]) {
+  for (const key of [
+    ...WORLD_TILE_KEYS,
+    ...WORLD_PROP_KEYS,
+    ...PLAZA_PROP_KEYS,
+  ]) {
     if (!scene.textures.exists(key)) continue;
     scene.textures.get(key).setFilter(Phaser.Textures.FilterMode.NEAREST);
   }

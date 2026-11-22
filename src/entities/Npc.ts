@@ -1,6 +1,8 @@
 import Phaser from 'phaser';
 import { figureDrawScale, FIGURE_CONTENT_PX } from '../core/FigureScale';
 import { depthFromWorld, worldToScreen } from '../core/IsoMath';
+import { hasArt } from '../render/WorldArt';
+import { PLAZA_NPC_KEY, plazaArtScale } from '../render/PlazaArt';
 import type { NpcRole } from '../world/MapGen';
 
 /** Hub NPC graphics were ~30px tall at scale 1; match figure height. */
@@ -38,11 +40,30 @@ export class Npc {
     this.worldY = worldY;
 
     const color = ROLE_COLOR[role];
-    const g = scene.add.graphics();
-    if (role === 'board') {
+    const artKey = PLAZA_NPC_KEY[role];
+    let figure: Phaser.GameObjects.GameObject;
+    let labelY: number;
+    let promptY: number;
+
+    if (artKey && hasArt(scene, artKey)) {
+      const figScale = plazaArtScale(artKey);
+      figure = scene.add
+        .image(0, 4, artKey)
+        .setOrigin(0.5, 1)
+        .setScale(figScale);
+      labelY = role === 'board' ? -52 * figScale : -58 * figScale;
+      promptY = 6;
+    } else if (role === 'board') {
+      const g = scene.add.graphics();
       drawNoticeBoard(g, color);
+      figure = g;
+      const fig = figureDrawScale() * (FIGURE_CONTENT_PX / NPC_NATIVE_H);
+      const figScale = Math.min(1.15, fig * 0.85);
+      g.setScale(figScale);
+      labelY = -38 * figScale - 4;
+      promptY = 10 * figScale;
     } else {
-      // Compact townsperson — cloak + head, not a flat color disc
+      const g = scene.add.graphics();
       g.fillStyle(0x000000, 0.35);
       g.fillEllipse(0, 8, 20, 10);
       g.fillStyle(0x2a2218, 1);
@@ -55,10 +76,15 @@ export class Npc {
       g.fillEllipse(0, -12, 12, 5);
       g.lineStyle(1, 0x1a1410, 0.7);
       g.strokeCircle(0, -18, 6);
+      figure = g;
+      const fig = figureDrawScale() * (FIGURE_CONTENT_PX / NPC_NATIVE_H);
+      g.setScale(fig);
+      labelY = -12 * fig - 8;
+      promptY = 8 * fig;
     }
 
     const label = scene.add
-      .text(0, role === 'board' ? -44 : -28, name, {
+      .text(0, labelY, name, {
         fontFamily: 'Georgia, serif',
         fontSize: '12px',
         color: '#e8e4d8',
@@ -77,7 +103,7 @@ export class Npc {
             ? 'E · bounties'
             : 'E · trade / repair';
     this.prompt = scene.add
-      .text(0, 16, job, {
+      .text(0, promptY, job, {
         fontFamily: 'Segoe UI, sans-serif',
         fontSize: '10px',
         color: '#ffe08a',
@@ -87,18 +113,7 @@ export class Npc {
       .setOrigin(0.5)
       .setVisible(false);
 
-    this.body = scene.add.container(0, 0, [g, label, this.prompt]);
-    // Match shared figure height (~1.4 tile); labels stay readable.
-    const fig = figureDrawScale() * (FIGURE_CONTENT_PX / NPC_NATIVE_H);
-    if (role === 'board') {
-      g.setScale(Math.min(1.15, fig * 0.85));
-      label.setY(-38 * Math.min(1.15, fig * 0.85) - 4);
-      this.prompt.setY(10 * Math.min(1.15, fig * 0.85));
-    } else {
-      g.setScale(fig);
-      label.setY(-12 * fig - 8);
-      this.prompt.setY(8 * fig);
-    }
+    this.body = scene.add.container(0, 0, [figure, label, this.prompt]);
     this.syncScreen();
   }
 
@@ -127,23 +142,19 @@ export class Npc {
 function drawNoticeBoard(g: Phaser.GameObjects.Graphics, accent: number): void {
   g.fillStyle(0x000000, 0.35);
   g.fillEllipse(0, 8, 28, 12);
-  // Posts
   g.fillStyle(0x4a3420, 1);
   g.fillRect(-14, -28, 4, 34);
   g.fillRect(10, -28, 4, 34);
-  // Board face
   g.fillStyle(0x6a4a28, 1);
   g.fillRect(-18, -36, 36, 26);
   g.fillStyle(0x8a6840, 1);
   g.fillRect(-16, -34, 32, 22);
-  // Paper scraps
   g.fillStyle(0xe8e0c8, 0.95);
   g.fillRect(-12, -30, 10, 12);
   g.fillRect(-1, -28, 12, 10);
   g.fillRect(4, -32, 8, 8);
   g.lineStyle(1, accent, 0.85);
   g.strokeRect(-18, -36, 36, 26);
-  // Star pin
   g.fillStyle(accent, 1);
   g.fillCircle(-7, -28, 2);
   g.fillCircle(5, -26, 2);

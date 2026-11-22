@@ -1,5 +1,7 @@
 import Phaser from 'phaser';
 import { depthFromWorld, worldToScreen } from '../core/IsoMath';
+import { hasArt } from '../render/WorldArt';
+import { plazaArtScale } from '../render/PlazaArt';
 import type { LootTier } from '../types/game';
 
 /** World chest — open with E for gold, mats, and gear. */
@@ -11,9 +13,11 @@ export class LootChest {
   looted = false;
   readonly body: Phaser.GameObjects.Container;
   private readonly lid: Phaser.GameObjects.Graphics;
+  private readonly sprite: Phaser.GameObjects.Image | null;
   private readonly label: Phaser.GameObjects.Text;
   private readonly scene: Phaser.Scene;
   private readonly isBoss: boolean;
+  private readonly useSprite: boolean;
 
   constructor(
     scene: Phaser.Scene,
@@ -29,8 +33,19 @@ export class LootChest {
     this.lootTier = lootTier;
     this.isBoss = lootTier >= 4 || id.includes('boss');
 
+    const artKey = this.isBoss ? 'prop_plaza_chest_boss' : 'prop_plaza_chest';
+    this.useSprite = hasArt(scene, artKey);
     this.lid = scene.add.graphics();
-    this.drawClosed();
+    if (this.useSprite) {
+      this.lid.setVisible(false);
+      this.sprite = scene.add
+        .image(0, 6, artKey)
+        .setOrigin(0.5, 1)
+        .setScale(plazaArtScale(artKey));
+    } else {
+      this.sprite = null;
+      this.drawClosed();
+    }
     this.label = scene.add
       .text(
         0,
@@ -46,7 +61,10 @@ export class LootChest {
       )
       .setOrigin(0.5)
       .setVisible(false);
-    this.body = scene.add.container(0, 0, [this.lid, this.label]);
+    const kids: Phaser.GameObjects.GameObject[] = this.sprite
+      ? [this.sprite, this.label]
+      : [this.lid, this.label];
+    this.body = scene.add.container(0, 0, kids);
     if (this.isBoss) {
       this.body.setScale(1.12);
       scene.tweens.add({
@@ -129,7 +147,12 @@ export class LootChest {
 
   markLooted(): void {
     this.looted = true;
-    this.drawOpen();
+    if (this.useSprite && this.sprite) {
+      this.sprite.setAlpha(0.55);
+      this.sprite.setTint(0x6a7080);
+    } else {
+      this.drawOpen();
+    }
     this.label.setText('Empty');
     this.label.setColor('#6a7080');
     this.scene.tweens.killTweensOf(this.label);

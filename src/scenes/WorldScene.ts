@@ -171,6 +171,11 @@ import {
   propArtScale,
   TILE_ART_SCALE,
 } from '../render/WorldArt';
+import {
+  PLAZA_BUILDING_KEY,
+  PLAZA_DECOR_KEY,
+  plazaArtScale,
+} from '../render/PlazaArt';
 import { biomeLook, type BiomeLook } from '../render/BiomeLook';
 import {
   arenaRingAlpha,
@@ -1284,8 +1289,7 @@ export class WorldScene extends Phaser.Scene {
     const p = snapToTile(d.x, d.y);
     const { screenX, screenY } = worldToScreen(p.x, p.y);
     const propKey = DECOR_PROP_KEY[d.kind];
-    // Near-town keeps warm procedural props — painted lanterns/wells/crates/
-    // rocks are purple void art that fights the cobble square.
+    // Near-town: warm plaza PNGs (not purple wilderness props).
     const townish =
       nearTown(Math.floor(p.x), Math.floor(p.y), 8) &&
       (d.kind === 'lantern' ||
@@ -1293,6 +1297,17 @@ export class WorldScene extends Phaser.Scene {
         d.kind === 'well' ||
         d.kind === 'crate' ||
         d.kind === 'rock');
+    const plazaKey = townish ? PLAZA_DECOR_KEY[d.kind] : undefined;
+    if (plazaKey && hasArt(this, plazaKey)) {
+      const img = this.add
+        .image(0, 0, plazaKey)
+        .setOrigin(0.5, 1)
+        .setScale(plazaArtScale(plazaKey));
+      const c = this.add.container(screenX, screenY, [img]);
+      c.setDepth(depthFromWorld(p.x, p.y) - 20);
+      this.decor.push(c);
+      return;
+    }
     if (propKey && hasArt(this, propKey) && !townish) {
       const img = this.add
         .image(0, 0, propKey)
@@ -1448,54 +1463,60 @@ export class WorldScene extends Phaser.Scene {
   ): void {
     const p = snapToTile(wx, wy);
     const { screenX, screenY } = worldToScreen(p.x, p.y);
-    const g = this.add.graphics();
-    const roof =
-      label === 'Forge' ? 0x3a2820 : label === 'Inn' ? 0x2a2438 : 0x2a2218;
-    const side = ((color >> 1) & 0x7f7f7f) | 0x101010;
-    const trim = 0xc4a574;
-    // ~2× old stub — buildings must dwarf the player / bush props.
-    g.fillStyle(0x000000, 0.38);
-    g.fillEllipse(0, 16, 92, 28);
-    g.fillStyle(0x4a4034, 0.95);
-    g.fillEllipse(0, 10, 82, 22);
-    // Side wall (iso depth)
-    g.fillStyle(side, 1);
-    g.fillRect(14, -70, 36, 68);
-    // Front wall
-    g.fillStyle(color, 1);
-    g.fillRect(-44, -70, 60, 68);
-    g.lineStyle(1, 0x1a1410, 0.28);
-    for (let i = 0; i < 6; i++) {
-      g.lineBetween(-40, -58 + i * 10, 12, -58 + i * 10);
-    }
-    // Door + stoop
-    g.fillStyle(0x1a1410, 0.95);
-    g.fillRect(-14, -28, 18, 28);
-    g.fillStyle(trim, 0.5);
-    g.fillRect(-10, -20, 4, 6);
-    g.fillStyle(0x5a5040, 0.95);
-    g.fillRect(-18, 0, 26, 6);
-    // Warm window glow
-    g.fillStyle(0xe6c35c, 0.65);
-    g.fillRect(-36, -54, 12, 12);
-    g.fillRect(22, -54, 12, 12);
-    g.fillRect(-36, -36, 12, 10);
-    g.lineStyle(1, 0x1a1410, 0.55);
-    g.strokeRect(-36, -54, 12, 12);
-    g.strokeRect(22, -54, 12, 12);
-    g.strokeRect(-36, -36, 12, 10);
-    // Roof + ridge
-    g.fillStyle(0x1a1410, 0.95);
-    g.fillTriangle(-52, -70, 56, -70, 6, -112);
-    g.fillStyle(roof, 0.95);
-    g.fillTriangle(-44, -70, 48, -70, 6, -104);
-    g.lineStyle(1, trim, 0.45);
-    g.strokeTriangle(-44, -70, 48, -70, 6, -104);
-    if (label === 'Forge') {
-      g.fillStyle(0x3a3028, 1);
-      g.fillRect(28, -96, 10, 22);
-      g.fillStyle(0x2a2218, 1);
-      g.fillRect(26, -100, 14, 6);
+    const artKey = PLAZA_BUILDING_KEY[label];
+    const parts: Phaser.GameObjects.GameObject[] = [];
+    if (artKey && hasArt(this, artKey)) {
+      parts.push(
+        this.add
+          .image(0, 8, artKey)
+          .setOrigin(0.5, 1)
+          .setScale(plazaArtScale(artKey)),
+      );
+    } else {
+      const g = this.add.graphics();
+      const roof =
+        label === 'Forge' ? 0x3a2820 : label === 'Inn' ? 0x2a2438 : 0x2a2218;
+      const side = ((color >> 1) & 0x7f7f7f) | 0x101010;
+      const trim = 0xc4a574;
+      g.fillStyle(0x000000, 0.38);
+      g.fillEllipse(0, 16, 92, 28);
+      g.fillStyle(0x4a4034, 0.95);
+      g.fillEllipse(0, 10, 82, 22);
+      g.fillStyle(side, 1);
+      g.fillRect(14, -70, 36, 68);
+      g.fillStyle(color, 1);
+      g.fillRect(-44, -70, 60, 68);
+      g.lineStyle(1, 0x1a1410, 0.28);
+      for (let i = 0; i < 6; i++) {
+        g.lineBetween(-40, -58 + i * 10, 12, -58 + i * 10);
+      }
+      g.fillStyle(0x1a1410, 0.95);
+      g.fillRect(-14, -28, 18, 28);
+      g.fillStyle(trim, 0.5);
+      g.fillRect(-10, -20, 4, 6);
+      g.fillStyle(0x5a5040, 0.95);
+      g.fillRect(-18, 0, 26, 6);
+      g.fillStyle(0xe6c35c, 0.65);
+      g.fillRect(-36, -54, 12, 12);
+      g.fillRect(22, -54, 12, 12);
+      g.fillRect(-36, -36, 12, 10);
+      g.lineStyle(1, 0x1a1410, 0.55);
+      g.strokeRect(-36, -54, 12, 12);
+      g.strokeRect(22, -54, 12, 12);
+      g.strokeRect(-36, -36, 12, 10);
+      g.fillStyle(0x1a1410, 0.95);
+      g.fillTriangle(-52, -70, 56, -70, 6, -112);
+      g.fillStyle(roof, 0.95);
+      g.fillTriangle(-44, -70, 48, -70, 6, -104);
+      g.lineStyle(1, trim, 0.45);
+      g.strokeTriangle(-44, -70, 48, -70, 6, -104);
+      if (label === 'Forge') {
+        g.fillStyle(0x3a3028, 1);
+        g.fillRect(28, -96, 10, 22);
+        g.fillStyle(0x2a2218, 1);
+        g.fillRect(26, -100, 14, 6);
+      }
+      parts.push(g);
     }
     const t = this.add
       .text(0, -118, label, {
@@ -1508,8 +1529,8 @@ export class WorldScene extends Phaser.Scene {
       .setOrigin(0.5)
       .setAlpha(0.92)
       .setVisible(false);
-    const c = this.add.container(screenX, screenY, [g, t]);
-    // Slightly behind foot depth so player/NPC draw in front when overlapping
+    parts.push(t);
+    const c = this.add.container(screenX, screenY, parts);
     c.setDepth(depthFromWorld(p.x, p.y) - 40);
     c.setData('wx', p.x);
     c.setData('wy', p.y);
@@ -1521,16 +1542,27 @@ export class WorldScene extends Phaser.Scene {
   private makeCraftSpot(wx: number, wy: number): Phaser.GameObjects.Container {
     const p = snapToTile(wx, wy);
     const { screenX, screenY } = worldToScreen(p.x, p.y);
-    const g = this.add.graphics();
-    g.fillStyle(0x000000, 0.28);
-    g.fillEllipse(0, 4, 22, 10);
-    g.fillStyle(0x5a5040, 0.95);
-    g.fillRect(-8, -6, 16, 8);
-    g.fillStyle(0x8a7a60, 0.9);
-    g.fillRect(-6, -10, 12, 5);
-    g.lineStyle(1, 0xc4a574, 0.5);
-    g.strokeRect(-8, -6, 16, 8);
-    const c = this.add.container(screenX, screenY, [g]);
+    const parts: Phaser.GameObjects.GameObject[] = [];
+    if (hasArt(this, 'prop_plaza_anvil')) {
+      parts.push(
+        this.add
+          .image(0, 4, 'prop_plaza_anvil')
+          .setOrigin(0.5, 1)
+          .setScale(plazaArtScale('prop_plaza_anvil')),
+      );
+    } else {
+      const g = this.add.graphics();
+      g.fillStyle(0x000000, 0.28);
+      g.fillEllipse(0, 4, 22, 10);
+      g.fillStyle(0x5a5040, 0.95);
+      g.fillRect(-8, -6, 16, 8);
+      g.fillStyle(0x8a7a60, 0.9);
+      g.fillRect(-6, -10, 12, 5);
+      g.lineStyle(1, 0xc4a574, 0.5);
+      g.strokeRect(-8, -6, 16, 8);
+      parts.push(g);
+    }
+    const c = this.add.container(screenX, screenY, parts);
     c.setDepth(depthFromWorld(p.x, p.y) - 15);
     c.setData('wx', p.x);
     c.setData('wy', p.y);
@@ -1540,18 +1572,30 @@ export class WorldScene extends Phaser.Scene {
   /** Town rift opener — tall obelisk players use with R. */
   private makeObelisk(wx: number, wy: number): Phaser.GameObjects.Container {
     const { screenX, screenY } = worldToScreen(wx, wy);
-    const g = this.add.graphics();
-    g.fillStyle(0x000000, 0.35);
-    g.fillEllipse(0, 4, 28, 12);
-    g.fillStyle(0x2a4060, 1);
-    g.fillRect(-8, -52, 16, 54);
-    g.fillStyle(0x4db6ff, 0.95);
-    g.fillTriangle(-10, -52, 10, -52, 0, -72);
-    g.lineStyle(2, 0x8ec8ff, 0.9);
-    g.strokeRect(-8, -52, 16, 54);
+    const parts: Phaser.GameObjects.GameObject[] = [];
     const glow = this.add.graphics();
     glow.lineStyle(2, 0x8ec8ff, 0.55);
     glow.strokeEllipse(0, 2, 34, 14);
+    if (hasArt(this, 'prop_plaza_obelisk')) {
+      parts.push(
+        this.add
+          .image(0, 6, 'prop_plaza_obelisk')
+          .setOrigin(0.5, 1)
+          .setScale(plazaArtScale('prop_plaza_obelisk')),
+      );
+    } else {
+      const g = this.add.graphics();
+      g.fillStyle(0x000000, 0.35);
+      g.fillEllipse(0, 4, 28, 12);
+      g.fillStyle(0x2a4060, 1);
+      g.fillRect(-8, -52, 16, 54);
+      g.fillStyle(0x4db6ff, 0.95);
+      g.fillTriangle(-10, -52, 10, -52, 0, -72);
+      g.lineStyle(2, 0x8ec8ff, 0.9);
+      g.strokeRect(-8, -52, 16, 54);
+      parts.push(g);
+    }
+    parts.push(glow);
     const t = this.add
       .text(0, -82, 'Rift Obelisk · R', {
         fontFamily: 'Segoe UI, sans-serif',
@@ -1562,7 +1606,8 @@ export class WorldScene extends Phaser.Scene {
       })
       .setOrigin(0.5)
       .setVisible(false);
-    const c = this.add.container(screenX, screenY, [g, glow, t]);
+    parts.push(t);
+    const c = this.add.container(screenX, screenY, parts);
     c.setDepth(depthFromWorld(wx, wy));
     c.setData('wx', wx);
     c.setData('wy', wy);
