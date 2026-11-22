@@ -6,7 +6,7 @@ import { ensureGameSprites, preloadGameSprites } from '../render/SpriteAtlas';
 import { preloadCombatVfx } from '../render/CombatVfx';
 import { applyWorldArtFilters, preloadWorldArt } from '../render/WorldArt';
 import { gameState } from '../systems/GameState';
-import { uiFont } from '../core/UiScale';
+import { uiFont, uiLayoutSpace, uiPx } from '../core/UiScale';
 import type { CharacterSave } from '../types/save';
 import { audioBus } from '../core/AudioBus';
 import { firstEmptySlot, titleActions } from '../core/TitleFlow';
@@ -97,25 +97,26 @@ export class BootScene extends Phaser.Scene {
   }
 
   private drawTitle(): void {
-    const { width, height } = this.scale;
+    const { width: cssW, height: cssH, scale: s } = uiLayoutSpace(this);
     // Short landscape phones: pull the stack up and tighten gaps so
     // Settings is never clipped by the bottom edge.
-    const compact = height < 500;
+    const compact = cssH < 520;
+    const cx = uiPx(cssW / 2, s);
     const title = this.add
-      .text(width / 2, height * (compact ? 0.14 : 0.22), 'RIFTBORN', {
+      .text(cx, uiPx(cssH * (compact ? 0.14 : 0.22), s), 'RIFTBORN', {
         fontFamily: 'Georgia, "Times New Roman", serif',
-        fontSize: uiFont(this, compact ? 42 : 56, 28, 64),
+        fontSize: uiFont(this, compact ? 36 : 52, 24, 64),
         color: '#e8e4d8',
       })
       .setOrigin(0.5);
     const sub = this.add
       .text(
-        width / 2,
-        height * (compact ? 0.26 : 0.32),
+        cx,
+        uiPx(cssH * (compact ? 0.26 : 0.32), s),
         'SHIFT between Asche & Schatten',
         {
           fontFamily: 'Segoe UI, sans-serif',
-          fontSize: uiFont(this, 18, 13, 20),
+          fontSize: uiFont(this, 16, 12, 18),
           color: '#8a9aaa',
         },
       )
@@ -129,10 +130,10 @@ export class BootScene extends Phaser.Scene {
       continue: 'Continue',
       settings: 'Settings',
     };
-    const gap = compact ? Math.max(36, Math.floor(height * 0.1)) : 56;
-    let y = height * (compact ? 0.42 : 0.48);
+    const gap = uiPx(compact ? Math.max(34, Math.floor(cssH * 0.1)) : 56, s);
+    let y = uiPx(cssH * (compact ? 0.42 : 0.48), s);
     for (const action of actions) {
-      const btn = this.makeButton(width / 2, y, labels[action], () => {
+      const btn = this.makeButton(cx, y, labels[action], () => {
         if (action === 'newGame') this.onNewGame();
         else if (action === 'continue') this.onContinue();
         else {
@@ -147,8 +148,8 @@ export class BootScene extends Phaser.Scene {
     if (!compact) {
       const hint = this.add
         .text(
-          width / 2,
-          height * 0.9,
+          cx,
+          uiPx(cssH * 0.9, s),
           'WASD · LMB · Q shift · 1/2/3 · M map · R rift · B town',
           {
             fontFamily: 'Segoe UI, sans-serif',
@@ -194,32 +195,56 @@ export class BootScene extends Phaser.Scene {
   }
 
   private drawSlots(): void {
-    const { width, height } = this.scale;
+    const { width: cssW, height: cssH, scale: s } = uiLayoutSpace(this);
+    const compact = cssH < 520;
+    const cx = uiPx(cssW / 2, s);
     const heading = this.add
-      .text(width / 2, height * 0.12, 'RIFTBORN', {
+      .text(cx, uiPx(cssH * (compact ? 0.08 : 0.1), s), 'RIFTBORN', {
         fontFamily: 'Georgia, "Times New Roman", serif',
-        fontSize: uiFont(this, 42, 28, 56),
+        fontSize: uiFont(this, compact ? 28 : 36, 20, 48),
         color: '#e8e4d8',
       })
       .setOrigin(0.5);
     const sub = this.add
-      .text(width / 2, height * 0.2, 'Choose a character slot', {
-        fontFamily: 'Segoe UI, sans-serif',
-        fontSize: uiFont(this, 18, 14, 22),
-        color: '#8a9aaa',
-      })
+      .text(
+        cx,
+        uiPx(cssH * (compact ? 0.16 : 0.18), s),
+        'Choose a character slot',
+        {
+          fontFamily: 'Segoe UI, sans-serif',
+          fontSize: uiFont(this, compact ? 13 : 16, 12, 18),
+          color: '#8a9aaa',
+        },
+      )
       .setOrigin(0.5);
     this.root.add([heading, sub]);
 
     const slots = saveStore.listSlots();
-    const gap = Math.min(220, width * 0.28);
-    const startX = width / 2 - gap;
-    const y = height * 0.48;
+    // Keep cards inside the CSS width with margins; shrink on short phones.
+    const cardWCss = Math.min(compact ? 148 : 170, (cssW - 36) / 3);
+    const cardHCss = compact
+      ? Math.min(148, cssH * 0.48)
+      : Math.min(180, cssH * 0.42);
+    const gapCss = cardWCss + Math.max(8, (cssW - 3 * cardWCss) / 4);
+    const startXCss = cssW / 2 - gapCss;
+    const yCss = compact ? cssH * 0.46 : cssH * 0.48;
     for (let i = 0; i < SLOT_COUNT; i++) {
-      this.drawSlot(startX + i * gap, y, i, slots[i] ?? null);
+      this.drawSlot(
+        uiPx(startXCss + i * gapCss, s),
+        uiPx(yCss, s),
+        i,
+        slots[i] ?? null,
+        uiPx(cardWCss, s),
+        uiPx(cardHCss, s),
+        s,
+      );
     }
 
-    const back = this.makeButton(width / 2, height * 0.86, 'Back', () => {
+    const backYCss = Math.min(
+      cssH - 28,
+      yCss + cardHCss / 2 + (compact ? 36 : 44),
+    );
+    const back = this.makeButton(cx, uiPx(backYCss, s), 'Back', () => {
       this.view = 'title';
       this.render();
     });
@@ -231,18 +256,19 @@ export class BootScene extends Phaser.Scene {
     y: number,
     index: number,
     save: CharacterSave | null,
+    w: number,
+    h: number,
+    s: number,
   ): void {
-    const w = 190;
-    const h = 200;
     const bg = this.add
       .rectangle(x, y, w, h, 0x121820, 0.95)
       .setStrokeStyle(2, save ? 0xc4a574 : 0x3a4a5a)
       .setInteractive({ useHandCursor: true });
 
     const title = this.add
-      .text(x, y - h / 2 + 22, `Slot ${index + 1}`, {
+      .text(x, y - h / 2 + uiPx(16, s), `Slot ${index + 1}`, {
         fontFamily: 'Georgia, serif',
-        fontSize: '16px',
+        fontSize: `${uiPx(13, s)}px`,
         color: '#8a9aaa',
       })
       .setOrigin(0.5);
@@ -253,26 +279,26 @@ export class BootScene extends Phaser.Scene {
       const classLabel =
         save.classId.charAt(0).toUpperCase() + save.classId.slice(1);
       const name = this.add
-        .text(x, y - 28, save.name, {
+        .text(x, y - uiPx(22, s), save.name, {
           fontFamily: 'Georgia, serif',
-          fontSize: '20px',
+          fontSize: `${uiPx(16, s)}px`,
           color: '#e8e4d8',
         })
         .setOrigin(0.5);
       const meta = this.add
-        .text(x, y + 2, `${classLabel} · Lv ${save.level}`, {
+        .text(x, y + uiPx(2, s), `${classLabel} · Lv ${save.level}`, {
           fontFamily: 'Segoe UI, sans-serif',
-          fontSize: '14px',
+          fontSize: `${uiPx(12, s)}px`,
           color: '#6ec6a0',
         })
         .setOrigin(0.5);
       const play = this.add
-        .text(x, y + 48, 'Continue', {
+        .text(x, y + uiPx(36, s), 'Continue', {
           fontFamily: 'Georgia, serif',
-          fontSize: '16px',
+          fontSize: `${uiPx(13, s)}px`,
           color: '#0a0c10',
           backgroundColor: '#c4a574',
-          padding: { x: 14, y: 6 },
+          padding: { x: uiPx(10, s), y: uiPx(5, s) },
         })
         .setOrigin(0.5)
         .setInteractive({ useHandCursor: true });
@@ -281,10 +307,10 @@ export class BootScene extends Phaser.Scene {
         this.bootSlot(index);
       });
       const del = this.add
-        .text(x, y + h / 2 - 22, 'Delete', {
+        .text(x, y + h / 2 - uiPx(16, s), 'Delete', {
           fontFamily: 'Segoe UI, sans-serif',
-          fontSize: '12px',
-          color: '#a06060',
+          fontSize: `${uiPx(11, s)}px`,
+          color: '#c08080',
         })
         .setOrigin(0.5)
         .setInteractive({ useHandCursor: true });
@@ -296,19 +322,19 @@ export class BootScene extends Phaser.Scene {
       this.root.add([name, meta, play, del]);
     } else {
       const empty = this.add
-        .text(x, y - 10, 'Empty', {
+        .text(x, y - uiPx(8, s), 'Empty', {
           fontFamily: 'Segoe UI, sans-serif',
-          fontSize: '18px',
+          fontSize: `${uiPx(14, s)}px`,
           color: '#5a6a7a',
         })
         .setOrigin(0.5);
       const create = this.add
-        .text(x, y + 40, 'New Character', {
+        .text(x, y + uiPx(28, s), 'New Character', {
           fontFamily: 'Georgia, serif',
-          fontSize: '15px',
+          fontSize: `${uiPx(12, s)}px`,
           color: '#0a0c10',
           backgroundColor: '#6ec6a0',
-          padding: { x: 12, y: 6 },
+          padding: { x: uiPx(10, s), y: uiPx(5, s) },
         })
         .setOrigin(0.5)
         .setInteractive({ useHandCursor: true });
@@ -442,14 +468,18 @@ export class BootScene extends Phaser.Scene {
     label: string,
     onClick: () => void,
   ): Phaser.GameObjects.Text {
-    const compact = this.scale.height < 500;
+    const { height: cssH, scale: s } = uiLayoutSpace(this);
+    const compact = cssH < 520;
     const btn = this.add
       .text(x, y, label, {
         fontFamily: 'Georgia, serif',
-        fontSize: uiFont(this, compact ? 16 : 20, 14, 22),
+        fontSize: uiFont(this, compact ? 14 : 18, 12, 20),
         color: '#0a0c10',
         backgroundColor: '#c4a574',
-        padding: { x: compact ? 14 : 18, y: compact ? 7 : 10 },
+        padding: {
+          x: uiPx(compact ? 12 : 16, s),
+          y: uiPx(compact ? 6 : 9, s),
+        },
       })
       .setOrigin(0.5)
       .setInteractive({ useHandCursor: true });

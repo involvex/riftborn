@@ -3,7 +3,7 @@ import type { CharacterClassId, CharacterGender } from '../types/game';
 import { listClasses } from '../systems/ProgressionSystem';
 import { gameState } from '../systems/GameState';
 import { audioBus } from '../core/AudioBus';
-import { uiFont, uiPad } from '../core/UiScale';
+import { uiFont, uiLayoutSpace, uiPx } from '../core/UiScale';
 import {
   ensureGameSprites,
   isPaintedSprite,
@@ -35,6 +35,8 @@ export class CharacterCreateScene extends Phaser.Scene {
   private previewY = 0;
   private cardFills = new Map<CharacterClassId, Phaser.GameObjects.Rectangle>();
   private genderBtns = new Map<CharacterGender, Phaser.GameObjects.Text>();
+  private layoutScale = 1;
+  private layoutCompact = false;
 
   constructor() {
     super('CharacterCreateScene');
@@ -128,65 +130,73 @@ export class CharacterCreateScene extends Phaser.Scene {
   }
 
   private build(): void {
-    const W = this.scale.width;
-    const H = this.scale.height;
-    const pad = uiPad(this, 16);
-    const contentW = Math.min(840, W - pad * 2);
-    const cx = W / 2;
-    const compact = H < 700;
-    // Pin name + actions to the bottom so they never clip off-screen
-    const footerH = compact ? 132 : 148;
-    const footerTop = H - footerH;
-    let y = Math.max(8, H * 0.02);
-    const maxContentBottom = footerTop - 8;
+    const { width: cssW, height: cssH, scale: s } = uiLayoutSpace(this);
+    this.layoutScale = s;
+    this.layoutCompact = cssH < 560;
+    const compact = this.layoutCompact;
+    const phone = cssH < 500;
+    const padCss = 12;
+    const contentWCss = Math.min(840, cssW - padCss * 2);
+    const cx = uiPx(cssW / 2, s);
+    // Footer: gender + name + actions — reserved so class cards never collide.
+    const footerHCss = phone ? 150 : compact ? 158 : 168;
+    const footerTopCss = cssH - footerHCss;
+    let yCss = Math.max(6, cssH * 0.02);
 
     const title = this.add
-      .text(cx, y, 'RIFTBORN', {
+      .text(cx, uiPx(yCss, s), 'RIFTBORN', {
         fontFamily: 'Georgia, serif',
-        fontSize: uiFont(this, compact ? 32 : 44, 22, 56),
+        fontSize: uiFont(this, phone ? 26 : compact ? 30 : 40, 20, 52),
         color: '#e8e4d8',
       })
       .setOrigin(0.5, 0);
     this.root.add(title);
-    y += title.height + (compact ? 2 : 6);
+    yCss += title.height / s + (phone ? 2 : 6);
 
-    if (!compact) {
+    if (!phone) {
       const subtitle = this.add
-        .text(cx, y, 'Create your riftwalker', {
+        .text(cx, uiPx(yCss, s), 'Create your riftwalker', {
           fontFamily: 'Segoe UI, sans-serif',
-          fontSize: uiFont(this, 15, 12, 18),
+          fontSize: uiFont(this, 14, 12, 16),
           color: '#8a9aaa',
         })
         .setOrigin(0.5, 0);
       this.root.add(subtitle);
-      y += subtitle.height + 10;
+      yCss += subtitle.height / s + 8;
     }
 
     this.root.add(
       this.add
-        .text(cx, y, 'CLASS', {
+        .text(cx, uiPx(yCss, s), 'CLASS', {
           fontFamily: 'Segoe UI, sans-serif',
-          fontSize: uiFont(this, 11, 9, 13),
-          color: '#6a7a8a',
+          fontSize: uiFont(this, 11, 9, 12),
+          color: '#8a9aaa',
         })
         .setOrigin(0.5, 0),
     );
-    y += 14;
+    yCss += 12;
 
     const classes = listClasses();
-    const cardH = Phaser.Math.Clamp(
-      compact ? H * 0.12 : H * 0.15,
-      compact ? 72 : 100,
-      compact ? 100 : 130,
+    const maxCardBottomCss = footerTopCss - (phone ? 28 : 36);
+    const cardHCss = Phaser.Math.Clamp(
+      phone ? cssH * 0.16 : compact ? cssH * 0.14 : cssH * 0.15,
+      phone ? 64 : 80,
+      Math.max(64, maxCardBottomCss - yCss),
     );
-    const cardW = Math.min(compact ? 160 : 200, (contentW - 16) / 3);
-    const gap = 8;
-    const rowW = classes.length * cardW + (classes.length - 1) * gap;
-    const startX = cx - rowW / 2 + cardW / 2;
-    const cardCy = y + cardH / 2;
+    const cardWCss = Math.min(
+      phone ? 132 : compact ? 150 : 190,
+      (contentWCss - 16) / 3,
+    );
+    const gapCss = 8;
+    const rowWCss = classes.length * cardWCss + (classes.length - 1) * gapCss;
+    const startXCss = cssW / 2 - rowWCss / 2 + cardWCss / 2;
+    const cardCyCss = yCss + cardHCss / 2;
 
     classes.forEach((cls, i) => {
-      const x = startX + i * (cardW + gap);
+      const x = uiPx(startXCss + i * (cardWCss + gapCss), s);
+      const cardCy = uiPx(cardCyCss, s);
+      const cardW = uiPx(cardWCss, s);
+      const cardH = uiPx(cardHCss, s);
       const card = this.add
         .rectangle(x, cardCy, cardW, cardH, 0x151a22, 1)
         .setStrokeStyle(
@@ -199,7 +209,7 @@ export class CharacterCreateScene extends Phaser.Scene {
       const name = this.add
         .text(x, cardCy - cardH * 0.28, cls.name, {
           fontFamily: 'Georgia, serif',
-          fontSize: uiFont(this, compact ? 15 : 20, 12, 22),
+          fontSize: uiFont(this, phone ? 13 : compact ? 14 : 18, 11, 20),
           color: cls.color,
         })
         .setOrigin(0.5);
@@ -208,12 +218,10 @@ export class CharacterCreateScene extends Phaser.Scene {
         .text(
           x,
           cardCy + cardH * 0.18,
-          compact
-            ? `STR ${cls.baseStats.strength} DEX ${cls.baseStats.dexterity}\nSTA ${cls.baseStats.stamina} INT ${cls.baseStats.intellect}`
-            : `STR ${cls.baseStats.strength}  DEX ${cls.baseStats.dexterity}\nSTA ${cls.baseStats.stamina}  INT ${cls.baseStats.intellect}`,
+          `STR ${cls.baseStats.strength} DEX ${cls.baseStats.dexterity}\nSTA ${cls.baseStats.stamina} INT ${cls.baseStats.intellect}`,
           {
             fontFamily: 'Consolas, monospace',
-            fontSize: uiFont(this, compact ? 10 : 12, 9, 13),
+            fontSize: uiFont(this, phone ? 9 : 11, 9, 12),
             color: '#c8c0b0',
             align: 'center',
             lineSpacing: 2,
@@ -224,43 +232,50 @@ export class CharacterCreateScene extends Phaser.Scene {
       card.on('pointerup', () => this.selectClass(cls.id));
       this.root.add([card, name, stats]);
     });
-    y += cardH + (compact ? 8 : 14);
+    yCss += cardHCss + (phone ? 6 : 10);
 
-    // Details — shrink or skip preview on very short screens
-    const roomLeft = maxContentBottom - y;
-    const showDetails = roomLeft > 100;
-    if (showDetails) {
+    // Short phones: one bright detail line. Taller: preview + blurb.
+    const roomLeftCss = footerTopCss - yCss;
+    const showPreview = !phone && roomLeftCss > 96;
+    if (showPreview) {
       this.root.add(
         this.add
-          .text(cx, y, 'DETAILS', {
+          .text(cx, uiPx(yCss, s), 'DETAILS', {
             fontFamily: 'Segoe UI, sans-serif',
-            fontSize: uiFont(this, 11, 9, 13),
-            color: '#6a7a8a',
+            fontSize: uiFont(this, 11, 9, 12),
+            color: '#8a9aaa',
           })
           .setOrigin(0.5, 0),
       );
-      y += 14;
+      yCss += 12;
 
-      const blockH = Phaser.Math.Clamp(roomLeft - 50, 70, compact ? 110 : 140);
-      const previewW = compact ? 72 : 100;
-      const colGap = 16;
-      this.previewX = cx - contentW / 2 + previewW / 2;
-      this.previewY = y + blockH / 2;
-      const textX = this.previewX + previewW / 2 + colGap;
-      const textW = contentW - previewW - colGap;
+      const blockHCss = Phaser.Math.Clamp(roomLeftCss - 20, 70, 120);
+      const previewWCss = compact ? 72 : 96;
+      const colGapCss = 14;
+      this.previewX = uiPx(cssW / 2 - contentWCss / 2 + previewWCss / 2, s);
+      this.previewY = uiPx(yCss + blockHCss / 2, s);
+      const textX = this.previewX + uiPx(previewWCss / 2 + colGapCss, s);
+      const textW = uiPx(contentWCss - previewWCss - colGapCss, s);
 
       this.previewFrame = this.add
-        .rectangle(this.previewX, this.previewY, previewW, blockH, 0x121820, 1)
+        .rectangle(
+          this.previewX,
+          this.previewY,
+          uiPx(previewWCss, s),
+          uiPx(blockHCss, s),
+          0x121820,
+          1,
+        )
         .setStrokeStyle(2, 0xc45c3a);
       const pKey = playerSpriteKey(this.gender, this.selected);
       this.previewSprite = this.add.sprite(
         this.previewX,
-        this.previewY + 4,
+        this.previewY + uiPx(4, s),
         pKey,
       );
       this.previewSprite.setOrigin(0.5, 0.7);
       this.previewSprite.setScale(
-        isPaintedSprite(pKey) ? (compact ? 0.55 : 0.75) : 2.0,
+        isPaintedSprite(pKey) ? (compact ? 0.5 : 0.7) * s : 2.0 * s,
       );
       this.previewSprite.play(`${pKey}_idle`);
       this.root.add([this.previewFrame, this.previewSprite]);
@@ -268,23 +283,22 @@ export class CharacterCreateScene extends Phaser.Scene {
       this.detailText = this.add
         .text(textX, this.previewY, '', {
           fontFamily: 'Segoe UI, sans-serif',
-          fontSize: uiFont(this, compact ? 12 : 14, 11, 16),
-          color: '#b8c0c8',
+          fontSize: uiFont(this, 13, 11, 15),
+          color: '#d0d8e0',
           align: 'left',
           wordWrap: { width: textW },
           lineSpacing: 3,
         })
         .setOrigin(0, 0.5);
       this.root.add(this.detailText);
-      y += blockH + 8;
     } else {
-      // Minimal detail line only
       this.detailText = this.add
-        .text(cx, y, '', {
+        .text(cx, uiPx(yCss, s), '', {
           fontFamily: 'Segoe UI, sans-serif',
           fontSize: uiFont(this, 12, 10, 14),
-          color: '#b8c0c8',
+          color: '#d0d8e0',
           align: 'center',
+          wordWrap: { width: uiPx(contentWCss, s) },
         })
         .setOrigin(0.5, 0);
       this.root.add(this.detailText);
@@ -294,37 +308,32 @@ export class CharacterCreateScene extends Phaser.Scene {
       this.previewSprite = this.add
         .sprite(0, 0, playerSpriteKey(this.gender, this.selected))
         .setVisible(false);
-      y += 22;
     }
 
-    // Gender in remaining content if space, else in footer
-    const genderInFooter = y + 40 > maxContentBottom;
-    if (!genderInFooter) {
-      this.root.add(
-        this.add
-          .text(cx, y, 'GENDER', {
-            fontFamily: 'Segoe UI, sans-serif',
-            fontSize: uiFont(this, 11, 9, 13),
-            color: '#6a7a8a',
-          })
-          .setOrigin(0.5, 0),
-      );
-      y += 14;
-      this.addGenderRow(cx, y + 12, contentW, compact);
-    }
-
-    // —— Fixed footer (bottom-up so buttons never cover the name field) ——
+    // —— Fixed footer ——
+    const footerTop = uiPx(footerTopCss, s);
+    const footerH = uiPx(footerHCss, s);
     const footerBg = this.add
-      .rectangle(cx, footerTop + footerH / 2, W, footerH, 0x0a0c10, 0.94)
-      .setStrokeStyle(1, 0x2a3344, 0.8);
+      .rectangle(
+        cx,
+        footerTop + footerH / 2,
+        uiPx(cssW, s),
+        footerH,
+        0x0a0c10,
+        0.96,
+      )
+      .setStrokeStyle(1, 0x2a3344, 0.85);
     this.root.add(footerBg);
 
-    const btnY = H - pad - 22;
+    const btnY = uiPx(cssH - padCss - 20, s);
+    const btnGap = uiPx(phone ? 88 : 100, s);
     this.root.add(
-      this.makeButton(cx - 100, btnY, 'Enter the Rift', () => this.startGame()),
+      this.makeButton(cx - btnGap, btnY, 'Enter the Rift', () =>
+        this.startGame(),
+      ),
     );
     this.root.add(
-      this.makeButton(cx + 100, btnY, 'Back', () => {
+      this.makeButton(cx + btnGap, btnY, 'Back', () => {
         if (this.starting) return;
         audioBus.uiClick();
         this.destroyNameDom();
@@ -332,20 +341,29 @@ export class CharacterCreateScene extends Phaser.Scene {
       }),
     );
 
-    const nameBoxH = 36;
-    const nameY = btnY - 40;
+    const nameBoxHCss = 34;
+    const nameYCss = cssH - padCss - 20 - 44;
+    const nameY = uiPx(nameYCss, s);
     this.root.add(
       this.add
-        .text(cx, nameY - nameBoxH / 2 - 14, 'NAME', {
+        .text(cx, uiPx(nameYCss - nameBoxHCss / 2 - 12, s), 'NAME', {
           fontFamily: 'Segoe UI, sans-serif',
           fontSize: uiFont(this, 11, 9, 12),
-          color: '#6a7a8a',
+          color: '#8a9aaa',
         })
         .setOrigin(0.5, 0),
     );
 
-    const nameBoxW = Math.min(300, contentW * 0.6);
-    // Real HTML input — Phaser keyboard alone fails on phones / soft keyboards
+    // Gender sits above the name field inside the footer (never over class cards).
+    this.addGenderRow(
+      cx,
+      uiPx(nameYCss - nameBoxHCss / 2 - 34, s),
+      uiPx(contentWCss, s),
+      phone || compact,
+    );
+
+    // DOM width is CSS pixels (overlay); position is game pixels.
+    const nameBoxWCss = Math.min(280, contentWCss * 0.55);
     const inputEl = document.createElement('input');
     inputEl.type = 'text';
     inputEl.value = this.nameValue;
@@ -354,8 +372,8 @@ export class CharacterCreateScene extends Phaser.Scene {
     inputEl.spellcheck = false;
     inputEl.setAttribute('enterkeyhint', 'done');
     Object.assign(inputEl.style, {
-      width: `${Math.round(nameBoxW)}px`,
-      height: `${nameBoxH}px`,
+      width: `${Math.round(nameBoxWCss)}px`,
+      height: `${nameBoxHCss}px`,
       fontSize: '16px',
       fontFamily: 'Georgia, serif',
       color: '#e8e4d8',
@@ -377,19 +395,14 @@ export class CharacterCreateScene extends Phaser.Scene {
       }
     });
     this.nameDom = this.add.dom(cx, nameY, inputEl).setOrigin(0.5);
-    // Fallback display if DOM container unavailable
     this.nameDisplay = this.add
       .text(cx, nameY, this.nameValue, {
         fontFamily: 'Georgia, serif',
-        fontSize: uiFont(this, 15, 13, 18),
+        fontSize: uiFont(this, 14, 12, 16),
         color: '#e8e4d8',
       })
       .setOrigin(0.5)
       .setVisible(false);
-
-    if (genderInFooter) {
-      this.addGenderRow(cx, nameY - nameBoxH / 2 - 36, contentW, true);
-    }
 
     this.selectClass(this.selected, false);
     this.selectGender(this.gender, false);
@@ -402,8 +415,12 @@ export class CharacterCreateScene extends Phaser.Scene {
     contentW: number,
     compact: boolean,
   ): void {
-    const gW = Math.min(compact ? 100 : 120, (contentW - 16) / 3);
-    const gGap = 8;
+    const s = this.layoutScale;
+    const gW = Math.min(
+      uiPx(compact ? 92 : 110, s),
+      Math.floor((contentW - uiPx(12, s)) / 3),
+    );
+    const gGap = uiPx(6, s);
     const gRowW = GENDERS.length * gW + (GENDERS.length - 1) * gGap;
     const gStart = cx - gRowW / 2 + gW / 2;
     GENDERS.forEach((g, i) => {
@@ -411,10 +428,10 @@ export class CharacterCreateScene extends Phaser.Scene {
       const btn = this.add
         .text(x, gY, g.label, {
           fontFamily: 'Georgia, serif',
-          fontSize: uiFont(this, compact ? 12 : 14, 11, 16),
+          fontSize: uiFont(this, compact ? 11 : 13, 10, 14),
           color: '#e8e4d8',
           backgroundColor: '#2a3344',
-          padding: { x: 8, y: 6 },
+          padding: { x: uiPx(6, s), y: uiPx(5, s) },
           fixedWidth: gW,
           align: 'center',
         })
@@ -452,11 +469,13 @@ export class CharacterCreateScene extends Phaser.Scene {
     const setName =
       id === 'warrior' ? 'Bone' : id === 'mage' ? 'Riftbound' : 'Ashen';
     this.detailText.setText(
-      [
-        cls.name,
-        cls.blurb,
-        `Primary: ${cls.damageStat.toUpperCase()} · Starter ${setName} set`,
-      ].join('\n'),
+      this.layoutCompact
+        ? `${cls.blurb} · ${cls.damageStat.toUpperCase()} · ${setName}`
+        : [
+            cls.name,
+            cls.blurb,
+            `Primary: ${cls.damageStat.toUpperCase()} · Starter ${setName} set`,
+          ].join('\n'),
     );
     this.previewFrame?.setStrokeStyle(2, this.classAccent());
     this.drawPreview();
@@ -478,11 +497,11 @@ export class CharacterCreateScene extends Phaser.Scene {
   private drawPreview(): void {
     if (!this.previewSprite?.visible) return;
     const key = playerSpriteKey(this.gender, this.selected);
-    this.previewSprite.setPosition(this.previewX, this.previewY + 4);
+    const s = this.layoutScale;
+    this.previewSprite.setPosition(this.previewX, this.previewY + uiPx(4, s));
     this.previewSprite.setTexture(key);
-    const compact = this.scale.height < 700;
     this.previewSprite.setScale(
-      isPaintedSprite(key) ? (compact ? 0.55 : 0.75) : 2.0,
+      isPaintedSprite(key) ? (this.layoutCompact ? 0.5 : 0.7) * s : 2.0 * s,
     );
     this.previewSprite.play(`${key}_idle`, true);
     if (isPaintedSprite(key)) {
@@ -505,20 +524,20 @@ export class CharacterCreateScene extends Phaser.Scene {
     label: string,
     onClick: () => void,
   ): Phaser.GameObjects.Text {
+    const s = this.layoutScale;
     const text = this.add
       .text(x, y, label, {
         fontFamily: 'Georgia, serif',
-        fontSize: uiFont(this, 14, 12, 17),
+        fontSize: uiFont(this, 13, 11, 15),
         color: '#0a0c10',
         backgroundColor: '#c4a574',
-        padding: { x: 16, y: 10 },
+        padding: { x: uiPx(12, s), y: uiPx(7, s) },
       })
       .setOrigin(0.5)
       .setInteractive({ useHandCursor: true })
       .setDepth(20);
     text.on('pointerover', () => text.setStyle({ backgroundColor: '#e0c890' }));
     text.on('pointerout', () => text.setStyle({ backgroundColor: '#c4a574' }));
-    // pointerdown is more reliable on touch than pointerup alone
     text.on('pointerdown', () => {
       text.setStyle({ backgroundColor: '#a89060' });
     });
