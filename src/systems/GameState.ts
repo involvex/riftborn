@@ -66,10 +66,7 @@ export class GameState {
     const def = getClassDef(classId);
     const kit = createStarterLoadout(classId, def.starterWeaponDamage);
     this.inventory.equipment.weapon = kit.weapon;
-    this.inventory.equipment.hat = kit.hat;
-    this.inventory.equipment.chest = kit.chest;
-    this.inventory.equipment.legs = kit.legs;
-    this.inventory.equipment.feet = kit.feet;
+    this.inventory.equipment[kit.armor.slot] = kit.armor;
     this.inventory.equipment.tool = 'hatchet';
     this.inventory.add('wood', 3);
     this.inventory.add('ore', 1);

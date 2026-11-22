@@ -1,4 +1,4 @@
-import type { GearInstance, GearStats } from '../types/game';
+import type { GearInstance, GearNamedAffix, GearStats } from '../types/game';
 import type { EquipmentSlots, InventorySlot } from '../types/save';
 import { rarityCss } from './RarityVisual';
 import { countSetPieces } from './SetBonus';
@@ -15,16 +15,38 @@ const sets = setsData as Record<
   }
 >;
 
+export type CompareTone = 'better' | 'worse' | 'same';
+
+export type CompareRow = {
+  key: keyof GearStats;
+  label: string;
+  candidate: number;
+  equipped: number;
+  delta: number;
+  tone: CompareTone;
+};
+
+export const COMPARE_TONE_CSS: Record<CompareTone, string> = {
+  better: '#6ecf7a',
+  worse: '#e07070',
+  same: '#a8b0bc',
+};
+
+export type TooltipLine = { text: string; color: string };
+
+const NAMED_AFFIX_COLOR = '#d0b070';
+
 /**
  * Set name + progress if this item is worn. `equipment` is the full loadout,
  * so the count reflects the swap (candidate replaces its own slot). Bag
  * pieces count toward "need X" so chase reads in the inventory panel.
+ * Breakpoints are always their own lines (gold when unlocked, muted preview).
  */
 export function setTooltipLines(
   item: GearInstance,
   equipment?: EquipmentSlots | null,
   bag: InventorySlot[] = [],
-): { text: string; color: string }[] {
+): TooltipLine[] {
   if (!item.setId) return [];
   const def = sets[item.setId];
   if (!def) return [];
@@ -37,7 +59,7 @@ export function setTooltipLines(
   const owned = ownedSetSlots(item.setId, next, bag);
   owned.add(item.slot);
   const collection = owned.size;
-  const out = [
+  const out: TooltipLine[] = [
     {
       text: `Set ${def.name} · ${collection}/4`,
       color: def.color,
@@ -47,12 +69,76 @@ export function setTooltipLines(
     out.push({ text: `4pc: ${def.fourPiece.label}`, color: '#f0d090' });
   } else if (after >= 2 && before < 2) {
     out.push({ text: `2pc: ${def.twoPiece.label}`, color: '#f0d090' });
+  } else if (after < 2) {
+    out.push({ text: `2pc: ${def.twoPiece.label}`, color: '#8a9aaa' });
+  } else if (after < 4) {
+    out.push({ text: `4pc: ${def.fourPiece.label}`, color: '#8a9aaa' });
+  } else {
+    out.push({ text: `4pc: ${def.fourPiece.label}`, color: '#f0d090' });
   }
   const missing = missingSetSlots(owned);
   if (missing.length) {
     out.push({
       text: `Need ${missing.map(slotShortLabel).join(', ')}`,
       color: '#c8b898',
+    });
+  }
+  return out;
+}
+
+/** Readable named skill affix line for tooltips / compare. */
+export function formatNamedAffixLine(affix: GearNamedAffix): string {
+  if (affix.kind === 'cooldown') {
+    return `${affix.name}  −${affix.value.toFixed(1)}s CD`;
+  }
+  if (affix.kind === 'targets') {
+    return `${affix.name}  +${affix.value} targets`;
+  }
+  return `${affix.name}  +${Math.round(affix.value * 100)}% skill`;
+}
+
+function affixKey(a: GearNamedAffix): string {
+  return `${a.skillId}:${a.kind}:${a.value}`;
+}
+
+/** Absolute named affix lines on a piece (not a delta). */
+export function namedAffixLines(item: GearInstance): TooltipLine[] {
+  return (item.affixes ?? []).map((a) => ({
+    text: formatNamedAffixLine(a),
+    color: NAMED_AFFIX_COLOR,
+  }));
+}
+
+/** Named affixes on the candidate that are not on the equipped piece. */
+export function namedAffixGainLines(
+  candidate: GearInstance,
+  equipped: GearInstance | null | undefined,
+): TooltipLine[] {
+  const have = new Set((equipped?.affixes ?? []).map(affixKey));
+  const out: TooltipLine[] = [];
+  for (const a of candidate.affixes ?? []) {
+    if (have.has(affixKey(a))) continue;
+    out.push({
+      text: formatNamedAffixLine(a),
+      color: COMPARE_TONE_CSS.better,
+    });
+  }
+  return out;
+}
+
+/** Named affixes on the equipped piece that the candidate would lose. */
+export function namedAffixLossLines(
+  candidate: GearInstance,
+  equipped: GearInstance | null | undefined,
+): TooltipLine[] {
+  if (!equipped?.affixes?.length) return [];
+  const keep = new Set((candidate.affixes ?? []).map(affixKey));
+  const out: TooltipLine[] = [];
+  for (const a of equipped.affixes) {
+    if (keep.has(affixKey(a))) continue;
+    out.push({
+      text: `Lose ${formatNamedAffixLine(a)}`,
+      color: COMPARE_TONE_CSS.worse,
     });
   }
   return out;
@@ -68,17 +154,6 @@ function emptyEquipment(): EquipmentSlots {
     tool: null,
   };
 }
-
-export type CompareTone = 'better' | 'worse' | 'same';
-
-export type CompareRow = {
-  key: keyof GearStats;
-  label: string;
-  candidate: number;
-  equipped: number;
-  delta: number;
-  tone: CompareTone;
-};
 
 const STAT_ORDER: { key: keyof GearStats; label: string }[] = [
   { key: 'damage', label: 'DMG' },
@@ -126,29 +201,28 @@ export function formatCompareDelta(delta: number): string {
   return `${delta}`;
 }
 
+/**
+ * Counts and combat deltas only — does not sum STR/armor/Skill% into one net
+ * (those stay as their own tooltip lines).
+ */
 export function summarizeCompare(rows: CompareRow[]): {
-  net: number;
   betterCount: number;
   worseCount: number;
+  damageDelta: number;
+  armorDelta: number;
 } {
-  let net = 0;
   let betterCount = 0;
   let worseCount = 0;
+  let damageDelta = 0;
+  let armorDelta = 0;
   for (const r of rows) {
-    net += r.delta;
     if (r.tone === 'better') betterCount += 1;
     if (r.tone === 'worse') worseCount += 1;
+    if (r.key === 'damage') damageDelta = r.delta;
+    if (r.key === 'armor') armorDelta = r.delta;
   }
-  return { net, betterCount, worseCount };
+  return { betterCount, worseCount, damageDelta, armorDelta };
 }
-
-export const COMPARE_TONE_CSS: Record<CompareTone, string> = {
-  better: '#6ecf7a',
-  worse: '#e07070',
-  same: '#a8b0bc',
-};
-
-export type TooltipLine = { text: string; color: string };
 
 /** Readable multi-line tooltip with rarity tint and equip deltas. */
 export function buildGearTooltipLines(
@@ -193,10 +267,16 @@ export function buildGearTooltipLines(
     });
   }
 
+  for (const affixLine of namedAffixLines(item)) {
+    lines.push(affixLine);
+  }
+
   if (equipped) {
     lines.push({ text: '— vs equipped —', color: '#6a8090' });
     const cmp = compareGearStats(item, equipped);
-    if (cmp.length === 0) {
+    const gains = namedAffixGainLines(item, equipped);
+    const losses = namedAffixLossLines(item, equipped);
+    if (cmp.length === 0 && gains.length === 0 && losses.length === 0) {
       lines.push({ text: 'Same stats', color: '#a8b0bc' });
     } else {
       for (const r of cmp) {
@@ -205,6 +285,8 @@ export function buildGearTooltipLines(
           color: COMPARE_TONE_CSS[r.tone],
         });
       }
+      for (const g of gains) lines.push(g);
+      for (const loss of losses) lines.push(loss);
     }
   } else {
     const cmp = compareGearStats(item, null);
@@ -216,6 +298,10 @@ export function buildGearTooltipLines(
           color: COMPARE_TONE_CSS.better,
         });
       }
+      for (const g of namedAffixGainLines(item, null)) lines.push(g);
+    } else if (item.affixes?.length) {
+      lines.push({ text: '— vs empty slot —', color: '#6a8090' });
+      for (const g of namedAffixGainLines(item, null)) lines.push(g);
     }
   }
 

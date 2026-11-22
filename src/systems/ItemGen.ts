@@ -298,17 +298,20 @@ function makeStarterPiece(
   };
 }
 
-/** Full starter kit: weapon + 4 armor pieces matching class set. */
+/**
+ * Thin starter kit: weapon + one class-set chest.
+ * Leaves 3 set slots to chase so HUD "need X" is alive from create.
+ */
+export type StarterLoadout = {
+  weapon: GearInstance;
+  /** Single set armor piece (chest) — hat / legs / feet stay empty. */
+  armor: GearInstance;
+};
+
 export function createStarterLoadout(
   classId: string,
   weaponDamage: number,
-): {
-  weapon: GearInstance;
-  hat: GearInstance;
-  chest: GearInstance;
-  legs: GearInstance;
-  feet: GearInstance;
-} {
+): StarterLoadout {
   const setPrefix =
     classId === 'warrior' ? 'bone' : classId === 'mage' ? 'rift' : 'ashen';
   const primaryExtra: Partial<GearStats> =
@@ -320,13 +323,10 @@ export function createStarterLoadout(
 
   return {
     weapon: createStarterWeapon(classId, weaponDamage),
-    hat: makeStarterPiece(`${setPrefix}_hat`, primaryExtra),
-    chest: makeStarterPiece(`${setPrefix}_chest`, {
+    armor: makeStarterPiece(`${setPrefix}_chest`, {
       ...primaryExtra,
       stamina: 2,
     }),
-    legs: makeStarterPiece(`${setPrefix}_legs`, { stamina: 1 }),
-    feet: makeStarterPiece(`${setPrefix}_feet`),
   };
 }
 

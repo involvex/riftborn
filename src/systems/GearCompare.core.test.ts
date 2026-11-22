@@ -5,8 +5,12 @@ import {
   buildGearTooltipLines,
   compareGearStats,
   formatCompareDelta,
+  formatNamedAffixLine,
+  namedAffixGainLines,
+  namedAffixLossLines,
   summarizeCompare,
 } from './GearCompare';
+import type { GearNamedAffix } from '../types/game';
 
 function piece(
   setId: string | null,
@@ -81,17 +85,18 @@ describe('GearCompare', () => {
     expect(rows.find((r) => r.key === 'damage')).toBeUndefined();
   });
 
-  test('formatCompareDelta uses +/- and summarize net score', () => {
+  test('formatCompareDelta uses +/-; summarize keeps combat deltas separate', () => {
     expect(formatCompareDelta(3)).toBe('+3');
     expect(formatCompareDelta(-2)).toBe('-2');
     expect(formatCompareDelta(0)).toBe('0');
     const rows = compareGearStats(
-      gear({ stats: { ...empty, damage: 10, armor: 1 } }),
-      gear({ stats: { ...empty, damage: 7, armor: 3 } }),
+      gear({ stats: { ...empty, damage: 10, armor: 1, strength: 5 } }),
+      gear({ stats: { ...empty, damage: 7, armor: 3, strength: 2 } }),
     );
     const sum = summarizeCompare(rows);
-    expect(sum.net).toBe(10 - 7 + (1 - 3));
-    expect(sum.betterCount).toBe(1);
+    expect(sum.damageDelta).toBe(3);
+    expect(sum.armorDelta).toBe(-2);
+    expect(sum.betterCount).toBe(2);
     expect(sum.worseCount).toBe(1);
   });
 
@@ -131,9 +136,62 @@ describe('GearCompare', () => {
     expect(lines[1]?.text).toBe('Set Ashen · 2/4');
     expect(lines[1]?.color).toBe('#8B5A2B');
     expect(lines[2]?.text).toBe('2pc: +6 DEX, +5% skill power');
+    expect(lines[2]?.color).toBe('#f0d090');
     expect(lines.some((l) => l.text === 'Need Legs, Feet')).toBe(true);
     expect(lines.some((l) => l.text.startsWith('Set ashen'))).toBe(false);
     expect(lines.some((l) => l.text.includes('ilvl 1'))).toBe(true);
+  });
+
+  test('incomplete set previews the next breakpoint in muted color', () => {
+    const cand = gear({
+      name: 'Ashen Hood',
+      slot: 'hat',
+      setId: 'ashen',
+      stats: { ...empty },
+    });
+    const lines = buildGearTooltipLines(cand, null, {
+      equipment: equipment([null, null, null, null]),
+    });
+    expect(lines.some((l) => l.text.startsWith('2pc:'))).toBe(true);
+    expect(lines.find((l) => l.text.startsWith('2pc:'))?.color).toBe('#8a9aaa');
+  });
+
+  test('named affixes are their own tooltip and compare lines', () => {
+    const affix: GearNamedAffix = {
+      id: 'a1',
+      name: 'Cleaving Force',
+      skillId: 'war_cleave',
+      kind: 'power',
+      value: 0.2,
+    };
+    const cand = gear({
+      rarity: 'rare',
+      name: 'Fork Blade',
+      stats: { ...empty, damage: 14 },
+      affixes: [affix],
+    });
+    const eq = gear({
+      stats: { ...empty, damage: 10 },
+      affixes: [
+        {
+          id: 'a2',
+          name: 'Bash Haste',
+          skillId: 'war_bash',
+          kind: 'cooldown',
+          value: 0.5,
+        },
+      ],
+    });
+    expect(formatNamedAffixLine(affix)).toBe('Cleaving Force  +20% skill');
+    const lines = buildGearTooltipLines(cand, eq);
+    expect(lines.some((l) => l.text === 'Cleaving Force  +20% skill')).toBe(
+      true,
+    );
+    expect(lines.some((l) => l.text === 'Lose Bash Haste  −0.5s CD')).toBe(
+      true,
+    );
+    expect(namedAffixGainLines(cand, eq)).toHaveLength(1);
+    expect(namedAffixLossLines(cand, eq)).toHaveLength(1);
   });
 
   test('no set line for gear without a set', () => {
