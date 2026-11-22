@@ -62,6 +62,11 @@ export class ShiftSystem {
     );
   }
 
+  /** Ashen Charm — fill the SHIFT meter for this rift. */
+  fillEnergy(): void {
+    this._energy = SHIFT_MAX_ENERGY;
+  }
+
   tick(dtMs: number): void {
     if (this._cooldownLeft <= 0) return;
     this._cooldownLeft = Math.max(0, this._cooldownLeft - dtMs);

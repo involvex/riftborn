@@ -54,6 +54,7 @@ import {
   shouldStartRush,
 } from '../systems/EnemyRush';
 import { MELEE_WINDUP_SEC } from '../systems/CombatWeight';
+import { attackTickDt } from '../systems/RiftElixir';
 import {
   MENDER_SIGHT,
   MENDER_WINDUP,
@@ -105,6 +106,8 @@ export class Enemy {
   private rushReadyIn = 0;
   /** Signature charge: one hit when the sprint enters attack range. */
   private rushContactHit = false;
+  /** Grove Tonic: while slowed, attack timers tick slower. */
+  slowDelaysAttacks = false;
   private menderWindup = 0;
   private meleeWindup = 0;
   private readonly kiteStrafeSign: 1 | -1;
@@ -296,8 +299,9 @@ export class Enemy {
     allies?: readonly Enemy[],
   ): { hitPlayer: boolean; damage: number; shot?: EnemyShot | null } {
     if (!this.alive) return { hitPlayer: false, damage: 0, shot: null };
-    this.attackTimer = Math.max(0, this.attackTimer - dt);
     this.slowTimer = Math.max(0, this.slowTimer - dt);
+    const atkDt = attackTickDt(dt, this.slowTimer > 0, this.slowDelaysAttacks);
+    this.attackTimer = Math.max(0, this.attackTimer - atkDt);
     this.stunTimer = Math.max(0, this.stunTimer - dt);
     this.rootTimer = Math.max(0, this.rootTimer - dt);
     this.rushReadyIn = Math.max(0, this.rushReadyIn - dt);
@@ -745,7 +749,8 @@ export class Enemy {
     }
     this.body.setVisible(true);
 
-    this.attackTimer = Math.max(0, this.attackTimer - dt);
+    const atkDt = attackTickDt(dt, this.slowTimer > 0, this.slowDelaysAttacks);
+    this.attackTimer = Math.max(0, this.attackTimer - atkDt);
     const spd = this.def.speed * this.slowMult * this.modSpeedMult;
     const dir = menderMoveDir(
       { x: this.worldX, y: this.worldY },

@@ -6,8 +6,10 @@ import {
   buildGearTooltipLines,
   type TooltipLine,
 } from '../systems/GearCompare';
+import { Events, gameEvents } from '../core/EventBus';
 import { getItemDef } from '../systems/InventorySystem';
 import { gameState } from '../systems/GameState';
+import { getRiftElixirDef, isRiftElixirId } from '../systems/RiftElixir';
 import { addSlotIcon } from '../render/ItemIcons';
 import type { EquipmentSlots, InventorySlot } from '../types/save';
 import { uiFont } from '../core/UiScale';
@@ -643,8 +645,14 @@ export class InventoryPanel {
             const unit = stackSellValue(slot.itemId);
             const sell =
               unit > 0 ? `  ·  sell ${unit * slot.qty}g` : '  ·  not sellable';
+            const elixir = getRiftElixirDef(slot.itemId);
+            const use = elixir
+              ? `  ·  ${elixir.blurb}`
+              : def?.kind === 'consumable' && def.useBlurb
+                ? `  ·  ${def.useBlurb}`
+                : '';
             this.setDetailPlain(
-              `${def?.name ?? slot.itemId}  ×${slot.qty}${sell}`,
+              `${def?.name ?? slot.itemId}  ×${slot.qty}${use}${sell}`,
               '#e8e4d8',
             );
           } else {
@@ -790,10 +798,32 @@ export class InventoryPanel {
       this.refresh();
       return;
     }
+    if (def?.kind === 'consumable' && isRiftElixirId(slot.itemId) && isDouble) {
+      const result = gameState.useElixir(slot.itemId);
+      if (!result.ok) {
+        this.setDetailPlain(result.reason, '#e07070');
+        this.refresh();
+        return;
+      }
+      gameState.persist();
+      audioBus.open();
+      this.setDetailPlain(result.message, '#6ecf7a');
+      gameEvents.emit('ui:toast', { text: result.message });
+      if (result.activateNow) {
+        gameEvents.emit(Events.ELIXIR_ACTIVATED, { id: slot.itemId });
+      }
+      this.refresh();
+      return;
+    }
     this.selectedIndex = index;
+    const elixir = getRiftElixirDef(slot.itemId);
     this.setDetailPlain(
       `${def?.name ?? slot.itemId} ×${slot.qty}` +
-        (def?.kind === 'tool' ? '  — double-tap to equip' : ''),
+        (def?.kind === 'tool'
+          ? '  — double-tap to equip'
+          : elixir
+            ? `  — double-tap to arm (${elixir.blurb})`
+            : ''),
     );
     this.refresh();
   }

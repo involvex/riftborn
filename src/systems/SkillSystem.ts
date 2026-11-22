@@ -224,6 +224,18 @@ export class SkillSystem {
     return barrierPassiveMult(this.ranks);
   }
 
+  /**
+   * Crystal Lens / world pulse — grant absorb without spending a skill slot.
+   * Keeps the higher HP and longer remaining window.
+   */
+  grantBarrier(hp: number, durationSec: number): void {
+    const left = Math.max(0, this.barrierUntil - this.now);
+    this.barrierHp = Math.max(this.barrierHp, Math.max(0, Math.floor(hp)));
+    if (durationSec >= left) {
+      this.barrierUntil = this.now + durationSec;
+    }
+  }
+
   /** Shrine / world blessing — timed damage buff (stacks by refresh). */
   applyShrineBuff(
     mult = 1.4,

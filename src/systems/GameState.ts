@@ -19,6 +19,12 @@ import { TraderSystem } from './TraderSystem';
 import { HUB_RESUME_SPAWN, hubResumeFromSave } from './HubResume';
 import { parseRiftRun } from './RiftRunPersist';
 import { clampPressureStep } from './RiftPressure';
+import {
+  getRiftElixirDef,
+  isRiftElixirId,
+  parseElixirIds,
+  type RiftElixirId,
+} from './RiftElixir';
 
 export class GameState {
   readonly inventory = new InventorySystem();
@@ -48,6 +54,10 @@ export class GameState {
   pressureStep = 0;
   /** Base64 hub fog; null until first explore persist. */
   hubExplored: string | null = null;
+  /** Biome elixirs armed for the next rift. */
+  armedElixirs: RiftElixirId[] = [];
+  /** Elixirs active for the current rift run. */
+  activeElixirs: RiftElixirId[] = [];
   pendingSessionToken: string | null = null;
   /** Seconds before passive regen resumes after a hit. */
   private regenDelay = 0;
@@ -83,6 +93,8 @@ export class GameState {
     this.playTimeSec = 0;
     this.hubExplored = null;
     this.pendingSessionToken = null;
+    this.armedElixirs = [];
+    this.activeElixirs = [];
     this.bounties.load(null);
     this.persist();
   }
@@ -91,6 +103,63 @@ export class GameState {
     this.riftRun = null;
     this.riftSeed = null;
     this.inRift = false;
+    this.activeElixirs = [];
+  }
+
+  hasActiveElixir(id: RiftElixirId): boolean {
+    return this.activeElixirs.includes(id);
+  }
+
+  hasArmedElixir(id: RiftElixirId): boolean {
+    return this.armedElixirs.includes(id);
+  }
+
+  /**
+   * Double-click bag consumable. Town arms for next rift; mid-rift activates now.
+   */
+  useElixir(
+    itemId: string,
+  ):
+    | { ok: true; message: string; activateNow: boolean }
+    | { ok: false; reason: string } {
+    if (!isRiftElixirId(itemId)) {
+      return { ok: false, reason: 'Not an elixir' };
+    }
+    const def = getRiftElixirDef(itemId);
+    if (!def) return { ok: false, reason: 'Unknown elixir' };
+    if (this.hasActiveElixir(itemId) || this.hasArmedElixir(itemId)) {
+      return { ok: false, reason: 'Already prepared' };
+    }
+    if (!this.inventory.remove(itemId, 1)) {
+      return { ok: false, reason: 'None in bag' };
+    }
+    if (this.inRift) {
+      this.activeElixirs = [...this.activeElixirs, itemId];
+      return {
+        ok: true,
+        message: def.activateToast,
+        activateNow: true,
+      };
+    }
+    this.armedElixirs = [...this.armedElixirs, itemId];
+    return { ok: true, message: def.armToast, activateNow: false };
+  }
+
+  /**
+   * Fresh rift entry: move armed → active. Resume leaves active from riftRun.
+   */
+  beginRiftElixirs(fromResume: boolean): RiftElixirId[] {
+    if (fromResume) {
+      this.armedElixirs = [];
+      return [...this.activeElixirs];
+    }
+    this.activeElixirs = [...this.armedElixirs];
+    this.armedElixirs = [];
+    return [...this.activeElixirs];
+  }
+
+  endRiftElixirs(): void {
+    this.activeElixirs = [];
   }
 
   tryLoad(): boolean {
@@ -135,6 +204,10 @@ export class GameState {
     this.playTimeSec = data.playTimeSec;
     this.hubExplored = data.hubExplored ?? null;
     this.pressureStep = clampPressureStep(data.pressureStep);
+    this.armedElixirs = parseElixirIds(data.armedElixirs);
+    this.activeElixirs = resume.inRift
+      ? parseElixirIds(resume.riftRun?.activeElixirs)
+      : [];
     this.bounties.load({
       bounty: data.bounty ?? null,
       lastKind: data.bountyLastKind ?? null,
@@ -191,6 +264,7 @@ export class GameState {
       hubExplored: this.hubExplored,
       riftRun: this.riftRun,
       pressureStep: this.pressureStep,
+      armedElixirs: [...this.armedElixirs],
     };
   }
 

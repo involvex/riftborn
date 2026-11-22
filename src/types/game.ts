@@ -1,4 +1,5 @@
-export type ItemKind = 'material' | 'tool' | 'weapon' | 'armor' | 'currency';
+export type ItemKind =
+  'material' | 'tool' | 'weapon' | 'armor' | 'currency' | 'consumable';
 
 export type ItemDef = {
   id: string;
@@ -8,6 +9,8 @@ export type ItemDef = {
   color: string;
   /** Vendor gold per unit (0 / omit = not sellable). */
   sellValue?: number;
+  /** Bag hint for consumables / elixirs. */
+  useBlurb?: string;
   gatherBonus?: number;
   damage?: number;
   attackRange?: number;

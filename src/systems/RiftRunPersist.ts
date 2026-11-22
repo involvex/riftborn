@@ -1,6 +1,7 @@
 import type { ShiftLayerId } from '../data/shiftLayers';
 import type { GearInstance, LootTier } from '../types/game';
 import type { RiftRunEnemySave, RiftRunSave } from '../types/save';
+import { parseElixirIds } from './RiftElixir';
 import type { RiftModifierId } from './RiftModifiers';
 
 const MOD_IDS: ReadonlySet<string> = new Set([
@@ -178,6 +179,9 @@ export function parseRiftRun(raw: unknown): RiftRunSave | null {
     Number.isFinite(rawRec.damageBuffMult)
       ? Math.max(1, rawRec.damageBuffMult)
       : 1;
+  const activeElixirs = parseElixirIds(
+    (rawRec as { activeElixirs?: unknown }).activeElixirs,
+  );
   return {
     seed: raw.seed >>> 0,
     depth: Math.max(1, Math.min(10, Math.floor(raw.depth))),
@@ -199,5 +203,6 @@ export function parseRiftRun(raw: unknown): RiftRunSave | null {
     barrierLeft,
     damageBuffMult,
     damageBuffLeft,
+    activeElixirs,
   };
 }

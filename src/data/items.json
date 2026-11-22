@@ -148,25 +148,28 @@
     "id": "ashen_charm",
     "name": "Ashen Charm",
     "stack": 20,
-    "kind": "material",
+    "kind": "consumable",
     "color": "#C8CDD2",
-    "sellValue": 28
+    "sellValue": 28,
+    "useBlurb": "One rift: full SHIFT energy"
   },
   "crystal_lens": {
     "id": "crystal_lens",
     "name": "Crystal Lens",
     "stack": 20,
-    "kind": "material",
+    "kind": "consumable",
     "color": "#7FD8FF",
-    "sellValue": 40
+    "sellValue": 40,
+    "useBlurb": "One rift: Barrier when the boss appears"
   },
   "grove_tonic": {
     "id": "grove_tonic",
     "name": "Grove Tonic",
     "stack": 20,
-    "kind": "material",
+    "kind": "consumable",
     "color": "#6ABF5A",
-    "sellValue": 32
+    "sellValue": 32,
+    "useBlurb": "One rift: slows also delay swings"
   },
   "salt_shard": {
     "id": "salt_shard",
@@ -180,8 +183,9 @@
     "id": "salt_charm",
     "name": "Salt Charm",
     "stack": 20,
-    "kind": "material",
+    "kind": "consumable",
     "color": "#E8E4D8",
-    "sellValue": 34
+    "sellValue": 34,
+    "useBlurb": "One rift: enemy shots deal half damage"
   }
 }

@@ -66,4 +66,6 @@ export const Events = {
   BOUNTY_COMPLETE: 'bounty:complete',
   /** Player (or boss) changed ash/shadow layer. */
   SHIFT_CHANGED: 'shift:changed',
+  /** Bag elixir activated mid-rift (immediate effects). */
+  ELIXIR_ACTIVATED: 'elixir:activated',
 } as const;

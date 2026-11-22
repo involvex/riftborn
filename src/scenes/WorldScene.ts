@@ -55,6 +55,11 @@ import {
   shouldStartDesktopAttack,
 } from '../systems/AttackHold';
 import { DASH_INVULN_SEC, blendStickWithAssist } from '../systems/CombatWeight';
+import {
+  CRYSTAL_LENS_BARRIER_HP,
+  CRYSTAL_LENS_BARRIER_SEC,
+  shotDamageWithSalt,
+} from '../systems/RiftElixir';
 import { hapticTap } from '../core/Haptics';
 import {
   generateHub,
@@ -761,6 +766,13 @@ export class WorldScene extends Phaser.Scene {
       gameEvents.on('combat:shift', () => this.tryPlayerShift()),
       gameEvents.on('ui:returnToTown', () => this.returnToTown()),
       gameEvents.on('ui:toggleCoop', () => this.toggleCoop()),
+      gameEvents.on(Events.ELIXIR_ACTIVATED, (p) => {
+        const id = (p as { id?: string }).id;
+        if (id === 'ashen_charm' && gameState.inRift) {
+          this.shiftSystem.fillEnergy();
+          this.emitShiftHud();
+        }
+      }),
     );
   }
 
@@ -843,6 +855,7 @@ export class WorldScene extends Phaser.Scene {
           skipNodes: true,
         });
         this.applyRiftRun(resume);
+        gameState.beginRiftElixirs(true);
       } else {
         const spawn = this.dungeon.layout.spawn;
         if (spawn) {
@@ -852,6 +865,10 @@ export class WorldScene extends Phaser.Scene {
           gameState.worldY = spawn.y;
         }
         this.spawnFromLayout(this.dungeon.layout);
+        gameState.beginRiftElixirs(false);
+        if (gameState.hasActiveElixir('ashen_charm')) {
+          this.shiftSystem.fillEnergy();
+        }
         this.syncRiftRunToState();
       }
     } else {
@@ -2496,8 +2513,11 @@ export class WorldScene extends Phaser.Scene {
 
   private updateEnemies(dt: number): void {
     if (netClient.connected) return;
+    const grove = gameState.hasActiveElixir('grove_tonic');
+    const salt = gameState.hasActiveElixir('salt_charm');
     for (const enemy of this.enemies) {
       if (!enemy.alive) continue;
+      enemy.slowDelaysAttacks = grove;
       // Allies are passed for support behavior (Rift Mender heals).
       const result = enemy.update(
         dt,
@@ -2509,9 +2529,11 @@ export class WorldScene extends Phaser.Scene {
         this.damagePlayer(result.damage);
       }
       if (result.shot) {
+        const shot = result.shot;
+        shot.damage = shotDamageWithSalt(shot.damage, salt);
         this.enemyShots.push({
-          shot: result.shot,
-          graphic: this.spawnEnemyShotGraphic(result.shot),
+          shot,
+          graphic: this.spawnEnemyShotGraphic(shot),
         });
       }
     }
@@ -2990,6 +3012,15 @@ export class WorldScene extends Phaser.Scene {
     boss.syncShiftLayer(this.shiftSystem.layer);
     this.enemies.push(boss);
     this.riftBossId = boss.id;
+    if (gameState.hasActiveElixir('crystal_lens')) {
+      gameState.skills.grantBarrier(
+        CRYSTAL_LENS_BARRIER_HP,
+        CRYSTAL_LENS_BARRIER_SEC,
+      );
+      gameEvents.emit('ui:toast', {
+        text: 'Crystal Lens — Barrier holds',
+      });
+    }
     gameEvents.emit('ui:toast', {
       text: bossPhaseToastText({
         bossName: boss.def.name,
@@ -3084,7 +3115,11 @@ export class WorldScene extends Phaser.Scene {
   private fireBossVolley(boss: Enemy): void {
     const from = { x: boss.worldX, y: boss.worldY };
     const to = { x: this.player.worldX, y: this.player.worldY };
-    const dmg = Math.max(1, Math.floor(boss.meleeDamage() * 0.85));
+    const salt = gameState.hasActiveElixir('salt_charm');
+    const dmg = shotDamageWithSalt(
+      Math.max(1, Math.floor(boss.meleeDamage() * 0.85)),
+      salt,
+    );
     for (const angle of BOSS_VOLLEY_SPREAD) {
       const aim = volleyAimPoint(from, to, angle);
       const shot = createEnemyShot(from, aim, dmg);
@@ -3275,6 +3310,7 @@ export class WorldScene extends Phaser.Scene {
       barrierLeft: combat.barrierLeft,
       damageBuffMult: combat.damageBuffMult,
       damageBuffLeft: combat.damageBuffLeft,
+      activeElixirs: [...gameState.activeElixirs],
     };
   }
 

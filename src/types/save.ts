@@ -52,6 +52,8 @@ export type RiftRunSave = {
   damageBuffMult: number;
   /** Seconds of damage buff remaining. */
   damageBuffLeft: number;
+  /** Active one-rift elixirs for this run (optional for older saves). */
+  activeElixirs?: string[];
 };
 
 export type BountyKind =
@@ -135,4 +137,6 @@ export type CharacterSave = {
    * Raised on Apex clears after depth 10 / level 50.
    */
   pressureStep?: number;
+  /** Biome elixirs armed for the next rift (optional; missing = []). */
+  armedElixirs?: string[];
 };
