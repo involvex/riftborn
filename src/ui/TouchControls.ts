@@ -340,6 +340,13 @@ export class TouchControls {
   ): void {
     b.root.setPosition(x, y);
     b.bg.setRadius(r);
+    // Arc pads are created at r=28. setRadius does not resize the hit
+    // rectangle, so a neighbor (ACT) was stealing taps on the Rift button.
+    const hit = b.bg.input?.hitArea as { width?: number; height?: number };
+    if (hit && typeof hit.width === 'number') {
+      hit.width = r * 2;
+      hit.height = r * 2;
+    }
     b.label.setFontSize(fontSize);
   }
 

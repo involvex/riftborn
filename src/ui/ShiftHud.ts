@@ -1,7 +1,9 @@
 import Phaser from 'phaser';
 import { Events, gameEvents } from '../core/EventBus';
 import { formatHotkey } from '../core/Hotkeys';
-import { uiFontSize } from '../core/UiFont';
+import { uiFontGameSize, uiFontSize } from '../core/UiFont';
+import { getAppliedRenderScale } from '../core/GraphicsQuality';
+import { computeGameTouchLayout } from './TouchLayout';
 import { SHIFT_LAYERS, type ShiftLayerId } from '../data/shiftLayers';
 import { SHIFT_COST, SHIFT_MAX_ENERGY } from '../systems/ShiftSystem';
 import { shouldShowTouchControls } from './TouchControls';
@@ -26,19 +28,22 @@ export class ShiftHud {
   private readonly touch: boolean;
   private actionLabel: string;
   private lastPayload: ShiftHudPayload | null = null;
+  private barW = 160;
   private readonly unsubs: (() => void)[] = [];
 
   constructor(scene: Phaser.Scene) {
     this.root = scene.add.container(16, 98).setScrollFactor(0).setDepth(10_000);
     this.touch = shouldShowTouchControls();
     const profile = this.touch ? 'touch' : 'desktop';
+    const font = (role: 'label' | 'hint') =>
+      this.touch ? uiFontGameSize(role, 'touch') : uiFontSize(role, profile);
     this.actionLabel = this.touch ? 'SHIFT' : formatHotkey('shift');
     this.label = scene.add.text(0, 0, '', {
       fontFamily: 'Consolas, "Courier New", monospace',
-      fontSize: uiFontSize('label', profile),
+      fontSize: font('label'),
       color: '#c8a070',
       stroke: '#0a0c10',
-      strokeThickness: 3,
+      strokeThickness: this.touch ? 2 : 3,
       resolution: 2,
     });
     this.barBg = scene.add
@@ -50,13 +55,15 @@ export class ShiftHud {
       .setOrigin(0, 0.5);
     this.hint = scene.add.text(0, 32, `${this.actionLabel} Shift`, {
       fontFamily: 'Consolas, "Courier New", monospace',
-      fontSize: uiFontSize('hint', profile),
+      fontSize: font('hint'),
       color: '#7a8090',
       stroke: '#0a0c10',
       strokeThickness: 2,
       resolution: 2,
     });
     this.root.add([this.label, this.barBg, this.barFill, this.hint]);
+    this.layout();
+    scene.scale.on('resize', () => this.layout());
     this.root.setVisible(false);
 
     this.unsubs.push(
@@ -74,6 +81,26 @@ export class ShiftHud {
     );
   }
 
+  layout(): void {
+    const scene = this.root.scene;
+    if (!this.touch) {
+      this.root.setPosition(16, 98);
+      return;
+    }
+    const s = Math.min(1, Math.max(0.35, getAppliedRenderScale() || 1));
+    this.label.setFontSize(uiFontGameSize('label', 'touch'));
+    this.hint.setFontSize(uiFontGameSize('hint', 'touch'));
+    const m = computeGameTouchLayout(scene.scale.width, scene.scale.height);
+    this.root.setPosition(m.status.x, m.status.y + Math.round(72 * s));
+    const barW = Math.max(72, Math.round(140 * s));
+    this.barW = barW;
+    const barY = Math.round(16 * s);
+    this.barBg.setPosition(0, barY);
+    this.barBg.setSize(barW, Math.max(6, Math.round(8 * s)));
+    this.barFill.setPosition(1, barY);
+    this.hint.setPosition(0, Math.round(26 * s));
+  }
+
   apply(p: ShiftHudPayload): void {
     this.lastPayload = p;
     if (!p.active) {
@@ -85,7 +112,7 @@ export class ShiftHud {
     this.label.setColor(def.hudColor);
     this.label.setText(`Layer · ${def.name}`);
     const ratio = Phaser.Math.Clamp(p.energy / SHIFT_MAX_ENERGY, 0, 1);
-    this.barFill.width = Math.max(0, 158 * ratio);
+    this.barFill.width = Math.max(0, (this.barW - 2) * ratio);
     this.barFill.setFillStyle(
       p.energy >= SHIFT_COST && p.cooldownLeft <= 0 ? 0xa090ff : 0x5a5080,
       1,

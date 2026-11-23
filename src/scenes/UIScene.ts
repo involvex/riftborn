@@ -27,6 +27,7 @@ import {
 } from '../ui/OverlayDismiss';
 import { listRecipes } from '../systems/CraftingSystem';
 import { describeGearFull } from '../systems/ItemGen';
+import type { GearInstance } from '../types/game';
 import { getItemDef } from '../systems/InventorySystem';
 import { MAX_LEVEL, STAT_POINTS_PER_LEVEL } from '../systems/ProgressionSystem';
 import { resolveSetBonuses } from '../systems/SetBonus';
@@ -39,11 +40,14 @@ import { ShiftHud } from '../ui/ShiftHud';
 import { ShopPanel } from '../ui/ShopPanel';
 import { TraderPanel } from '../ui/TraderPanel';
 import { SkillTreePanel } from '../ui/SkillTreePanel';
+import { layoutCharacterSheet } from '../ui/CharacterSheetLayout';
 import { MiniMap } from '../ui/MiniMap';
 import { MapOverlay } from '../ui/MapOverlay';
 import type { MapSnapshot } from '../ui/MapModel';
 import { HotkeyDock } from '../ui/HotkeyDock';
 import { FpsHud } from '../ui/FpsHud';
+import { uiFontGameSize } from '../core/UiFont';
+import { computeGameTouchLayout } from '../ui/TouchLayout';
 import { shouldShowTouchControls, TouchControls } from '../ui/TouchControls';
 import { TutorialOverlay } from '../ui/TutorialOverlay';
 import { FirstSessionHint } from '../ui/FirstSessionHint';
@@ -130,6 +134,8 @@ export class UIScene extends Phaser.Scene {
   private awaitingRebind: HotkeyAction | null = null;
   private rebindHint!: Phaser.GameObjects.Text;
   private charDismiss!: OverlayDismissHandles;
+  private charBodyMaxH = 240;
+  private charBodyW = 340;
   private menuDismiss!: OverlayDismissHandles;
   private craftDismiss!: OverlayDismissHandles;
 
@@ -366,6 +372,12 @@ export class UIScene extends Phaser.Scene {
             gameEvents.emit(Events.RIFT_END_CONFIRM);
             this.refresh();
           },
+          onCancel: () => {
+            this.setModalChrome(false);
+            this.scene.resume('WorldScene');
+            gameEvents.emit(Events.RIFT_END_CANCEL);
+            this.refresh();
+          },
         });
         this.setModalChrome(true);
         this.pauseWorldSafe();
@@ -432,7 +444,7 @@ export class UIScene extends Phaser.Scene {
       }),
       gameEvents.on('ui:dismissSummary', () => {
         if (!this.summaryOverlay.open) return;
-        this.summaryOverlay.confirm();
+        this.summaryOverlay.cancel();
         this.syncNavFlags();
       }),
       gameEvents.on('ui:showTutorial', () => {
@@ -571,8 +583,9 @@ export class UIScene extends Phaser.Scene {
       }),
     );
 
+    this.layoutToast();
     this.scale.on('resize', () => {
-      this.toastText.setX(this.scale.width / 2);
+      this.layoutToast();
       this.hudBars.layout();
       this.hotkeyDock.layout();
       this.hotkeyDock.refresh();
@@ -646,7 +659,7 @@ export class UIScene extends Phaser.Scene {
   /** Browser/Android Back: close top overlay (not pause). */
   private handleBackCloseOverlay(): void {
     if (this.summaryOverlay.open) {
-      this.summaryOverlay.confirm();
+      this.summaryOverlay.cancel();
       this.syncNavFlags();
       return;
     }
@@ -943,32 +956,41 @@ export class UIScene extends Phaser.Scene {
 
   private layoutCharPanel(): void {
     const touch = shouldShowTouchControls();
-    const { w, h } = uiPanelSize(
-      this,
-      touch ? 0.94 : 0.7,
-      touch ? 0.9 : 0.75,
-      touch ? 520 : 560,
-      touch ? 480 : 520,
-    );
+    const { w, h } = touch
+      ? uiPanelSizeGame(this, 0.96, 0.96, 560, 520)
+      : uiPanelSize(this, 0.7, 0.75, 560, 520);
+    const layout = layoutCharacterSheet(w, h, touch);
     this.charBg.setSize(w, h);
-    this.charTitle.setPosition(0, -h / 2 + (touch ? 22 : 28));
-    this.charTitle.setFontSize(touch ? '18px' : '22px');
-    const bodyW = touch ? w * 0.55 : 340;
-    this.charBody.setPosition(-w / 2 + 16, -h / 2 + (touch ? 44 : 55));
+    this.charTitle.setPosition(0, layout.titleY);
+    this.charTitle.setFontSize(`${layout.titleFont}px`);
+    this.charBody.setPosition(layout.bodyX, layout.bodyY);
     this.charBody.setStyle({
       fontFamily: 'Consolas, monospace',
-      fontSize: touch ? '11px' : '12px',
+      fontSize: `${layout.bodyFont}px`,
       color: '#c8c0b0',
-      lineSpacing: touch ? 2 : 3,
-      wordWrap: { width: bodyW },
+      lineSpacing: touch ? 1 : 3,
+      wordWrap: { width: layout.bodyW },
     });
-    const btnX = w / 2 - (touch ? 56 : 80);
+    this.charBodyW = layout.bodyW;
+    this.charBodyMaxH = Math.max(24, h / 2 - layout.bodyY - 8);
     this.charStatBtns.forEach((btn, i) => {
-      btn.setPosition(btnX, -h / 2 + (touch ? 70 : 90) + i * (touch ? 40 : 36));
-      btn.setFontSize(touch ? '13px' : '14px');
+      const slot = layout.buttons[i];
+      if (!slot) return;
+      btn.setPosition(slot.x, slot.y);
+      btn.setStyle({
+        fontFamily: 'Segoe UI, sans-serif',
+        fontSize: `${layout.btnFont}px`,
+        color: '#0a0c10',
+        backgroundColor: '#6ec6ff',
+        padding: {
+          x: 8,
+          y: Math.max(2, Math.round(slot.h * 0.14)),
+        },
+      });
     });
-    this.charClose.setPosition(0, h / 2 - (touch ? 22 : 28));
-    this.charClose.setFontSize(touch ? '15px' : '14px');
+    this.charClose.setVisible(layout.showClose);
+    this.charClose.setPosition(0, layout.closeY);
+    this.charClose.setFontSize(`${layout.closeFont}px`);
     this.charDismiss?.layout(w, h);
     if (this.charOpen) {
       this.charPanel.setPosition(this.scale.width / 2, this.scale.height / 2);
@@ -1322,6 +1344,7 @@ export class UIScene extends Phaser.Scene {
     }
     this.fpsHud.root.setVisible(!modal);
     this.miniMap.root.setVisible(!modal);
+    this.hudBars.root.setVisible(!modal);
   }
 
   private refreshCharBody(): void {
@@ -1335,37 +1358,55 @@ export class UIScene extends Phaser.Scene {
         : gameState.gender === 'nonbinary'
           ? 'Non-binary'
           : 'Male';
-    const lines = [
+    const touch = shouldShowTouchControls();
+    const gearLine = (item: GearInstance | null): string => {
+      if (!item) return '—';
+      return touch ? item.name : describeGearFull(item);
+    };
+    const lines: string[] = [];
+    const gap = (): void => {
+      if (!touch) lines.push('');
+    };
+    lines.push(
       `${gameState.name}  ·  ${p.classDef().name}  ·  ${genderLabel}`,
       `Level ${p.level}/${MAX_LEVEL}   Attr ${p.unspentStatPoints}   Skill ${gameState.skills.unspentSkillPoints}`,
-      '',
+    );
+    gap();
+    lines.push(
       '— Attributes —',
       `STR ${p.stats.strength} (+${gear.strength})   DEX ${p.stats.dexterity} (+${gear.dexterity})`,
       `STA ${p.stats.stamina} (+${gear.stamina})   INT ${p.stats.intellect} (+${gear.intellect})`,
-      '',
+    );
+    gap();
+    lines.push(
       '— Offensive —',
       `Weapon ${gameState.inventory.weaponDamage()}   Attack ~ ${gameState.combat.playerAttackDamage()}`,
       `Skill power +${gear.skillPower}%`,
-      '',
+    );
+    gap();
+    lines.push(
       '— Defensive —',
       `Armor ${gear.armor}   Max HP ${gameState.maxHp}`,
-      '',
+    );
+    gap();
+    lines.push(
       '— Equipment —',
-      `WPN  ${eq.weapon ? describeGearFull(eq.weapon) : '—'}`,
-      `HAT  ${eq.hat ? describeGearFull(eq.hat) : '—'}`,
-      `CHT  ${eq.chest ? describeGearFull(eq.chest) : '—'}`,
-      `LEG  ${eq.legs ? describeGearFull(eq.legs) : '—'}`,
-      `FET  ${eq.feet ? describeGearFull(eq.feet) : '—'}`,
+      `WPN  ${gearLine(eq.weapon)}`,
+      `HAT  ${gearLine(eq.hat)}`,
+      `CHT  ${gearLine(eq.chest)}`,
+      `LEG  ${gearLine(eq.legs)}`,
+      `FET  ${gearLine(eq.feet)}`,
       `TOOL ${eq.tool ? (getItemDef(eq.tool)?.name ?? eq.tool) : '—'}`,
-      '',
-      '— Set bonuses —',
-    ];
+    );
+    gap();
+    lines.push('— Set bonuses —');
     if (sets.length === 0) lines.push('(none)');
     for (const s of sets) {
       lines.push(`${s.name} (${s.pieces}/4)`);
       for (const l of s.labels) lines.push(`  ${l}`);
     }
     this.charBody.setText(lines.join('\n'));
+    this.charBody.setCrop(0, 0, this.charBodyW, this.charBodyMaxH);
   }
 
   private showCraft(): void {
@@ -1431,7 +1472,33 @@ export class UIScene extends Phaser.Scene {
     this.abilityBar.refresh();
   }
 
+  private layoutToast(): void {
+    const touch = shouldShowTouchControls();
+    const s = Math.min(1, Math.max(0.35, getAppliedRenderScale() || 1));
+    this.toastText.setFontSize(
+      touch ? uiFontGameSize('hint', 'touch') : '16px',
+    );
+    const padX = touch ? Math.max(4, Math.round(8 * s)) : 14;
+    const padY = touch ? Math.max(2, Math.round(3 * s)) : 6;
+    this.toastText.setPadding(padX, padY);
+    this.toastText.setStroke(
+      '#0a0c10',
+      touch ? Math.max(1, Math.round(2 * s)) : 2,
+    );
+    this.toastText.setWordWrapWidth(Math.round(this.scale.width * 0.72));
+    if (touch) {
+      const m = computeGameTouchLayout(this.scale.width, this.scale.height);
+      this.toastText.setPosition(
+        this.scale.width / 2,
+        m.status.y + m.status.h + Math.round(6 * s),
+      );
+    } else {
+      this.toastText.setPosition(this.scale.width / 2, 72);
+    }
+  }
+
   private toast(text: string, color = '#e8e4d8'): void {
+    this.layoutToast();
     this.toastText.setText(text);
     this.toastText.setColor(color);
     this.toastText.setAlpha(1);
@@ -1453,7 +1520,7 @@ export class UIScene extends Phaser.Scene {
 
     if (Phaser.Input.Keyboard.JustDown(this.keyMenu)) {
       if (this.summaryOverlay.open) {
-        this.summaryOverlay.confirm();
+        this.summaryOverlay.cancel();
         return;
       }
       if (this.tutorial.open) {

@@ -57,6 +57,8 @@ export const Events = {
   RIFT_END_SUMMARY: 'rift:endSummary',
   /** Player confirmed the clear / abandon card. */
   RIFT_END_CONFIRM: 'rift:endConfirm',
+  /** Player dismissed the card and stays in the rift. */
+  RIFT_END_CANCEL: 'rift:endCancel',
   PLAYER_DIED: 'player:died',
   /** UI confirmed death → WorldScene finishes respawn. */
   RESOLVE_DEATH: 'player:resolveDeath',

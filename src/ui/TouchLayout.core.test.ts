@@ -142,11 +142,19 @@ describe('computeTouchLayout', () => {
         expect(s.y).toBeGreaterThanOrEqual(floor);
         const reach = Math.hypot(s.x - layout.atk.x, s.y - layout.atk.y);
         expect(reach).toBeGreaterThan(layout.atk.r);
-        expect(reach).toBeLessThan(layout.atk.r + s.r + 96);
+        expect(reach).toBeLessThan(layout.atk.r + s.r + 120);
       }
       expect(layout.dash.x).toBe(layout.shift.x);
       expect(layout.dash.y).toBe(layout.shift.y);
       expect(layout.shift.x).toBeGreaterThan(vp.w * 0.55);
+      // Rift/E is the pad beside ATK. ACT must not share that row.
+      expect(Math.abs(layout.interact.y - layout.atk.y)).toBeLessThan(4);
+      expect(layout.interact.x).toBeLessThan(layout.atk.x);
+      const actToE = Math.hypot(
+        layout.shift.x - layout.interact.x,
+        layout.shift.y - layout.interact.y,
+      );
+      expect(actToE).toBeGreaterThan(layout.shift.r + layout.interact.r + 16);
       expect(layout.stick.x).toBeLessThan(vp.w * 0.35);
       expect(layout.mapSize).toBeLessThanOrEqual(96);
     }

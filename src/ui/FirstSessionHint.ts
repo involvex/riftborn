@@ -1,6 +1,8 @@
 import Phaser from 'phaser';
 import { formatHotkey } from '../core/Hotkeys';
-import { uiFontSize } from '../core/UiFont';
+import { uiFontGameSize, uiFontSize } from '../core/UiFont';
+import { getAppliedRenderScale } from '../core/GraphicsQuality';
+import { computeGameTouchLayout } from './TouchLayout';
 import {
   firstSessionHintText,
   type FirstSessionStep,
@@ -20,13 +22,18 @@ export class FirstSessionHint {
     this.text = scene.add
       .text(0, 0, '', {
         fontFamily: 'Segoe UI, sans-serif',
-        fontSize: uiFontSize('label', profile),
+        fontSize: touch
+          ? uiFontGameSize('label', 'touch')
+          : uiFontSize('label', profile),
         color: '#e8e4d8',
         align: 'center',
         resolution: 2,
         stroke: '#0a0c10',
-        strokeThickness: 3,
-        padding: { x: 14, y: 6 },
+        strokeThickness: touch ? 2 : 3,
+        padding: {
+          x: touch ? Math.max(6, Math.round(10 * getAppliedRenderScale())) : 14,
+          y: touch ? Math.max(2, Math.round(4 * getAppliedRenderScale())) : 6,
+        },
       })
       .setOrigin(0.5);
     this.bg = scene.add
@@ -39,6 +46,7 @@ export class FirstSessionHint {
       .setDepth(9_998)
       .setVisible(false);
     this.layout();
+    scene.scale.on('resize', () => this.layout());
   }
 
   get step(): FirstSessionStep | null {
@@ -65,9 +73,18 @@ export class FirstSessionHint {
   layout(): void {
     const scene = this.root.scene;
     const touch = shouldShowTouchControls();
-    // Upper-middle, below HP/XP/bounty; avoids minimap/stick/ATK/skills.
-    const y = touch ? 86 : 94;
-    this.root.setPosition(Math.round(scene.scale.width / 2), y);
+    if (!touch) {
+      this.root.setPosition(Math.round(scene.scale.width / 2), 94);
+      return;
+    }
+    const s = Math.min(1, Math.max(0.35, getAppliedRenderScale() || 1));
+    this.text.setFontSize(uiFontGameSize('label', 'touch'));
+    this.bg.setSize(this.text.width + 4, this.text.height + 2);
+    const m = computeGameTouchLayout(scene.scale.width, scene.scale.height);
+    this.root.setPosition(
+      Math.round(scene.scale.width / 2),
+      m.status.y + m.status.h + Math.round(8 * s),
+    );
   }
 
   destroy(): void {

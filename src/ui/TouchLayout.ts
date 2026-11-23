@@ -173,27 +173,27 @@ export function computeTouchLayout(width: number, height: number): TouchLayout {
   const chromeGap = chromeR * 2 + 8;
   const chromeY = minimap.y + minimap.h + pad + chromeR;
 
-  // Spells hug ATK on the open sides (above and left). The corner is the screen edge.
-  const gutter = Math.max(6, Math.round(gap * 0.5));
+  // E sits immediately left of ATK so the Rift label is not beside ACT.
+  // Spells fill the open side above and further left. ACT is on the top row.
+  const gutter = Math.max(8, Math.round(gap * 0.65));
   const aboveY = atk.y - atkR - gutter - skillR;
-  const leftX = atk.x - atkR - gutter - skillR;
+  const besideX = atk.x - atkR - gutter - eR;
+  const farX = besideX - eR - gutter - skillR;
   const skillSlots: TouchPoint[] = [
     { x: atk.x, y: aboveY, r: skillR },
-    { x: leftX, y: aboveY, r: skillR },
-    { x: leftX - (skillR * 2 + gutter), y: aboveY, r: skillR },
-    { x: leftX, y: atk.y, r: skillR },
+    { x: besideX, y: aboveY, r: skillR },
+    { x: farX, y: aboveY, r: skillR },
+    { x: farX, y: atk.y, r: skillR },
   ];
-
-  // E is left of the inner spell. ACT (hold = shift, double-tap = dash) is left of E.
   const interact: TouchPoint = {
-    x: leftX - (skillR * 2 + gutter),
+    x: besideX,
     y: atk.y,
     r: eR,
   };
   const actionR = Math.max(22, Math.round(atkR * 0.62));
   const action: TouchPoint = {
-    x: interact.x - interact.r - actionR - gutter,
-    y: atk.y,
+    x: farX - skillR - gutter - actionR,
+    y: aboveY,
     r: actionR,
   };
   const chromeButtons: TouchPoint[] = [];

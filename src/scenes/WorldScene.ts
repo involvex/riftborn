@@ -773,6 +773,7 @@ export class WorldScene extends Phaser.Scene {
       gameEvents.on('combat:shift', () => this.tryPlayerShift()),
       gameEvents.on('ui:returnToTown', () => this.returnToTown()),
       gameEvents.on(Events.RIFT_END_CONFIRM, () => this.confirmRiftEnd()),
+      gameEvents.on(Events.RIFT_END_CANCEL, () => this.cancelRiftEnd()),
       gameEvents.on('ui:toggleCoop', () => this.toggleCoop()),
       gameEvents.on(Events.ELIXIR_ACTIVATED, (p) => {
         const id = (p as { id?: string }).id;
@@ -2630,6 +2631,11 @@ export class WorldScene extends Phaser.Scene {
     this.riftEndPending = true;
     const kind: RiftEndKind = this.riftCleared ? 'clear' : 'abandon';
     gameEvents.emit(Events.RIFT_END_SUMMARY, this.riftEndFacts(kind));
+  }
+
+  /** Summary dismissed — stay in the rift. */
+  private cancelRiftEnd(): void {
+    this.riftEndPending = false;
   }
 
   /** Summary confirmed — apply the purse and fade back to the plaza. */

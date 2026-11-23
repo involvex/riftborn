@@ -14,11 +14,20 @@ export class SummaryOverlay {
   private title: Phaser.GameObjects.Text;
   private body: Phaser.GameObjects.Text;
   private actionBtn: Phaser.GameObjects.Text;
+  private scrim: Phaser.GameObjects.Rectangle;
   private openFlag = false;
   private onAction: (() => void) | null = null;
+  private onCancel: (() => void) | null = null;
 
   constructor(scene: Phaser.Scene) {
     this.scene = scene;
+    this.scrim = scene.add
+      .rectangle(0, 0, 10, 10, 0x05070a, 0.55)
+      .setInteractive();
+    this.scrim.on('pointerup', (pointer: Phaser.Input.Pointer) => {
+      pointer.event?.stopPropagation?.();
+      if (this.onCancel) this.cancel();
+    });
     this.bg = scene.add
       .rectangle(0, 0, 420, 320, 0x0a0c10, 0.94)
       .setStrokeStyle(2, 0xc4a574);
@@ -48,12 +57,23 @@ export class SummaryOverlay {
       })
       .setOrigin(0.5)
       .setInteractive({ useHandCursor: true });
-    this.actionBtn.on('pointerup', () => {
+    this.bg.setInteractive();
+    this.bg.on('pointerup', (pointer: Phaser.Input.Pointer) => {
+      pointer.event?.stopPropagation?.();
+    });
+    this.actionBtn.on('pointerup', (pointer: Phaser.Input.Pointer) => {
+      pointer.event?.stopPropagation?.();
       audioBus.uiClick();
       this.onAction?.();
     });
     this.root = scene.add
-      .container(0, 0, [this.bg, this.title, this.body, this.actionBtn])
+      .container(0, 0, [
+        this.scrim,
+        this.bg,
+        this.title,
+        this.body,
+        this.actionBtn,
+      ])
       .setScrollFactor(0)
       .setDepth(10_050)
       .setVisible(false);
@@ -68,11 +88,14 @@ export class SummaryOverlay {
     lines: SummaryLine[];
     actionLabel: string;
     onAction: () => void;
+    /** Esc, Android back, and a tap outside. Omit to keep confirm-on-dismiss. */
+    onCancel?: () => void;
   }): void {
     this.title.setText(opts.title);
     this.body.setText(opts.lines.map((l) => l.text).join('\n'));
     this.actionBtn.setText(opts.actionLabel);
     this.onAction = opts.onAction;
+    this.onCancel = opts.onCancel ?? null;
     this.layout();
     this.root.setVisible(true);
     this.openFlag = true;
@@ -82,17 +105,34 @@ export class SummaryOverlay {
     this.root.setVisible(false);
     this.openFlag = false;
     this.onAction = null;
+    this.onCancel = null;
   }
 
-  /** Fire the primary action (Esc / Back). */
+  /** Fire the primary button. */
   confirm(): void {
     if (!this.openFlag) return;
     this.onAction?.();
   }
 
+  /**
+   * Esc / Android back / tap outside.
+   * A card with onCancel stays in the rift. Death and boss cards still confirm.
+   */
+  cancel(): void {
+    if (!this.openFlag) return;
+    if (!this.onCancel) {
+      this.confirm();
+      return;
+    }
+    const fn = this.onCancel;
+    this.hide();
+    fn();
+  }
+
   layout(): void {
     const { width, height } = this.scene.scale;
     this.root.setPosition(width / 2, height / 2);
+    this.scrim.setSize(width + 8, height + 8);
     const touch = shouldShowTouchControls();
     const w = Math.min(440, Math.floor(width * (touch ? 0.82 : 0.72)));
     const h = Math.min(340, Math.floor(height * (touch ? 0.82 : 0.7)));
