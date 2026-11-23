@@ -80,10 +80,38 @@ export function combatShakeParams(kind: CombatShakeKind): {
     default:
       break;
   }
-  return {
-    ms: Math.round(ms * juice),
-    intensity: intensity * Math.min(1, juice + 0.25),
-  };
+  return shakeParamsScaled(kind, juice, ms, intensity);
+}
+
+/**
+ * Low juice (phone Low / Auto) must not shrink a crit shake under the
+ * hitstop floor. Intensity lifts slightly so the punch matches that freeze.
+ * Desktop juice 1 keeps the authored duration and intensity.
+ */
+export const SHAKE_FLOOR_MS: Record<CombatShakeKind, number> = {
+  hit: 40,
+  crit: 70,
+  boss: 90,
+  playerHit: 70,
+};
+
+/** Extra intensity when juice is cut. Crit and boss only. */
+export const LOW_JUICE_CRIT_SHAKE = 1.35;
+
+export function shakeParamsScaled(
+  kind: CombatShakeKind,
+  juiceScale: number,
+  baseMs: number,
+  baseIntensity: number,
+): { ms: number; intensity: number } {
+  const juice = Math.max(0, juiceScale);
+  const scaledMs = Math.round(baseMs * juice);
+  const ms = juice >= 1 ? scaledMs : Math.max(SHAKE_FLOOR_MS[kind], scaledMs);
+  let intensity = baseIntensity * Math.min(1, juice + 0.25);
+  if (juice < 1 && (kind === 'crit' || kind === 'boss')) {
+    intensity *= LOW_JUICE_CRIT_SHAKE;
+  }
+  return { ms, intensity };
 }
 
 /**

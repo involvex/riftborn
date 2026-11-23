@@ -6,9 +6,12 @@ import {
   basicAttackShakeKind,
   combatHitstopMs,
   combatShakeParams,
+  LOW_JUICE_CRIT_SHAKE,
+  SHAKE_FLOOR_MS,
   critFlashPlan,
   hitstopMsScaled,
   isCombatCrit,
+  shakeParamsScaled,
 } from './CombatFeel';
 
 describe('isCombatCrit', () => {
@@ -97,5 +100,38 @@ describe('combatShakeParams', () => {
     const p = combatShakeParams('hit');
     expect(p.ms).toBeGreaterThanOrEqual(0);
     expect(p.intensity).toBeGreaterThanOrEqual(0);
+  });
+});
+
+describe('shakeParamsScaled', () => {
+  test('phone juice holds crit shake at the hitstop floor and lifts it', () => {
+    const crit = shakeParamsScaled(
+      'crit',
+      0.4,
+      COMBAT_FEEL.shakeCritMs,
+      COMBAT_FEEL.shakeCritIntensity,
+    );
+    const hit = shakeParamsScaled(
+      'hit',
+      0.4,
+      COMBAT_FEEL.shakeHitMs,
+      COMBAT_FEEL.shakeHitIntensity,
+    );
+    expect(crit.ms).toBe(SHAKE_FLOOR_MS.crit);
+    expect(crit.ms).toBe(70);
+    expect(crit.intensity).toBeGreaterThan(hit.intensity);
+    const unboosted = COMBAT_FEEL.shakeCritIntensity * Math.min(1, 0.4 + 0.25);
+    expect(crit.intensity).toBeCloseTo(unboosted * LOW_JUICE_CRIT_SHAKE);
+  });
+
+  test('desktop juice keeps the authored crit shake', () => {
+    const crit = shakeParamsScaled(
+      'crit',
+      1,
+      COMBAT_FEEL.shakeCritMs,
+      COMBAT_FEEL.shakeCritIntensity,
+    );
+    expect(crit.ms).toBe(COMBAT_FEEL.shakeCritMs);
+    expect(crit.intensity).toBeCloseTo(COMBAT_FEEL.shakeCritIntensity);
   });
 });

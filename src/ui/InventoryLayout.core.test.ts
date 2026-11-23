@@ -1,8 +1,10 @@
 import { describe, expect, test } from 'bun:test';
 import {
   computeInventoryLayout,
+  ellipsizeToWidth,
   inventoryPanelFromViewport,
   rectsOverlap,
+  scaleInventoryLayout,
   type InventoryLayout,
   type Rect,
 } from './InventoryLayout';
@@ -57,6 +59,39 @@ const VIEWPORTS = [
   { w: 1920, h: 1080, touch: false },
 ] as const;
 
+describe('ellipsizeToWidth', () => {
+  test('keeps short gear names and clips long ones', () => {
+    expect(ellipsizeToWidth('Ash Blade', 80, 7)).toBe('Ash Blade');
+    const long = ellipsizeToWidth('Gleaming Rift Blade', 70, 7);
+    expect(long.endsWith('…')).toBe(true);
+    expect(long.length).toBeLessThan('Gleaming Rift Blade'.length);
+  });
+});
+
+describe('scaleInventoryLayout', () => {
+  test('0.65 scale keeps Sort above the compare column', () => {
+    const { panelW, panelH } = inventoryPanelFromViewport(1024, 473, true);
+    const css = computeInventoryLayout({
+      panelW,
+      panelH,
+      touch: true,
+      bagCols: 8,
+      bagRows: 6,
+      showCloseX: true,
+    });
+    const layout = scaleInventoryLayout(css, 0.65);
+    assertInsidePanel(layout);
+    assertNoOverlaps(layout);
+    expect(layout.detailBeside).toBe(true);
+    expect(layout.visibleRows).toBe(css.visibleRows);
+    expect(layout.sortBtn.y + layout.sortBtn.h).toBeLessThanOrEqual(
+      layout.detail.y + 0.01,
+    );
+    expect(layout.panel.w).toBeLessThan(css.panel.w);
+    expect(layout.eqNameMaxPx).toBeGreaterThan(80);
+  });
+});
+
 describe('computeInventoryLayout', () => {
   for (const vp of VIEWPORTS) {
     test(`${vp.w}x${vp.h} touch=${vp.touch}: no overlap, inside panel`, () => {
@@ -103,6 +138,14 @@ describe('computeInventoryLayout', () => {
       expect(layout.sortBtn.y + layout.sortBtn.h).toBeLessThanOrEqual(
         layout.bagHeader.y + layout.bagHeader.h + 0.01,
       );
+      if (layout.detailBeside) {
+        expect(layout.sortBtn.y + layout.sortBtn.h).toBeLessThanOrEqual(
+          layout.detail.y + 0.01,
+        );
+        expect(layout.bagGrid.x + layout.bagGrid.w).toBeLessThanOrEqual(
+          layout.detail.x - layout.gap + 0.01,
+        );
+      }
       expect(layout.hint.y + layout.hint.h).toBeLessThanOrEqual(
         layout.bagHeader.y + 0.01,
       );

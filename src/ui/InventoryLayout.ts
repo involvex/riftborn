@@ -41,6 +41,23 @@ export type InventoryLayout = {
   eqNameMaxPx: number;
 };
 
+/**
+ * One line that fits a card. Consolas at 11–12px is ~0.6em wide.
+ * Word-wrap was spilling the second line out of short equipment cards.
+ */
+export function ellipsizeToWidth(
+  text: string,
+  maxPx: number,
+  pxPerChar = 7,
+): string {
+  const clean = text.replace(/\s+/g, ' ').trim();
+  if (maxPx <= 0 || clean.length === 0) return '';
+  const maxChars = Math.max(1, Math.floor(maxPx / Math.max(1, pxPerChar)));
+  if (clean.length <= maxChars) return clean;
+  if (maxChars <= 1) return '…';
+  return `${clean.slice(0, maxChars - 1)}…`;
+}
+
 export function rectsOverlap(a: Rect, b: Rect): boolean {
   return (
     a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y
@@ -74,9 +91,11 @@ export function computeInventoryLayout(
   const { panelW, panelH, touch, bagCols, bagRows, showCloseX } = input;
   const short = panelH < 360;
   const pad = touch ? (short ? 10 : 14) : 22;
-  const gap = touch ? 6 : 8;
+  // Wider gutter so the compare column does not kiss the last bag cell.
+  const gap = touch ? 12 : 10;
   const titleH = touch ? (short ? 22 : 28) : 34;
-  const hintH = touch ? (short ? 16 : 18) : 18;
+  // Touch puts Auto-sell on the bag header. A centered hint sat on the names.
+  const hintH = touch ? 0 : 18;
   const headerBand = short ? 22 : 24;
   // Padding on the Sort text (~8px×2) needs room — avoid spilling into detail.
   const sortW = touch ? 64 : 68;
@@ -130,7 +149,7 @@ export function computeInventoryLayout(
     w: panelW - pad * 2,
     h: eqBlockH,
   };
-  y += eqBlockH + 6;
+  y += eqBlockH + (hintH > 0 ? 6 : 4);
 
   const hint: Rect = {
     x: pad,
@@ -138,7 +157,7 @@ export function computeInventoryLayout(
     w: panelW - pad * 2,
     h: hintH,
   };
-  y += hintH + 8;
+  y += hintH + (hintH > 0 ? 8 : 0);
 
   const bottomY = panelH - pad - closeH;
   const close: Rect | null = showCloseText
@@ -179,23 +198,28 @@ export function computeInventoryLayout(
   };
 
   if (detailBeside) {
+    const minBagW = bagCols * (touch ? minCell : 28) + bagGap * (bagCols - 1);
+    const detailCap = Math.max(120, panelW - pad * 2 - gap - minBagW);
     const detailW = Math.min(
-      220,
-      Math.max(140, Math.floor((panelW - pad * 2) * 0.28)),
+      240,
+      detailCap,
+      Math.max(140, Math.floor((panelW - pad * 2) * 0.32)),
     );
     const bagW = panelW - pad * 2 - gap - detailW;
-    detail = {
-      x: pad + bagW + gap,
-      y: contentTop,
-      w: detailW,
-      h: contentH,
-    };
-    placeBagHeader(pad, contentTop, bagW);
+    // Header spans the panel so Sort sits above the compare column.
+    placeBagHeader(pad, contentTop, panelW - pad * 2);
     const gridH = contentH - headerBand;
+    const gridTop = contentTop + headerBand;
     bagGrid = {
       x: pad,
-      y: contentTop + headerBand,
+      y: gridTop,
       w: bagW,
+      h: gridH,
+    };
+    detail = {
+      x: pad + bagW + gap,
+      y: gridTop,
+      w: detailW,
       h: gridH,
     };
 
@@ -203,7 +227,9 @@ export function computeInventoryLayout(
     // Touch: claim free width (up to maxCell), never shrink below minCell
     // to squeeze rows — scroll instead. Desktop may shrink to fit height.
     if (touch) {
-      cellSize = Math.max(minCell, Math.min(maxCell, fitW));
+      // Never wider than the column — minCell must not spill into compare.
+      cellSize = Math.min(maxCell, fitW);
+      if (fitW >= minCell) cellSize = Math.max(minCell, cellSize);
       const rowPitch = cellSize + bagGap;
       visibleRows = Math.max(
         1,
@@ -306,5 +332,49 @@ export function computeInventoryLayout(
     bagGap,
     headerBand,
     eqNameMaxPx,
+  };
+}
+
+function scaleRect(rect: Rect, scale: number): Rect {
+  return {
+    x: Math.round(rect.x * scale),
+    y: Math.round(rect.y * scale),
+    w: Math.max(1, Math.round(rect.w * scale)),
+    h: Math.max(0, Math.round(rect.h * scale)),
+  };
+}
+
+/**
+ * CSS-space layout → Phaser buffer pixels. Scale 1 is a no-op.
+ * Low graphics stretches the buffer back to CSS, so UI must be authored
+ * in CSS pixels or a 1024×473 phone lays out as a 432×199 screen.
+ */
+export function scaleInventoryLayout(
+  layout: InventoryLayout,
+  scale: number,
+): InventoryLayout {
+  const s = Math.min(1, Math.max(0.35, scale));
+  if (s >= 0.995) return layout;
+  const n = (v: number) => Math.max(0, Math.round(v * s));
+  return {
+    ...layout,
+    panel: scaleRect(layout.panel, s),
+    title: scaleRect(layout.title, s),
+    equipment: scaleRect(layout.equipment, s),
+    hint: scaleRect(layout.hint, s),
+    bagHeader: scaleRect(layout.bagHeader, s),
+    bagLabel: scaleRect(layout.bagLabel, s),
+    sortBtn: scaleRect(layout.sortBtn, s),
+    bagGrid: scaleRect(layout.bagGrid, s),
+    detail: scaleRect(layout.detail, s),
+    close: layout.close ? scaleRect(layout.close, s) : null,
+    cellSize: Math.max(1, n(layout.cellSize)),
+    pad: n(layout.pad),
+    gap: n(layout.gap),
+    eqCellH: Math.max(1, n(layout.eqCellH)),
+    eqGap: n(layout.eqGap),
+    bagGap: n(layout.bagGap),
+    headerBand: Math.max(1, n(layout.headerBand)),
+    eqNameMaxPx: Math.max(1, n(layout.eqNameMaxPx)),
   };
 }

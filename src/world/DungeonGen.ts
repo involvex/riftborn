@@ -84,20 +84,113 @@ function carveCorridor(
 
 export type CryptRoomRole = 'start' | 'hall' | 'boss';
 
-/** Ashen Crypt reads roomTypeRules. Other biomes keep the square roller. */
+export type BiomeRoomPlan = {
+  corridor: 'straight' | 'jagged';
+  niches: boolean;
+  bossMinLong: number;
+  bossMinShort: number;
+  bossShapes: readonly (readonly [number, number])[];
+  rescue: readonly { x: number; y: number; w: number; h: number }[];
+};
+
+type RoomRect = { x: number; y: number; w: number; h: number };
+
+/**
+ * Room rules actually drive layout. Crypt = long halls, Crystal = wide
+ * caverns, Woods = clearings, Salt = broad flats. Unknown rules stay square.
+ */
+export function biomeRoomPlan(biome: BiomeDef): BiomeRoomPlan | null {
+  const rules = biome.roomTypeRules ?? [];
+  const has = (rule: string) => rules.includes(rule);
+  if (biome.id === 'ashen_crypt' && has('rectangular_halls')) {
+    return {
+      corridor: has('corridors_narrow') ? 'straight' : 'jagged',
+      niches: has('niches'),
+      bossMinLong: has('boss_hall') ? 10 : 0,
+      bossMinShort: 4,
+      bossShapes: [
+        [12, 5],
+        [5, 12],
+        [11, 5],
+        [10, 4],
+      ],
+      rescue: [
+        { x: 3, y: 3, w: 10, h: 4 },
+        { x: 3, y: 12, w: 4, h: 10 },
+        { x: 16, y: 18, w: 12, h: 5 },
+      ],
+    };
+  }
+  if (biome.id === 'crystal_cavern' && has('wide_kaverns')) {
+    return {
+      corridor: has('twisty_galleries') ? 'jagged' : 'straight',
+      niches: false,
+      bossMinLong: has('central_boss_cavern') ? 9 : 0,
+      bossMinShort: has('central_boss_cavern') ? 8 : 0,
+      bossShapes: [
+        [10, 9],
+        [9, 10],
+        [11, 8],
+      ],
+      rescue: [
+        { x: 3, y: 3, w: 9, h: 6 },
+        { x: 3, y: 14, w: 6, h: 9 },
+        { x: 16, y: 16, w: 10, h: 7 },
+      ],
+    };
+  }
+  if (biome.id === 'shattered_woods' && has('forest_clearings')) {
+    return {
+      corridor: has('twisted_paths') ? 'jagged' : 'straight',
+      niches: has('overgrown_passages'),
+      bossMinLong: has('boss_glade') ? 9 : 0,
+      bossMinShort: has('boss_glade') ? 8 : 0,
+      bossShapes: [
+        [10, 8],
+        [8, 10],
+        [9, 8],
+      ],
+      rescue: [
+        { x: 3, y: 3, w: 7, h: 6 },
+        { x: 3, y: 14, w: 6, h: 7 },
+        { x: 16, y: 16, w: 8, h: 7 },
+      ],
+    };
+  }
+  if (biome.id === 'salt_wastes' && has('wide_flats')) {
+    return {
+      corridor: has('salt_ridges') ? 'straight' : 'jagged',
+      niches: false,
+      bossMinLong: has('boss_basin') ? 12 : 0,
+      bossMinShort: has('boss_basin') ? 5 : 0,
+      bossShapes: [
+        [14, 6],
+        [6, 14],
+        [13, 5],
+      ],
+      rescue: [
+        { x: 3, y: 3, w: 12, h: 5 },
+        { x: 3, y: 14, w: 5, h: 12 },
+        { x: 16, y: 18, w: 13, h: 4 },
+      ],
+    };
+  }
+  return null;
+}
+
+/** Ashen Crypt flag view kept for the existing hall test. */
 export function ashenCryptRules(biome: BiomeDef): {
   halls: boolean;
   narrow: boolean;
   niches: boolean;
   bossHall: boolean;
 } {
-  const rules = biome.roomTypeRules ?? [];
-  const crypt = biome.id === 'ashen_crypt';
+  const plan = biome.id === 'ashen_crypt' ? biomeRoomPlan(biome) : null;
   return {
-    halls: crypt && rules.includes('rectangular_halls'),
-    narrow: crypt && rules.includes('corridors_narrow'),
-    niches: crypt && rules.includes('niches'),
-    bossHall: crypt && rules.includes('boss_hall'),
+    halls: !!plan,
+    narrow: plan?.corridor === 'straight',
+    niches: !!plan?.niches,
+    bossHall: (plan?.bossMinLong ?? 0) >= 10,
   };
 }
 
@@ -119,6 +212,56 @@ export function cryptRoomSize(
   const short = role === 'boss' ? 5 : role === 'start' ? 5 : 4;
   if (rollOrient < 0.5) return { w: long, h: short };
   return { w: short, h: long };
+}
+
+/** Two rolls, same budget as the old square roller. Null = use that roller. */
+export function biomeRoomSize(
+  biomeId: string,
+  role: CryptRoomRole,
+  rollA: number,
+  rollB: number,
+): { w: number; h: number } | null {
+  if (biomeId === 'ashen_crypt') return cryptRoomSize(role, rollA, rollB);
+  if (biomeId === 'crystal_cavern') {
+    if (role === 'start') {
+      return rollB < 0.5 ? { w: 7, h: 6 } : { w: 6, h: 7 };
+    }
+    if (role === 'boss') {
+      return rollB < 0.5 ? { w: 10, h: 8 } : { w: 8, h: 10 };
+    }
+    const wide = 8 + Math.floor(rollA * 4);
+    const thick = 6 + (rollB < 0.5 ? 0 : 1);
+    return rollB < 0.5 ? { w: wide, h: thick } : { w: thick, h: wide };
+  }
+  if (biomeId === 'shattered_woods') {
+    if (role === 'start') return { w: 6, h: 6 };
+    if (role === 'boss') {
+      return rollB < 0.5 ? { w: 10, h: 8 } : { w: 8, h: 10 };
+    }
+    const side = 6 + Math.floor(rollA * 3);
+    const other = Math.max(5, side - (rollB < 0.35 ? 1 : 0));
+    return rollB < 0.5 ? { w: side, h: other } : { w: other, h: side };
+  }
+  if (biomeId === 'salt_wastes') {
+    if (role === 'start') {
+      return rollB < 0.5 ? { w: 9, h: 5 } : { w: 5, h: 9 };
+    }
+    if (role === 'boss') {
+      return rollB < 0.5 ? { w: 14, h: 6 } : { w: 6, h: 14 };
+    }
+    const long = 11 + Math.floor(rollA * 3);
+    const short = 4 + (rollB < 0.5 ? 0 : 1);
+    return rollB < 0.5 ? { w: long, h: short } : { w: short, h: long };
+  }
+  return null;
+}
+
+function bossMeets(room: RoomRect, plan: BiomeRoomPlan): boolean {
+  if (plan.bossMinLong <= 0) return true;
+  return (
+    Math.max(room.w, room.h) >= plan.bossMinLong &&
+    Math.min(room.w, room.h) >= plan.bossMinShort
+  );
 }
 
 function roomsOverlap(
@@ -168,33 +311,69 @@ function findFreeHall(
   return null;
 }
 
-/** Grow the long axis so the boss chamber reads as a hall. */
-function ensureMinLongSide(
+function growRoomAxis(
   cells: DungeonCell[][],
-  rooms: { x: number; y: number; w: number; h: number }[],
-  room: { x: number; y: number; w: number; h: number },
-  minLong: number,
+  rooms: RoomRect[],
+  room: RoomRect,
+  axis: 'w' | 'h',
+  width: number,
+  height: number,
+): boolean {
+  const next = { ...room, [axis]: room[axis] + 1 };
+  const origin = axis === 'w' ? 'x' : 'y';
+  const back = {
+    ...room,
+    [origin]: room[origin] - 1,
+    [axis]: room[axis] + 1,
+  };
+  const pick = roomFits(next, rooms, width, height, room)
+    ? next
+    : roomFits(back, rooms, width, height, room)
+      ? back
+      : null;
+  if (!pick) return false;
+  room.x = pick.x;
+  room.y = pick.y;
+  room.w = pick.w;
+  room.h = pick.h;
+  carveRoom(cells, room.x, room.y, room.w, room.h);
+  return true;
+}
+
+/** Thicken or lengthen the last room, then stamp a free boss shape. */
+function ensureBossRoom(
+  cells: DungeonCell[][],
+  rooms: RoomRect[],
+  room: RoomRect,
+  plan: BiomeRoomPlan,
   width: number,
   height: number,
 ): void {
   let guard = 0;
-  while (Math.max(room.w, room.h) < minLong && guard++ < 12) {
-    const growX = room.w >= room.h;
-    const next = { ...room };
-    if (growX) next.w += 1;
-    else next.h += 1;
-    const alt = { ...room };
-    if (growX) alt.h += 1;
-    else alt.w += 1;
-    const pick = roomFits(next, rooms, width, height, room)
-      ? next
-      : roomFits(alt, rooms, width, height, room)
-        ? alt
-        : null;
-    if (!pick) break;
-    room.w = pick.w;
-    room.h = pick.h;
-    carveRoom(cells, room.x, room.y, room.w, room.h);
+  while (!bossMeets(room, plan) && guard++ < 20) {
+    const needShort = Math.min(room.w, room.h) < plan.bossMinShort;
+    const axis: 'w' | 'h' = needShort
+      ? room.w <= room.h
+        ? 'w'
+        : 'h'
+      : room.w >= room.h
+        ? 'w'
+        : 'h';
+    if (growRoomAxis(cells, rooms, room, axis, width, height)) continue;
+    if (
+      !growRoomAxis(cells, rooms, room, axis === 'w' ? 'h' : 'w', width, height)
+    ) {
+      break;
+    }
+  }
+  if (bossMeets(room, plan)) return;
+  for (const [w, h] of plan.bossShapes) {
+    const spot = findFreeHall(rooms, width, height, w, h);
+    if (!spot) continue;
+    const hall = { x: spot.x, y: spot.y, w, h };
+    rooms.push(hall);
+    carveRoom(cells, hall.x, hall.y, hall.w, hall.h);
+    return;
   }
 }
 
@@ -272,20 +451,19 @@ export function generateDungeon(seed: number, depth = 1): DungeonMap {
   );
 
   const roomCount = 6 + Math.floor(rnd() * 4) + Math.floor((d - 1) / 2);
-  const rooms: { x: number; y: number; w: number; h: number }[] = [];
-  const crypt = ashenCryptRules(biome);
+  const rooms: RoomRect[] = [];
+  const plan = biomeRoomPlan(biome);
 
   for (let i = 0; i < roomCount; i++) {
     const rollA = rnd();
     const rollB = rnd();
     const role: CryptRoomRole =
       i === 0 ? 'start' : i === roomCount - 1 ? 'boss' : 'hall';
-    const sized = crypt.halls
-      ? cryptRoomSize(role, rollA, rollB)
-      : {
-          w: 5 + Math.floor(rollA * 5),
-          h: 5 + Math.floor(rollB * 5),
-        };
+    const shaped = plan ? biomeRoomSize(biome.id, role, rollA, rollB) : null;
+    const sized = shaped ?? {
+      w: 5 + Math.floor(rollA * 5),
+      h: 5 + Math.floor(rollB * 5),
+    };
     const w = sized.w;
     const h = sized.h;
     const x = 2 + Math.floor(rnd() * (width - w - 4));
@@ -302,13 +480,8 @@ export function generateDungeon(seed: number, depth = 1): DungeonMap {
     carveRoom(cells, x, y, w, h);
   }
 
-  if (crypt.halls && rooms.length < 3) {
-    const extras = [
-      { x: 3, y: 3, w: 10, h: 4 },
-      { x: 3, y: 12, w: 4, h: 10 },
-      { x: 16, y: 18, w: 12, h: 5 },
-    ];
-    for (const extra of extras) {
+  if (plan && rooms.length < 3) {
+    for (const extra of plan.rescue) {
       if (rooms.length >= 3) break;
       if (!roomFits(extra, rooms, width, height)) continue;
       rooms.push(extra);
@@ -322,25 +495,8 @@ export function generateDungeon(seed: number, depth = 1): DungeonMap {
     rooms.push({ x: 8, y: 8, w: 20, h: 20 });
   }
 
-  if (crypt.bossHall && rooms.length > 0) {
-    const boss = rooms[rooms.length - 1]!;
-    ensureMinLongSide(cells, rooms, boss, 10, width, height);
-    if (Math.max(boss.w, boss.h) < 10) {
-      const shapes = [
-        [12, 5],
-        [5, 12],
-        [11, 5],
-        [10, 4],
-      ] as const;
-      for (const [w, h] of shapes) {
-        const spot = findFreeHall(rooms, width, height, w, h);
-        if (!spot) continue;
-        const hall = { x: spot.x, y: spot.y, w, h };
-        rooms.push(hall);
-        carveRoom(cells, hall.x, hall.y, hall.w, hall.h);
-        break;
-      }
-    }
+  if (plan && plan.bossMinLong > 0 && rooms.length > 0) {
+    ensureBossRoom(cells, rooms, rooms[rooms.length - 1]!, plan, width, height);
   }
 
   for (let i = 1; i < rooms.length; i++) {
@@ -353,11 +509,11 @@ export function generateDungeon(seed: number, depth = 1): DungeonMap {
       Math.floor(b.x + b.w / 2),
       Math.floor(b.y + b.h / 2),
       rnd,
-      crypt.narrow ? 'straight' : 'jagged',
+      plan?.corridor === 'straight' ? 'straight' : 'jagged',
     );
   }
 
-  if (crypt.niches) {
+  if (plan?.niches) {
     for (let i = 1; i < rooms.length - 1; i++) {
       tryCryptNiche(cells, rooms[i]!, rnd, width, height);
     }

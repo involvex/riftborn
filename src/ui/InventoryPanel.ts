@@ -12,7 +12,7 @@ import { gameState } from '../systems/GameState';
 import { getRiftElixirDef, isRiftElixirId } from '../systems/RiftElixir';
 import { addSlotIcon } from '../render/ItemIcons';
 import type { EquipmentSlots, InventorySlot } from '../types/save';
-import { uiFont } from '../core/UiScale';
+import { uiFont, uiLayoutSpace, uiPx } from '../core/UiScale';
 import { settingsStore } from '../core/SettingsStore';
 import type { GearInstance } from '../types/game';
 import {
@@ -23,7 +23,9 @@ import {
 import { shouldShowTouchControls } from './TouchControls';
 import {
   computeInventoryLayout,
+  ellipsizeToWidth,
   inventoryPanelFromViewport,
+  scaleInventoryLayout,
   type InventoryLayout,
 } from './InventoryLayout';
 
@@ -52,6 +54,8 @@ export class InventoryPanel {
   private lastClickAt = 0;
   private panelW = 800;
   private panelH = 560;
+  /** CSS → buffer scale. Fonts use this so Low graphics stays readable. */
+  private uiScale = 1;
   private dismiss!: OverlayDismissHandles;
   private lastLayout: InventoryLayout | null = null;
   /** Pixel scroll into the bag grid (scrollable layouts only). */
@@ -128,20 +132,29 @@ export class InventoryPanel {
   }
 
   private computeLayout(): InventoryLayout {
+    const space = uiLayoutSpace(this.scene);
+    this.uiScale = space.scale;
     const touch = shouldShowTouchControls();
     const { panelW, panelH } = inventoryPanelFromViewport(
-      this.scene.scale.width,
-      this.scene.scale.height,
+      space.width,
+      space.height,
       touch,
     );
-    return computeInventoryLayout({
-      panelW,
-      panelH,
-      touch,
-      bagCols: gameState.inventory.bagCols,
-      bagRows: gameState.inventory.bagRows,
-      showCloseX: true,
-    });
+    return scaleInventoryLayout(
+      computeInventoryLayout({
+        panelW,
+        panelH,
+        touch,
+        bagCols: gameState.inventory.bagCols,
+        bagRows: gameState.inventory.bagRows,
+        showCloseX: true,
+      }),
+      space.scale,
+    );
+  }
+
+  private fontPx(cssPx: number): string {
+    return `${uiPx(cssPx, this.uiScale)}px`;
   }
 
   layout(): void {
@@ -259,7 +272,7 @@ export class InventoryPanel {
       const t = this.scene.add
         .text(0, y, line.text, {
           fontFamily: UI_FONT,
-          fontSize: touch ? '12px' : '12px',
+          fontSize: this.fontPx(touch ? 12 : 13),
           color: line.color,
           align: layout?.detailBeside ? 'left' : 'center',
           resolution: 2,
@@ -296,23 +309,6 @@ export class InventoryPanel {
         bag: gameState.inventory.slots,
       }),
     );
-  }
-
-  /** Fit name to equipment card width via word-wrap (no early char cut). */
-  private fitEqName(
-    name: string,
-    maxPx: number,
-    fontSize: string,
-  ): Phaser.GameObjects.Text {
-    return this.scene.add
-      .text(0, 0, name, {
-        fontFamily: UI_FONT,
-        fontSize,
-        color: '#f0ebe3',
-        resolution: 2,
-        wordWrap: { width: maxPx },
-      })
-      .setOrigin(0, 0.5);
   }
 
   refresh(): void {
@@ -352,7 +348,10 @@ export class InventoryPanel {
         .setStrokeStyle(1, 0x5a6a80)
         .setInteractive({ useHandCursor: true, dropZone: true });
       this.eqDropZones.push({ key: s.key, zone: cell });
-      const iconSize = Math.min(touch ? 28 : 36, eqCellH - 8);
+      const iconSize = Math.max(
+        10,
+        Math.min(eqCellH - 4, Math.floor(eqCellH * 0.62)),
+      );
       const iconX = x - eqCellW / 2 + 6;
       const iconY = y - iconSize / 2;
       const icons: Phaser.GameObjects.GameObject[] = [];
@@ -382,19 +381,27 @@ export class InventoryPanel {
         Math.floor(eqCellW - iconSize - 14),
       );
       const text = this.scene.add
-        .text(iconX + iconSize + 6, y - 6, s.label, {
+        .text(iconX + iconSize + 6, y - Math.round(eqCellH * 0.18), s.label, {
           fontFamily: UI_FONT,
-          fontSize: touch ? '12px' : '10px',
+          fontSize: this.fontPx(touch ? 11 : 10),
           color: '#8a9aaa',
           resolution: 2,
         })
         .setOrigin(0, 0.5);
-      const nameTxt = this.fitEqName(
-        fullName,
-        nameMaxPx,
-        touch ? '12px' : '12px',
-      );
-      nameTxt.setPosition(iconX + iconSize + 6, y + 8);
+      const nameFont = touch ? 11 : 12;
+      const nameTxt = this.scene.add
+        .text(
+          iconX + iconSize + 6,
+          y + Math.round(eqCellH * 0.18),
+          ellipsizeToWidth(fullName, nameMaxPx, nameFont * 0.62 * this.uiScale),
+          {
+            fontFamily: UI_FONT,
+            fontSize: this.fontPx(nameFont),
+            color: '#f0ebe3',
+            resolution: 2,
+          },
+        )
+        .setOrigin(0, 0.5);
       cell.on('pointerup', () => this.onEquipClick(s.key));
       cell.on('pointerover', () => {
         if (s.key !== 'tool' && eq[s.key]) {
@@ -408,74 +415,82 @@ export class InventoryPanel {
       this.eqRoot.add([cell, ...icons, text, nameTxt]);
     });
 
-    const hintOrigin = this.local(
-      layout.hint.x + layout.hint.w / 2,
-      layout.hint.y,
-    );
-    this.hintRoot.setPosition(hintOrigin.x, hintOrigin.y);
     const junkOn = settingsStore.get().autoSellJunk;
-    // Keep the row short so it never crowds Sort / the panel edge (M1d).
-    // Longer help lives in the detail box.
-    const hintLine = touch
-      ? junkOn
-        ? 'Auto-sell ON'
-        : 'Double-tap to equip'
-      : junkOn
+    if (layout.hint.h > 0) {
+      const hintOrigin = this.local(
+        layout.hint.x + layout.hint.w / 2,
+        layout.hint.y,
+      );
+      this.hintRoot.setPosition(hintOrigin.x, hintOrigin.y);
+      const hintLine = junkOn
         ? 'Drag to equip · Auto-sell junk ON'
         : 'Drag to equip · Double-click works too';
-    const hint = this.scene.add
-      .text(0, 0, hintLine, {
-        fontFamily: UI_FONT,
-        fontSize: touch ? '12px' : '11px',
-        color: '#8a9aaa',
-        resolution: 2,
-        wordWrap: { width: Math.max(40, layout.hint.w - 4) },
-        align: 'center',
-      })
-      .setOrigin(0.5, 0);
-    this.hintRoot.add(hint);
+      const hint = this.scene.add
+        .text(0, 0, hintLine, {
+          fontFamily: UI_FONT,
+          fontSize: this.fontPx(11),
+          color: '#8a9aaa',
+          resolution: 2,
+          wordWrap: { width: Math.max(40, layout.hint.w - 4) },
+          align: 'center',
+        })
+        .setOrigin(0.5, 0);
+      this.hintRoot.add(hint);
+    }
 
     // Bag header + grid live in gridRoot at panel origin for easier masking.
     this.gridRoot.setPosition(-this.panelW / 2, -this.panelH / 2);
 
+    const sellBit = touch
+      ? junkOn
+        ? '  ·  Auto-sell'
+        : '  ·  Tap to equip'
+      : '';
     const bagLabel = this.scene.add
       .text(
         layout.bagLabel.x,
         layout.bagLabel.y + layout.bagLabel.h / 2,
-        `Bag ${gameState.inventory.slots.length}/${gameState.inventory.capacity}  ·  ${gameState.inventory.count('gold')}g`,
+        `Bag ${gameState.inventory.slots.length}/${gameState.inventory.capacity}  ·  ${gameState.inventory.count('gold')}g${sellBit}`,
         {
           fontFamily: UI_FONT,
-          fontSize: touch ? '12px' : '14px',
+          fontSize: this.fontPx(touch ? 12 : 14),
           color: '#e0c890',
           resolution: 2,
           wordWrap: { width: Math.max(40, layout.bagLabel.w - 4) },
         },
       )
       .setOrigin(0, 0.5);
-    const sortBtn = this.scene.add
+    const sortBg = this.scene.add
+      .rectangle(
+        layout.sortBtn.x + layout.sortBtn.w / 2,
+        layout.sortBtn.y + layout.sortBtn.h / 2,
+        layout.sortBtn.w,
+        layout.sortBtn.h,
+        0xd0b070,
+      )
+      .setInteractive({ useHandCursor: true });
+    const sortLabel = this.scene.add
       .text(
         layout.sortBtn.x + layout.sortBtn.w / 2,
         layout.sortBtn.y + layout.sortBtn.h / 2,
         'Sort',
         {
           fontFamily: UI_FONT,
-          fontSize: '12px',
+          fontSize: this.fontPx(12),
           color: '#0a0c10',
-          backgroundColor: '#d0b070',
-          padding: { x: 8, y: 3 },
           resolution: 2,
         },
       )
-      .setOrigin(0.5)
-      .setInteractive({ useHandCursor: true });
-    sortBtn.on('pointerup', () => {
+      .setOrigin(0.5);
+    const onSort = (): void => {
       audioBus.uiClick();
       gameState.inventory.sortBag();
       gameState.persist();
       this.setDetailPlain('Bag sorted · gear by rarity, then materials');
       this.refresh();
-    });
-    this.gridRoot.add([bagLabel, sortBtn]);
+    };
+    sortBg.on('pointerup', onSort);
+    this.gridRoot.add([bagLabel, sortBg, sortLabel]);
 
     const cell = layout.cellSize;
     const gap = layout.bagGap;
@@ -582,7 +597,7 @@ export class InventoryPanel {
             const qty = this.scene.add
               .text(x + cell - 3, y + cell - 3, `x${slot.qty}`, {
                 fontFamily: UI_FONT,
-                fontSize: `${Math.max(touch ? 12 : 9, Math.floor(cell * 0.22))}px`,
+                fontSize: `${Math.max(uiPx(touch ? 10 : 9, this.uiScale), Math.floor(cell * 0.28))}px`,
                 color: '#f0ebe3',
                 stroke: '#0a0c10',
                 strokeThickness: 3,
