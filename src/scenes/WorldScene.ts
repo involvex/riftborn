@@ -39,11 +39,7 @@ import {
   namedAffixTargets,
 } from '../systems/GearSkillAffix';
 import { gameState } from '../systems/GameState';
-import {
-  applyPressureToRule,
-  nextPressureStep,
-  pressureMults,
-} from '../systems/RiftPressure';
+import { applyPressureToRule, nextPressureStep } from '../systems/RiftPressure';
 import {
   ASSIST_RANGE,
   directionTo,
@@ -154,6 +150,12 @@ import {
   riftEnterToastText,
   veiledWrongLayerToast,
 } from '../systems/RiftGoalCopy';
+import {
+  gearUpgradeHighlight,
+  riftEndPay,
+  type RiftEndFacts,
+  type RiftEndKind,
+} from '../systems/RiftEndSummary';
 import {
   coopConnectingToast,
   coopJoinBlockedReason,
@@ -290,6 +292,11 @@ export class WorldScene extends Phaser.Scene {
   /** Kills since last death / spawn (shown on death screen). */
   private lifeKills = 0;
   private deathPending = false;
+  /** Best upgrade line seen this rift (ground drops). */
+  private riftGearLine: string | null = null;
+  private riftGearScore = 0;
+  /** Clear/abandon card is up; town transition waits for confirm. */
+  private riftEndPending = false;
   private riftMod: RiftModifier = getRiftModifier('none');
   private depthRule: DepthRule = depthRuleFor(1);
   /** Active rift biome palette (null in hub). */
@@ -765,6 +772,7 @@ export class WorldScene extends Phaser.Scene {
       }),
       gameEvents.on('combat:shift', () => this.tryPlayerShift()),
       gameEvents.on('ui:returnToTown', () => this.returnToTown()),
+      gameEvents.on(Events.RIFT_END_CONFIRM, () => this.confirmRiftEnd()),
       gameEvents.on('ui:toggleCoop', () => this.toggleCoop()),
       gameEvents.on(Events.ELIXIR_ACTIVATED, (p) => {
         const id = (p as { id?: string }).id;
@@ -827,6 +835,10 @@ export class WorldScene extends Phaser.Scene {
         gameState.pressureStep,
       );
       this.dungeon = generateDungeon(seed, this.riftDepth);
+      if (!resume) {
+        this.riftGearLine = null;
+        this.riftGearScore = 0;
+      }
       this.biomeLookActive = biomeLook(this.dungeon.biome.id);
       this.cameras.main.setBackgroundColor(this.biomeLookActive.background);
       this.player.maxX = this.dungeon.width - 1.5;
@@ -2575,15 +2587,9 @@ export class WorldScene extends Phaser.Scene {
     this.safeCameraFlash(280, 120, 20, 30);
     this.triggerCombatShake('boss');
     this.triggerHitstop(true);
+    this.riftEndPending = false;
     this.player.resetCombatPose();
-    gameEvents.emit(Events.PLAYER_DIED, {
-      kills: this.lifeKills,
-      level: gameState.progression.level,
-      gold: gameState.inventory.count('gold'),
-      playTimeSec: gameState.playTimeSec,
-      inRift: gameState.inRift,
-      depth: gameState.inRift ? this.riftDepth : undefined,
-    });
+    gameEvents.emit(Events.PLAYER_DIED, this.riftEndFacts('death'));
   }
 
   /** After death-screen confirm: half HP and back to plaza. */
@@ -2606,7 +2612,7 @@ export class WorldScene extends Phaser.Scene {
   }
 
   /** Always available (B): leave rift / reset to plaza. */
-  private returnToTown(reward = false, silent = false): void {
+  private returnToTown(_reward = false, silent = false): void {
     // Death / forced exits must not wait on an enter fade.
     if (this.zoneBusy && !silent) return;
     const wasRift = gameState.inRift;
@@ -2616,20 +2622,77 @@ export class WorldScene extends Phaser.Scene {
       }
       return;
     }
+    if (silent) {
+      this.commitTownReturn(true);
+      return;
+    }
+    if (this.riftEndPending) return;
+    this.riftEndPending = true;
+    const kind: RiftEndKind = this.riftCleared ? 'clear' : 'abandon';
+    gameEvents.emit(Events.RIFT_END_SUMMARY, this.riftEndFacts(kind));
+  }
 
+  /** Summary confirmed — apply the purse and fade back to the plaza. */
+  private confirmRiftEnd(): void {
+    if (!this.riftEndPending || !gameState.inRift) {
+      this.riftEndPending = false;
+      return;
+    }
+    this.riftEndPending = false;
+    this.commitTownReturn(false);
+  }
+
+  private riftEndFacts(kind: RiftEndKind): RiftEndFacts {
+    const inRift = gameState.inRift;
+    const lootLeftBehind = this.groundLoot.some((d) => !d.picked);
+    return {
+      kind,
+      inRift,
+      depth: this.riftDepth,
+      biomeName: this.dungeon?.biome.name,
+      modName: inRift ? this.riftMod.name : undefined,
+      kills: inRift ? this.riftKills : this.lifeKills,
+      goal: this.riftKillGoal,
+      level: gameState.progression.level,
+      gold: gameState.inventory.count('gold'),
+      shards: gameState.inventory.count('rift_shard'),
+      pressureStep: gameState.pressureStep,
+      hpAfter: Math.floor(gameState.maxHp * 0.5),
+      maxHp: gameState.maxHp,
+      gearLine: this.riftGearLine,
+      playTimeSec: gameState.playTimeSec,
+      lootLeftBehind,
+    };
+  }
+
+  private noteRiftGear(item: GearInstance): void {
+    if (!gameState.inRift) return;
+    const equipped = gameState.inventory.equipment[item.slot];
+    const hit = gearUpgradeHighlight(item, equipped);
+    if (!hit) return;
+    if (this.riftGearLine && hit.score <= this.riftGearScore) return;
+    this.riftGearScore = hit.score;
+    this.riftGearLine = hit.line;
+  }
+
+  /**
+   * @param silent Death and other forced exits skip the zone fade and the purse.
+   * Once the boss is dead, every other exit claims the clear pay.
+   */
+  private commitTownReturn(silent: boolean): void {
+    const reward = this.riftCleared && !silent;
     const finish = (): void => {
-      if (reward && this.riftCleared) {
-        const pay = pressureMults(gameState.pressureStep);
-        gameState.progression.addXp(50 + gameState.pressureStep * 5);
-        gameState.inventory.add('rift_shard', pay.clearShards);
-        gameState.inventory.add('gold', pay.clearGold);
+      const kind: RiftEndKind = silent ? 'death' : reward ? 'clear' : 'abandon';
+      const pay = riftEndPay(kind, gameState.pressureStep);
+      if (pay.xp) gameState.progression.addXp(pay.xp);
+      if (pay.gold) gameState.inventory.add('gold', pay.gold);
+      if (pay.shards) gameState.inventory.add('rift_shard', pay.shards);
+      if (reward) {
         gameState.bounties.noteRiftClear();
         // Apex / depth-10 clears raise the post-cap ladder.
         if (this.riftDepth >= 10) {
           gameState.pressureStep = nextPressureStep(gameState.pressureStep);
         }
-      } else if (!silent) {
-        gameState.progression.addXp(8);
       }
       gameState.clearRiftRun();
       gameState.worldX = TOWN_SPAWN.x;
@@ -2639,16 +2702,8 @@ export class WorldScene extends Phaser.Scene {
       this.loadZone(false);
       this.persistGame();
       gameEvents.emit(Events.RIFT_CLEARED, {
-        cleared: reward && this.riftCleared,
+        cleared: reward,
       });
-      if (!silent) {
-        gameEvents.emit('ui:toast', {
-          text:
-            reward && this.riftCleared
-              ? 'Rift cleared — back in town'
-              : 'Returned to town',
-        });
-      }
       this.emitRiftProgress();
     };
 
@@ -2822,7 +2877,7 @@ export class WorldScene extends Phaser.Scene {
             enemy.worldY,
             crit ? 'crit' : 'hit',
           );
-          if (enemy.applyDamage(dmg)) this.onEnemyKilled(enemy);
+          if (enemy.applyDamage(dmg, crit)) this.onEnemyKilled(enemy);
         }
         if (hitCount > 0) {
           audioBus.hit();
@@ -3225,6 +3280,7 @@ export class WorldScene extends Phaser.Scene {
       depth: this.riftDepth,
       modName: this.riftMod.name,
       ruleName: this.depthRule.id === 'none' ? undefined : this.depthRule.name,
+      biomeName: this.dungeon?.biome.name,
     });
   }
 
@@ -3664,6 +3720,7 @@ export class WorldScene extends Phaser.Scene {
       : snapToTile(nearX + jitter(), nearY + jitter());
     const drop = new GroundLoot(this, `loot_${this.lootSeq++}`, p.x, p.y, item);
     this.groundLoot.push(drop);
+    this.noteRiftGear(item);
     if (!opts.silent) this.playLootJuice(item.rarity, p.x, p.y);
   }
 
@@ -3994,7 +4051,7 @@ export class WorldScene extends Phaser.Scene {
       const { screenX, screenY } = worldToScreen(enemy.worldX, enemy.worldY);
       gameState.combat.emitDamageNumber(screenX, screenY - 18, dmg, 'enemy');
       playCombatBurst(this, enemy.worldX, enemy.worldY, 'burn');
-      if (enemy.applyDamage(dmg)) this.onEnemyKilled(enemy);
+      if (enemy.applyDamage(dmg, isCombatCrit(dmg))) this.onEnemyKilled(enemy);
     }
     this.safeCameraFlash(80, 110, 160, 200);
   }

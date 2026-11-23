@@ -53,7 +53,14 @@ import {
   nextFirstSessionHint,
   type FirstSessionStep,
 } from '../systems/FirstSession';
-import { formatPlayTime, SummaryOverlay } from '../ui/SummaryOverlay';
+import { SummaryOverlay } from '../ui/SummaryOverlay';
+import {
+  normalizeRiftEnd,
+  riftEndAction,
+  riftEndLines,
+  riftEndTitle,
+  type RiftEndFacts,
+} from '../systems/RiftEndSummary';
 import { uiPanelSize, uiPanelSizeGame } from '../core/UiScale';
 import {
   computeCraftPanelLayout,
@@ -341,11 +348,27 @@ export class UIScene extends Phaser.Scene {
         // WorldScene already toasts O2 Kill→Boss→Exit — avoid duplicate.
         this.riftHud.show();
       }),
-      gameEvents.on(Events.RIFT_CLEARED, (p) => {
-        const d = p as { cleared: boolean };
-        this.toast(d.cleared ? 'Rift rewards claimed' : 'Left the Rift');
+      gameEvents.on(Events.RIFT_CLEARED, () => {
         this.riftHud.hide();
         this.refresh();
+      }),
+      gameEvents.on(Events.RIFT_END_SUMMARY, (p) => {
+        const facts = normalizeRiftEnd(p as Partial<RiftEndFacts>);
+        this.closeAllPanels();
+        this.summaryOverlay.show({
+          title: riftEndTitle(facts),
+          lines: riftEndLines(facts),
+          actionLabel: riftEndAction(facts),
+          onAction: () => {
+            this.summaryOverlay.hide();
+            this.setModalChrome(false);
+            this.scene.resume('WorldScene');
+            gameEvents.emit(Events.RIFT_END_CONFIRM);
+            this.refresh();
+          },
+        });
+        this.setModalChrome(true);
+        this.pauseWorldSafe();
       }),
       gameEvents.on(Events.RIFT_BOSS_SUMMARY, (p) => {
         const d = p as {
@@ -390,6 +413,7 @@ export class UIScene extends Phaser.Scene {
           depth?: number;
           modName?: string;
           ruleName?: string;
+          biomeName?: string;
         };
         if (!d.active) {
           this.riftHud.hide();
@@ -403,6 +427,7 @@ export class UIScene extends Phaser.Scene {
           d.depth ?? 1,
           d.modName,
           d.ruleName,
+          d.biomeName,
         );
       }),
       gameEvents.on('ui:dismissSummary', () => {
@@ -442,39 +467,21 @@ export class UIScene extends Phaser.Scene {
         this.maybeShowFirstSession();
       }),
       gameEvents.on(Events.PLAYER_DIED, (p) => {
-        const d = p as {
-          kills: number;
-          level: number;
-          gold: number;
-          playTimeSec: number;
-          inRift: boolean;
-          depth?: number;
-        };
+        const facts = normalizeRiftEnd({
+          ...(p as Partial<RiftEndFacts>),
+          kind: 'death',
+        });
         this.closeAllPanels();
-        const lines = [
-          { text: `Level ${d.level}` },
-          { text: `Kills this life: ${d.kills}` },
-          { text: `Gold: ${d.gold}` },
-          { text: `Play time: ${formatPlayTime(d.playTimeSec)}` },
-        ];
-        if (d.inRift && d.depth != null) {
-          lines.push({ text: `Fell in rift D${d.depth}` });
-        }
         this.summaryOverlay.show({
-          title: 'You Died',
-          lines,
-          actionLabel: 'Return to hub',
+          title: riftEndTitle(facts),
+          lines: riftEndLines(facts),
+          actionLabel: riftEndAction(facts),
           onAction: () => {
             this.summaryOverlay.hide();
             this.setModalChrome(false);
             gameEvents.emit(Events.RESOLVE_DEATH);
             this.scene.resume('WorldScene');
             this.refresh();
-            this.toast(
-              d.inRift
-                ? 'You fall in the rift… waking in town at half health.'
-                : 'You fall… Mira drags you back to the plaza.',
-            );
           },
         });
         this.setModalChrome(true);

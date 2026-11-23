@@ -53,6 +53,10 @@ export const Events = {
   RIFT_CLEARED: 'rift:cleared',
   /** Boss slain — show run summary while still in the rift. */
   RIFT_BOSS_SUMMARY: 'rift:bossSummary',
+  /** Clear or abandon — summary before the town transition. */
+  RIFT_END_SUMMARY: 'rift:endSummary',
+  /** Player confirmed the clear / abandon card. */
+  RIFT_END_CONFIRM: 'rift:endConfirm',
   PLAYER_DIED: 'player:died',
   /** UI confirmed death → WorldScene finishes respawn. */
   RESOLVE_DEATH: 'player:resolveDeath',

@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { uiFontSize } from '../core/UiFont';
+import { riftHudLabel } from '../systems/RiftGoalCopy';
 import { MiniMap } from './MiniMap';
 import { shouldShowTouchControls } from './TouchControls';
 
@@ -25,16 +26,16 @@ export class RiftProgressHud {
       .rectangle(0, 0, this.barW - 2, 0, 0xc62868, 1)
       .setOrigin(0.5, 1);
     this.label = scene.add
-      .text(0, 12, 'Rift', {
+      .text(-18, -80, 'Rift', {
         fontFamily: 'Segoe UI, sans-serif',
         fontSize: uiFontSize(
           'rift',
           shouldShowTouchControls() ? 'touch' : 'desktop',
         ),
         color: '#e8c0d0',
-        align: 'center',
+        align: 'right',
       })
-      .setOrigin(0.5, 0);
+      .setOrigin(1, 0.5);
     this.root.add([this.bg, this.fill, this.label]);
     this.root.setVisible(false);
     this.layout();
@@ -65,25 +66,29 @@ export class RiftProgressHud {
     depth = 1,
     modName?: string,
     ruleName?: string,
+    biomeName?: string,
   ): void {
     const ratio = goal <= 0 ? 1 : Phaser.Math.Clamp(kills / goal, 0, 1);
     this.fill.height = Math.max(2, (this.barH - 2) * ratio);
-    const dTag = `D${depth}`;
-    const rule = ruleName ? `\n${shortRule(ruleName)}` : '';
-    const mod =
-      modName && modName !== 'Calm Rift' ? `\n${shortMod(modName)}` : '';
-    if (phase === 'fill') {
-      this.fill.setFillStyle(0xc62868, 1);
-      this.label.setText(`${dTag}${rule}\nKill ${kills}/${goal}${mod}`);
-    } else if (phase === 'boss') {
+    if (phase === 'fill') this.fill.setFillStyle(0xc62868, 1);
+    else if (phase === 'boss') {
       this.fill.setFillStyle(0xff7043, 1);
       this.fill.height = this.barH - 2;
-      this.label.setText(`${dTag}${rule}\nBoss${mod}`);
     } else {
       this.fill.setFillStyle(0x4db6ff, 1);
       this.fill.height = this.barH - 2;
-      this.label.setText(`${dTag}\nExit`);
     }
+    this.label.setText(
+      riftHudLabel({
+        biomeName,
+        depth,
+        kills,
+        goal,
+        phase,
+        modName,
+        ruleName,
+      }),
+    );
     if (phase !== this.lastPhase) {
       this.lastPhase = phase;
       this.pulsePhase();
@@ -103,20 +108,4 @@ export class RiftProgressHud {
       ease: 'Quad.easeOut',
     });
   }
-}
-
-function shortRule(name: string): string {
-  if (name.includes('Hardened')) return 'Hard';
-  if (name.includes('Relentless')) return 'Relent';
-  if (name.includes('Apex')) return 'Apex';
-  return name.slice(0, 6);
-}
-
-function shortMod(name: string): string {
-  if (name.includes('Dense')) return 'Dense';
-  if (name.includes('Glass')) return 'Glass';
-  if (name.includes('Gilded')) return 'Gold';
-  if (name.includes('Veil')) return 'Veil';
-  if (name.includes('Swift')) return 'Swift';
-  return name.slice(0, 6);
 }

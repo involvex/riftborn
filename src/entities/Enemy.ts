@@ -14,6 +14,7 @@ import {
   ensureGameSprites,
   isPaintedSprite,
 } from '../render/SpriteAtlas';
+import { critFlashPlan } from '../render/CombatFeel';
 import { playEnemyTelegraph } from '../render/EnemyTelegraphVfx';
 import type { EnemyDef } from '../types/game';
 import enemiesData from '../data/enemies.json';
@@ -867,11 +868,11 @@ export class Enemy {
     }
   }
 
-  applyDamage(amount: number): boolean {
+  applyDamage(amount: number, crit = false): boolean {
     if (!this.alive || this.ghosted) return false;
     this.hp -= amount;
     this.redrawBar();
-    this.flashHit();
+    this.flashHit(crit);
     if (this.hp <= 0) {
       this.alive = false;
       this.attackGen += 1;
@@ -922,9 +923,10 @@ export class Enemy {
     playEnemyTelegraph(this.scene, 'rush', 'windup', this.worldX, this.worldY);
   }
 
-  /** Hit frames + warm flash/knock so connects read even on pale sheets. */
-  flashHit(): void {
+  /** Hit frames + warm flash. Crits flash white for 40ms and pop harder. */
+  flashHit(crit = false): void {
     if (!this.alive) return;
+    const plan = critFlashPlan(crit);
     const hitKey = `${this.textureKey}_hit`;
     const hasHit = this.sprite.scene.anims.exists(hitKey);
     if (hasHit) {
@@ -936,8 +938,7 @@ export class Enemy {
         this.sprite.play(`${this.textureKey}_${this.animKind}`, true);
       });
     }
-    // White flash is invisible on light sprites — use a warm punch tint.
-    this.sprite.setTint(0xff7050);
+    this.sprite.setTint(plan.whiteMs > 0 ? 0xffffff : 0xff7050);
     const ox = this.sprite.x;
     const baseScale =
       this.isBoss || this.def.isElite || this.elitePack
@@ -945,7 +946,13 @@ export class Enemy {
         : figureDrawScale();
     const knock = this.facing * 6;
     this.sprite.x = ox + knock;
-    this.sprite.setScale(baseScale * 1.14);
+    this.sprite.setScale(baseScale * plan.scale);
+    if (plan.whiteMs > 0) {
+      this.sprite.scene.time.delayedCall(plan.whiteMs, () => {
+        if (!this.alive) return;
+        this.sprite.setTint(0xff7050);
+      });
+    }
     this.sprite.scene.time.delayedCall(hasHit ? 110 : 90, () => {
       if (!this.alive) return;
       this.sprite.x = 0;

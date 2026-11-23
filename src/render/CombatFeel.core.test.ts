@@ -1,10 +1,13 @@
 import { describe, expect, test } from 'bun:test';
 import {
   COMBAT_FEEL,
+  HITSTOP_FLOOR_MS,
   basicAttackHitstopKind,
   basicAttackShakeKind,
   combatHitstopMs,
   combatShakeParams,
+  critFlashPlan,
+  hitstopMsScaled,
   isCombatCrit,
 } from './CombatFeel';
 
@@ -60,6 +63,32 @@ describe('combatHitstopMs', () => {
   test('crit is longer than light', () => {
     expect(combatHitstopMs('crit')).toBeGreaterThan(combatHitstopMs('light'));
     expect(combatHitstopMs('hit')).toBeGreaterThan(combatHitstopMs('light'));
+  });
+});
+
+describe('hitstopMsScaled', () => {
+  test('phone juice cannot shrink below the readable floor', () => {
+    expect(hitstopMsScaled('light', 0.4)).toBe(HITSTOP_FLOOR_MS.light);
+    expect(hitstopMsScaled('hit', 0.4)).toBe(HITSTOP_FLOOR_MS.hit);
+    expect(hitstopMsScaled('crit', 0.4)).toBe(HITSTOP_FLOOR_MS.crit);
+    expect(HITSTOP_FLOOR_MS.light).toBe(28);
+    expect(HITSTOP_FLOOR_MS.hit).toBe(45);
+    expect(HITSTOP_FLOOR_MS.crit).toBe(70);
+  });
+
+  test('desktop juice keeps the longer base durations', () => {
+    expect(hitstopMsScaled('light', 1)).toBe(COMBAT_FEEL.hitstopLightMs);
+    expect(hitstopMsScaled('hit', 1)).toBe(COMBAT_FEEL.hitstopMs);
+    expect(hitstopMsScaled('crit', 1)).toBe(COMBAT_FEEL.hitstopCritMs);
+  });
+});
+
+describe('critFlashPlan', () => {
+  test('crits flash white and pop harder than a normal hit', () => {
+    expect(critFlashPlan(false)).toEqual({ whiteMs: 0, scale: 1.14 });
+    const crit = critFlashPlan(true);
+    expect(crit.whiteMs).toBe(40);
+    expect(crit.scale).toBeGreaterThan(critFlashPlan(false).scale);
   });
 });
 

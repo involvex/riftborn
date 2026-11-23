@@ -101,6 +101,8 @@ export type RiftbornApi = {
   openCraft: () => void;
   /** Show death summary modal (screenshot / layout). */
   showDeathSummary: () => void;
+  /** Show clear / abandon card without leaving the zone (layout). */
+  showRiftEnd: (kind?: 'clear' | 'abandon') => void;
   /** Dismiss death / rift summary via primary action. */
   dismissSummary: () => void;
   /** Pure touch HUD hit rects for the current viewport. */
@@ -354,6 +356,24 @@ export function installRiftbornDebug(
         inRift: false,
       });
     },
+    showRiftEnd: (kind = 'clear') => {
+      gameEvents.emit(Events.RIFT_END_SUMMARY, {
+        kind,
+        inRift: true,
+        depth: 1,
+        biomeName: 'Aschen-Krypta',
+        modName: kind === 'clear' ? 'Dense Packs' : 'Calm Rift',
+        kills: 8,
+        goal: 13,
+        level: 3,
+        gold: 24,
+        shards: 1,
+        pressureStep: 0,
+        gearLine:
+          kind === 'clear' ? 'Upgrade · magic Ash Blade · DMG +4' : null,
+        lootLeftBehind: kind === 'abandon',
+      });
+    },
     dismissSummary: () => gameEvents.emit('ui:dismissSummary', {}),
     touchHits: () => collectTouchHits(),
     enterRift: () => (enterRiftHook ? enterRiftHook() : false),
@@ -443,6 +463,7 @@ export function clearRiftbornDebug(): void {
       openTrader: () => {},
       openCraft: () => {},
       showDeathSummary: () => {},
+      showRiftEnd: () => {},
       dismissSummary: () => {},
       touchHits: () => [],
       enterRift: () => false,

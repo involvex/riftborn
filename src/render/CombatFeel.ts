@@ -86,17 +86,44 @@ export function combatShakeParams(kind: CombatShakeKind): {
   };
 }
 
-export function combatHitstopMs(kind: CombatHitstopKind = 'hit'): number {
+/**
+ * Phone Low juice (0.4) must not shrink a connect below a readable freeze.
+ * Desktop juice 1 stays on the longer base durations.
+ */
+export const HITSTOP_FLOOR_MS: Record<CombatHitstopKind, number> = {
+  light: 28,
+  hit: 45,
+  crit: 70,
+};
+
+export function hitstopMsScaled(
+  kind: CombatHitstopKind,
+  juiceScale: number,
+): number {
   const c = COMBAT_FEEL;
-  if (!c.enabled || !c.hitstopEnabled) return 0;
-  const juice = currentGraphicsProfile().juiceScale;
   const base =
     kind === 'crit'
       ? c.hitstopCritMs
       : kind === 'light'
         ? c.hitstopLightMs
         : c.hitstopMs;
-  return Math.round(base * juice);
+  const scaled = Math.round(base * Math.max(0, juiceScale));
+  return Math.max(HITSTOP_FLOOR_MS[kind], scaled);
+}
+
+/** Crit connects flash white before the warm tint and pop harder. */
+export function critFlashPlan(crit: boolean): {
+  whiteMs: number;
+  scale: number;
+} {
+  if (crit) return { whiteMs: 40, scale: 1.28 };
+  return { whiteMs: 0, scale: 1.14 };
+}
+
+export function combatHitstopMs(kind: CombatHitstopKind = 'hit'): number {
+  const c = COMBAT_FEEL;
+  if (!c.enabled || !c.hitstopEnabled) return 0;
+  return hitstopMsScaled(kind, currentGraphicsProfile().juiceScale);
 }
 
 export function isCombatCrit(damage: number): boolean {

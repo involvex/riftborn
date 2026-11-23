@@ -58,15 +58,179 @@ function carveCorridor(
   x2: number,
   y2: number,
   rnd: () => number,
+  style: 'jagged' | 'straight' = 'jagged',
 ): void {
   let x = x1;
   let y = y1;
+  if (style === 'straight') {
+    while (x !== x2) {
+      carveBrush2(cells, x, y);
+      x += x < x2 ? 1 : -1;
+    }
+    while (y !== y2) {
+      carveBrush2(cells, x, y);
+      y += y < y2 ? 1 : -1;
+    }
+    carveBrush2(cells, x2, y2);
+    return;
+  }
   while (x !== x2 || y !== y2) {
     carveBrush2(cells, x, y);
     if (x !== x2 && (y === y2 || rnd() > 0.5)) x += x < x2 ? 1 : -1;
     else if (y !== y2) y += y < y2 ? 1 : -1;
   }
   carveBrush2(cells, x2, y2);
+}
+
+export type CryptRoomRole = 'start' | 'hall' | 'boss';
+
+/** Ashen Crypt reads roomTypeRules. Other biomes keep the square roller. */
+export function ashenCryptRules(biome: BiomeDef): {
+  halls: boolean;
+  narrow: boolean;
+  niches: boolean;
+  bossHall: boolean;
+} {
+  const rules = biome.roomTypeRules ?? [];
+  const crypt = biome.id === 'ashen_crypt';
+  return {
+    halls: crypt && rules.includes('rectangular_halls'),
+    narrow: crypt && rules.includes('corridors_narrow'),
+    niches: crypt && rules.includes('niches'),
+    bossHall: crypt && rules.includes('boss_hall'),
+  };
+}
+
+/**
+ * Long halls for the crypt. Two rolls match the old w/h rng budget so
+ * non-crypt seeds are untouched (this is only called for the crypt).
+ */
+export function cryptRoomSize(
+  role: CryptRoomRole,
+  rollLong: number,
+  rollOrient: number,
+): { w: number; h: number } {
+  const long =
+    role === 'boss'
+      ? 10 + Math.floor(rollLong * 3)
+      : role === 'start'
+        ? 6
+        : 8 + Math.floor(rollLong * 3);
+  const short = role === 'boss' ? 5 : role === 'start' ? 5 : 4;
+  if (rollOrient < 0.5) return { w: long, h: short };
+  return { w: short, h: long };
+}
+
+function roomsOverlap(
+  a: { x: number; y: number; w: number; h: number },
+  b: { x: number; y: number; w: number; h: number },
+  pad = 1,
+): boolean {
+  return (
+    a.x < b.x + b.w + pad &&
+    a.x + a.w + pad > b.x &&
+    a.y < b.y + b.h + pad &&
+    a.y + a.h + pad > b.y
+  );
+}
+
+function roomFits(
+  room: { x: number; y: number; w: number; h: number },
+  rooms: { x: number; y: number; w: number; h: number }[],
+  width: number,
+  height: number,
+  ignore?: { x: number; y: number; w: number; h: number },
+): boolean {
+  if (room.x < 2 || room.y < 2) return false;
+  if (room.x + room.w >= width - 2 || room.y + room.h >= height - 2) {
+    return false;
+  }
+  for (const other of rooms) {
+    if (other === room || other === ignore) continue;
+    if (roomsOverlap(room, other)) return false;
+  }
+  return true;
+}
+
+/** First top-left spot that can hold a w×h hall clear of other rooms. */
+function findFreeHall(
+  rooms: { x: number; y: number; w: number; h: number }[],
+  width: number,
+  height: number,
+  w: number,
+  h: number,
+): { x: number; y: number } | null {
+  for (let y = 2; y <= height - h - 2; y++) {
+    for (let x = 2; x <= width - w - 2; x++) {
+      if (roomFits({ x, y, w, h }, rooms, width, height)) return { x, y };
+    }
+  }
+  return null;
+}
+
+/** Grow the long axis so the boss chamber reads as a hall. */
+function ensureMinLongSide(
+  cells: DungeonCell[][],
+  rooms: { x: number; y: number; w: number; h: number }[],
+  room: { x: number; y: number; w: number; h: number },
+  minLong: number,
+  width: number,
+  height: number,
+): void {
+  let guard = 0;
+  while (Math.max(room.w, room.h) < minLong && guard++ < 12) {
+    const growX = room.w >= room.h;
+    const next = { ...room };
+    if (growX) next.w += 1;
+    else next.h += 1;
+    const alt = { ...room };
+    if (growX) alt.h += 1;
+    else alt.w += 1;
+    const pick = roomFits(next, rooms, width, height, room)
+      ? next
+      : roomFits(alt, rooms, width, height, room)
+        ? alt
+        : null;
+    if (!pick) break;
+    room.w = pick.w;
+    room.h = pick.h;
+    carveRoom(cells, room.x, room.y, room.w, room.h);
+  }
+}
+
+/** 2×2 alcove on a wall. Counts as a wide floor cell for corridor tests. */
+function tryCryptNiche(
+  cells: DungeonCell[][],
+  room: { x: number; y: number; w: number; h: number },
+  rnd: () => number,
+  width: number,
+  height: number,
+): void {
+  const side = Math.floor(rnd() * 4);
+  const span = side % 2 === 0 ? room.w : room.h;
+  const along = Math.floor(rnd() * Math.max(1, span - 1));
+  let x: number;
+  let y: number;
+  if (side === 0) {
+    x = room.x + along;
+    y = room.y - 2;
+  } else if (side === 1) {
+    x = room.x + room.w;
+    y = room.y + along;
+  } else if (side === 2) {
+    x = room.x + along;
+    y = room.y + room.h;
+  } else {
+    x = room.x - 2;
+    y = room.y + along;
+  }
+  if (x < 1 || y < 1 || x + 2 >= width || y + 2 >= height) return;
+  for (let dy = 0; dy < 2; dy++) {
+    for (let dx = 0; dx < 2; dx++) {
+      if (cells[y + dy]?.[x + dx] !== 0) return;
+    }
+  }
+  carveRoom(cells, x, y, 2, 2);
 }
 
 function pickWeightedProp(
@@ -109,20 +273,26 @@ export function generateDungeon(seed: number, depth = 1): DungeonMap {
 
   const roomCount = 6 + Math.floor(rnd() * 4) + Math.floor((d - 1) / 2);
   const rooms: { x: number; y: number; w: number; h: number }[] = [];
+  const crypt = ashenCryptRules(biome);
 
   for (let i = 0; i < roomCount; i++) {
-    const w = 5 + Math.floor(rnd() * 5);
-    const h = 5 + Math.floor(rnd() * 5);
+    const rollA = rnd();
+    const rollB = rnd();
+    const role: CryptRoomRole =
+      i === 0 ? 'start' : i === roomCount - 1 ? 'boss' : 'hall';
+    const sized = crypt.halls
+      ? cryptRoomSize(role, rollA, rollB)
+      : {
+          w: 5 + Math.floor(rollA * 5),
+          h: 5 + Math.floor(rollB * 5),
+        };
+    const w = sized.w;
+    const h = sized.h;
     const x = 2 + Math.floor(rnd() * (width - w - 4));
     const y = 2 + Math.floor(rnd() * (height - h - 4));
     let overlaps = false;
     for (const r of rooms) {
-      if (
-        x < r.x + r.w + 1 &&
-        x + w + 1 > r.x &&
-        y < r.y + r.h + 1 &&
-        y + h + 1 > r.y
-      ) {
+      if (roomsOverlap({ x, y, w, h }, r)) {
         overlaps = true;
         break;
       }
@@ -132,10 +302,45 @@ export function generateDungeon(seed: number, depth = 1): DungeonMap {
     carveRoom(cells, x, y, w, h);
   }
 
+  if (crypt.halls && rooms.length < 3) {
+    const extras = [
+      { x: 3, y: 3, w: 10, h: 4 },
+      { x: 3, y: 12, w: 4, h: 10 },
+      { x: 16, y: 18, w: 12, h: 5 },
+    ];
+    for (const extra of extras) {
+      if (rooms.length >= 3) break;
+      if (!roomFits(extra, rooms, width, height)) continue;
+      rooms.push(extra);
+      carveRoom(cells, extra.x, extra.y, extra.w, extra.h);
+    }
+  }
+
   if (rooms.length < 3) {
     // fallback open arena
     carveRoom(cells, 8, 8, 20, 20);
     rooms.push({ x: 8, y: 8, w: 20, h: 20 });
+  }
+
+  if (crypt.bossHall && rooms.length > 0) {
+    const boss = rooms[rooms.length - 1]!;
+    ensureMinLongSide(cells, rooms, boss, 10, width, height);
+    if (Math.max(boss.w, boss.h) < 10) {
+      const shapes = [
+        [12, 5],
+        [5, 12],
+        [11, 5],
+        [10, 4],
+      ] as const;
+      for (const [w, h] of shapes) {
+        const spot = findFreeHall(rooms, width, height, w, h);
+        if (!spot) continue;
+        const hall = { x: spot.x, y: spot.y, w, h };
+        rooms.push(hall);
+        carveRoom(cells, hall.x, hall.y, hall.w, hall.h);
+        break;
+      }
+    }
   }
 
   for (let i = 1; i < rooms.length; i++) {
@@ -148,7 +353,14 @@ export function generateDungeon(seed: number, depth = 1): DungeonMap {
       Math.floor(b.x + b.w / 2),
       Math.floor(b.y + b.h / 2),
       rnd,
+      crypt.narrow ? 'straight' : 'jagged',
     );
+  }
+
+  if (crypt.niches) {
+    for (let i = 1; i < rooms.length - 1; i++) {
+      tryCryptNiche(cells, rooms[i]!, rnd, width, height);
+    }
   }
 
   const nodes: ZoneLayout['nodes'] = [];

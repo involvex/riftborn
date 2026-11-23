@@ -376,7 +376,7 @@ export class SkillSystem {
         enemy.worldY,
         isCombatCrit(dmg) ? 'crit' : 'hit',
       );
-      const killed = enemy.applyDamage(dmg);
+      const killed = enemy.applyDamage(dmg, isCombatCrit(dmg));
       if (killed) ctx.onKill(enemy);
     };
 
