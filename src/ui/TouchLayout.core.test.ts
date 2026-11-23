@@ -56,6 +56,13 @@ function assertNoOverlaps(layout: TouchLayout): void {
     for (let j = i + 1; j < parts.length; j++) {
       const a = parts[i]!;
       const b = parts[j]!;
+      // Dash and shift are one ACT pad, so they share a circle.
+      if (
+        (a.name === 'dash' && b.name === 'shift') ||
+        (a.name === 'shift' && b.name === 'dash')
+      ) {
+        continue;
+      }
       expect(rectsOverlap(a.rect, b.rect), `${a.name} overlaps ${b.name}`).toBe(
         false,
       );
@@ -126,15 +133,21 @@ describe('computeTouchLayout', () => {
     }
   });
 
-  test('landscape skills stay in bottom 45% (2×2 cluster near ATK)', () => {
+  test('landscape spells ring ATK; ACT pad is on the right', () => {
     for (const vp of VIEWPORTS) {
       const layout = computeTouchLayout(vp.w, vp.h);
       expect(layout.landscape).toBe(true);
       const floor = vp.h * 0.55;
       for (const s of layout.skillSlots) {
         expect(s.y).toBeGreaterThanOrEqual(floor);
+        const reach = Math.hypot(s.x - layout.atk.x, s.y - layout.atk.y);
+        expect(reach).toBeGreaterThan(layout.atk.r);
+        expect(reach).toBeLessThan(layout.atk.r + s.r + 96);
       }
-      // Compact map so forge is not buried under chrome.
+      expect(layout.dash.x).toBe(layout.shift.x);
+      expect(layout.dash.y).toBe(layout.shift.y);
+      expect(layout.shift.x).toBeGreaterThan(vp.w * 0.55);
+      expect(layout.stick.x).toBeLessThan(vp.w * 0.35);
       expect(layout.mapSize).toBeLessThanOrEqual(96);
     }
   });
@@ -161,7 +174,7 @@ describe('computeTouchLayout', () => {
     const land = computeTouchLayout(1024, 473);
     const xs = new Set(land.skillSlots.map((s) => Math.round(s.x)));
     const ys = new Set(land.skillSlots.map((s) => Math.round(s.y)));
-    expect(xs.size).toBe(2);
-    expect(ys.size).toBe(2);
+    expect(xs.size).toBeGreaterThanOrEqual(2);
+    expect(ys.size).toBeGreaterThanOrEqual(2);
   });
 });

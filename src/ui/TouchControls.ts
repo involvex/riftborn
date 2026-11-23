@@ -39,6 +39,10 @@ export function shouldShowTouchControls(): boolean {
 }
 
 const CHROME_AUTO_CLOSE_MS = 4000;
+/** Finger down this long fires world shift. */
+const ACTION_HOLD_MS = 260;
+/** Second tap inside this window after a short tap fires dash. */
+const ACTION_DOUBLE_MS = 320;
 const MENU_INDEX = TOUCH_CHROME_COUNT - 1;
 
 type Btn = {
@@ -58,7 +62,8 @@ const CHROME: ChromeEntry[] = [
 ];
 
 /**
- * Phone pads — stick+DASH left, ATK+skills+E right.
+ * Phone pads — stick left, ATK+spells+E+ACT right.
+ * ACT: hold = shift, double-tap = dash.
  * Top chrome tray toggled by tapping the minimap or ☰ (collapsed by default).
  */
 export class TouchControls {
@@ -75,8 +80,11 @@ export class TouchControls {
   private stickR = 58;
   private atk!: Btn;
   private interact!: Btn;
-  private dash!: Btn;
-  private shiftBtn!: Btn;
+  /** One pad: hold shifts, a second tap dashes. */
+  private actionBtn!: Btn;
+  private actionHold: Phaser.Time.TimerEvent | null = null;
+  private actionLastUp = 0;
+  private actionHoldFired = false;
   private townBtn!: Btn;
   private chromeBtns: Btn[] = [];
   private chromeOpen = false;
@@ -102,12 +110,10 @@ export class TouchControls {
     this.interact = this.makeBtn('E', 0x6ec6a0, () =>
       gameEvents.emit('ui:interact', {}),
     );
-    this.dash = this.makeBtn('DASH', 0x5a8fd4, () =>
-      gameEvents.emit('combat:dash', {}),
-    );
-    this.shiftBtn = this.makeBtn('SHIFT', 0x9a80e0, () =>
-      gameEvents.emit('combat:shift', {}),
-    );
+    this.actionBtn = this.makeBtn('ACT', 0x7a6ad4, {
+      onDown: () => this.onActionDown(),
+      onUp: () => this.onActionUp(),
+    });
     this.townBtn = this.makeBtn('⌂', 0xc4a574, () => {
       audioBus.uiClick();
       gameEvents.emit('ui:returnToTown', {});
@@ -116,8 +122,7 @@ export class TouchControls {
     this.root.add([
       this.atk.root,
       this.interact.root,
-      this.dash.root,
-      this.shiftBtn.root,
+      this.actionBtn.root,
       this.townBtn.root,
     ]);
 
@@ -248,8 +253,7 @@ export class TouchControls {
       this.resetKnob();
     }
 
-    this.placeBtn(this.dash, m.dash.x, m.dash.y, m.dash.r, padFont(11));
-    this.placeBtn(this.shiftBtn, m.shift.x, m.shift.y, m.shift.r, padFont(10));
+    this.placeBtn(this.actionBtn, m.shift.x, m.shift.y, m.shift.r, padFont(11));
     this.placeBtn(this.atk, m.atk.x, m.atk.y, m.atk.r, padFont(15));
     this.placeBtn(
       this.interact,
@@ -482,6 +486,41 @@ export class TouchControls {
     this.stickCy = this.stickHomeY;
     this.stickBase.setPosition(this.stickCx, this.stickCy);
     this.stickKnob.setPosition(this.stickCx, this.stickCy);
+  }
+
+  /** Hold fires shift once. A second tap inside the window fires dash. */
+  private onActionDown(): void {
+    const now = this.scene.time.now;
+    this.clearActionHold();
+    if (this.actionLastUp > 0 && now - this.actionLastUp <= ACTION_DOUBLE_MS) {
+      this.actionLastUp = 0;
+      this.actionHoldFired = true;
+      gameEvents.emit('combat:dash', {});
+      return;
+    }
+    this.actionHoldFired = false;
+    this.actionHold = this.scene.time.delayedCall(ACTION_HOLD_MS, () => {
+      this.actionHold = null;
+      this.actionHoldFired = true;
+      this.actionLastUp = 0;
+      gameEvents.emit('combat:shift', {});
+    });
+  }
+
+  private onActionUp(): void {
+    this.clearActionHold();
+    if (this.actionHoldFired) {
+      this.actionHoldFired = false;
+      return;
+    }
+    this.actionLastUp = this.scene.time.now;
+  }
+
+  private clearActionHold(): void {
+    if (this.actionHold) {
+      this.actionHold.remove(false);
+      this.actionHold = null;
+    }
   }
 
   private makeBtn(

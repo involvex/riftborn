@@ -1,8 +1,9 @@
 /**
  * Phone HUD geometry (landscape-first) as pure rectangles / circles.
  *
- * Left:  stick + DASH + SHIFT
- * Right: ATK + E + four skills (2×2 cluster landscape; stack portrait)
+ * Left:  stick only
+ * Right: ATK, spells around it, E, and one ACT pad
+ *        (hold = shift, double-tap = dash)
  * Top:   status (HP/XP/bounty/set + FPS) left; minimap right; chrome
  *        under minimap (never over the status strip).
  *
@@ -21,8 +22,9 @@ export type TouchLayout = {
   pad: number;
   landscape: boolean;
   stick: TouchPoint;
+  /** Same circle as `shift` — one ACT pad (double-tap dash). */
   dash: TouchPoint;
-  /** World shift (Q) — above DASH, ≥44px hit. */
+  /** Same circle as `dash` — one ACT pad (hold shift). */
   shift: TouchPoint;
   atk: TouchPoint;
   interact: TouchPoint;
@@ -139,7 +141,7 @@ export function computeTouchLayout(width: number, height: number): TouchLayout {
     h: TOUCH_STATUS_H,
   };
 
-  // —— Left: stick + dash ——
+  // —— Left: stick only ——
   const stickR = landscape
     ? Math.round(Math.min(44, short * 0.12))
     : Math.round(Math.min(40, short * 0.115));
@@ -148,20 +150,8 @@ export function computeTouchLayout(width: number, height: number): TouchLayout {
     y: height - pad - stickR - (landscape ? 2 : 10),
     r: stickR,
   };
-  const dashR = Math.max(22, Math.round(stickR * 0.5));
-  const dash = {
-    x: stick.x + stickR + dashR + gap,
-    y: stick.y,
-    r: dashR,
-  };
-  const shiftR = Math.max(22, Math.round(dashR * 0.95));
-  const shiftBtn: TouchPoint = {
-    x: dash.x,
-    y: dash.y - dashR * 2.35,
-    r: shiftR,
-  };
 
-  // —— Right combat: ATK + E + skills ——
+  // —— Right combat: ATK, spells around it, E, one ACT pad ——
   const atkR = Math.max(
     22,
     landscape
@@ -176,11 +166,6 @@ export function computeTouchLayout(width: number, height: number): TouchLayout {
     y: height - pad - atkR - (landscape ? 4 : 12),
     r: atkR,
   };
-  const interact = {
-    x: atk.x - atkR - eR - gap,
-    y: atk.y,
-    r: eR,
-  };
 
   // ≥44px diameter chrome — row under minimap, right-aligned (clears status).
   // Computed before skills so short landscape can clear the chrome row.
@@ -188,35 +173,29 @@ export function computeTouchLayout(width: number, height: number): TouchLayout {
   const chromeGap = chromeR * 2 + 8;
   const chromeY = minimap.y + minimap.h + pad + chromeR;
 
-  // Skills: landscape always 2×2 next to ATK; portrait may use a short stack.
-  const skillPitch = skillR * 2 + Math.max(6, Math.round(gap * 0.65));
-  const chromeBottom = chromeY + chromeR;
-  const yFloor = chromeBottom + skillR + 6;
-  const skill0Y = interact.y - interact.r - skillR - Math.max(6, gap - 2);
-  const stackFits = !landscape && skill0Y - 3 * skillPitch >= yFloor - 1;
-  let skillSlots: TouchPoint[];
-  if (stackFits) {
-    skillSlots = [0, 1, 2, 3].map((i) => ({
-      x: interact.x,
-      y: skill0Y - i * skillPitch,
-      r: skillR,
-    }));
-  } else {
-    const pitch = skillR * 2 + Math.max(6, Math.round(gap * 0.7));
-    const rightX = interact.x - interact.r - skillR - Math.max(6, gap - 2);
-    const bottomY = Math.min(atk.y, height - pad - skillR);
-    const topY = bottomY - pitch;
-    skillSlots = [
-      { x: rightX, y: bottomY, r: skillR },
-      { x: rightX - pitch, y: bottomY, r: skillR },
-      { x: rightX, y: topY, r: skillR },
-      { x: rightX - pitch, y: topY, r: skillR },
-    ].map((s) => ({
-      x: Math.max(skillR + 2, Math.min(width - skillR - 2, s.x)),
-      y: Math.max(yFloor, Math.min(height - pad - skillR, s.y)),
-      r: skillR,
-    }));
-  }
+  // Spells hug ATK on the open sides (above and left). The corner is the screen edge.
+  const gutter = Math.max(6, Math.round(gap * 0.5));
+  const aboveY = atk.y - atkR - gutter - skillR;
+  const leftX = atk.x - atkR - gutter - skillR;
+  const skillSlots: TouchPoint[] = [
+    { x: atk.x, y: aboveY, r: skillR },
+    { x: leftX, y: aboveY, r: skillR },
+    { x: leftX - (skillR * 2 + gutter), y: aboveY, r: skillR },
+    { x: leftX, y: atk.y, r: skillR },
+  ];
+
+  // E is left of the inner spell. ACT (hold = shift, double-tap = dash) is left of E.
+  const interact: TouchPoint = {
+    x: leftX - (skillR * 2 + gutter),
+    y: atk.y,
+    r: eR,
+  };
+  const actionR = Math.max(22, Math.round(atkR * 0.62));
+  const action: TouchPoint = {
+    x: interact.x - interact.r - actionR - gutter,
+    y: atk.y,
+    r: actionR,
+  };
   const chromeButtons: TouchPoint[] = [];
   const rightmostX = minimap.x + minimap.w - chromeR;
   for (let i = 0; i < TOUCH_CHROME_COUNT; i++) {
@@ -288,8 +267,8 @@ export function computeTouchLayout(width: number, height: number): TouchLayout {
     pad,
     landscape,
     stick,
-    dash,
-    shift: shiftBtn,
+    dash: action,
+    shift: action,
     atk,
     interact,
     skillSlots,
