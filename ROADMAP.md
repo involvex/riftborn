@@ -53,6 +53,7 @@ Solo evenings, one shippable slice at a time. Prefer **feel → content → syst
 - **Second skill fork per class** — War Charge / Rift Echo / Arc Spark (stack with the first forks)
 - **Champion minimap ping** — gold spur marker (fog-piercing) on mini + full map
 - **Champion loot line** — spur kill stamps `Champion's …` on the magic+ drop + prize toast
+- **Rift clear names the spur** — return card says Elite slain/skipped + Champion's drop when present
 
 ## Done — feel & look (core loop)
 
@@ -89,28 +90,32 @@ co-op rifts stayed parked.
 | ✓   | **Replay ladder**       | Depth 10 / L50 plateaus                                            | Pressure step, skill forks, named affixes, set family, shard reroll, rift bounties |
 | ✓   | **Plaza / boss look**   | Vector town + reskin bosses                                        | Proximity labels, figure shadows, boss silhouette accents                          |
 
-## Next — playtest when free
+## Done — rift verbs
 
-Champion, D3+ quota, and SHIFT split pack are in. Playtest combat nits
-stay parked until someone has time on a device.
+In-rift choice, SHIFT fight, build fork, map ping, and named drop are in.
 
-| #   | Slice                      | Why it matters                          | Done when                                                              |
-| --- | -------------------------- | --------------------------------------- | ---------------------------------------------------------------------- |
-| ✓   | **Plaza building sprites** | Rectangle inns beside the hero          | Shop / Forge / Inn use iso PNGs (`sprites:plaza`); smoke hub size OK   |
-| ✓   | **Plaza NPC + props**      | Triangle Mira / board / chest / obelisk | Mira, Bram, Nix, board, chest, obelisk + warm lantern/well/crate/anvil |
-| ✓   | **Optional champion room** | Middle of rift was only a kill counter  | Spur elite off path; HUD `Elite`; buff on kill; kill goal ignores it   |
-| ✓   | **D3+ kill quota ~60%**    | Full clear before boss blocked skips    | `riftKillGoalFillRatio` is 0.6 from D3 up; D1–D2 stay ~80%+            |
-| ✓   | **SHIFT split pack**       | SHIFT was only a gate key               | One ash/shadow pair per rift; enter toast; Veiled still overrides      |
-| ✓   | **Second skill forks**     | One fork left build choice thin         | Charge / Echo / Spark replace bash / slash / bolt; stack with forks 1  |
-| ✓   | **Champion minimap ping**  | Spur easy to miss on the map            | Gold `champion` marker + fog pierce; Spur in M legend                  |
-| ✓   | **Champion loot line**     | Spur buff alone is soft payoff          | Drop renamed `Champion's …`; prize toast on kill                       |
-| 7   | **Playtest combat nits**   | Phone loop shipped; feel TBD on device  | Fix 2–3 notes from landscape `/?touch=1` or APK play                   |
+| #   | Slice                         | Why it matters                          | Done when                                                                                 |
+| --- | ----------------------------- | --------------------------------------- | ----------------------------------------------------------------------------------------- |
+| ✓   | **Plaza building sprites**    | Rectangle inns beside the hero          | Shop / Forge / Inn use iso PNGs (`sprites:plaza`); smoke hub size OK                      |
+| ✓   | **Plaza NPC + props**         | Triangle Mira / board / chest / obelisk | Mira, Bram, Nix, board, chest, obelisk + warm lantern/well/crate/anvil                    |
+| ✓   | **Optional champion room**    | Middle of rift was only a kill counter  | Spur elite off path; HUD `Elite`; buff on kill; kill goal ignores it                      |
+| ✓   | **D3+ kill quota ~60%**       | Full clear before boss blocked skips    | `riftKillGoalFillRatio` is 0.6 from D3 up; D1–D2 stay ~80%+                               |
+| ✓   | **SHIFT split pack**          | SHIFT was only a gate key               | One ash/shadow pair per rift; enter toast; Veiled still overrides                         |
+| ✓   | **Second skill forks**        | One fork left build choice thin         | Charge / Echo / Spark replace bash / slash / bolt; stack with forks 1                     |
+| ✓   | **Champion minimap ping**     | Spur easy to miss on the map            | Gold `champion` marker + fog pierce; Spur in M legend                                     |
+| ✓   | **Champion loot line**        | Spur buff alone is soft payoff          | Drop renamed `Champion's …`; prize toast on kill                                          |
+| ✓   | **Rift clear names the spur** | Clear card skipped the Elite choice     | Clear / death / abandon line says Elite slain or skipped; names `Champion's …` if dropped |
+
+## Now
+
+_No open slice — pick the next loop beat after playtest, or park._
 
 Skip inventing new frameworks — extend `WorldArt` / `WorldScene` /
 `Npc` / `LootChest` / `public/assets/props/`.
 
 ## Later (parked)
 
+- **Playtest combat nits** — fix 2–3 notes from landscape `/?touch=1` or APK when someone has device time
 - Co-op rifts + authoritative loot / gear sync (hub sandbox stays prototype)
 - App Store packaging for Expo shell
 - Seasons, trading, seamless open world
