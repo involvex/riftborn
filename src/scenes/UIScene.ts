@@ -240,6 +240,15 @@ export class UIScene extends Phaser.Scene {
         this.refresh();
         if (this.inventoryPanel.open) this.inventoryPanel.refresh();
       }),
+      gameEvents.on(Events.SET_BREAKPOINT, (p) => {
+        const d = p as {
+          lines: { text: string; color: string; tier: 2 | 4 }[];
+        };
+        for (const line of d.lines) {
+          this.toast(line.text, line.color);
+          audioBus.loot(line.tier >= 4 ? 'rare' : 'magic');
+        }
+      }),
       gameEvents.on(Events.XP_GAINED, (p) => {
         const d = p as { amount?: number };
         this.hudBars.playXpGain(d.amount ?? 0);
@@ -1732,7 +1741,9 @@ export class UIScene extends Phaser.Scene {
       gameState.persist();
       this.refresh();
       this.refreshCharBody();
-      this.toast(`Equipped ${slot.item.name}`);
+      if (gameState.inventory.lastEquipBreakpoints.length === 0) {
+        this.toast(`Equipped ${slot.item.name}`);
+      }
     } else {
       this.toast('Cannot equip (inventory full?)');
     }

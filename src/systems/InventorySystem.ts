@@ -15,7 +15,7 @@ import {
   migrateGearInstance,
   resolveGearClass,
 } from './ItemGen';
-import { sumSetStats } from './SetBonus';
+import { setBreakpointToasts, sumSetStats } from './SetBonus';
 
 const RARITY_RANK: Record<GearRarity, number> = {
   common: 0,
@@ -52,6 +52,8 @@ export class InventorySystem {
   readonly capacity = 48;
   readonly bagCols = 8;
   readonly bagRows = 6;
+  /** Breakpoints from the latest equipGear call (for toast dedupe). */
+  lastEquipBreakpoints: ReturnType<typeof setBreakpointToasts> = [];
 
   load(slots: InventorySlot[], equipment: EquipmentSlots): void {
     this.slots = slots.map((s) =>
@@ -232,9 +234,15 @@ export class InventorySystem {
       this.slots.push({ kind: 'gear', item });
       return false;
     }
+    const before = { ...this.equipment };
     this.equipment[slot] = item;
     if (previous) this.slots.push({ kind: 'gear', item: previous });
     gameEvents.emit(Events.EQUIP_CHANGED, { ...this.equipment });
+    const lines = setBreakpointToasts(before, this.equipment);
+    this.lastEquipBreakpoints = lines;
+    if (lines.length) {
+      gameEvents.emit(Events.SET_BREAKPOINT, { lines });
+    }
     return true;
   }
 

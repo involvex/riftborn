@@ -39,6 +39,8 @@ export const Events = {
   ITEM_REMOVED: 'item:removed',
   JUNK_SOLD: 'shop:junkSold',
   EQUIP_CHANGED: 'equip:changed',
+  /** Worn set crossed 2pc / 4pc — payload `{ lines: SetBreakpointToast[] }`. */
+  SET_BREAKPOINT: 'set:breakpoint',
   PLAYER_DAMAGED: 'player:damaged',
   PLAYER_HEALED: 'player:healed',
   ENEMY_DIED: 'enemy:died',

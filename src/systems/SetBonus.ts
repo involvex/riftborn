@@ -84,6 +84,46 @@ export function setSkillFamilyMult(
   return bonus;
 }
 
+export type SetBreakpointToast = {
+  text: string;
+  color: string;
+  tier: 2 | 4;
+};
+
+/**
+ * Toasts when worn set count crosses 2pc or 4pc (equip / swap).
+ * Prefer 4pc line alone when both thresholds cross in one change.
+ */
+export function setBreakpointToasts(
+  before: EquipmentSlots,
+  after: EquipmentSlots,
+): SetBreakpointToast[] {
+  const prev = countSetPieces(before);
+  const next = countSetPieces(after);
+  const ids = new Set([...prev.keys(), ...next.keys()]);
+  const out: SetBreakpointToast[] = [];
+  for (const setId of ids) {
+    const def = sets[setId];
+    if (!def) continue;
+    const b = prev.get(setId) ?? 0;
+    const a = next.get(setId) ?? 0;
+    if (b < 4 && a >= 4) {
+      out.push({
+        text: `${def.name} 4pc · ${def.fourPiece.label}`,
+        color: def.color,
+        tier: 4,
+      });
+    } else if (b < 2 && a >= 2) {
+      out.push({
+        text: `${def.name} 2pc · ${def.twoPiece.label}`,
+        color: def.color,
+        tier: 2,
+      });
+    }
+  }
+  return out;
+}
+
 function mergeBonus(
   stats: GearStats & { maxHp: number },
   bonus: {

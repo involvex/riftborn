@@ -80,6 +80,7 @@ Do not rely on paste-a-screenshot alone after map/POI edits — prefer smoke + `
 - **Inventory icons:** `ItemIcons.ts` maps gear/materials to `public/assets/icons/` (LootLoop-sourced painted icons).
 - **Vendor:** Mira shop Buy/Sell tabs; item `sellValue` + `gearSellValue()`; **Sort** in bag; Esc → Settings → Auto-sell junk (common gear → gold on loot). **Chase · Set Slot** offer when a class set is incomplete (`hubSetSinkTarget` / `set_chase`).
 - **Bram / forge:** Craft bench + **Set Patch** (4 Ore + 4 Scrap → missing set slot); forge bounty pays that piece when chase is open (`grantHubSetSinkReward`).
+- **Set breakpoints:** equip crossing 2pc/4pc emits `SET_BREAKPOINT` toast; ability bar gold-rims 4pc family skills (`setSkillFamilyMult`).
 - **Nix (trader):** plaza west of spawn — Buy supplies/tonics, sell mats at 1.4×, Repair patch-up (`TraderSystem` / `TraderPanel`).
 - **Attack feel:** sprite attack frames (sheet 10–13) + class-colored slash VFX in `Player.showSlash`. New swing art needs new frames in `public/assets/sprites/game/`.
 - **Class skills (1/2/3/4):** all four unlocked at create — Warrior Leap/Cleave/Bash/Battle Cry, Mystic Pulse/Slash/Seal/Rift Step, Mage Bolt/Nova/Barrier/Chain Surge. Cast VFX in `SkillVfx.ts`; ranks via skill points (`K`).

@@ -4,6 +4,7 @@ import { hapticTap } from '../core/Haptics';
 import { formatHotkey } from '../core/Hotkeys';
 import { uiFontPx } from '../core/UiFont';
 import { gameState } from '../systems/GameState';
+import { setSkillFamilyMult } from '../systems/SetBonus';
 import { ACTIVE_SLOTS, getAbilityDef } from '../systems/SkillSystem';
 import {
   beginSkillAim,
@@ -357,18 +358,23 @@ export class AbilityBar {
           slot.sweep.setVisible(true);
         }
       }
+      const setBoost =
+        !!id && setSkillFamilyMult(gameState.inventory.equipment, id) > 0;
+      // Gold rim = this skill is in the worn 4pc family.
+      const stroke = cd > 0 ? 0x5a7080 : setBoost ? 0xf0d090 : accent;
+      const strokeW = setBoost && cd <= 0 ? 3 : 2.5;
       if (slot.ring) {
-        slot.ring.setStrokeStyle(2.5, cd > 0 ? 0x5a7080 : accent, 0.95);
+        slot.ring.setStrokeStyle(strokeW, stroke, 0.95);
         // Keep pressed fill if scaled down mid-aim.
         if (slot.ring.scaleX >= 0.99) {
           // Abdunkelnd while on CD so the remaining time reads clearly.
           slot.ring.setFillStyle(
-            cd > 0 ? 0x0c1218 : 0x1a2230,
+            cd > 0 ? 0x0c1218 : setBoost ? 0x2a2418 : 0x1a2230,
             cd > 0 ? 0.96 : 0.9,
           );
         }
       } else if (slot.bg instanceof Phaser.GameObjects.Rectangle) {
-        slot.bg.setStrokeStyle(1, cd > 0 ? 0x5a7080 : accent, 0.95);
+        slot.bg.setStrokeStyle(setBoost && cd <= 0 ? 2 : 1, stroke, 0.95);
       }
     }
   }
