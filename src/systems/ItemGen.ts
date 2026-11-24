@@ -389,14 +389,6 @@ export function rollGearDrop(
   const rarityBump =
     (opts.elite ? 2 : 0) +
     (tier === 1 ? -1 : tier === 3 ? 1 : tier === 4 ? 3 : 0);
-  const rarity = pickRarity(
-    rnd,
-    Math.max(0, rarityBump),
-    opts.minRarity ?? 'common',
-  );
-  const affixCount =
-    (RARITY_WEIGHTS.find((r) => r.rarity === rarity)?.affixes ?? 0) +
-    (tier >= 3 ? 1 : 0);
 
   const forClass = opts.forClass;
   const all = Object.values(bases);
@@ -459,6 +451,17 @@ export function rollGearDrop(
   }
 
   const base = pool[Math.floor(rnd() * pool.length)] ?? all[0]!;
+  // Set pieces always read as a chase hit — never common.
+  const setFloor: GearRarity = base.setId ? 'magic' : 'common';
+  const minRarity =
+    RARITY_RANK[opts.minRarity ?? 'common'] >= RARITY_RANK[setFloor]
+      ? (opts.minRarity ?? 'common')
+      : setFloor;
+  const rarity = pickRarity(rnd, Math.max(0, rarityBump), minRarity);
+  const affixCount =
+    (RARITY_WEIGHTS.find((r) => r.rarity === rarity)?.affixes ?? 0) +
+    (tier >= 3 ? 1 : 0);
+
   const classId = base.classId;
   const upgradeBump = opts.preferUpgrade ? 2 + Math.floor(rnd() * 3) : 0;
   const rollLevel = effectiveLevel + upgradeBump;

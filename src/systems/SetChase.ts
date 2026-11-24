@@ -186,6 +186,31 @@ export function chaseLineAfterGain(
 }
 
 /**
+ * Ground-drop toast when a set piece lands — names the set, slot, and chase.
+ * e.g. "Grove · Legs · 2/4 · need Feet"
+ */
+export function setDropToastLine(
+  item: GearInstance,
+  equipment: EquipmentSlots,
+  bag: InventorySlot[] = [],
+): string | null {
+  if (!item.setId) return null;
+  const def = sets[item.setId];
+  if (!def) return null;
+  const virtual: InventorySlot[] = [...bag, { kind: 'gear', item }];
+  const status = setChaseStatus(item.setId, equipment, virtual);
+  if (!status) return null;
+  const slot = slotShortLabel(item.slot);
+  let line = `${def.name} · ${slot} · ${status.owned}/4`;
+  if (status.nextNeed) {
+    line += ` · need ${slotShortLabel(status.nextNeed)}`;
+  } else if (status.owned >= 4) {
+    line += ' · complete';
+  }
+  return line;
+}
+
+/**
  * Drop-roll bias toward the incomplete set with the most owned pieces.
  * Falls back to the primary class set; preferUpgrade once a set is full.
  */

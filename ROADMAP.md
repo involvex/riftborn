@@ -55,6 +55,7 @@ Solo evenings, one shippable slice at a time. Prefer **feel → content → syst
 - **Champion loot line** — spur kill stamps `Champion's …` on the magic+ drop + prize toast
 - **Rift clear names the spur** — return card says Elite slain/skipped + Champion's drop when present
 - **Rare set variety** — second set per class (Bulwark / Grove / Spark); set armor ~12–28% of armor drops
+- **Set drop juice** — set armor is magic+; drop toast `Grove · Legs · 2/4 · need Feet`
 
 ## Done — feel & look (core loop)
 
@@ -79,6 +80,7 @@ earn their keep in feel.
 | ✓   | **Boss signature beats**  | Arena looks special; fight is one pattern | Shipped: hop / wail / charge / volley on shared beat cadence       |
 | ✓   | **Set chase readability** | Loot pops; keeping gear is thin           | Shipped: missing-slot drop bias + HUD/bag “need X” from 1pc        |
 | ✓   | **Rare set variety**      | One set per class; set armor too common   | Alternate set per class; set drops ~12–28%; chase owned incomplete |
+| ✓   | **Set drop juice**        | Rare sets still felt like generic loot    | Magic+ floor on set armor; chase toast names set / slot / need     |
 
 ## Done — lite mobile ARPG loop (v0.2.0)
 
@@ -115,6 +117,7 @@ _No open slice — pick the next loop beat after playtest, or park._
 | #   | Slice                | Why it matters                          | Done when                                                              |
 | --- | -------------------- | --------------------------------------- | ---------------------------------------------------------------------- |
 | ✓   | **Rare set variety** | One set per class; set armor too common | Alternate set per class; set drops ~12–28%; chase owned incomplete set |
+| ✓   | **Set drop juice**   | Rare sets still felt like generic loot  | Magic+ floor on set armor; chase toast names set / slot / need         |
 
 Skip inventing new frameworks — extend `WorldArt` / `WorldScene` /
 `Npc` / `LootChest` / `public/assets/props/`.
