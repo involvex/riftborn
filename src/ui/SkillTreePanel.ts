@@ -3,7 +3,12 @@ import { audioBus } from '../core/AudioBus';
 import { formatHotkey } from '../core/Hotkeys';
 import { uiFont, uiPanelSizeGame } from '../core/UiScale';
 import { gameState } from '../systems/GameState';
-import { getAbilityDef, getClassTree } from '../systems/SkillSystem';
+import {
+  activeBarSummary,
+  getAbilityDef,
+  getClassTree,
+  skillNodeBarStatus,
+} from '../systems/SkillSystem';
 import {
   fitSkillTree,
   skillNodeCenter,
@@ -140,60 +145,91 @@ export class SkillTreePanel {
   refresh(): void {
     this.nodesRoot.removeAll(true);
     const cls = gameState.progression.classDef();
+    const classId = gameState.progression.classId;
+    const ranks = gameState.skills.ranks;
     this.title.setText(`${cls.name} Skills`);
-    const tree = getClassTree(gameState.progression.classId);
+    const tree = getClassTree(classId);
     const fit = this.fit ?? this.measure().fit;
     const wide = this.panelW >= 520;
+    const barLine = activeBarSummary(classId, ranks);
     this.points.setText(
       wide
-        ? `Skill points: ${gameState.skills.unspentSkillPoints}` +
-            `   ·   Active keys ${formatHotkey('skill1')}/${formatHotkey('skill2')}/${formatHotkey('skill3')}/${formatHotkey('skill4')}`
-        : `Points ${gameState.skills.unspentSkillPoints}`,
+        ? `Points ${gameState.skills.unspentSkillPoints}  ·  Bar ${barLine}`
+        : `Pts ${gameState.skills.unspentSkillPoints} · ${barLine}`,
     );
     for (const node of tree) {
       const { x, y } = skillNodeCenter(fit, node.col, node.row);
       const ability = getAbilityDef(node.abilityId);
-      const rank = gameState.skills.ranks[node.abilityId] ?? 0;
+      const rank = ranks[node.abilityId] ?? 0;
       const max = ability?.maxRank ?? 3;
       const unlocked = gameState.skills.nodeUnlocked(node);
       const canSpend = gameState.skills.canSpendOn(node.id);
       const locked = !unlocked || rank < 1;
+      const status = skillNodeBarStatus(node, classId, ranks);
+      const isFork = !!node.replacesAbilityId;
+      const offBar =
+        !status.passive && !status.onBar && !!status.replacedByName;
+
+      let fill = locked ? 0x1a222c : 0x16241c;
+      if (status.onBar) fill = 0x1a2a20;
+      if (offBar) fill = 0x181820;
+      if (isFork && rank >= 1 && status.onBar) fill = 0x2a2418;
+
+      let stroke = canSpend ? 0x6ec6a0 : rank > 0 ? 0xc4a574 : 0x3a4a5a;
+      if (status.onBar) stroke = isFork ? 0xf0d090 : 0x6ec6a0;
+      if (offBar) stroke = 0x4a5568;
+      if (isFork && rank < 1 && unlocked) stroke = 0xa09070;
 
       const box = this.scene.add.rectangle(
         x,
         y,
         fit.nodeW,
         fit.nodeH,
-        locked ? 0x1a222c : 0x16241c,
+        fill,
         0.95,
       );
-      box.setStrokeStyle(
-        2,
-        canSpend ? 0x6ec6a0 : rank > 0 ? 0xc4a574 : 0x3a4a5a,
-        0.9,
-      );
+      box.setStrokeStyle(status.onBar || isFork ? 2.5 : 2, stroke, 0.9);
+
       const label = this.scene.add
-        .text(x, y - fit.nodeH * 0.18, node.name, {
+        .text(x, y - fit.nodeH * 0.28, node.name, {
           fontFamily: 'Segoe UI, sans-serif',
           fontSize: `${fit.nodeFont}px`,
-          color: locked && rank < 1 ? '#6a7a8a' : '#e8e4d8',
+          color: offBar
+            ? '#6a7a8a'
+            : locked && rank < 1
+              ? '#6a7a8a'
+              : '#e8e4d8',
           align: 'center',
           wordWrap: { width: Math.max(40, fit.nodeW - 10) },
         })
         .setOrigin(0.5);
+
+      const rankLine = status.badge
+        ? `R${rank}/${max} · ${status.badge}`
+        : `Rank ${rank}/${max}`;
       const rankTxt = this.scene.add
-        .text(x, y + fit.nodeH * 0.22, `Rank ${rank}/${max}`, {
+        .text(x, y + fit.nodeH * 0.08, rankLine, {
           fontFamily: 'Consolas, monospace',
-          fontSize: `${fit.rankFont}px`,
-          color: canSpend ? '#6ec6a0' : '#8a9aaa',
+          fontSize: `${Math.max(9, fit.rankFont - 1)}px`,
+          color: status.onBar
+            ? '#f0d090'
+            : canSpend
+              ? '#6ec6a0'
+              : offBar
+                ? '#5a6a7a'
+                : '#8a9aaa',
         })
         .setOrigin(0.5);
 
       box.setInteractive({ useHandCursor: true });
       box.on('pointerover', () => {
-        this.detail.setText(
-          `${node.blurb}\n${ability?.blurb ?? ''}${canSpend ? '\nClick to spend 1 skill point' : ''}`,
-        );
+        const bits = [
+          node.blurb,
+          ability?.blurb ?? '',
+          status.detailLine,
+          canSpend ? 'Click to spend 1 skill point' : '',
+        ].filter(Boolean);
+        this.detail.setText(bits.join('\n'));
       });
       box.on('pointerup', () => {
         if (!gameState.spendSkill(node.id)) {
@@ -207,15 +243,23 @@ export class SkillTreePanel {
           return;
         }
         audioBus.uiClick();
+        const nextRank = rank + 1;
+        const after = skillNodeBarStatus(node, classId, gameState.skills.ranks);
         this.refresh();
-        this.detail.setText(`Ranked up ${node.name} → ${rank + 1}`);
+        if (isFork && nextRank === 1 && after.onBar) {
+          this.detail.setText(
+            `${node.name} on bar · replaces ${after.replacesName}`,
+          );
+        } else {
+          this.detail.setText(`Ranked up ${node.name} → ${nextRank}`);
+        }
       });
 
       this.nodesRoot.add([box, label, rankTxt]);
     }
 
     this.detail.setText(
-      'Click a node to unlock or improve. 4 actives on 1 / 2 / 3 / 4.',
+      'Gold rim = on bar. Forks replace a starter on 1–4. Hover for details.',
     );
   }
 }

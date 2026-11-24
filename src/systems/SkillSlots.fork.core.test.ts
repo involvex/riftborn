@@ -1,5 +1,10 @@
 import { describe, expect, test } from 'bun:test';
-import { classAbilityIds } from './SkillSlots';
+import {
+  activeBarSummary,
+  classAbilityIds,
+  getClassTree,
+  skillNodeBarStatus,
+} from './SkillSlots';
 
 describe('classAbilityIds forks', () => {
   test('default bar is the four starters', () => {
@@ -67,5 +72,40 @@ describe('classAbilityIds forks', () => {
       'mys_lance',
       'mys_riftstep',
     ]);
+  });
+});
+
+describe('skillNodeBarStatus', () => {
+  test('War Charge on bar replaces Shield Bash', () => {
+    const charge = getClassTree('warrior').find((n) => n.id === 'w_charge')!;
+    const status = skillNodeBarStatus(charge, 'warrior', { war_charge: 1 });
+    expect(status.onBar).toBe(true);
+    expect(status.slotIndex).toBe(2);
+    expect(status.badge).toBe('ON 3');
+    expect(status.replacesName).toBe('Shield Bash');
+    expect(status.detailLine).toContain('replaces Shield Bash');
+  });
+
+  test('Shield Bash shows off-bar when Charge is ranked', () => {
+    const bash = getClassTree('warrior').find((n) => n.id === 'w_bash')!;
+    const status = skillNodeBarStatus(bash, 'warrior', { war_charge: 1 });
+    expect(status.onBar).toBe(false);
+    expect(status.replacedByName).toBe('War Charge');
+    expect(status.badge).toContain('Charge');
+    expect(status.detailLine).toContain('Off bar');
+  });
+
+  test('unranked fork stays FORK until spent', () => {
+    const echo = getClassTree('mystic').find((n) => n.id === 'm_echo')!;
+    const status = skillNodeBarStatus(echo, 'mystic', {});
+    expect(status.onBar).toBe(false);
+    expect(status.badge).toBe('FORK');
+    expect(status.replacesName).toBe('Rift Slash');
+  });
+
+  test('bar summary lists short names for current 1–4', () => {
+    expect(activeBarSummary('warrior', { war_whirl: 1, war_charge: 1 })).toBe(
+      '1:Leap · 2:Whirlwind · 3:Charge · 4:Cry',
+    );
   });
 });

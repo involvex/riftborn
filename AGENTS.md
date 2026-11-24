@@ -83,7 +83,7 @@ Do not rely on paste-a-screenshot alone after map/POI edits — prefer smoke + `
 - **Set breakpoints:** equip crossing 2pc/4pc emits `SET_BREAKPOINT` toast; ability bar gold-rims 4pc family skills (`setSkillFamilyMult`).
 - **Nix (trader):** plaza west of spawn — Buy supplies/tonics, sell mats at 1.4×, Repair patch-up (`TraderSystem` / `TraderPanel`).
 - **Attack feel:** sprite attack frames (sheet 10–13) + class-colored slash VFX in `Player.showSlash`. New swing art needs new frames in `public/assets/sprites/game/`.
-- **Class skills (1/2/3/4):** all four unlocked at create — Warrior Leap/Cleave/Bash/Battle Cry, Mystic Pulse/Slash/Seal/Rift Step, Mage Bolt/Nova/Barrier/Chain Surge. Cast VFX in `SkillVfx.ts`; ranks via skill points (`K`).
+- **Class skills (1/2/3/4):** all four unlocked at create — Warrior Leap/Cleave/Bash/Battle Cry, Mystic Pulse/Slash/Seal/Rift Step, Mage Bolt/Nova/Barrier/Chain Surge. Cast VFX in `SkillVfx.ts`; ranks via skill points (`K`). Forks (Whirl/Charge, Echo/Lance, Meteor/Spark) replace a starter on the bar — K panel shows `ON n` / `FORK` / `→ Charge` via `skillNodeBarStatus`.
 - **Rifts:** depth 1–10 from player level (`RiftDepth.ts`); packs/HP/dmg/loot scale; Rift Lord + boss chest; HUD shows `D#`. Random run mods (`RiftModifiers.ts`: Dense / Glass / Gilded).
 - **Saves:** 3 character slots on boot (`SaveStore`); legacy single save migrates to slot 1.
 - **Bounty Board:** plaza NPC south of spawn — **E** accept (scout / chests / cull / shrine / bramble); HUD ★ line; progress + cooldown persist on character save.

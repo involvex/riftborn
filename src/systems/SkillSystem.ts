@@ -15,7 +15,13 @@ import {
   pickEnemiesInForwardArc,
 } from './AutoTarget';
 import { decideSkillRangeGate, skillRangeKind } from './SkillRangeGate';
-import { ACTIVE_SLOTS, classAbilityIds, getClassTree } from './SkillSlots';
+import {
+  ACTIVE_SLOTS,
+  activeBarSummary,
+  classAbilityIds,
+  getClassTree,
+  skillNodeBarStatus,
+} from './SkillSlots';
 import {
   incomingDamageMult as passiveIncomingMult,
   passiveBarrierMult as barrierPassiveMult,
@@ -26,7 +32,13 @@ import { mergeDamageBuff } from './SkillDamageBuff';
 import { isCombatCrit } from '../render/CombatFeel';
 import { playCombatBurst } from '../render/CombatVfx';
 
-export { ACTIVE_SLOTS, classAbilityIds, getClassTree };
+export {
+  ACTIVE_SLOTS,
+  activeBarSummary,
+  classAbilityIds,
+  getClassTree,
+  skillNodeBarStatus,
+};
 
 const abilities = skillsData.abilities as Record<string, AbilityDef>;
 
