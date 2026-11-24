@@ -1,6 +1,11 @@
 import Phaser from 'phaser';
 import { gameEvents } from '../core/EventBus';
-import { MAP_CELL_COLOR, MAP_MARKER_COLOR, type MapSnapshot } from './MapModel';
+import {
+  MAP_CELL_COLOR,
+  MAP_MARKER_COLOR,
+  mapMarkerPiercesFog,
+  type MapSnapshot,
+} from './MapModel';
 import { shouldShowTouchControls } from './TouchControls';
 import { computeGameTouchLayout } from './TouchLayout';
 
@@ -252,8 +257,16 @@ export class MiniMap {
       if (m.kind === 'mob' && !showMobs) continue;
       if (m.kind === 'player') continue;
       if (!inView(m.x, m.y)) continue;
-      if (!isExplored(m.x, m.y)) continue;
+      if (!mapMarkerPiercesFog(m.kind) && !isExplored(m.x, m.y)) continue;
       const { px, py } = toPx(m.x, m.y);
+      if (m.kind === 'champion') {
+        // Gold ring ping — readable against cyan elites; pierces fog.
+        this.marks.lineStyle(1.5, MAP_MARKER_COLOR.champion, 0.9);
+        this.marks.strokeCircle(px, py, 6.5);
+        this.marks.fillStyle(MAP_MARKER_COLOR.champion, 0.95);
+        this.marks.fillCircle(px, py, 3.5);
+        continue;
+      }
       const r =
         m.kind === 'boss'
           ? 4

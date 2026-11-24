@@ -5,7 +5,15 @@ export type MapCellKind =
   'wall' | 'floor' | 'plaza' | 'path' | 'poi' | 'wild' | 'fog';
 
 export type MapMarkerKind =
-  'player' | 'npc' | 'poi' | 'chest' | 'elite' | 'boss' | 'portal' | 'mob';
+  | 'player'
+  | 'npc'
+  | 'poi'
+  | 'chest'
+  | 'elite'
+  | 'champion'
+  | 'boss'
+  | 'portal'
+  | 'mob';
 
 export type MapMarker = {
   kind: MapMarkerKind;
@@ -42,6 +50,8 @@ export type MapBuildInput = {
     alive: boolean;
     elite: boolean;
     boss: boolean;
+    /** Optional rift spur — distinct map ping. */
+    champion?: boolean;
   }[];
   portal: { x: number; y: number } | null;
 };
@@ -104,7 +114,9 @@ export function buildMapMarkers(input: MapBuildInput): MapMarker[] {
   for (const e of input.enemies) {
     if (!e.alive) continue;
     if (e.boss) markers.push({ kind: 'boss', x: e.x, y: e.y });
-    else if (e.elite) markers.push({ kind: 'elite', x: e.x, y: e.y });
+    else if (e.champion) {
+      markers.push({ kind: 'champion', x: e.x, y: e.y, label: 'Elite' });
+    } else if (e.elite) markers.push({ kind: 'elite', x: e.x, y: e.y });
     else markers.push({ kind: 'mob', x: e.x, y: e.y });
   }
   if (input.portal) {
@@ -138,7 +150,14 @@ export const MAP_MARKER_COLOR: Record<MapMarkerKind, number> = {
   poi: 0x6ec6a0,
   chest: 0xe0c890,
   elite: 0x6ec6ff,
+  /** Optional spur — warm gold so it reads apart from cyan elites. */
+  champion: 0xffc050,
   boss: 0xff7043,
   portal: 0x4db6ff,
   mob: 0xa05050,
 };
+
+/** True when this marker should pierce fog (quest-style ping). */
+export function mapMarkerPiercesFog(kind: MapMarkerKind): boolean {
+  return kind === 'champion' || kind === 'portal' || kind === 'player';
+}
