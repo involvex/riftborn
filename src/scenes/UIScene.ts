@@ -30,7 +30,7 @@ import { describeGearFull } from '../systems/ItemGen';
 import type { GearInstance } from '../types/game';
 import { getItemDef } from '../systems/InventorySystem';
 import { MAX_LEVEL, STAT_POINTS_PER_LEVEL } from '../systems/ProgressionSystem';
-import { resolveSetBonuses } from '../systems/SetBonus';
+import { characterSetBonusLines } from '../systems/SetBonus';
 import { gameState } from '../systems/GameState';
 import { AbilityBar } from '../ui/AbilityBar';
 import { HudBars } from '../ui/HudBars';
@@ -1353,7 +1353,11 @@ export class UIScene extends Phaser.Scene {
     const p = gameState.progression;
     const gear = gameState.inventory.totalGearStats();
     const eq = gameState.inventory.equipment;
-    const sets = resolveSetBonuses(eq);
+    const setLines = characterSetBonusLines(
+      p.classId,
+      eq,
+      gameState.inventory.slots,
+    );
     const genderLabel =
       gameState.gender === 'female'
         ? 'Female'
@@ -1401,12 +1405,7 @@ export class UIScene extends Phaser.Scene {
       `TOOL ${eq.tool ? (getItemDef(eq.tool)?.name ?? eq.tool) : '—'}`,
     );
     gap();
-    lines.push('— Set bonuses —');
-    if (sets.length === 0) lines.push('(none)');
-    for (const s of sets) {
-      lines.push(`${s.name} (${s.pieces}/4)`);
-      for (const l of s.labels) lines.push(`  ${l}`);
-    }
+    lines.push('— Set bonuses —', ...setLines);
     this.charBody.setText(lines.join('\n'));
     this.charBody.setCrop(0, 0, this.charBodyW, this.charBodyMaxH);
   }

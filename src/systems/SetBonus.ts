@@ -1,7 +1,14 @@
-import type { ArmorSetDef, GearStats } from '../types/game';
-import type { EquipmentSlots } from '../types/save';
+import type { ArmorSetDef, CharacterClassId, GearStats } from '../types/game';
+import type { EquipmentSlots, InventorySlot } from '../types/save';
 import setsData from '../data/sets.json';
 import { emptyGearStats } from './ItemGen';
+import {
+  classSetIds,
+  missingSetSlots,
+  ownedSetSlots,
+  slotShortLabel,
+  wornSetCount,
+} from './SetChase';
 
 const sets = setsData as Record<string, ArmorSetDef>;
 
@@ -115,4 +122,48 @@ export function sumSetStats(
     total.maxHp += bonus.stats.maxHp;
   }
   return total;
+}
+
+/**
+ * Character (C) panel lines: both class kits with lit/dim 2pc·4pc,
+ * plus any off-class set that is already worn at 2pc+.
+ */
+export function characterSetBonusLines(
+  classId: CharacterClassId,
+  equipment: EquipmentSlots,
+  bag: InventorySlot[] = [],
+): string[] {
+  const lines: string[] = [];
+  const seen = new Set<string>();
+  const order = [...classSetIds(classId)];
+  for (const [setId, pieces] of countSetPieces(equipment)) {
+    if (pieces >= 2 && !order.includes(setId)) order.push(setId);
+  }
+  for (const setId of order) {
+    if (seen.has(setId)) continue;
+    seen.add(setId);
+    const def = sets[setId];
+    if (!def) continue;
+    const worn = wornSetCount(setId, equipment);
+    const owned = ownedSetSlots(setId, equipment, bag);
+    const missing = missingSetSlots(owned);
+    let head = `${def.name} ${worn}/4`;
+    if (missing.length) {
+      head += ` · need ${missing.map(slotShortLabel).join(', ')}`;
+    } else if (worn >= 4) {
+      head += ' · complete';
+    }
+    lines.push(head);
+    lines.push(
+      worn >= 2
+        ? `  ✓ 2pc: ${def.twoPiece.label}`
+        : `  · 2pc: ${def.twoPiece.label}`,
+    );
+    lines.push(
+      worn >= 4
+        ? `  ✓ 4pc: ${def.fourPiece.label}`
+        : `  · 4pc: ${def.fourPiece.label}`,
+    );
+  }
+  return lines;
 }
