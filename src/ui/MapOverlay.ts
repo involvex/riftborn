@@ -2,7 +2,12 @@ import Phaser from 'phaser';
 import { audioBus } from '../core/AudioBus';
 import { formatHotkey } from '../core/Hotkeys';
 import { uiFont, uiPanelSize } from '../core/UiScale';
-import { MAP_CELL_COLOR, MAP_MARKER_COLOR, type MapSnapshot } from './MapModel';
+import {
+  MAP_CELL_COLOR,
+  MAP_MARKER_COLOR,
+  mapMarkerPiercesFog,
+  type MapSnapshot,
+} from './MapModel';
 import { shouldShowTouchControls } from './TouchControls';
 import {
   attachOverlayDismiss,
@@ -16,6 +21,7 @@ const LEGEND: { kind: keyof typeof MAP_MARKER_COLOR; label: string }[] = [
   { kind: 'poi', label: 'POI' },
   { kind: 'chest', label: 'Chest' },
   { kind: 'elite', label: 'Elite' },
+  { kind: 'champion', label: 'Spur' },
   { kind: 'boss', label: 'Boss' },
   { kind: 'portal', label: 'Portal' },
 ];
@@ -165,7 +171,7 @@ export class MapOverlay {
 
     for (const m of snap.markers) {
       if (m.kind === 'player') continue;
-      if (explored) {
+      if (explored && !mapMarkerPiercesFog(m.kind)) {
         const mx = Math.floor(m.x);
         const my = Math.floor(m.y);
         if (
@@ -180,6 +186,14 @@ export class MapOverlay {
       }
       const px = ox + m.x * tw;
       const py = oy + m.y * th;
+      if (m.kind === 'champion') {
+        const rr = Math.max(5, tw * 0.5);
+        this.marks.lineStyle(2, MAP_MARKER_COLOR.champion, 0.85);
+        this.marks.strokeCircle(px, py, rr + 2);
+        this.marks.fillStyle(MAP_MARKER_COLOR.champion, 1);
+        this.marks.fillCircle(px, py, rr * 0.55);
+        continue;
+      }
       const alpha = m.kind === 'mob' ? 0.4 : 1;
       const r =
         m.kind === 'boss'
