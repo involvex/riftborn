@@ -24,12 +24,23 @@ export type SetChaseStatus = {
   line: string;
 };
 
-/** Class → set id (Bone / Ashen / Riftbound). */
+/** Starter / primary chase set per class (not the alternate kit). */
+const PRIMARY_CLASS_SET: Record<CharacterClassId, string> = {
+  warrior: 'bone',
+  mystic: 'ashen',
+  mage: 'riftbound',
+};
+
+/** Class → primary set id (Bone / Ashen / Riftbound). */
 export function classSetId(classId: CharacterClassId): string {
-  for (const def of Object.values(sets)) {
-    if (def.classId === classId) return def.id;
-  }
-  return 'ashen';
+  return PRIMARY_CLASS_SET[classId] ?? 'ashen';
+}
+
+/** Sets available to a class (primary + alternate). */
+export function classSetIds(classId: CharacterClassId): string[] {
+  return Object.values(sets)
+    .filter((d) => d.classId === classId)
+    .map((d) => d.id);
 }
 
 export function slotShortLabel(slot: GearSlot): string {
@@ -126,7 +137,7 @@ export function classSetChase(
 }
 
 /**
- * HUD lines: class chase from 1pc (bag counts), plus any other worn 2pc+.
+ * HUD lines: every owned class set from 1pc (bag counts), then other worn 2pc+.
  */
 export function hudSetChaseLines(
   classId: CharacterClassId,
@@ -139,6 +150,13 @@ export function hudSetChaseLines(
   if (primary) {
     lines.push({ text: primary.line, color: primary.color });
     seen.add(primary.setId);
+  }
+  for (const setId of classSetIds(classId)) {
+    if (seen.has(setId)) continue;
+    const chase = setChaseStatus(setId, equipment, bag);
+    if (!chase) continue;
+    lines.push({ text: chase.line, color: chase.color });
+    seen.add(setId);
   }
   for (const slot of SET_ARMOR_SLOTS) {
     const id = equipment[slot]?.setId;
@@ -167,7 +185,10 @@ export function chaseLineAfterGain(
   return status?.line ?? null;
 }
 
-/** Drop-roll bias toward missing class-set slots (or upgrades after 4pc). */
+/**
+ * Drop-roll bias toward the incomplete set with the most owned pieces.
+ * Falls back to the primary class set; preferUpgrade once a set is full.
+ */
 export function setChaseDropBias(
   classId: CharacterClassId,
   equipment: EquipmentSlots,
@@ -177,10 +198,42 @@ export function setChaseDropBias(
   preferSlots?: GearSlot[];
   preferUpgrade?: boolean;
 } {
-  const setId = classSetId(classId);
-  const missing = missingSetSlots(ownedSetSlots(setId, equipment, bag));
-  if (!missing.length) {
-    return { preferSetId: setId, preferUpgrade: true };
+  const ids = classSetIds(classId);
+  let bestIncomplete: {
+    setId: string;
+    owned: number;
+    missing: GearSlot[];
+  } | null = null;
+  let bestComplete: string | null = null;
+
+  for (const setId of ids) {
+    const ownedSlots = ownedSetSlots(setId, equipment, bag);
+    const owned = ownedSlots.size;
+    if (owned <= 0) continue;
+    const missing = missingSetSlots(ownedSlots);
+    if (!missing.length) {
+      if (!bestComplete) bestComplete = setId;
+      continue;
+    }
+    if (!bestIncomplete || owned > bestIncomplete.owned) {
+      bestIncomplete = { setId, owned, missing };
+    }
   }
-  return { preferSetId: setId, preferSlots: missing };
+
+  if (bestIncomplete) {
+    return {
+      preferSetId: bestIncomplete.setId,
+      preferSlots: bestIncomplete.missing,
+    };
+  }
+
+  if (bestComplete) {
+    return { preferSetId: bestComplete, preferUpgrade: true };
+  }
+
+  const primary = classSetId(classId);
+  return {
+    preferSetId: primary,
+    preferSlots: missingSetSlots(ownedSetSlots(primary, equipment, bag)),
+  };
 }

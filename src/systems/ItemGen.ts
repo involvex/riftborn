@@ -337,6 +337,27 @@ export function gearDropChance(tier: LootTier, elite = false): number {
 }
 
 /**
+ * Chance that an armor roll becomes a set piece.
+ * Incomplete chase (~28%) > elite/T4 (~22%) > baseline (~12%).
+ */
+export function setArmorDropChance(opts: {
+  elite?: boolean;
+  lootTier?: LootTier;
+  preferSetId?: string;
+  preferSlots?: GearSlot[];
+  preferUpgrade?: boolean;
+}): number {
+  const chasing =
+    !!opts.preferSetId &&
+    !!opts.preferSlots &&
+    opts.preferSlots.length > 0 &&
+    !opts.preferUpgrade;
+  if (chasing) return 0.28;
+  if (opts.elite || (opts.lootTier ?? 2) >= 4) return 0.22;
+  return 0.12;
+}
+
+/**
  * Roll a class-locked armor/weapon drop.
  * Higher loot tiers → higher item level, better rarity, different name bands.
  */
@@ -395,8 +416,8 @@ export function rollGearDrop(
       (b) => b.slot === 'weapon' || b.armorBias <= 1.35,
     );
     if (light.length) pool = light;
-  } else if (tier >= 3) {
-    const heavy = pool.filter((b) => b.setId || (b.damageBias ?? 0) >= 1.15);
+  } else if (tier >= 3 && !preferArmor) {
+    const heavy = pool.filter((b) => (b.damageBias ?? 0) >= 1.15);
     if (heavy.length && rnd() < 0.65) pool = heavy;
   }
   if (!pool.length) {
@@ -412,23 +433,29 @@ export function rollGearDrop(
     if (classPool.length) pool = classPool;
   }
 
-  // Set chase: bias armor rolls toward missing class-set slots.
-  if (opts.preferSetId && preferArmor) {
-    let setPool = pool.filter((b) => b.setId === opts.preferSetId);
-    if (opts.preferSlots?.length) {
-      const miss = setPool.filter((b) => opts.preferSlots!.includes(b.slot));
-      if (miss.length) setPool = miss;
+  // Set armor is rare — plain armor by default; chase only raises the odds.
+  if (preferArmor) {
+    const wantSet = rnd() < setArmorDropChance(opts);
+    if (wantSet) {
+      let setPool = pool.filter((b) => !!b.setId);
+      if (opts.preferSetId) {
+        setPool = setPool.filter((b) => b.setId === opts.preferSetId);
+        if (opts.preferSlots?.length) {
+          const miss = setPool.filter((b) =>
+            opts.preferSlots!.includes(b.slot),
+          );
+          if (miss.length) setPool = miss;
+        }
+      }
+      if (setPool.length) pool = setPool;
+      else {
+        const plain = pool.filter((b) => !b.setId);
+        if (plain.length) pool = plain;
+      }
+    } else {
+      const plain = pool.filter((b) => !b.setId);
+      if (plain.length) pool = plain;
     }
-    const bias = chasingSet
-      ? tier >= 3 || opts.elite
-        ? 0.78
-        : 0.55
-      : opts.preferUpgrade
-        ? 0.7
-        : tier >= 3 || opts.elite
-          ? 0.55
-          : 0.35;
-    if (setPool.length && rnd() < bias) pool = setPool;
   }
 
   const base = pool[Math.floor(rnd() * pool.length)] ?? all[0]!;

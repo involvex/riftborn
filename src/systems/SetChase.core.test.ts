@@ -105,6 +105,24 @@ describe('SetChase', () => {
     expect(full.preferSlots).toBeUndefined();
   });
 
+  test('drop bias chases the owned incomplete alternate set', () => {
+    const eq = equipment([
+      piece('grove', 'hat'),
+      piece('grove', 'chest'),
+      null,
+      null,
+    ]);
+    const bias = setChaseDropBias('mystic', eq, []);
+    expect(bias.preferSetId).toBe('grove');
+    expect(bias.preferSlots).toEqual(['legs', 'feet']);
+  });
+
+  test('classSetId stays on the primary kit with alternates present', () => {
+    expect(classSetId('warrior')).toBe('bone');
+    expect(classSetId('mystic')).toBe('ashen');
+    expect(classSetId('mage')).toBe('riftbound');
+  });
+
   test('HUD shows class chase from 1pc', () => {
     const lines = hudSetChaseLines(
       'mystic',
