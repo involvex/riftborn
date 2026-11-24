@@ -78,7 +78,8 @@ Do not rely on paste-a-screenshot alone after map/POI edits — prefer smoke + `
 - **Facing:** `spriteFacingFromDelta` in `IsoMath.ts` — 8-way octant + lean; sheets still 2-dir `flipX` (sticky on pure N/S).
 - **Passive HP regen:** `GameState.tickRegen` — none for ~5s after a hit; out of combat regenerates fast (~3.5–5.5% max HP/s + STA), stronger in town.
 - **Inventory icons:** `ItemIcons.ts` maps gear/materials to `public/assets/icons/` (LootLoop-sourced painted icons).
-- **Vendor:** Mira shop Buy/Sell tabs; item `sellValue` + `gearSellValue()`; **Sort** in bag; Esc → Settings → Auto-sell junk (common gear → gold on loot).
+- **Vendor:** Mira shop Buy/Sell tabs; item `sellValue` + `gearSellValue()`; **Sort** in bag; Esc → Settings → Auto-sell junk (common gear → gold on loot). **Chase · Set Slot** offer when a class set is incomplete (`hubSetSinkTarget` / `set_chase`).
+- **Bram / forge:** Craft bench + **Set Patch** (4 Ore + 4 Scrap → missing set slot); forge bounty pays that piece when chase is open (`grantHubSetSinkReward`).
 - **Nix (trader):** plaza west of spawn — Buy supplies/tonics, sell mats at 1.4×, Repair patch-up (`TraderSystem` / `TraderPanel`).
 - **Attack feel:** sprite attack frames (sheet 10–13) + class-colored slash VFX in `Player.showSlash`. New swing art needs new frames in `public/assets/sprites/game/`.
 - **Class skills (1/2/3/4):** all four unlocked at create — Warrior Leap/Cleave/Bash/Battle Cry, Mystic Pulse/Slash/Seal/Rift Step, Mage Bolt/Nova/Barrier/Chain Surge. Cast VFX in `SkillVfx.ts`; ranks via skill points (`K`).
