@@ -159,6 +159,11 @@ import {
   championEnterToast,
 } from '../world/ChampionRoom';
 import {
+  SPLIT_ENTER_TOAST,
+  findSplitPackTile,
+  isSplitPack,
+} from '../world/ShiftSplitPack';
+import {
   gearUpgradeHighlight,
   riftEndPay,
   type RiftEndFacts,
@@ -1104,12 +1109,13 @@ export class WorldScene extends Phaser.Scene {
     if (!opts.skipPacks) {
       for (const pack of layout.packs) {
         if (!gameState.inRift && inPlaza(pack.x, pack.y)) continue;
-        // Support / champion stay lone — mods never clone them.
+        // Support / champion / split stay lone — mods never clone them.
         const isSupport = pack.enemyId === 'rift_mender';
         const isChampion = !!pack.champion;
+        const isSplit = isSplitPack(pack);
         const count =
           pack.count +
-          (gameState.inRift && !isSupport && !isChampion
+          (gameState.inRift && !isSupport && !isChampion && !isSplit
             ? this.riftMod.packCountBonus + this.depthRule.packCountBonus
             : 0);
         for (let i = 0; i < count; i++) {
@@ -1129,7 +1135,8 @@ export class WorldScene extends Phaser.Scene {
           const eliteChance = gameState.inRift
             ? riftPackBonus(this.riftDepth).eliteChance
             : 0.14;
-          const elitePack = !isChampion && Math.random() < eliteChance;
+          const elitePack =
+            !isChampion && !isSplit && Math.random() < eliteChance;
           const enemy = new Enemy(
             this,
             `enemy_${this.enemySeq++}`,
@@ -1151,6 +1158,10 @@ export class WorldScene extends Phaser.Scene {
                 : 1,
             },
           );
+          // Split halves lock to their layer; Veiled still wins afterward.
+          if (pack.layer === 'ash' || pack.layer === 'shadow') {
+            enemy.setCombatLayer(pack.layer);
+          }
           const layerLock = gameState.inRift
             ? riftModLayerLock(this.riftMod)
             : null;
@@ -4059,6 +4070,9 @@ export class WorldScene extends Phaser.Scene {
           gameEvents.emit('ui:toast', {
             text: championEnterToast(champ.enemyId),
           });
+        }
+        if (findSplitPackTile(this.dungeon?.layout.packs ?? [])) {
+          gameEvents.emit('ui:toast', { text: SPLIT_ENTER_TOAST });
         }
         this.emitRiftProgress();
         this.persistGame();

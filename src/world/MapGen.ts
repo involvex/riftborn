@@ -79,6 +79,10 @@ export type ZoneLayout = {
     y: number;
     /** Optional spur elite — excluded from kill goal. */
     champion?: boolean;
+    /** SHIFT split fight — lock combat to this layer (Veiled may override). */
+    layer?: 'ash' | 'shadow';
+    /** One ash+shadow pair per rift; never mod-cloned. */
+    split?: boolean;
   }[];
   /** Town: rift obelisk. Rift: exit portal (null until boss dies). */
   portal: SpawnPoint | null;
