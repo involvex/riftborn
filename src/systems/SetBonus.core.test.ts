@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import {
+  characterSetBonusLines,
   countSetPieces,
   resolveSetBonuses,
   setSkillFamilyMult,
@@ -156,5 +157,57 @@ describe('SetBonus', () => {
     ]);
     expect(setSkillFamilyMult(eq, 'mys_echo')).toBeCloseTo(0.18);
     expect(setSkillFamilyMult(eq, 'mys_pulse')).toBe(0);
+  });
+
+  test('C panel lists both class kits with dim bonuses at 0 worn', () => {
+    const lines = characterSetBonusLines(
+      'mystic',
+      equipment([null, null, null, null]),
+    );
+    expect(lines[0]).toBe('Ashen 0/4 · need Hat, Chest, Legs, Feet');
+    expect(lines[1]).toBe('  · 2pc: +6 DEX, +5% skill power');
+    expect(lines[2]).toStartWith('  · 4pc:');
+    expect(lines[3]).toBe('Grove 0/4 · need Hat, Chest, Legs, Feet');
+    expect(lines[4]).toBe('  · 2pc: +8 DEX');
+  });
+
+  test('C panel lights 2pc when worn and still shows the other kit', () => {
+    const lines = characterSetBonusLines(
+      'mystic',
+      equipment([piece('ashen', 'hat'), piece('ashen', 'chest'), null, null]),
+    );
+    expect(lines[0]).toBe('Ashen 2/4 · need Legs, Feet');
+    expect(lines[1]).toBe('  ✓ 2pc: +6 DEX, +5% skill power');
+    expect(lines[2]).toStartWith('  · 4pc:');
+    expect(lines.some((l) => l.startsWith('Grove'))).toBe(true);
+    expect(lines.some((l) => l === '  · 2pc: +8 DEX')).toBe(true);
+  });
+
+  test('C panel lights 4pc when complete and still lists alternate', () => {
+    const lines = characterSetBonusLines(
+      'warrior',
+      equipment([
+        piece('bone', 'hat'),
+        piece('bone', 'chest'),
+        piece('bone', 'legs'),
+        piece('bone', 'feet'),
+      ]),
+    );
+    expect(lines[0]).toBe('Bone 4/4 · complete');
+    expect(lines[1]).toStartWith('  ✓ 2pc:');
+    expect(lines[2]).toStartWith('  ✓ 4pc:');
+    expect(lines.some((l) => l.startsWith('Bulwark'))).toBe(true);
+  });
+
+  test('C panel need uses bag pieces for chase slots', () => {
+    const bag = [{ kind: 'gear' as const, item: piece('bone', 'legs') }];
+    const lines = characterSetBonusLines(
+      'warrior',
+      equipment([piece('bone', 'hat'), piece('bone', 'chest'), null, null]),
+      bag,
+    );
+    // Legs owned in bag — only Feet still needed
+    expect(lines[0]).toBe('Bone 2/4 · need Feet');
+    expect(lines[1]).toStartWith('  ✓ 2pc:');
   });
 });
