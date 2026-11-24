@@ -31,7 +31,11 @@ import {
   rarityWantsBurst,
   rarityWantsCameraFlash,
 } from '../systems/RarityVisual';
-import { setChaseDropBias, setChaseStatus } from '../systems/SetChase';
+import {
+  setChaseDropBias,
+  setChaseStatus,
+  setDropToastLine,
+} from '../systems/SetChase';
 import { setSkillFamilyMult } from '../systems/SetBonus';
 import {
   namedAffixCooldown,
@@ -3039,8 +3043,16 @@ export class WorldScene extends Phaser.Scene {
             text: `Bramble crushed — ${g.rarity} ${g.name}`,
           });
         } else {
+          const setLine = setDropToastLine(
+            g,
+            gameState.inventory.equipment,
+            gameState.inventory.slots,
+          );
           gameEvents.emit('ui:toast', {
-            text: `Loot · ${describeGear(g)} · E / click`,
+            text: setLine
+              ? `${setLine} · E / click`
+              : `Loot · ${describeGear(g)} · E / click`,
+            color: setLine ? rarityCss(g.rarity) : undefined,
           });
         }
       },

@@ -9,6 +9,7 @@ import {
   ownedSetSlots,
   setChaseDropBias,
   setChaseStatus,
+  setDropToastLine,
   slotShortLabel,
 } from './SetChase';
 
@@ -136,5 +137,31 @@ describe('SetChase', () => {
     const eq = equipment([null, null, null, null]);
     const line = chaseLineAfterGain(piece('ashen', 'chest'), eq, []);
     expect(line).toBe('Ashen 1/4 · need Hat');
+  });
+
+  test('set drop toast names set, slot, and chase', () => {
+    const eq = equipment([piece('grove', 'hat'), null, null, null]);
+    const line = setDropToastLine(piece('grove', 'legs'), eq, []);
+    expect(line).toBe('Grove · Legs · 2/4 · need Chest');
+  });
+
+  test('set drop toast marks complete', () => {
+    const eq = equipment([
+      piece('ashen', 'hat'),
+      piece('ashen', 'chest'),
+      piece('ashen', 'legs'),
+      null,
+    ]);
+    expect(setDropToastLine(piece('ashen', 'feet'), eq, [])).toBe(
+      'Ashen · Feet · 4/4 · complete',
+    );
+  });
+
+  test('non-set gear has no set drop toast', () => {
+    const plain = piece('ashen', 'hat');
+    plain.setId = null;
+    expect(
+      setDropToastLine(plain, equipment([null, null, null, null])),
+    ).toBeNull();
   });
 });

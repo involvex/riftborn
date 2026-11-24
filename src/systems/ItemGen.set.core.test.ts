@@ -78,4 +78,24 @@ describe('rollGearDrop set rarity', () => {
     expect(chaseSet).toBeGreaterThan(baseSet);
     expect(chaseSet / n).toBeLessThan(0.5);
   });
+
+  test('set armor drops are always magic or better', () => {
+    const rnd = lcg(99);
+    let setHits = 0;
+    for (let i = 0; i < 200; i++) {
+      const g = rollGearDrop(6, {
+        preferArmor: true,
+        forClass: 'mystic',
+        lootTier: 2,
+        preferSetId: 'grove',
+        preferSlots: ['hat', 'chest', 'legs', 'feet'],
+        rnd,
+      });
+      if (!g.setId) continue;
+      setHits += 1;
+      expect(g.rarity).not.toBe('common');
+      expect(['magic', 'rare', 'legendary']).toContain(g.rarity);
+    }
+    expect(setHits).toBeGreaterThan(10);
+  });
 });
