@@ -32,10 +32,12 @@ import {
   rarityWantsCameraFlash,
 } from '../systems/RarityVisual';
 import {
+  hubSetSinkTarget,
   setChaseDropBias,
   setChaseStatus,
   setDropToastLine,
 } from '../systems/SetChase';
+import { hubSinkNpcPrompt, hubSinkProximityToast } from '../systems/ShopSystem';
 import { setSkillFamilyMult } from '../systems/SetBonus';
 import {
   namedAffixCooldown,
@@ -296,6 +298,8 @@ export class WorldScene extends Phaser.Scene {
   private npcs: Npc[] = [];
   private decor: Phaser.GameObjects.Container[] = [];
   private nearNpc: Npc | null = null;
+  /** Dedupes Mira/Bram chase toast until you leave or the sink changes. */
+  private hubSinkToastKey: string | null = null;
   private saveTimer = 0;
   private nearBench = false;
   private riftCleared = false;
@@ -4185,21 +4189,49 @@ export class WorldScene extends Phaser.Scene {
     this.safeCameraFlash(80, 110, 160, 200);
   }
 
+  /** Rising-edge toast when Mira/Bram has a missing set slot to sell/forge. */
+  private maybeToastHubSink(sink: ReturnType<typeof hubSetSinkTarget>): void {
+    const npc = this.nearNpc;
+    const role = npc?.role;
+    if (!sink || !npc || (role !== 'vendor' && role !== 'crafter')) {
+      this.hubSinkToastKey = null;
+      return;
+    }
+    const key = `${npc.id}:${role}:${sink.setId}:${sink.slot}`;
+    if (key === this.hubSinkToastKey) return;
+    this.hubSinkToastKey = key;
+    gameEvents.emit('ui:toast', {
+      text: hubSinkProximityToast(role, sink, gameState.progression.level),
+      color: '#f0d090',
+    });
+  }
+
   private updateNpcProximity(): void {
     this.nearNpc = null;
     let best = 1.9;
+    const sink = !gameState.inRift
+      ? hubSetSinkTarget(
+          gameState.progression.classId,
+          gameState.inventory.equipment,
+          gameState.inventory.slots,
+        )
+      : null;
     for (const npc of this.npcs) {
       const dist = worldDistance(
         { x: this.player.worldX, y: this.player.worldY },
         { x: npc.worldX, y: npc.worldY },
       );
       const near = dist < 1.9;
+      if (npc.role === 'vendor' || npc.role === 'crafter') {
+        npc.setPrompt(hubSinkNpcPrompt(npc.role, sink));
+      }
       npc.setNear(near);
       if (near && dist < best) {
         best = dist;
         this.nearNpc = npc;
       }
     }
+    this.maybeToastHubSink(sink);
     for (const chest of this.chests) {
       const dist = worldDistance(
         { x: this.player.worldX, y: this.player.worldY },

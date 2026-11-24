@@ -3,8 +3,11 @@ import { InventorySystem } from './InventorySystem';
 import {
   grantHubSetSinkReward,
   hubSetSinkPrice,
+  hubSinkNpcPrompt,
+  hubSinkProximityToast,
   ShopSystem,
 } from './ShopSystem';
+import type { HubSetSinkTarget } from './SetChase';
 import type { GearInstance } from '../types/game';
 
 function piece(
@@ -85,5 +88,23 @@ describe('ShopSystem hub set sink', () => {
     expect(
       inv.slots.some((s) => s.kind === 'gear' && s.item.setId === 'bone'),
     ).toBe(true);
+  });
+
+  test('proximity prompt and toast name the chase slot', () => {
+    const sink: HubSetSinkTarget = {
+      setId: 'bone',
+      setName: 'Bone',
+      slot: 'hat',
+      slotLabel: 'Hat',
+    };
+    expect(hubSinkNpcPrompt('vendor', sink)).toBe('E · Chase Bone Hat');
+    expect(hubSinkNpcPrompt('crafter', sink)).toBe('E · Patch Bone Hat');
+    expect(hubSinkNpcPrompt('vendor', null)).toBe('E · shop');
+    expect(hubSinkProximityToast('vendor', sink, 5)).toBe(
+      `Mira · Bone Hat · ${hubSetSinkPrice(5)}g · E`,
+    );
+    expect(hubSinkProximityToast('crafter', sink, 5)).toBe(
+      'Bram · Set Patch · Bone Hat · 4 Ore, 4 Scrap · E',
+    );
   });
 });

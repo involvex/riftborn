@@ -127,6 +127,11 @@ export class Npc {
     label?.setVisible(near);
   }
 
+  /** Update the floating E line (e.g. chase / set patch when open). */
+  setPrompt(text: string): void {
+    this.prompt.setText(text);
+  }
+
   syncScreen(): void {
     const { screenX, screenY } = worldToScreen(this.worldX, this.worldY);
     this.body.setPosition(screenX, screenY);

@@ -61,6 +61,7 @@ Solo evenings, one shippable slice at a time. Prefer **feel → content → syst
 - **Set breakpoint toast** — equip hitting 2pc/4pc toasts the bonus + loot sting
 - **4pc skill glow** — ability bar gold rim on family skills while 4pc is worn
 - **Skill fork clarity (K)** — bar summary + ON/FORK/→ badges; replaced starters dim
+- **Hub sink proximity** — Mira/Bram toast + E prompt when a chase slot is open
 
 ## Done — feel & look (core loop)
 
@@ -91,6 +92,7 @@ earn their keep in feel.
 | ✓   | **Set breakpoint toast**   | Activating 2pc/4pc was silent             | Equip toast names bonus; magic/rare sting                            |
 | ✓   | **4pc skill glow**         | Family buff invisible on the bar          | Gold rim + warm fill on buffed 1/2/3/4 while 4pc worn                |
 | ✓   | **Skill fork clarity (K)** | Second forks easy to miss vs starters     | Header bar 1–4; ON/FORK/→ badges; replaced nodes dim; spend toast    |
+| ✓   | **Hub sink proximity**     | Mira/Bram chase easy to walk past         | Enter toast + floating E · Chase/Patch when sink open                |
 
 ## Done — lite mobile ARPG loop (v0.2.0)
 
@@ -133,6 +135,7 @@ _No open slice — pick the next loop beat after playtest, or park._
 | ✓   | **Set breakpoint toast**   | Activating 2pc/4pc was silent           | Equip toast names bonus; magic/rare sting                              |
 | ✓   | **4pc skill glow**         | Family buff invisible on the bar        | Gold rim on buffed skills while 4pc worn                               |
 | ✓   | **Skill fork clarity (K)** | Second forks easy to miss vs starters   | Header bar 1–4; ON/FORK/→ badges; replaced nodes dim                   |
+| ✓   | **Hub sink proximity**     | Mira/Bram chase easy to walk past       | Enter toast + E · Chase/Patch prompt when sink open                    |
 
 Skip inventing new frameworks — extend `WorldArt` / `WorldScene` /
 `Npc` / `LootChest` / `public/assets/props/`.
