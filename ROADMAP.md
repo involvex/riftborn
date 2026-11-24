@@ -58,6 +58,8 @@ Solo evenings, one shippable slice at a time. Prefer **feel → content → syst
 - **Set drop juice** — set armor is magic+; drop toast `Grove · Legs · 2/4 · need Feet`
 - **Set bonus UI (C)** — both class kits with lit/dim 2pc·4pc + need slots
 - **Hub set sink** — Mira chase buy / Bram Set Patch / forge bounty pays missing slot
+- **Set breakpoint toast** — equip hitting 2pc/4pc toasts the bonus + loot sting
+- **4pc skill glow** — ability bar gold rim on family skills while 4pc is worn
 
 ## Done — feel & look (core loop)
 
@@ -85,6 +87,8 @@ earn their keep in feel.
 | ✓   | **Set drop juice**        | Rare sets still felt like generic loot    | Magic+ floor on set armor; chase toast names set / slot / need       |
 | ✓   | **Set bonus UI (C)**      | Active sets only; other kit invisible     | Both class kits; ✓/· 2pc·4pc; need slots from bag + worn             |
 | ✓   | **Hub set sink**          | Set chase only advances in rifts          | Mira chase offer; Bram Set Patch (ore/scrap); forge bounty set piece |
+| ✓   | **Set breakpoint toast**  | Activating 2pc/4pc was silent             | Equip toast names bonus; magic/rare sting                            |
+| ✓   | **4pc skill glow**        | Family buff invisible on the bar          | Gold rim + warm fill on buffed 1/2/3/4 while 4pc worn                |
 
 ## Done — lite mobile ARPG loop (v0.2.0)
 
@@ -118,12 +122,14 @@ In-rift choice, SHIFT fight, build fork, map ping, and named drop are in.
 
 _No open slice — pick the next loop beat after playtest, or park._
 
-| #   | Slice                | Why it matters                          | Done when                                                              |
-| --- | -------------------- | --------------------------------------- | ---------------------------------------------------------------------- |
-| ✓   | **Rare set variety** | One set per class; set armor too common | Alternate set per class; set drops ~12–28%; chase owned incomplete set |
-| ✓   | **Set drop juice**   | Rare sets still felt like generic loot  | Magic+ floor on set armor; chase toast names set / slot / need         |
-| ✓   | **Set bonus UI (C)** | Active sets only; other kit invisible   | Both class kits; ✓/· 2pc·4pc; need slots from bag + worn               |
-| ✓   | **Hub set sink**     | Set chase only advances in rifts        | Mira chase; Bram Set Patch; forge bounty pays missing slot             |
+| #   | Slice                    | Why it matters                          | Done when                                                              |
+| --- | ------------------------ | --------------------------------------- | ---------------------------------------------------------------------- |
+| ✓   | **Rare set variety**     | One set per class; set armor too common | Alternate set per class; set drops ~12–28%; chase owned incomplete set |
+| ✓   | **Set drop juice**       | Rare sets still felt like generic loot  | Magic+ floor on set armor; chase toast names set / slot / need         |
+| ✓   | **Set bonus UI (C)**     | Active sets only; other kit invisible   | Both class kits; ✓/· 2pc·4pc; need slots from bag + worn               |
+| ✓   | **Hub set sink**         | Set chase only advances in rifts        | Mira chase; Bram Set Patch; forge bounty pays missing slot             |
+| ✓   | **Set breakpoint toast** | Activating 2pc/4pc was silent           | Equip toast names bonus; magic/rare sting                              |
+| ✓   | **4pc skill glow**       | Family buff invisible on the bar        | Gold rim on buffed skills while 4pc worn                               |
 
 Skip inventing new frameworks — extend `WorldArt` / `WorldScene` /
 `Npc` / `LootChest` / `public/assets/props/`.

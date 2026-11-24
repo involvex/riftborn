@@ -3,6 +3,7 @@ import {
   characterSetBonusLines,
   countSetPieces,
   resolveSetBonuses,
+  setBreakpointToasts,
   setSkillFamilyMult,
   sumSetStats,
 } from './SetBonus';
@@ -209,5 +210,60 @@ describe('SetBonus', () => {
     // Legs owned in bag — only Feet still needed
     expect(lines[0]).toBe('Bone 2/4 · need Feet');
     expect(lines[1]).toStartWith('  ✓ 2pc:');
+  });
+
+  test('breakpoint toast fires for 2pc only', () => {
+    const before = equipment([piece('ashen', 'hat'), null, null, null]);
+    const after = equipment([
+      piece('ashen', 'hat'),
+      piece('ashen', 'chest'),
+      null,
+      null,
+    ]);
+    expect(setBreakpointToasts(before, after)).toEqual([
+      {
+        text: 'Ashen 2pc · +6 DEX, +5% skill power',
+        color: '#8B5A2B',
+        tier: 2,
+      },
+    ]);
+  });
+
+  test('breakpoint toast prefers 4pc when completing the set', () => {
+    const before = equipment([
+      piece('ashen', 'hat'),
+      piece('ashen', 'chest'),
+      piece('ashen', 'legs'),
+      null,
+    ]);
+    const after = equipment([
+      piece('ashen', 'hat'),
+      piece('ashen', 'chest'),
+      piece('ashen', 'legs'),
+      piece('ashen', 'feet'),
+    ]);
+    expect(setBreakpointToasts(before, after)).toEqual([
+      {
+        text: 'Ashen 4pc · +12 DEX, +15% Rift skills, +25 Max HP',
+        color: '#8B5A2B',
+        tier: 4,
+      },
+    ]);
+  });
+
+  test('no breakpoint toast when already at 2pc and swapping', () => {
+    const before = equipment([
+      piece('ashen', 'hat'),
+      piece('ashen', 'chest'),
+      null,
+      null,
+    ]);
+    const after = equipment([
+      piece('ashen', 'hat'),
+      { ...piece('ashen', 'chest'), uid: 'chest-2' },
+      null,
+      null,
+    ]);
+    expect(setBreakpointToasts(before, after)).toEqual([]);
   });
 });
