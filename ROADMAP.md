@@ -60,6 +60,7 @@ Solo evenings, one shippable slice at a time. Prefer **feel → content → syst
 - **Hub set sink** — Mira chase buy / Bram Set Patch / forge bounty pays missing slot
 - **Set breakpoint toast** — equip hitting 2pc/4pc toasts the bonus + loot sting
 - **4pc skill glow** — ability bar gold rim on family skills while 4pc is worn
+- **Skill fork clarity (K)** — bar summary + ON/FORK/→ badges; replaced starters dim
 
 ## Done — feel & look (core loop)
 
@@ -78,17 +79,18 @@ earn their keep in feel.
 
 ## Done — content (keep after feel)
 
-| #   | Slice                     | Why it matters                            | Done when                                                            |
-| --- | ------------------------- | ----------------------------------------- | -------------------------------------------------------------------- |
-| ✓   | **Biome pack identity**   | Biomes tint floors; packs fight alike     | Shipped: opening packs (grind / kite / rush / poke) + skewed mixes   |
-| ✓   | **Boss signature beats**  | Arena looks special; fight is one pattern | Shipped: hop / wail / charge / volley on shared beat cadence         |
-| ✓   | **Set chase readability** | Loot pops; keeping gear is thin           | Shipped: missing-slot drop bias + HUD/bag “need X” from 1pc          |
-| ✓   | **Rare set variety**      | One set per class; set armor too common   | Alternate set per class; set drops ~12–28%; chase owned incomplete   |
-| ✓   | **Set drop juice**        | Rare sets still felt like generic loot    | Magic+ floor on set armor; chase toast names set / slot / need       |
-| ✓   | **Set bonus UI (C)**      | Active sets only; other kit invisible     | Both class kits; ✓/· 2pc·4pc; need slots from bag + worn             |
-| ✓   | **Hub set sink**          | Set chase only advances in rifts          | Mira chase offer; Bram Set Patch (ore/scrap); forge bounty set piece |
-| ✓   | **Set breakpoint toast**  | Activating 2pc/4pc was silent             | Equip toast names bonus; magic/rare sting                            |
-| ✓   | **4pc skill glow**        | Family buff invisible on the bar          | Gold rim + warm fill on buffed 1/2/3/4 while 4pc worn                |
+| #   | Slice                      | Why it matters                            | Done when                                                            |
+| --- | -------------------------- | ----------------------------------------- | -------------------------------------------------------------------- |
+| ✓   | **Biome pack identity**    | Biomes tint floors; packs fight alike     | Shipped: opening packs (grind / kite / rush / poke) + skewed mixes   |
+| ✓   | **Boss signature beats**   | Arena looks special; fight is one pattern | Shipped: hop / wail / charge / volley on shared beat cadence         |
+| ✓   | **Set chase readability**  | Loot pops; keeping gear is thin           | Shipped: missing-slot drop bias + HUD/bag “need X” from 1pc          |
+| ✓   | **Rare set variety**       | One set per class; set armor too common   | Alternate set per class; set drops ~12–28%; chase owned incomplete   |
+| ✓   | **Set drop juice**         | Rare sets still felt like generic loot    | Magic+ floor on set armor; chase toast names set / slot / need       |
+| ✓   | **Set bonus UI (C)**       | Active sets only; other kit invisible     | Both class kits; ✓/· 2pc·4pc; need slots from bag + worn             |
+| ✓   | **Hub set sink**           | Set chase only advances in rifts          | Mira chase offer; Bram Set Patch (ore/scrap); forge bounty set piece |
+| ✓   | **Set breakpoint toast**   | Activating 2pc/4pc was silent             | Equip toast names bonus; magic/rare sting                            |
+| ✓   | **4pc skill glow**         | Family buff invisible on the bar          | Gold rim + warm fill on buffed 1/2/3/4 while 4pc worn                |
+| ✓   | **Skill fork clarity (K)** | Second forks easy to miss vs starters     | Header bar 1–4; ON/FORK/→ badges; replaced nodes dim; spend toast    |
 
 ## Done — lite mobile ARPG loop (v0.2.0)
 
@@ -122,14 +124,15 @@ In-rift choice, SHIFT fight, build fork, map ping, and named drop are in.
 
 _No open slice — pick the next loop beat after playtest, or park._
 
-| #   | Slice                    | Why it matters                          | Done when                                                              |
-| --- | ------------------------ | --------------------------------------- | ---------------------------------------------------------------------- |
-| ✓   | **Rare set variety**     | One set per class; set armor too common | Alternate set per class; set drops ~12–28%; chase owned incomplete set |
-| ✓   | **Set drop juice**       | Rare sets still felt like generic loot  | Magic+ floor on set armor; chase toast names set / slot / need         |
-| ✓   | **Set bonus UI (C)**     | Active sets only; other kit invisible   | Both class kits; ✓/· 2pc·4pc; need slots from bag + worn               |
-| ✓   | **Hub set sink**         | Set chase only advances in rifts        | Mira chase; Bram Set Patch; forge bounty pays missing slot             |
-| ✓   | **Set breakpoint toast** | Activating 2pc/4pc was silent           | Equip toast names bonus; magic/rare sting                              |
-| ✓   | **4pc skill glow**       | Family buff invisible on the bar        | Gold rim on buffed skills while 4pc worn                               |
+| #   | Slice                      | Why it matters                          | Done when                                                              |
+| --- | -------------------------- | --------------------------------------- | ---------------------------------------------------------------------- |
+| ✓   | **Rare set variety**       | One set per class; set armor too common | Alternate set per class; set drops ~12–28%; chase owned incomplete set |
+| ✓   | **Set drop juice**         | Rare sets still felt like generic loot  | Magic+ floor on set armor; chase toast names set / slot / need         |
+| ✓   | **Set bonus UI (C)**       | Active sets only; other kit invisible   | Both class kits; ✓/· 2pc·4pc; need slots from bag + worn               |
+| ✓   | **Hub set sink**           | Set chase only advances in rifts        | Mira chase; Bram Set Patch; forge bounty pays missing slot             |
+| ✓   | **Set breakpoint toast**   | Activating 2pc/4pc was silent           | Equip toast names bonus; magic/rare sting                              |
+| ✓   | **4pc skill glow**         | Family buff invisible on the bar        | Gold rim on buffed skills while 4pc worn                               |
+| ✓   | **Skill fork clarity (K)** | Second forks easy to miss vs starters   | Header bar 1–4; ON/FORK/→ badges; replaced nodes dim                   |
 
 Skip inventing new frameworks — extend `WorldArt` / `WorldScene` /
 `Npc` / `LootChest` / `public/assets/props/`.
