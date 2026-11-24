@@ -157,6 +157,8 @@ import {
   CHAMPION_BUFF_SEC,
   championDisplayName,
   championEnterToast,
+  championLootToast,
+  stampChampionLootName,
 } from '../world/ChampionRoom';
 import {
   SPLIT_ENTER_TOAST,
@@ -2976,8 +2978,15 @@ export class WorldScene extends Phaser.Scene {
           : undefined,
       autoBag: false,
       onGear: (g) => {
+        if (enemy.isChampion) {
+          g.name = stampChampionLootName(g.name);
+        }
         this.spawnGearDrop(enemy.worldX, enemy.worldY, g);
-        if (scoutKill) {
+        if (enemy.isChampion) {
+          gameEvents.emit('ui:toast', {
+            text: championLootToast(g.name),
+          });
+        } else if (scoutKill) {
           gameEvents.emit('ui:toast', {
             text: `Scout fall — ${g.rarity} ${g.name}`,
           });
