@@ -151,6 +151,14 @@ import {
   veiledWrongLayerToast,
 } from '../systems/RiftGoalCopy';
 import {
+  CHAMPION_BARRIER_HP,
+  CHAMPION_BARRIER_SEC,
+  CHAMPION_BUFF_MULT,
+  CHAMPION_BUFF_SEC,
+  championDisplayName,
+  championEnterToast,
+} from '../world/ChampionRoom';
+import {
   gearUpgradeHighlight,
   riftEndPay,
   type RiftEndFacts,
@@ -288,6 +296,8 @@ export class WorldScene extends Phaser.Scene {
   private riftBossId: string | null = null;
   /** Boss def for the current biome (reskinned variants). */
   private riftBossDefId = 'rift_lord';
+  /** Champion kill already paid the this-run buff. */
+  private championPayoffGranted = false;
   private riftDepth = 1;
   /** Kills since last death / spawn (shown on death screen). */
   private lifeKills = 0;
@@ -1076,6 +1086,7 @@ export class WorldScene extends Phaser.Scene {
     this.riftKillGoal = layout.killGoal ?? 18;
     this.bossAnchor = layout.elite ? { ...layout.elite } : null;
     this.shrineReadyAt = 0;
+    this.championPayoffGranted = false;
 
     if (!opts.skipNodes) {
       for (const n of layout.nodes) {
@@ -1093,11 +1104,12 @@ export class WorldScene extends Phaser.Scene {
     if (!opts.skipPacks) {
       for (const pack of layout.packs) {
         if (!gameState.inRift && inPlaza(pack.x, pack.y)) continue;
-        // Support foes stay lone priority targets — mods never clone them.
+        // Support / champion stay lone — mods never clone them.
         const isSupport = pack.enemyId === 'rift_mender';
+        const isChampion = !!pack.champion;
         const count =
           pack.count +
-          (gameState.inRift && !isSupport
+          (gameState.inRift && !isSupport && !isChampion
             ? this.riftMod.packCountBonus + this.depthRule.packCountBonus
             : 0);
         for (let i = 0; i < count; i++) {
@@ -1117,7 +1129,7 @@ export class WorldScene extends Phaser.Scene {
           const eliteChance = gameState.inRift
             ? riftPackBonus(this.riftDepth).eliteChance
             : 0.14;
-          const elitePack = Math.random() < eliteChance;
+          const elitePack = !isChampion && Math.random() < eliteChance;
           const enemy = new Enemy(
             this,
             `enemy_${this.enemySeq++}`,
@@ -1126,6 +1138,7 @@ export class WorldScene extends Phaser.Scene {
             p.y,
             {
               elitePack: gameState.inRift ? elitePack : false,
+              champion: isChampion,
               levelScale: gameState.progression.level,
               hpMult: gameState.inRift
                 ? this.riftMod.hpMult * this.depthRule.hpMult
@@ -2434,7 +2447,7 @@ export class WorldScene extends Phaser.Scene {
         x: e.worldX,
         y: e.worldY,
         alive: e.alive,
-        elite: e.elitePack || e.def.isElite,
+        elite: e.elitePack || e.def.isElite || e.isChampion,
         boss: e.isBoss,
       })),
       portal,
@@ -2941,7 +2954,7 @@ export class WorldScene extends Phaser.Scene {
     const scoutKill = enemy.def.id === 'ash_scout';
     const batKill = enemy.def.id === 'ash_bat';
     const brambleKill = enemy.def.id === 'ash_bramble';
-    const namedElite = scoutKill || batKill || brambleKill;
+    const namedElite = scoutKill || batKill || brambleKill || enemy.isChampion;
     gameState.combat.grantKillRewards(enemy.def.xp, enemy.def.lootTable, {
       elite: enemy.awardsEliteLoot,
       lootTier: tier,
@@ -3014,11 +3027,34 @@ export class WorldScene extends Phaser.Scene {
       return;
     }
 
+    // Optional spur — buff + magic drop already granted; never fills the bar.
+    if (enemy.isChampion) {
+      this.grantChampionPayoff(enemy);
+      this.emitRiftProgress();
+      return;
+    }
+
     this.riftKills += 1;
     this.emitRiftProgress();
     if (!this.riftBossSpawned && this.riftKills >= this.riftKillGoal) {
       this.spawnRiftBoss();
     }
+  }
+
+  /** This-run damage buff + barrier after the optional champion. */
+  private grantChampionPayoff(enemy: Enemy): void {
+    if (this.championPayoffGranted) return;
+    this.championPayoffGranted = true;
+    gameState.skills.applyShrineBuff(CHAMPION_BUFF_MULT, CHAMPION_BUFF_SEC);
+    gameState.skills.grantBarrier(CHAMPION_BARRIER_HP, CHAMPION_BARRIER_SEC);
+    const name = championDisplayName(enemy.def.id);
+    gameEvents.emit('ui:toast', {
+      text: `${name} falls — +${Math.round((CHAMPION_BUFF_MULT - 1) * 100)}% dmg ${CHAMPION_BUFF_SEC}s`,
+    });
+  }
+
+  private championStillAlive(): boolean {
+    return this.enemies.some((e) => e.alive && e.isChampion);
   }
 
   /**
@@ -3287,6 +3323,7 @@ export class WorldScene extends Phaser.Scene {
       modName: this.riftMod.name,
       ruleName: this.depthRule.id === 'none' ? undefined : this.depthRule.name,
       biomeName: this.dungeon?.biome.name,
+      championAlive: this.championStillAlive(),
     });
   }
 
@@ -3321,6 +3358,7 @@ export class WorldScene extends Phaser.Scene {
           hp: e.hp,
           elitePack: e.elitePack,
           boss: e.isBoss,
+          champion: e.isChampion,
           combatLayer: e.shiftLayer,
         })),
     );
@@ -3411,6 +3449,7 @@ export class WorldScene extends Phaser.Scene {
         {
           elitePack: row.elitePack,
           boss: row.boss,
+          champion: !!row.champion,
           levelScale: row.boss
             ? gameState.progression.level + 2 + this.riftDepth
             : gameState.progression.level,
@@ -3436,6 +3475,9 @@ export class WorldScene extends Phaser.Scene {
         this.riftBossSpawned = true;
       }
     }
+    // Buff already spent if this rift had a champion and they are gone.
+    this.championPayoffGranted =
+      !!this.dungeon?.layout.champion && !this.championStillAlive();
 
     for (const n of this.nodes) n.destroy();
     this.nodes = [];
@@ -4012,6 +4054,12 @@ export class WorldScene extends Phaser.Scene {
             biomeName: this.dungeon?.biome.name,
           }),
         });
+        const champ = this.dungeon?.layout.champion;
+        if (champ) {
+          gameEvents.emit('ui:toast', {
+            text: championEnterToast(champ.enemyId),
+          });
+        }
         this.emitRiftProgress();
         this.persistGame();
       });

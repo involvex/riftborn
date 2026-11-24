@@ -77,6 +77,7 @@ export function sanitizeRiftEnemies(
       hp: e.hp,
       elitePack: !!e.elitePack,
       boss,
+      champion: !!e.champion && !boss,
       combatLayer: layer as RiftRunEnemySave['combatLayer'],
     });
   }

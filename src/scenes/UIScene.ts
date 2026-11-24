@@ -426,6 +426,7 @@ export class UIScene extends Phaser.Scene {
           modName?: string;
           ruleName?: string;
           biomeName?: string;
+          championAlive?: boolean;
         };
         if (!d.active) {
           this.riftHud.hide();
@@ -440,6 +441,7 @@ export class UIScene extends Phaser.Scene {
           d.modName,
           d.ruleName,
           d.biomeName,
+          !!d.championAlive,
         );
       }),
       gameEvents.on('ui:dismissSummary', () => {

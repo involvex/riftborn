@@ -64,12 +64,15 @@ export function riftHudLabel(opts: {
   phase: 'fill' | 'boss' | 'exit';
   modName?: string;
   ruleName?: string;
+  /** Optional spur champion still alive. */
+  championAlive?: boolean;
 }): string {
   const head = `${shortBiomeName(opts.biomeName)} D${opts.depth}`;
   const mod =
     opts.modName && opts.modName !== 'Calm Rift' ? shortMod(opts.modName) : '';
   const rule = opts.ruleName ? shortRule(opts.ruleName) : '';
-  const tail = [mod, rule].filter(Boolean);
+  const elite = opts.championAlive ? 'Elite' : '';
+  const tail = [mod, rule, elite].filter(Boolean);
   if (opts.phase === 'boss') return [head, 'Boss', ...tail].join('\n');
   if (opts.phase === 'exit') return [head, 'Exit', ...tail].join('\n');
   return [head, `${opts.kills}/${opts.goal}`, ...tail].join('\n');

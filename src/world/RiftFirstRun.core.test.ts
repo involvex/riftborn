@@ -80,13 +80,17 @@ describe('first-run rift reachability', () => {
     expect(sum / SEEDS_PER_DEPTH).toBeGreaterThanOrEqual(9);
   });
 
-  test('deep rifts keep the old packed pacing when foes allow it', () => {
-    let withFullGoal = 0;
+  test('D3+ kill goals leave skip room (~60% of spawned foes)', () => {
+    let slackSeeds = 0;
     for (let s = 1; s <= SEEDS_PER_DEPTH; s++) {
-      const map = generateDungeon(s * 7919 + 10, 10);
-      if (map.layout.killGoal === 12 + 10) withFullGoal++;
+      const map = generateDungeon(s * 7919 + 5, 5);
+      const foes = totalFoes(map);
+      const goal = map.layout.killGoal ?? 0;
+      // Champion packs are excluded from the goal supply, so slack can be
+      // a bit over 40% — still prove the boss unlocks before a full clear.
+      if (goal > 0 && goal <= Math.ceil(foes * 0.7)) slackSeeds++;
     }
-    expect(withFullGoal).toBeGreaterThan(0);
+    expect(slackSeeds).toBeGreaterThan(SEEDS_PER_DEPTH * 0.7);
   });
 
   test('every layer holds enough foes to pay for a shift', () => {

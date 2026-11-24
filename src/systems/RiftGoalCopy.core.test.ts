@@ -78,6 +78,27 @@ describe('RiftGoalCopy', () => {
     expect(text).toContain('Relent');
   });
 
+  test('hud label shows Elite while the champion lives', () => {
+    const alive = riftHudLabel({
+      biomeName: 'Aschen-Krypta',
+      depth: 2,
+      kills: 3,
+      goal: 10,
+      phase: 'fill',
+      championAlive: true,
+    });
+    expect(alive).toContain('Elite');
+    const dead = riftHudLabel({
+      biomeName: 'Aschen-Krypta',
+      depth: 2,
+      kills: 3,
+      goal: 10,
+      phase: 'fill',
+      championAlive: false,
+    });
+    expect(dead).not.toContain('Elite');
+  });
+
   test('veil toast names the lock layer and shift bind', () => {
     const text = veiledWrongLayerToast({
       modName: 'Ashen Veil',

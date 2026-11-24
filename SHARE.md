@@ -41,7 +41,9 @@ Install yourself if you want — don’t interrupt their device session.
 3. **Interact** — **E** near Mira (shop), Bram (forge), Nix (trader),
    bounty board, chests, Ember Shrine.
 4. **Rift** — **R** at the crystal · **Kill packs → Boss → Exit portal**.
-   **B** returns to town (or die → hub at half HP).
+   Optional side-room **Elite** (HUD token) — skip it or kill for a
+   short damage buff before the boss. **B** returns to town (or die →
+   hub at half HP).
 5. **Chase** — class armor sets (Bone / Ashen / Riftbound). HUD shows
    `Ashen 1/4 · need Chest`; elites bias missing slots.
 6. **Menus** — **I** bag, **M** map, **K** skills, **Esc** settings;
