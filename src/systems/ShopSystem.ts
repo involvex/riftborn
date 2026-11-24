@@ -4,7 +4,7 @@ import { gearSellValue, isJunkGear, stackSellValue } from './Economy';
 import { rollGearDrop, rollHubSetPiece } from './ItemGen';
 import type { InventorySystem } from './InventorySystem';
 import { Events, gameEvents } from '../core/EventBus';
-import { hubSetSinkTarget } from './SetChase';
+import { hubSetSinkTarget, type HubSetSinkTarget } from './SetChase';
 
 export type ShopOffer = {
   id: string;
@@ -55,6 +55,32 @@ const STOCK: ShopOffer[] = [
 export function hubSetSinkPrice(playerLevel: number): number {
   const lv = Math.max(1, Math.floor(playerLevel));
   return 120 + lv * 8;
+}
+
+/** Floating E prompt when a set chase is open at Mira / Bram. */
+export function hubSinkNpcPrompt(
+  role: 'vendor' | 'crafter',
+  sink: HubSetSinkTarget | null,
+): string {
+  if (!sink) {
+    return role === 'vendor' ? 'E · shop' : 'E · craft';
+  }
+  if (role === 'vendor') {
+    return `E · Chase ${sink.setName} ${sink.slotLabel}`;
+  }
+  return `E · Patch ${sink.setName} ${sink.slotLabel}`;
+}
+
+/** One-shot toast when walking into Mira / Bram with a chase open. */
+export function hubSinkProximityToast(
+  role: 'vendor' | 'crafter',
+  sink: HubSetSinkTarget,
+  playerLevel: number,
+): string {
+  if (role === 'vendor') {
+    return `Mira · ${sink.setName} ${sink.slotLabel} · ${hubSetSinkPrice(playerLevel)}g · E`;
+  }
+  return `Bram · Set Patch · ${sink.setName} ${sink.slotLabel} · 4 Ore, 4 Scrap · E`;
 }
 
 /** Item level for hub-guaranteed set pieces. */
