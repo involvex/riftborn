@@ -1,9 +1,10 @@
 import type { CharacterClassId, GearInstance, GearSlot } from '../types/game';
 import type { InventorySlot } from '../types/save';
 import { gearSellValue, isJunkGear, stackSellValue } from './Economy';
-import { rollGearDrop } from './ItemGen';
+import { rollGearDrop, rollHubSetPiece } from './ItemGen';
 import type { InventorySystem } from './InventorySystem';
 import { Events, gameEvents } from '../core/EventBus';
+import { hubSetSinkTarget } from './SetChase';
 
 export type ShopOffer = {
   id: string;
@@ -50,6 +51,39 @@ const STOCK: ShopOffer[] = [
   },
 ];
 
+/** Gold cost for Mira's guaranteed missing set slot. */
+export function hubSetSinkPrice(playerLevel: number): number {
+  const lv = Math.max(1, Math.floor(playerLevel));
+  return 120 + lv * 8;
+}
+
+/** Item level for hub-guaranteed set pieces. */
+export function hubSetSinkItemLevel(playerLevel: number): number {
+  const lv = Math.max(1, Math.floor(playerLevel));
+  const base = 2 + Math.floor((lv - 1) / 5);
+  return Math.max(5, base + 3);
+}
+
+/**
+ * Bram forge / bounty payoff — grant one missing class-set slot when
+ * the chase is open. Returns null when complete or bag is full.
+ */
+export function grantHubSetSinkReward(
+  inventory: InventorySystem,
+  classId: CharacterClassId,
+  playerLevel: number,
+): GearInstance | null {
+  const sink = hubSetSinkTarget(classId, inventory.equipment, inventory.slots);
+  if (!sink || !inventory.canAddGear()) return null;
+  const gear = rollHubSetPiece(hubSetSinkItemLevel(playerLevel), {
+    setId: sink.setId,
+    slot: sink.slot,
+    forClass: classId,
+  });
+  if (!inventory.addGear(gear, { allowAutosell: false })) return null;
+  return gear;
+}
+
 export class ShopSystem {
   private readonly inventory: InventorySystem;
 
@@ -57,10 +91,10 @@ export class ShopSystem {
     this.inventory = inventory;
   }
 
-  listOffers(playerLevel = 1): ShopOffer[] {
+  listOffers(playerLevel = 1, forClass?: CharacterClassId): ShopOffer[] {
     const lv = Math.max(1, Math.floor(playerLevel));
     const base = 2 + Math.floor((lv - 1) / 5);
-    return STOCK.map((o) => ({
+    const offers: ShopOffer[] = STOCK.map((o) => ({
       ...o,
       itemLevel: Math.max(o.itemLevel, base + (o.itemLevel >= 5 ? 3 : 0)),
       blurb:
@@ -68,6 +102,25 @@ export class ShopSystem {
           ? `Better roll · ilvl ${Math.max(o.itemLevel, base + 3)}`
           : `Random piece · ilvl ${Math.max(o.itemLevel, base)}`,
     }));
+    if (forClass) {
+      const sink = hubSetSinkTarget(
+        forClass,
+        this.inventory.equipment,
+        this.inventory.slots,
+      );
+      if (sink) {
+        const itemLevel = Math.max(5, base + 3);
+        offers.unshift({
+          id: 'set_chase',
+          label: `Chase · ${sink.setName} ${sink.slotLabel}`,
+          blurb: `Guaranteed ${sink.setName} ${sink.slotLabel} · magic+`,
+          price: hubSetSinkPrice(lv),
+          preferArmor: true,
+          itemLevel,
+        });
+      }
+    }
+    return offers;
   }
 
   gold(): number {
@@ -79,7 +132,9 @@ export class ShopSystem {
     forClass?: CharacterClassId,
     playerLevel = 1,
   ): { ok: true; gear: GearInstance } | { ok: false; reason: string } {
-    const offer = this.listOffers(playerLevel).find((o) => o.id === offerId);
+    const offer = this.listOffers(playerLevel, forClass).find(
+      (o) => o.id === offerId,
+    );
     if (!offer) return { ok: false, reason: 'Unknown offer' };
     if (this.gold() < offer.price) {
       return { ok: false, reason: `Need ${offer.price} gold` };
@@ -90,12 +145,36 @@ export class ShopSystem {
     if (!this.inventory.remove('gold', offer.price)) {
       return { ok: false, reason: 'Need more gold' };
     }
-    const gear = rollGearDrop(offer.itemLevel, {
-      preferArmor: offer.preferArmor,
-      elite: offer.itemLevel >= 5,
-      forClass,
-      anyClass: true,
-    });
+
+    let gear: GearInstance;
+    if (offerId === 'set_chase') {
+      if (!forClass) {
+        this.inventory.add('gold', offer.price);
+        return { ok: false, reason: 'No class for set chase' };
+      }
+      const sink = hubSetSinkTarget(
+        forClass,
+        this.inventory.equipment,
+        this.inventory.slots,
+      );
+      if (!sink) {
+        this.inventory.add('gold', offer.price);
+        return { ok: false, reason: 'Set complete — nothing to chase' };
+      }
+      gear = rollHubSetPiece(offer.itemLevel, {
+        setId: sink.setId,
+        slot: sink.slot,
+        forClass,
+      });
+    } else {
+      gear = rollGearDrop(offer.itemLevel, {
+        preferArmor: offer.preferArmor,
+        elite: offer.itemLevel >= 5,
+        forClass,
+        anyClass: true,
+      });
+    }
+
     if (!this.inventory.addGear(gear, { allowAutosell: false })) {
       this.inventory.add('gold', offer.price);
       return { ok: false, reason: 'Bag full' };

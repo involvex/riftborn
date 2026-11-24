@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { rollGearDrop, setArmorDropChance } from './ItemGen';
+import { rollGearDrop, rollHubSetPiece, setArmorDropChance } from './ItemGen';
 
 /** Deterministic LCG for seeded loot loops. */
 function lcg(seed: number): () => number {
@@ -97,5 +97,20 @@ describe('rollGearDrop set rarity', () => {
       expect(['magic', 'rare', 'legendary']).toContain(g.rarity);
     }
     expect(setHits).toBeGreaterThan(10);
+  });
+
+  test('hub set piece always hits the requested set and slot', () => {
+    const rnd = lcg(3);
+    for (let i = 0; i < 20; i++) {
+      const g = rollHubSetPiece(8, {
+        setId: 'bulwark',
+        slot: 'feet',
+        forClass: 'warrior',
+        rnd,
+      });
+      expect(g.setId).toBe('bulwark');
+      expect(g.slot).toBe('feet');
+      expect(g.rarity).not.toBe('common');
+    }
   });
 });

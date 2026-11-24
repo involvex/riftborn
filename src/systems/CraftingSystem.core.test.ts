@@ -69,6 +69,95 @@ describe('biome craft sinks', () => {
   });
 });
 
+describe('Bram set patch', () => {
+  test('forges the next missing Ashen slot for ore + scrap', () => {
+    const { inv, crafting } = setup();
+    inv.equipment.chest = {
+      uid: 'chest',
+      baseId: 'ashen_chest',
+      name: 'Ashen Vest',
+      slot: 'chest',
+      setId: 'ashen',
+      classId: 'mystic',
+      rarity: 'magic',
+      itemLevel: 3,
+      stats: {
+        strength: 0,
+        dexterity: 2,
+        stamina: 0,
+        intellect: 0,
+        armor: 3,
+        damage: 0,
+        skillPower: 0,
+      },
+    };
+    inv.add('ore', 4);
+    inv.add('scrap', 4);
+    const result = crafting.craftSetPatch('mystic', 4);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.gear.setId).toBe('ashen');
+    expect(result.gear.slot).toBe('hat');
+    expect(result.gear.rarity).not.toBe('common');
+    expect(inv.count('ore')).toBe(0);
+    expect(inv.count('scrap')).toBe(0);
+  });
+
+  test('refuses set patch when chase is complete', () => {
+    const { inv, crafting } = setup();
+    for (const slot of ['hat', 'chest', 'legs', 'feet'] as const) {
+      inv.addGear(
+        {
+          uid: `a-${slot}`,
+          baseId: `ashen_${slot}`,
+          name: 'A',
+          slot,
+          setId: 'ashen',
+          classId: 'mystic',
+          rarity: 'magic',
+          itemLevel: 4,
+          stats: {
+            strength: 0,
+            dexterity: 1,
+            stamina: 0,
+            intellect: 0,
+            armor: 2,
+            damage: 0,
+            skillPower: 0,
+          },
+        },
+        { allowAutosell: false },
+      );
+      inv.addGear(
+        {
+          uid: `g-${slot}`,
+          baseId: `grove_${slot}`,
+          name: 'G',
+          slot,
+          setId: 'grove',
+          classId: 'mystic',
+          rarity: 'magic',
+          itemLevel: 4,
+          stats: {
+            strength: 0,
+            dexterity: 1,
+            stamina: 0,
+            intellect: 0,
+            armor: 2,
+            damage: 0,
+            skillPower: 0,
+          },
+        },
+        { allowAutosell: false },
+      );
+    }
+    inv.add('ore', 4);
+    inv.add('scrap', 4);
+    const result = crafting.craftSetPatch('mystic', 4);
+    expect(result.ok).toBe(false);
+  });
+});
+
 describe('biome loot materials', () => {
   test('each rift biome feeds one unique material', () => {
     const seen = new Set<string>();
