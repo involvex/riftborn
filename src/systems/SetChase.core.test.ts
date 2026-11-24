@@ -4,6 +4,7 @@ import type { EquipmentSlots, InventorySlot } from '../types/save';
 import {
   chaseLineAfterGain,
   classSetId,
+  hubSetSinkTarget,
   hudSetChaseLines,
   missingSetSlots,
   ownedSetSlots,
@@ -163,5 +164,43 @@ describe('SetChase', () => {
     expect(
       setDropToastLine(plain, equipment([null, null, null, null])),
     ).toBeNull();
+  });
+
+  test('hub set sink targets the next missing slot', () => {
+    const sink = hubSetSinkTarget(
+      'mystic',
+      equipment([null, piece('ashen', 'chest'), null, null]),
+    );
+    expect(sink).toEqual({
+      setId: 'ashen',
+      setName: 'Ashen',
+      slot: 'hat',
+      slotLabel: 'Hat',
+    });
+  });
+
+  test('hub set sink prefers the owned incomplete kit', () => {
+    const sink = hubSetSinkTarget(
+      'mystic',
+      equipment([piece('grove', 'hat'), piece('grove', 'chest'), null, null]),
+    );
+    expect(sink?.setId).toBe('grove');
+    expect(sink?.slot).toBe('legs');
+  });
+
+  test('hub set sink is null when every class kit is complete', () => {
+    const eq = equipment([
+      piece('ashen', 'hat'),
+      piece('ashen', 'chest'),
+      piece('ashen', 'legs'),
+      piece('ashen', 'feet'),
+    ]);
+    const bag = [
+      { kind: 'gear' as const, item: piece('grove', 'hat') },
+      { kind: 'gear' as const, item: piece('grove', 'chest') },
+      { kind: 'gear' as const, item: piece('grove', 'legs') },
+      { kind: 'gear' as const, item: piece('grove', 'feet') },
+    ];
+    expect(hubSetSinkTarget('mystic', eq, bag)).toBeNull();
   });
 });

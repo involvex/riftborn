@@ -26,11 +26,13 @@ import {
   type OverlayDismissHandles,
 } from '../ui/OverlayDismiss';
 import { listRecipes } from '../systems/CraftingSystem';
-import { describeGearFull } from '../systems/ItemGen';
+import { describeGear, describeGearFull } from '../systems/ItemGen';
 import type { GearInstance } from '../types/game';
 import { getItemDef } from '../systems/InventorySystem';
 import { MAX_LEVEL, STAT_POINTS_PER_LEVEL } from '../systems/ProgressionSystem';
 import { characterSetBonusLines } from '../systems/SetBonus';
+import { hubSetSinkTarget } from '../systems/SetChase';
+import { grantHubSetSinkReward } from '../systems/ShopSystem';
 import { gameState } from '../systems/GameState';
 import { AbilityBar } from '../ui/AbilityBar';
 import { HudBars } from '../ui/HudBars';
@@ -90,6 +92,7 @@ export class UIScene extends Phaser.Scene {
   private craftTitle!: Phaser.GameObjects.Text;
   private craftClose!: Phaser.GameObjects.Text;
   private craftRowBtns: Phaser.GameObjects.Text[] = [];
+  private craftSetPatchBtn!: Phaser.GameObjects.Text;
   private charPanel!: Phaser.GameObjects.Container;
   private charBg!: Phaser.GameObjects.Rectangle;
   private charTitle!: Phaser.GameObjects.Text;
@@ -506,6 +509,7 @@ export class UIScene extends Phaser.Scene {
       gameEvents.on(Events.BOUNTY_COMPLETE, (p) => {
         const d = p as {
           bounty: {
+            kind?: string;
             label: string;
             rewardGold: number;
             rewardXp: number;
@@ -516,7 +520,20 @@ export class UIScene extends Phaser.Scene {
         gameState.inventory.add('gold', b.rewardGold);
         gameState.progression.addXp(b.rewardXp);
         let itemBit = '';
-        if (b.rewardItemId) {
+        // Bram forge contracts pay a missing set slot when the chase is open.
+        if (b.kind === 'forge') {
+          const gear = grantHubSetSinkReward(
+            gameState.inventory,
+            gameState.progression.classId,
+            gameState.progression.level,
+          );
+          if (gear) {
+            itemBit = ` + ${describeGear(gear)}`;
+          } else if (b.rewardItemId) {
+            gameState.inventory.add(b.rewardItemId, 1);
+            itemBit = ` + ${b.rewardItemId.replace(/_/g, ' ')}`;
+          }
+        } else if (b.rewardItemId) {
           gameState.inventory.add(b.rewardItemId, 1);
           itemBit = ` + ${b.rewardItemId.replace(/_/g, ' ')}`;
         }
@@ -813,6 +830,31 @@ export class UIScene extends Phaser.Scene {
       this.craftRowBtns.push(btn);
     }
 
+    this.craftSetPatchBtn = this.add
+      .text(0, 0, 'Set Patch', {
+        fontFamily: 'Segoe UI, sans-serif',
+        fontSize: '13px',
+        color: '#0a0c10',
+        backgroundColor: '#f0d090',
+        padding: { x: 10, y: 6 },
+      })
+      .setOrigin(0.5)
+      .setInteractive({ useHandCursor: true });
+    this.craftSetPatchBtn.on('pointerup', () => {
+      const result = gameState.crafting.craftSetPatch(
+        gameState.progression.classId,
+        gameState.progression.level,
+      );
+      if (!result.ok) {
+        this.toast(result.reason);
+        return;
+      }
+      gameState.persist();
+      this.toast(`Forged ${describeGear(result.gear)}`);
+      this.refreshSetPatchBtn();
+      this.refresh();
+    });
+
     this.craftClose = this.add
       .text(0, 110, 'Close (Esc)', {
         fontFamily: 'Segoe UI, sans-serif',
@@ -828,6 +870,7 @@ export class UIScene extends Phaser.Scene {
         this.craftBg,
         this.craftTitle,
         ...this.craftRowBtns,
+        this.craftSetPatchBtn,
         this.craftClose,
       ])
       .setScrollFactor(0)
@@ -849,7 +892,7 @@ export class UIScene extends Phaser.Scene {
     const layout = computeCraftPanelLayout({
       panelW,
       panelH,
-      recipeCount: this.craftRowBtns.length,
+      recipeCount: this.craftRowBtns.length + 1,
       touch,
     });
     this.craftBg.setSize(panelW, panelH);
@@ -871,6 +914,19 @@ export class UIScene extends Phaser.Scene {
         padding: { x: 10, y: 6 },
       });
     });
+    const patchRow = layout.rows[this.craftRowBtns.length];
+    if (patchRow) {
+      const pos = craftRectCenter(panelW, panelH, patchRow);
+      this.craftSetPatchBtn.setPosition(pos.x, pos.y);
+      this.craftSetPatchBtn.setStyle({
+        fontFamily: 'Segoe UI, sans-serif',
+        fontSize: touch ? '14px' : '13px',
+        color: '#0a0c10',
+        backgroundColor: '#f0d090',
+        padding: { x: 10, y: 6 },
+      });
+    }
+    this.refreshSetPatchBtn();
 
     const closePos = craftRectCenter(panelW, panelH, layout.close);
     this.craftClose.setPosition(closePos.x, closePos.y);
@@ -1410,6 +1466,23 @@ export class UIScene extends Phaser.Scene {
     this.charBody.setCrop(0, 0, this.charBodyW, this.charBodyMaxH);
   }
 
+  private refreshSetPatchBtn(): void {
+    const sink = hubSetSinkTarget(
+      gameState.progression.classId,
+      gameState.inventory.equipment,
+      gameState.inventory.slots,
+    );
+    if (!sink) {
+      this.craftSetPatchBtn.setText('Set Patch — chase complete');
+      this.craftSetPatchBtn.setAlpha(0.55);
+      return;
+    }
+    this.craftSetPatchBtn.setAlpha(1);
+    this.craftSetPatchBtn.setText(
+      `Set Patch · ${sink.setName} ${sink.slotLabel}  (4 Ore, 4 Scrap)`,
+    );
+  }
+
   private showCraft(): void {
     if (this.menuOpen) return;
     this.layoutCraftPanel();
@@ -1428,7 +1501,7 @@ export class UIScene extends Phaser.Scene {
     this.mapOverlay.hide();
     this.shopPanel.show();
     this.shopOpen = true;
-    this.toast('Mira’s shop — spend gold on gear');
+    this.toast('Mira’s shop — chase set / gear for gold');
   }
 
   private hideShop(): void {

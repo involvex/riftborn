@@ -155,18 +155,23 @@ export class ShopPanel {
   }
 
   private renderBuy(rowW: number): void {
-    const offers = gameState.shop.listOffers();
-    offers.forEach((offer, i) => {
-      const y = 40 + i * 56;
+    const lv = gameState.progression.level;
+    const cls = gameState.progression.classId;
+    const offers = gameState.shop.listOffers(lv, cls);
+    // Chase row + 4 stock — keep scroll tight on touch.
+    const maxRows = 5;
+    offers.slice(0, maxRows).forEach((offer, i) => {
+      const y = 40 + i * 52;
+      const chase = offer.id === 'set_chase';
       const row = this.scene.add
-        .rectangle(0, y, rowW, 48, 0x1a2230, 1)
-        .setStrokeStyle(1, 0x4a5568)
+        .rectangle(0, y, rowW, 46, chase ? 0x2a2418 : 0x1a2230, 1)
+        .setStrokeStyle(1, chase ? 0xc4a574 : 0x4a5568)
         .setInteractive({ useHandCursor: true });
       const label = this.scene.add
         .text(-rowW / 2 + 12, y - 8, `${offer.label}  ·  ${offer.price}g`, {
           fontFamily: 'Segoe UI, sans-serif',
           fontSize: '14px',
-          color: '#e8e4d8',
+          color: chase ? '#f0d090' : '#e8e4d8',
         })
         .setOrigin(0, 0.5);
       const blurb = this.scene.add
@@ -177,13 +182,12 @@ export class ShopPanel {
         })
         .setOrigin(0, 0.5);
       row.on('pointerover', () => row.setStrokeStyle(1, 0xc4a574));
-      row.on('pointerout', () => row.setStrokeStyle(1, 0x4a5568));
+      row.on('pointerout', () =>
+        row.setStrokeStyle(1, chase ? 0xc4a574 : 0x4a5568),
+      );
       row.on('pointerup', () => {
         audioBus.uiClick();
-        const result = gameState.shop.buy(
-          offer.id,
-          gameState.progression.classId,
-        );
+        const result = gameState.shop.buy(offer.id, cls, lv);
         if (!result.ok) {
           this.detail.setText(result.reason);
           this.goldText.setText(`Gold: ${gameState.shop.gold()}`);

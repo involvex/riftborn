@@ -262,3 +262,51 @@ export function setChaseDropBias(
     preferSlots: missingSetSlots(ownedSetSlots(primary, equipment, bag)),
   };
 }
+
+/** Hub Mira / Bram / bounty target — next missing class-set slot. */
+export type HubSetSinkTarget = {
+  setId: string;
+  setName: string;
+  slot: GearSlot;
+  slotLabel: string;
+};
+
+/**
+ * Pick one missing set slot for town sinks. Prefers the incomplete kit
+ * with the most owned pieces; falls back to any incomplete class set.
+ */
+export function hubSetSinkTarget(
+  classId: CharacterClassId,
+  equipment: EquipmentSlots,
+  bag: InventorySlot[] = [],
+): HubSetSinkTarget | null {
+  const primary = classSetId(classId);
+  let best: {
+    setId: string;
+    owned: number;
+    missing: GearSlot[];
+  } | null = null;
+  for (const setId of classSetIds(classId)) {
+    const ownedSlots = ownedSetSlots(setId, equipment, bag);
+    const missing = missingSetSlots(ownedSlots);
+    if (!missing.length) continue;
+    const owned = ownedSlots.size;
+    if (
+      !best ||
+      owned > best.owned ||
+      (owned === best.owned && setId === primary)
+    ) {
+      best = { setId, owned, missing };
+    }
+  }
+  if (!best) return null;
+  const slot = best.missing[0]!;
+  const def = sets[best.setId];
+  if (!def) return null;
+  return {
+    setId: best.setId,
+    setName: def.name,
+    slot,
+    slotLabel: slotShortLabel(slot),
+  };
+}

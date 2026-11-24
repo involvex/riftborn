@@ -379,6 +379,8 @@ export function rollGearDrop(
     preferSlots?: GearSlot[];
     /** After 4pc: bias toward higher ilvl upgrades of the same set. */
     preferUpgrade?: boolean;
+    /** Shop / forge sink — always roll set armor when preferArmor. */
+    forceSet?: boolean;
     rnd?: () => number;
   } = {},
 ): GearInstance {
@@ -427,7 +429,7 @@ export function rollGearDrop(
 
   // Set armor is rare — plain armor by default; chase only raises the odds.
   if (preferArmor) {
-    const wantSet = rnd() < setArmorDropChance(opts);
+    const wantSet = opts.forceSet || rnd() < setArmorDropChance(opts);
     if (wantSet) {
       let setPool = pool.filter((b) => !!b.setId);
       if (opts.preferSetId) {
@@ -536,6 +538,30 @@ export function rollGearDrop(
     attackRange: base.slot === 'weapon' ? 1.2 + rnd() * 0.3 : undefined,
     affixes: namedAffixes.length ? namedAffixes : undefined,
   };
+}
+
+/**
+ * Guaranteed class-set armor for hub sinks (Mira chase / Bram forge).
+ */
+export function rollHubSetPiece(
+  itemLevel: number,
+  opts: {
+    setId: string;
+    slot: GearSlot;
+    forClass: CharacterClassId;
+    rnd?: () => number;
+  },
+): GearInstance {
+  return rollGearDrop(itemLevel, {
+    preferArmor: true,
+    forClass: opts.forClass,
+    lootTier: 3,
+    minRarity: 'magic',
+    preferSetId: opts.setId,
+    preferSlots: [opts.slot],
+    forceSet: true,
+    rnd: opts.rnd,
+  });
 }
 
 /** Compact line for toasts / lists (no armor — use describeGearFull for that). */
