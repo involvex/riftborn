@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import type { GearInstance, GearStats } from '../types/game';
 import {
+  championEndLine,
   gearUpgradeHighlight,
   normalizeRiftEnd,
   riftClearPay,
@@ -44,6 +45,24 @@ describe('riftEndPay', () => {
   });
 });
 
+describe('championEndLine', () => {
+  test('omits when no spur', () => {
+    expect(championEndLine('none')).toBeNull();
+    expect(championEndLine(undefined)).toBeNull();
+  });
+
+  test('names slain with optional Champion drop', () => {
+    expect(championEndLine('slain')).toBe('Elite slain');
+    expect(championEndLine('slain', "Champion's Ash Blade")).toBe(
+      "Elite slain · Champion's Ash Blade",
+    );
+  });
+
+  test('names a skipped spur', () => {
+    expect(championEndLine('skipped')).toBe('Elite skipped');
+  });
+});
+
 describe('riftEndLines', () => {
   test('clear card names biome, mod, kills, and the purse', () => {
     const lines = riftEndLines({
@@ -69,6 +88,34 @@ describe('riftEndLines', () => {
     expect(lines).toContain('Kills 12/15');
     expect(lines).toContain('+50 XP · +20g · +1 shards');
     expect(lines.some((l) => l.startsWith('Upgrade ·'))).toBe(true);
+    expect(lines.some((l) => l.startsWith('Elite'))).toBe(false);
+  });
+
+  test('clear card names Elite slain and the Champion drop', () => {
+    const lines = riftEndLines({
+      kind: 'clear',
+      inRift: true,
+      depth: 4,
+      kills: 10,
+      goal: 12,
+      pressureStep: 0,
+      championStatus: 'slain',
+      championLootName: "Champion's Bone Helm",
+    }).map((l) => l.text);
+    expect(lines).toContain("Elite slain · Champion's Bone Helm");
+  });
+
+  test('abandon card names Elite skipped', () => {
+    const lines = riftEndLines({
+      kind: 'abandon',
+      inRift: true,
+      depth: 2,
+      kills: 3,
+      goal: 14,
+      pressureStep: 0,
+      championStatus: 'skipped',
+    }).map((l) => l.text);
+    expect(lines).toContain('Elite skipped');
   });
 
   test('abandon card keeps gold and grants only the token XP', () => {

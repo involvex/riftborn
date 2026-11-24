@@ -305,6 +305,8 @@ export class WorldScene extends Phaser.Scene {
   private riftBossDefId = 'rift_lord';
   /** Champion kill already paid the this-run buff. */
   private championPayoffGranted = false;
+  /** Named Champion's drop stamped this rift (for the return card). */
+  private riftChampionLootName: string | null = null;
   private riftDepth = 1;
   /** Kills since last death / spawn (shown on death screen). */
   private lifeKills = 0;
@@ -856,6 +858,7 @@ export class WorldScene extends Phaser.Scene {
       if (!resume) {
         this.riftGearLine = null;
         this.riftGearScore = 0;
+        this.riftChampionLootName = null;
       }
       this.biomeLookActive = biomeLook(this.dungeon.biome.id);
       this.cameras.main.setBackgroundColor(this.biomeLookActive.background);
@@ -1094,8 +1097,9 @@ export class WorldScene extends Phaser.Scene {
     this.bossAnchor = layout.elite ? { ...layout.elite } : null;
     this.shrineReadyAt = 0;
     this.championPayoffGranted = false;
-
     if (!opts.skipNodes) {
+      // Fresh spawn — resume restores loot name from bag/ground later.
+      this.riftChampionLootName = null;
       for (const n of layout.nodes) {
         const p = snapToTile(n.x, n.y);
         this.nodes.push(
@@ -2695,7 +2699,41 @@ export class WorldScene extends Phaser.Scene {
       gearLine: this.riftGearLine,
       playTimeSec: gameState.playTimeSec,
       lootLeftBehind,
+      championStatus: inRift ? this.championEndStatus() : 'none',
+      championLootName: inRift ? this.championLootNameForEnd() : null,
     };
+  }
+
+  /** Spur outcome for the return card. */
+  private championEndStatus(): 'none' | 'slain' | 'skipped' {
+    const had =
+      !!this.dungeon?.layout.champion ||
+      this.enemies.some((e) => e.isChampion) ||
+      this.championPayoffGranted;
+    if (!had) return 'none';
+    if (this.championPayoffGranted || !this.championStillAlive()) {
+      return 'slain';
+    }
+    return 'skipped';
+  }
+
+  /** Prefer the stamped drop; fall back to bag / ground after resume. */
+  private championLootNameForEnd(): string | null {
+    if (this.riftChampionLootName) return this.riftChampionLootName;
+    const isChamp = (name: string) => /^Champion's\s+/i.test(name);
+    for (const slot of gameState.inventory.slots) {
+      if (slot.kind === 'gear' && isChamp(slot.item.name)) {
+        return slot.item.name;
+      }
+    }
+    const eq = gameState.inventory.equipment;
+    for (const g of [eq.weapon, eq.hat, eq.chest, eq.legs, eq.feet]) {
+      if (g && isChamp(g.name)) return g.name;
+    }
+    for (const drop of this.groundLoot) {
+      if (!drop.picked && isChamp(drop.item.name)) return drop.item.name;
+    }
+    return null;
   }
 
   private noteRiftGear(item: GearInstance): void {
@@ -2981,6 +3019,7 @@ export class WorldScene extends Phaser.Scene {
       onGear: (g) => {
         if (enemy.isChampion) {
           g.name = stampChampionLootName(g.name);
+          this.riftChampionLootName = g.name;
         }
         this.spawnGearDrop(enemy.worldX, enemy.worldY, g);
         if (enemy.isChampion) {

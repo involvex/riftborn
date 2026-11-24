@@ -8,6 +8,9 @@ import { clampPressureStep, pressureMults } from './RiftPressure';
 
 export type RiftEndKind = 'clear' | 'abandon' | 'death';
 
+/** Spur outcome for the return card — omit when the rift had no Elite. */
+export type ChampionEndStatus = 'none' | 'slain' | 'skipped';
+
 export type RiftEndFacts = {
   kind: RiftEndKind;
   inRift: boolean;
@@ -26,6 +29,10 @@ export type RiftEndFacts = {
   playTimeSec?: number;
   /** Unpicked ground drops will despawn on the zone change. */
   lootLeftBehind?: boolean;
+  /** Optional spur — slain, skipped, or absent. */
+  championStatus?: ChampionEndStatus;
+  /** Named Champion's drop from this run, when one dropped. */
+  championLootName?: string | null;
 };
 
 export type RiftEndPay = {
@@ -77,6 +84,7 @@ function formatPlayTime(sec: number): string {
 }
 
 export function normalizeRiftEnd(raw: Partial<RiftEndFacts>): RiftEndFacts {
+  const status = raw.championStatus;
   return {
     kind: raw.kind ?? 'death',
     inRift: !!raw.inRift,
@@ -94,7 +102,27 @@ export function normalizeRiftEnd(raw: Partial<RiftEndFacts>): RiftEndFacts {
     gearLine: raw.gearLine ?? null,
     playTimeSec: raw.playTimeSec ?? 0,
     lootLeftBehind: !!raw.lootLeftBehind,
+    championStatus:
+      status === 'slain' || status === 'skipped' || status === 'none'
+        ? status
+        : 'none',
+    championLootName: raw.championLootName ?? null,
   };
+}
+
+/**
+ * One return-card line for the optional spur.
+ * Absent when the rift had no Elite.
+ */
+export function championEndLine(
+  status: ChampionEndStatus | undefined,
+  lootName?: string | null,
+): string | null {
+  if (!status || status === 'none') return null;
+  if (status === 'skipped') return 'Elite skipped';
+  const loot = lootName?.trim();
+  if (loot) return `Elite slain · ${loot}`;
+  return 'Elite slain';
 }
 
 export function riftEndLines(raw: Partial<RiftEndFacts>): { text: string }[] {
@@ -106,6 +134,8 @@ export function riftEndLines(raw: Partial<RiftEndFacts>): { text: string }[] {
     if (facts.modName) lines.push({ text: facts.modName });
     const goal = facts.goal > 0 ? `/${facts.goal}` : '';
     lines.push({ text: `Kills ${facts.kills}${goal}` });
+    const spur = championEndLine(facts.championStatus, facts.championLootName);
+    if (spur) lines.push({ text: spur });
   } else {
     lines.push({ text: `Level ${facts.level}` });
     lines.push({ text: `Kills this life: ${facts.kills}` });
