@@ -51,6 +51,7 @@ Solo evenings, one shippable slice at a time. Prefer **feel → content → syst
 - **D3+ kill quota ~60%** — skip trash / take elite / fight boss is a real route (D1–D2 stay ~80%+)
 - **SHIFT split pack** — one ash goblin + shadow archer fight per rift; Q swaps who is solid
 - **Second skill fork per class** — War Charge / Rift Echo / Arc Spark (stack with the first forks)
+- **Champion minimap ping** — gold spur marker (fog-piercing) on mini + full map
 - **Champion loot line** — spur kill stamps `Champion's …` on the magic+ drop + prize toast
 
 ## Done — feel & look (core loop)
@@ -101,6 +102,7 @@ stay parked until someone has time on a device.
 | ✓   | **D3+ kill quota ~60%**    | Full clear before boss blocked skips    | `riftKillGoalFillRatio` is 0.6 from D3 up; D1–D2 stay ~80%+            |
 | ✓   | **SHIFT split pack**       | SHIFT was only a gate key               | One ash/shadow pair per rift; enter toast; Veiled still overrides      |
 | ✓   | **Second skill forks**     | One fork left build choice thin         | Charge / Echo / Spark replace bash / slash / bolt; stack with forks 1  |
+| ✓   | **Champion minimap ping**  | Spur easy to miss on the map            | Gold `champion` marker + fog pierce; Spur in M legend                  |
 | ✓   | **Champion loot line**     | Spur buff alone is soft payoff          | Drop renamed `Champion's …`; prize toast on kill                       |
 | 7   | **Playtest combat nits**   | Phone loop shipped; feel TBD on device  | Fix 2–3 notes from landscape `/?touch=1` or APK play                   |
 

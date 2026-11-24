@@ -2462,6 +2462,7 @@ export class WorldScene extends Phaser.Scene {
         alive: e.alive,
         elite: e.elitePack || e.def.isElite || e.isChampion,
         boss: e.isBoss,
+        champion: e.isChampion,
       })),
       portal,
     });
