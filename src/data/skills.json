@@ -204,6 +204,47 @@
       "rankBonus": 0.22,
       "maxTargets": 5
     },
+    "war_charge": {
+      "id": "war_charge",
+      "classId": "warrior",
+      "name": "War Charge",
+      "blurb": "Crash through a foe — alternate to Shield Bash.",
+      "maxRank": 3,
+      "cooldown": 7,
+      "kind": "dash_strike",
+      "range": 2.2,
+      "dash": 2.8,
+      "damageMult": 1.65,
+      "rankBonus": 0.22,
+      "maxTargets": 2
+    },
+    "mys_echo": {
+      "id": "mys_echo",
+      "classId": "mystic",
+      "name": "Rift Echo",
+      "blurb": "Second pulse wave — alternate to Rift Slash.",
+      "maxRank": 3,
+      "cooldown": 5.5,
+      "kind": "pulse",
+      "range": 3.0,
+      "damageMult": 1.15,
+      "rankBonus": 0.18,
+      "slow": 0.25,
+      "duration": 2.5,
+      "maxTargets": 6
+    },
+    "mag_spark": {
+      "id": "mag_spark",
+      "classId": "mage",
+      "name": "Arc Spark",
+      "blurb": "Fast snap bolt — alternate to Arc Bolt.",
+      "maxRank": 3,
+      "cooldown": 2.2,
+      "kind": "bolt",
+      "range": 5.5,
+      "damageMult": 1.25,
+      "rankBonus": 0.2
+    },
     "war_ironwill": {
       "id": "war_ironwill",
       "classId": "warrior",
@@ -292,6 +333,17 @@
         "starter": false
       },
       {
+        "id": "w_charge",
+        "abilityId": "war_charge",
+        "replacesAbilityId": "war_bash",
+        "name": "War Charge",
+        "blurb": "Fork. Replaces Shield Bash on the bar.",
+        "col": 2,
+        "row": 2,
+        "requires": ["w_bash"],
+        "starter": false
+      },
+      {
         "id": "w_iron",
         "abilityId": "war_ironwill",
         "name": "Iron Will",
@@ -355,6 +407,17 @@
         "starter": false
       },
       {
+        "id": "m_echo",
+        "abilityId": "mys_echo",
+        "replacesAbilityId": "mys_rift",
+        "name": "Rift Echo",
+        "blurb": "Fork. Replaces Rift Slash on the bar.",
+        "col": -2,
+        "row": 2,
+        "requires": ["m_rift"],
+        "starter": false
+      },
+      {
         "id": "m_attune",
         "abilityId": "mys_riftattune",
         "name": "Rift Attunement",
@@ -415,6 +478,17 @@
         "col": -2,
         "row": 2,
         "requires": ["g_nova"],
+        "starter": false
+      },
+      {
+        "id": "g_spark",
+        "abilityId": "mag_spark",
+        "replacesAbilityId": "mag_bolt",
+        "name": "Arc Spark",
+        "blurb": "Fork. Replaces Arc Bolt on the bar.",
+        "col": 2,
+        "row": 2,
+        "requires": ["g_bolt"],
         "starter": false
       },
       {

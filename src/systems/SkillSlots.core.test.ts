@@ -64,10 +64,10 @@ describe('four active abilities per class', () => {
   });
 
   for (const cls of CLASSES) {
-    test(`${cls}: four starters + fork + passive; slots stay four`, () => {
+    test(`${cls}: four starters + two forks + passive; slots stay four`, () => {
       const tree = trees[cls]!;
-      // 4 starters, 1 bar fork, 1 passive.
-      expect(tree.length).toBe(6);
+      // 4 starters, 2 bar forks, 1 passive.
+      expect(tree.length).toBe(7);
       expect(classAbilityIds(cls).length).toBe(4);
       expect(classAbilityIds(cls)).not.toContain(PASSIVE[cls]!.abilityId);
 
@@ -91,16 +91,20 @@ describe('four active abilities per class', () => {
       }
 
       const forks = tree.filter((n) => n.replacesAbilityId);
-      expect(forks.length).toBe(1);
-      const fork = forks[0]!;
-      expect(fork.starter).toBe(false);
-      expect(starters.some((s) => s.abilityId === fork.replacesAbilityId)).toBe(
-        true,
-      );
-      const forkDef = abilities[fork.abilityId];
-      expect(forkDef, `${fork.abilityId} def missing`).toBeDefined();
-      expect(forkDef!.classId).toBe(cls);
-      expect(forkDef!.kind).not.toBe('passive');
+      expect(forks.length).toBe(2);
+      const replaced = new Set<string>();
+      for (const fork of forks) {
+        expect(fork.starter).toBe(false);
+        expect(
+          starters.some((s) => s.abilityId === fork.replacesAbilityId),
+        ).toBe(true);
+        expect(replaced.has(fork.replacesAbilityId!)).toBe(false);
+        replaced.add(fork.replacesAbilityId!);
+        const forkDef = abilities[fork.abilityId];
+        expect(forkDef, `${fork.abilityId} def missing`).toBeDefined();
+        expect(forkDef!.classId).toBe(cls);
+        expect(forkDef!.kind).not.toBe('passive');
+      }
 
       const passive = tree.find((n) => n.id === PASSIVE[cls]!.nodeId);
       expect(passive, `${cls} passive node`).toBeDefined();

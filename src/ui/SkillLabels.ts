@@ -22,6 +22,12 @@ const KNOWN: Record<string, string> = {
   'Battle Cry': 'CRY',
   'Rift Step': 'STEP',
   'Chain Surge': 'SURGE',
+  Whirlwind: 'WHIRL',
+  'Rift Lance': 'LANCE',
+  'Rift Meteor': 'METEOR',
+  'War Charge': 'CHARGE',
+  'Rift Echo': 'ECHO',
+  'Arc Spark': 'SPARK',
 };
 
 /** Approximate painted width for bold sans caps (CSS-px). */
