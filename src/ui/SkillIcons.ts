@@ -8,17 +8,22 @@ const BY_ABILITY: Record<string, ItemIconId> = {
   war_cleave: 'axe',
   war_bash: 'shield',
   war_cry: 'scroll',
+  war_battlecry: 'scroll',
   war_whirl: 'sword',
+  war_charge: 'boots',
   mys_pulse: 'gem_blue',
   mys_rift: 'dagger',
   mys_seal: 'scroll',
   mys_step: 'boots',
+  mys_riftstep: 'boots',
   mys_lance: 'dagger',
+  mys_echo: 'gem_blue',
   mag_bolt: 'wand',
   mag_nova: 'potion_blue',
   mag_barrier: 'shield',
   mag_chain: 'gem_red',
   mag_meteor: 'gem_red',
+  mag_spark: 'wand',
 };
 
 const BY_CLASS_ATK: Record<string, ItemIconId> = {
