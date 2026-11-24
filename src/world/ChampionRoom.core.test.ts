@@ -5,8 +5,10 @@ import {
   championEnemyForBiome,
   championEnterToast,
   championHudToken,
+  championLootToast,
   floorPathExists,
   packsTowardKillGoal,
+  stampChampionLootName,
   stampChampionSideRoom,
 } from './ChampionRoom';
 import { mulberry32 } from './MapGen';
@@ -29,6 +31,24 @@ describe('ChampionRoom', () => {
   test('hud token is Elite only while alive', () => {
     expect(championHudToken(true)).toBe('Elite');
     expect(championHudToken(false)).toBeNull();
+  });
+
+  test("champion loot line strips rarity fluff and stamps Champion's", () => {
+    expect(stampChampionLootName('Gleaming Ash Blade')).toBe(
+      "Champion's Ash Blade",
+    );
+    expect(stampChampionLootName('Rift-Touched Bone Helm')).toBe(
+      "Champion's Bone Helm",
+    );
+    expect(stampChampionLootName("Champion's Ash Blade")).toBe(
+      "Champion's Ash Blade",
+    );
+    expect(championLootToast("Champion's Ash Blade")).toContain(
+      "Champion's Ash Blade",
+    );
+    expect(championLootToast("Champion's Ash Blade").toLowerCase()).toContain(
+      'prize',
+    );
   });
 
   test('kill goal ignores champion packs', () => {

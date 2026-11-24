@@ -61,6 +61,24 @@ export function championHudToken(alive: boolean): string | null {
   return alive ? 'Elite' : null;
 }
 
+const LOOT_PREFIXES =
+  /^(Gleaming|Rift-Touched|Ascendant|Worn|Hardened|Warlord)\s+/i;
+
+/**
+ * Stamp the guaranteed champion drop with a chase-readable name.
+ * Strips rarity/tier fluff so the line reads `Champion's Ash Blade`.
+ */
+export function stampChampionLootName(gearName: string): string {
+  const stripped = gearName.replace(LOOT_PREFIXES, '').trim();
+  const base = stripped.replace(/^Champion's\s+/i, '').trim() || 'Relic';
+  return `Champion's ${base}`;
+}
+
+/** Toast when the named champion piece hits the ground. */
+export function championLootToast(gearName: string): string {
+  return `Champion's prize — ${gearName}`;
+}
+
 /** Packs that count toward Kill → Boss. */
 export function packsTowardKillGoal(
   packs: readonly { count: number; champion?: boolean }[],
