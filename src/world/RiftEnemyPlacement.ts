@@ -8,6 +8,7 @@ import {
   assignOpeningPackSpots,
   openingPacksForBiome,
 } from './BiomePackIdentity';
+import { stampShiftSplitPack } from './ShiftSplitPack';
 
 export type ReachKey = string; // "x,y,layer"
 
@@ -427,5 +428,12 @@ export function placeRiftEnemyPacks(
     rnd,
   );
   ensureSupportFoe(packs, enemyMix, candidates, spawn);
+  // One SHIFT fight: ash + shadow halves on a shared tile (extra foes).
+  stampShiftSplitPack({
+    packs,
+    candidates,
+    spawn,
+    used,
+  });
   return packs;
 }

@@ -49,6 +49,7 @@ Solo evenings, one shippable slice at a time. Prefer **feel → content → syst
 - **Share-ready** — `SHARE.md` + `docs/ITCH_PAGE.md` current loop; co-op hub toasts (`CoopGate`)
 - **Optional rift champion** — side-room elite off the boss path; skip freely; kill pays this-run buff + magic gear (not kill-goal)
 - **D3+ kill quota ~60%** — skip trash / take elite / fight boss is a real route (D1–D2 stay ~80%+)
+- **SHIFT split pack** — one ash goblin + shadow archer fight per rift; Q swaps who is solid
 
 ## Done — feel & look (core loop)
 
@@ -85,11 +86,10 @@ co-op rifts stayed parked.
 | ✓   | **Replay ladder**       | Depth 10 / L50 plateaus                                            | Pressure step, skill forks, named affixes, set family, shard reroll, rift bounties |
 | ✓   | **Plaza / boss look**   | Vector town + reskin bosses                                        | Proximity labels, figure shadows, boss silhouette accents                          |
 
-## Next — playtest + loop choice
+## Next — playtest when free
 
-Optional champion spur + eased D3+ kill quota are in. Next: device feel
-nits, then SHIFT-in-fight packs only if playtest asks for more mid-run
-verbs.
+Champion, D3+ quota, and SHIFT split pack are in. Playtest combat nits
+stay parked until someone has time on a device.
 
 | #   | Slice                      | Why it matters                          | Done when                                                              |
 | --- | -------------------------- | --------------------------------------- | ---------------------------------------------------------------------- |
@@ -97,7 +97,8 @@ verbs.
 | ✓   | **Plaza NPC + props**      | Triangle Mira / board / chest / obelisk | Mira, Bram, Nix, board, chest, obelisk + warm lantern/well/crate/anvil |
 | ✓   | **Optional champion room** | Middle of rift was only a kill counter  | Spur elite off path; HUD `Elite`; buff on kill; kill goal ignores it   |
 | ✓   | **D3+ kill quota ~60%**    | Full clear before boss blocked skips    | `riftKillGoalFillRatio` is 0.6 from D3 up; D1–D2 stay ~80%+            |
-| 5   | **Playtest combat nits**   | Phone loop shipped; feel TBD on device  | Fix 2–3 notes from landscape `/?touch=1` or APK play                   |
+| ✓   | **SHIFT split pack**       | SHIFT was only a gate key               | One ash/shadow pair per rift; enter toast; Veiled still overrides      |
+| 6   | **Playtest combat nits**   | Phone loop shipped; feel TBD on device  | Fix 2–3 notes from landscape `/?touch=1` or APK play                   |
 
 Skip inventing new frameworks — extend `WorldArt` / `WorldScene` /
 `Npc` / `LootChest` / `public/assets/props/`.
