@@ -72,7 +72,14 @@ export type ChestSpawn = SpawnPoint & {
 
 export type ZoneLayout = {
   nodes: { defId: string; x: number; y: number }[];
-  packs: { enemyId: string; count: number; x: number; y: number }[];
+  packs: {
+    enemyId: string;
+    count: number;
+    x: number;
+    y: number;
+    /** Optional spur elite — excluded from kill goal. */
+    champion?: boolean;
+  }[];
   /** Town: rift obelisk. Rift: exit portal (null until boss dies). */
   portal: SpawnPoint | null;
   bench: SpawnPoint;
@@ -96,6 +103,8 @@ export type ZoneLayout = {
   chests?: ChestSpawn[];
   /** World size for open hub. */
   size?: number;
+  /** Optional champion spur (rift) — skip freely, buff on kill. */
+  champion?: { enemyId: string; x: number; y: number } | null;
 };
 
 /** Open hub extent (tiles on each axis). */

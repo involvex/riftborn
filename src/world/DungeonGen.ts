@@ -10,6 +10,7 @@ import {
   type ShiftGateGrid,
 } from './ShiftGateMap';
 import { minRiftEnemyCount, placeRiftEnemyPacks } from './RiftEnemyPlacement';
+import { packsTowardKillGoal, stampChampionSideRoom } from './ChampionRoom';
 import { pickRiftBiome, type BiomeDef } from '../data/biomes';
 import { riftKillGoalFillRatio } from '../systems/RiftDepth';
 
@@ -572,11 +573,39 @@ export function generateDungeon(seed: number, depth = 1): DungeonMap {
   };
   // Place after gates so flood-fill matches real rift walkability.
   layout.packs = placeRiftEnemyPacks(map, d, rnd, 3, biome.enemyMix);
-  const expectedKills = layout.packs.reduce((s, p) => s + p.count, 0);
+
+  // Optional champion spur — carved after packs so trash stays on the spine.
+  const champ = stampChampionSideRoom({
+    cells,
+    rooms,
+    rnd,
+    width,
+    height,
+    biomeId: biome.id,
+  });
+  if (champ) {
+    layout.champion = {
+      enemyId: champ.enemyId,
+      x: champ.x,
+      y: champ.y,
+    };
+    layout.packs.push({
+      enemyId: champ.enemyId,
+      count: 1,
+      x: champ.x,
+      y: champ.y,
+      champion: true,
+    });
+  } else {
+    layout.champion = null;
+  }
+
+  const expectedKills = packsTowardKillGoal(layout.packs);
   const fillRatio = riftKillGoalFillRatio(d);
   // The goal must stay reachable: never ask for more kills than the rift
   // actually spawned, or the boss can never appear and the run can only be
   // abandoned. Mod pack bonuses only add foes, so this stays conservative.
+  // Champion packs are excluded — skipping the spur still reaches the boss.
   const supplyCap = Math.max(
     minRiftEnemyCount(d),
     Math.floor(expectedKills * fillRatio),
@@ -591,6 +620,11 @@ export function generateDungeon(seed: number, depth = 1): DungeonMap {
     blocked.add(`${Math.floor(layout.elite.x)},${Math.floor(layout.elite.y)}`);
   if (layout.bench)
     blocked.add(`${Math.floor(layout.bench.x)},${Math.floor(layout.bench.y)}`);
+  if (layout.champion) {
+    blocked.add(
+      `${Math.floor(layout.champion.x)},${Math.floor(layout.champion.y)}`,
+    );
+  }
   const decor = layout.decor ?? [];
   layout.decor = decor;
   const pmin = biome.propsPer10x10?.min ?? 0;

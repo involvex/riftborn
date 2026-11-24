@@ -114,6 +114,8 @@ export class Enemy {
   private readonly kiteStrafeSign: 1 | -1;
   /** Runtime elite (random pack upgrade), distinct from boss defs. */
   readonly elitePack: boolean;
+  /** Optional rift spur champion — elite loot, never the Rift Lord. */
+  readonly isChampion: boolean;
   /** Boss flag for rift progress / exit portal. */
   readonly isBoss: boolean;
   /** Multiplier from player level / rift depth (HP + damage). */
@@ -136,6 +138,7 @@ export class Enemy {
     worldY: number,
     opts: {
       elitePack?: boolean;
+      champion?: boolean;
       boss?: boolean;
       levelScale?: number;
       hpMult?: number;
@@ -153,7 +156,9 @@ export class Enemy {
     this.homeX = worldX;
     this.homeY = worldY;
     this.elitePack = !!opts.elitePack && !this.def.isElite;
-    this.isBoss = !!opts.boss || this.def.isElite;
+    this.isChampion = !!opts.champion;
+    // Champions reuse elite defs but must not count as the Rift Lord.
+    this.isBoss = this.isChampion ? false : !!opts.boss || this.def.isElite;
     this.levelMult = 1 + Math.max(0, (opts.levelScale ?? 1) - 1) * 0.12;
     this.modDmgMult = opts.dmgMult ?? 1;
     this.modSpeedMult = opts.speedMult ?? 1;
@@ -168,14 +173,18 @@ export class Enemy {
     this.sprite = scene.add.sprite(0, -2, this.textureKey, 0);
     this.sprite.setOrigin(0.5, 0.88);
     const drawScale =
-      this.isBoss || this.def.isElite || this.elitePack
+      this.isBoss || this.def.isElite || this.elitePack || this.isChampion
         ? figureEliteDrawScale()
         : figureDrawScale();
     this.sprite.setScale(drawScale);
     this.applyBaseTint();
     this.bar = scene.add.graphics();
     const shadow = scene.add.graphics();
-    const sw = this.isBoss ? 36 : this.def.isElite || this.elitePack ? 30 : 24;
+    const sw = this.isBoss
+      ? 36
+      : this.def.isElite || this.elitePack || this.isChampion
+        ? 30
+        : 24;
     shadow.fillStyle(0x000000, this.isBoss ? 0.4 : 0.3);
     shadow.fillEllipse(0, 5, sw, sw * 0.42);
     // Boss silhouette accent — unique crown/horn so reskins read apart.
@@ -195,7 +204,7 @@ export class Enemy {
   }
 
   get awardsEliteLoot(): boolean {
-    return this.def.isElite || this.elitePack || this.isBoss;
+    return this.def.isElite || this.elitePack || this.isBoss || this.isChampion;
   }
 
   get isGhosted(): boolean {
@@ -941,7 +950,7 @@ export class Enemy {
     this.sprite.setTint(plan.whiteMs > 0 ? 0xffffff : 0xff7050);
     const ox = this.sprite.x;
     const baseScale =
-      this.isBoss || this.def.isElite || this.elitePack
+      this.isBoss || this.def.isElite || this.elitePack || this.isChampion
         ? figureEliteDrawScale()
         : figureDrawScale();
     const knock = this.facing * 6;

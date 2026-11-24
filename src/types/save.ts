@@ -15,6 +15,8 @@ export type RiftRunEnemySave = {
   hp: number;
   elitePack: boolean;
   boss: boolean;
+  /** Optional spur champion (not the Rift Lord). */
+  champion?: boolean;
   combatLayer: ShiftLayerId | 'both';
 };
 

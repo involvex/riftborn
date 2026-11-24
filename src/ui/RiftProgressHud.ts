@@ -67,6 +67,7 @@ export class RiftProgressHud {
     modName?: string,
     ruleName?: string,
     biomeName?: string,
+    championAlive = false,
   ): void {
     const ratio = goal <= 0 ? 1 : Phaser.Math.Clamp(kills / goal, 0, 1);
     this.fill.height = Math.max(2, (this.barH - 2) * ratio);
@@ -87,6 +88,7 @@ export class RiftProgressHud {
         phase,
         modName,
         ruleName,
+        championAlive,
       }),
     );
     if (phase !== this.lastPhase) {

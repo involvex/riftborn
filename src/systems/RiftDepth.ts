@@ -103,12 +103,13 @@ export function riftPackBonus(depth: number): {
 
 /**
  * Fraction of spawned foes required before the boss (clamped by supply).
- * Early depths stay higher so the first boss arrives more predictably.
+ * D1–D2 stay high so the first boss arrives predictably. D3+ sits near
+ * 60% so skipping trash for the optional champion → boss is a real route.
  */
 export function riftKillGoalFillRatio(depth: number): number {
   const d = Math.max(1, Math.min(10, depth));
   if (d <= 2) return Math.min(0.85, 0.78 + d * 0.02);
-  return Math.min(0.85, 0.68 + d * 0.015);
+  return 0.6;
 }
 
 /**

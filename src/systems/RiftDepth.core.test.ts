@@ -23,9 +23,11 @@ describe('RiftDepth early balance', () => {
     expect(riftPackBonus(10).eliteChance).toBeLessThanOrEqual(0.38);
   });
 
-  test('D1–D2 kill fill aims higher than mid/late depths', () => {
+  test('D1–D2 kill fill stays high; D3+ eases toward 60%', () => {
     expect(riftKillGoalFillRatio(1)).toBeGreaterThan(riftKillGoalFillRatio(5));
     expect(riftKillGoalFillRatio(2)).toBeGreaterThanOrEqual(0.8);
+    expect(riftKillGoalFillRatio(3)).toBe(0.6);
+    expect(riftKillGoalFillRatio(10)).toBe(0.6);
   });
 
   test('biome bosses soft-cap only on early depths', () => {
