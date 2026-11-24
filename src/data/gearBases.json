@@ -31,6 +31,38 @@
     "classId": "mystic",
     "armorBias": 0.9
   },
+  "grove_hat": {
+    "id": "grove_hat",
+    "name": "Grove Circlet",
+    "slot": "hat",
+    "setId": "grove",
+    "classId": "mystic",
+    "armorBias": 0.95
+  },
+  "grove_chest": {
+    "id": "grove_chest",
+    "name": "Grove Mantle",
+    "slot": "chest",
+    "setId": "grove",
+    "classId": "mystic",
+    "armorBias": 1.5
+  },
+  "grove_legs": {
+    "id": "grove_legs",
+    "name": "Grove Leggings",
+    "slot": "legs",
+    "setId": "grove",
+    "classId": "mystic",
+    "armorBias": 1.25
+  },
+  "grove_feet": {
+    "id": "grove_feet",
+    "name": "Grove Striders",
+    "slot": "feet",
+    "setId": "grove",
+    "classId": "mystic",
+    "armorBias": 0.85
+  },
   "rift_hat": {
     "id": "rift_hat",
     "name": "Riftbound Circlet",
@@ -63,6 +95,38 @@
     "classId": "mage",
     "armorBias": 0.7
   },
+  "spark_hat": {
+    "id": "spark_hat",
+    "name": "Spark Diadem",
+    "slot": "hat",
+    "setId": "spark",
+    "classId": "mage",
+    "armorBias": 0.75
+  },
+  "spark_chest": {
+    "id": "spark_chest",
+    "name": "Spark Vestments",
+    "slot": "chest",
+    "setId": "spark",
+    "classId": "mage",
+    "armorBias": 1.15
+  },
+  "spark_legs": {
+    "id": "spark_legs",
+    "name": "Spark Trousers",
+    "slot": "legs",
+    "setId": "spark",
+    "classId": "mage",
+    "armorBias": 0.95
+  },
+  "spark_feet": {
+    "id": "spark_feet",
+    "name": "Spark Slippers",
+    "slot": "feet",
+    "setId": "spark",
+    "classId": "mage",
+    "armorBias": 0.65
+  },
   "bone_hat": {
     "id": "bone_hat",
     "name": "Bone Helm",
@@ -94,6 +158,134 @@
     "setId": "bone",
     "classId": "warrior",
     "armorBias": 1.0
+  },
+  "bulwark_hat": {
+    "id": "bulwark_hat",
+    "name": "Bulwark Helm",
+    "slot": "hat",
+    "setId": "bulwark",
+    "classId": "warrior",
+    "armorBias": 1.35
+  },
+  "bulwark_chest": {
+    "id": "bulwark_chest",
+    "name": "Bulwark Cuirass",
+    "slot": "chest",
+    "setId": "bulwark",
+    "classId": "warrior",
+    "armorBias": 2.0
+  },
+  "bulwark_legs": {
+    "id": "bulwark_legs",
+    "name": "Bulwark Greaves",
+    "slot": "legs",
+    "setId": "bulwark",
+    "classId": "warrior",
+    "armorBias": 1.55
+  },
+  "bulwark_feet": {
+    "id": "bulwark_feet",
+    "name": "Bulwark Sabatons",
+    "slot": "feet",
+    "setId": "bulwark",
+    "classId": "warrior",
+    "armorBias": 1.15
+  },
+  "mystic_hat": {
+    "id": "mystic_hat",
+    "name": "Wanderer Cap",
+    "slot": "hat",
+    "setId": null,
+    "classId": "mystic",
+    "armorBias": 0.95
+  },
+  "mystic_chest": {
+    "id": "mystic_chest",
+    "name": "Wanderer Vest",
+    "slot": "chest",
+    "setId": null,
+    "classId": "mystic",
+    "armorBias": 1.45
+  },
+  "mystic_legs": {
+    "id": "mystic_legs",
+    "name": "Wanderer Pants",
+    "slot": "legs",
+    "setId": null,
+    "classId": "mystic",
+    "armorBias": 1.2
+  },
+  "mystic_feet": {
+    "id": "mystic_feet",
+    "name": "Wanderer Boots",
+    "slot": "feet",
+    "setId": null,
+    "classId": "mystic",
+    "armorBias": 0.85
+  },
+  "mage_hat": {
+    "id": "mage_hat",
+    "name": "Scholar Cap",
+    "slot": "hat",
+    "setId": null,
+    "classId": "mage",
+    "armorBias": 0.75
+  },
+  "mage_chest": {
+    "id": "mage_chest",
+    "name": "Scholar Robe",
+    "slot": "chest",
+    "setId": null,
+    "classId": "mage",
+    "armorBias": 1.1
+  },
+  "mage_legs": {
+    "id": "mage_legs",
+    "name": "Scholar Pants",
+    "slot": "legs",
+    "setId": null,
+    "classId": "mage",
+    "armorBias": 0.95
+  },
+  "mage_feet": {
+    "id": "mage_feet",
+    "name": "Scholar Sandals",
+    "slot": "feet",
+    "setId": null,
+    "classId": "mage",
+    "armorBias": 0.65
+  },
+  "warrior_hat": {
+    "id": "warrior_hat",
+    "name": "Militia Helm",
+    "slot": "hat",
+    "setId": null,
+    "classId": "warrior",
+    "armorBias": 1.15
+  },
+  "warrior_chest": {
+    "id": "warrior_chest",
+    "name": "Militia Cuirass",
+    "slot": "chest",
+    "setId": null,
+    "classId": "warrior",
+    "armorBias": 1.7
+  },
+  "warrior_legs": {
+    "id": "warrior_legs",
+    "name": "Militia Greaves",
+    "slot": "legs",
+    "setId": null,
+    "classId": "warrior",
+    "armorBias": 1.35
+  },
+  "warrior_feet": {
+    "id": "warrior_feet",
+    "name": "Militia Boots",
+    "slot": "feet",
+    "setId": null,
+    "classId": "warrior",
+    "armorBias": 0.95
   },
   "iron_blade": {
     "id": "iron_blade",

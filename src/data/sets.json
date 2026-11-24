@@ -14,14 +14,25 @@
       "dexterity": 12,
       "skillPower": 15,
       "maxHp": 25,
-      "skillFamily": [
-        "mys_pulse",
-        "mys_rift",
-        "mys_seal",
-        "mys_riftstep",
-        "mys_lance"
-      ],
+      "skillFamily": ["mys_pulse", "mys_rift", "mys_riftstep", "mys_lance"],
       "skillFamilyMult": 0.15
+    }
+  },
+  "grove": {
+    "id": "grove",
+    "name": "Grove",
+    "color": "#6BAA5A",
+    "classId": "mystic",
+    "twoPiece": {
+      "label": "+8 DEX",
+      "dexterity": 8
+    },
+    "fourPiece": {
+      "label": "+10 DEX, +18% Echo / Lance / Seal",
+      "dexterity": 10,
+      "skillPower": 12,
+      "skillFamily": ["mys_echo", "mys_lance", "mys_seal"],
+      "skillFamilyMult": 0.18
     }
   },
   "riftbound": {
@@ -39,13 +50,24 @@
       "intellect": 14,
       "skillPower": 18,
       "maxHp": 20,
-      "skillFamily": [
-        "mag_bolt",
-        "mag_nova",
-        "mag_barrier",
-        "mag_chain",
-        "mag_meteor"
-      ],
+      "skillFamily": ["mag_bolt", "mag_nova", "mag_meteor"],
+      "skillFamilyMult": 0.18
+    }
+  },
+  "spark": {
+    "id": "spark",
+    "name": "Spark",
+    "color": "#E8C040",
+    "classId": "mage",
+    "twoPiece": {
+      "label": "+8 INT",
+      "intellect": 8
+    },
+    "fourPiece": {
+      "label": "+10 INT, +18% Spark / Chain / Barrier",
+      "intellect": 10,
+      "skillPower": 12,
+      "skillFamily": ["mag_spark", "mag_chain", "mag_barrier"],
       "skillFamilyMult": 0.18
     }
   },
@@ -69,9 +91,26 @@
         "war_cleave",
         "war_bash",
         "war_battlecry",
-        "war_whirl"
+        "war_whirl",
+        "war_charge"
       ],
       "skillFamilyMult": 0.2
+    }
+  },
+  "bulwark": {
+    "id": "bulwark",
+    "name": "Bulwark",
+    "color": "#7A8A9A",
+    "classId": "warrior",
+    "twoPiece": {
+      "label": "+8 Armor, +6 STA",
+      "armor": 8,
+      "stamina": 6
+    },
+    "fourPiece": {
+      "label": "+14 Armor, +40 Max HP",
+      "armor": 14,
+      "maxHp": 40
     }
   }
 }

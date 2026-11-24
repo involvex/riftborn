@@ -1,5 +1,10 @@
 import { describe, expect, test } from 'bun:test';
-import { countSetPieces, resolveSetBonuses, sumSetStats } from './SetBonus';
+import {
+  countSetPieces,
+  resolveSetBonuses,
+  setSkillFamilyMult,
+  sumSetStats,
+} from './SetBonus';
 import type { GearInstance } from '../types/game';
 import type { EquipmentSlots } from '../types/save';
 
@@ -124,5 +129,32 @@ describe('SetBonus', () => {
     expect(total.strength).toBe(8);
     expect(total.skillPower).toBe(10);
     expect(total.maxHp).toBe(0);
+  });
+
+  test('Bulwark 4pc is armor/HP with no skill family', () => {
+    const eq = equipment([
+      piece('bulwark', 'hat'),
+      piece('bulwark', 'chest'),
+      piece('bulwark', 'legs'),
+      piece('bulwark', 'feet'),
+    ]);
+    const active = resolveSetBonuses(eq);
+    expect(active).toHaveLength(1);
+    expect(active[0]!.stats.armor).toBe(8 + 14);
+    expect(active[0]!.stats.maxHp).toBe(40);
+    expect(active[0]!.stats.stamina).toBe(6);
+    expect(active[0]!.skillFamily).toBeUndefined();
+    expect(setSkillFamilyMult(eq, 'war_cleave')).toBe(0);
+  });
+
+  test('Grove 4pc boosts Echo, not Pulse', () => {
+    const eq = equipment([
+      piece('grove', 'hat'),
+      piece('grove', 'chest'),
+      piece('grove', 'legs'),
+      piece('grove', 'feet'),
+    ]);
+    expect(setSkillFamilyMult(eq, 'mys_echo')).toBeCloseTo(0.18);
+    expect(setSkillFamilyMult(eq, 'mys_pulse')).toBe(0);
   });
 });
