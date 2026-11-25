@@ -156,6 +156,8 @@ export class MiniMap {
     return SIZE;
   }
 
+  private lastMarkerKey = '';
+
   apply(snap: MapSnapshot): void {
     this.snap = snap;
     const view = this.viewWindow(snap);
@@ -166,6 +168,20 @@ export class MiniMap {
       this.lastTerrainKey = key;
       this.drawTerrain(snap, view);
     }
+    const player = snap.markers.find((m) => m.kind === 'player');
+    const px = Math.floor(player?.x ?? 0);
+    const py = Math.floor(player?.y ?? 0);
+    let hostiles = 0;
+    for (const m of snap.markers) {
+      if (m.kind === 'mob' || m.kind === 'boss' || m.kind === 'champion') {
+        hostiles += 1;
+      }
+    }
+    const markerKey = `${px},${py}:${hostiles}:${snap.markers.length}:${view.x0},${view.y0}`;
+    if (markerKey === this.lastMarkerKey && key === this.lastTerrainKey) {
+      return;
+    }
+    this.lastMarkerKey = markerKey;
     this.drawMarkers(snap, view, false);
   }
 

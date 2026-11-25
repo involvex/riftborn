@@ -11,11 +11,11 @@ import {
 } from '../render/SpriteAtlas';
 import { navEnterCreate } from '../core/GameNavState';
 import { gameEvents } from '../core/EventBus';
+import { addMenuBackdrop, preloadMenuBackdrop } from '../ui/MenuBackdrop';
 
 const GENDERS: { id: CharacterGender; label: string }[] = [
   { id: 'male', label: 'Male' },
   { id: 'female', label: 'Female' },
-  { id: 'nonbinary', label: 'Non-binary' },
 ];
 
 export class CharacterCreateScene extends Phaser.Scene {
@@ -40,6 +40,10 @@ export class CharacterCreateScene extends Phaser.Scene {
 
   constructor() {
     super('CharacterCreateScene');
+  }
+
+  preload(): void {
+    preloadMenuBackdrop(this);
   }
 
   create(): void {
@@ -142,6 +146,9 @@ export class CharacterCreateScene extends Phaser.Scene {
     const footerHCss = phone ? 150 : compact ? 158 : 168;
     const footerTopCss = cssH - footerHCss;
     let yCss = Math.max(6, cssH * 0.02);
+
+    const bg = addMenuBackdrop(this);
+    if (bg) this.root.add(bg);
 
     const title = this.add
       .text(cx, uiPx(yCss, s), 'RIFTBORN', {

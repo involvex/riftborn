@@ -171,7 +171,7 @@ export class GameState {
 
   applySave(data: CharacterSave): void {
     this.name = data.name;
-    this.gender = data.gender ?? 'male';
+    this.gender = data.gender === 'female' ? 'female' : 'male';
     this.progression.load(
       data.level,
       data.xp,

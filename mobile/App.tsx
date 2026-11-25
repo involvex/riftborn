@@ -1,16 +1,13 @@
 import Constants from 'expo-constants';
 import { StatusBar } from 'expo-status-bar';
 import * as ScreenOrientation from 'expo-screen-orientation';
+import * as SplashScreen from 'expo-splash-screen';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import {
-  ActivityIndicator,
-  BackHandler,
-  Platform,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+import { BackHandler, Platform, StyleSheet, Text, View } from 'react-native';
 import { WebView } from 'react-native-webview';
+
+// Keep the native splash up until the WebView finishes loading.
+SplashScreen.preventAutoHideAsync().catch(() => {});
 
 type WebSource = { uri: string };
 
@@ -72,7 +69,6 @@ const INJECT_NATIVE_BACK = `
  */
 export default function App() {
   const source = useMemo(() => resolveSource(), []);
-  const bundled = isBundled();
   const [ready, setReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const webRef = useRef<WebHandle | null>(null);
@@ -82,6 +78,11 @@ export default function App() {
       ScreenOrientation.OrientationLock.LANDSCAPE,
     ).catch(() => {});
   }, []);
+
+  useEffect(() => {
+    if (!ready && !error) return;
+    SplashScreen.hideAsync().catch(() => {});
+  }, [ready, error]);
 
   useEffect(() => {
     if (Platform.OS !== 'android') return;
@@ -101,21 +102,12 @@ export default function App() {
   return (
     <View style={styles.root}>
       <StatusBar hidden />
-      {!ready && !error && (
-        <View style={styles.overlay}>
-          <ActivityIndicator color="#c4a574" size="large" />
-          <Text style={styles.hint}>
-            {bundled ? 'Starting Riftborn…' : 'Loading Riftborn…'}
-          </Text>
-          <Text style={styles.uri}>{source.uri}</Text>
-        </View>
-      )}
       {error && (
         <View style={styles.overlay}>
           <Text style={styles.err}>{error}</Text>
           <Text style={styles.uri}>{source.uri}</Text>
           <Text style={styles.hint}>
-            {bundled
+            {isBundled()
               ? 'Rebuild with bun run mobile:build'
               : 'Run bun run mobile:dev (starts Vite + installs debug app)'}
           </Text>
@@ -189,15 +181,15 @@ export default function App() {
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: '#0e1218' },
-  webview: { flex: 1, backgroundColor: '#0e1218' },
+  root: { flex: 1, backgroundColor: '#0a0c10' },
+  webview: { flex: 1, backgroundColor: '#0a0c10' },
   overlay: {
     ...StyleSheet.absoluteFill,
     zIndex: 2,
     alignItems: 'center',
     justifyContent: 'center',
     padding: 24,
-    backgroundColor: '#0e1218',
+    backgroundColor: '#0a0c10',
   },
   hint: {
     marginTop: 12,

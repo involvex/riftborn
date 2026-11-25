@@ -10,9 +10,9 @@ export default {
   icon: './assets/icon.png',
   userInterfaceStyle: 'dark',
   splash: {
-    image: './assets/splash-icon.png',
-    resizeMode: 'contain',
-    backgroundColor: '#0e1218',
+    image: './assets/splash.png',
+    resizeMode: 'cover',
+    backgroundColor: '#0a0c10',
   },
   ios: {
     supportsTablet: true,
@@ -38,7 +38,19 @@ export default {
   web: {
     favicon: './assets/favicon.png',
   },
-  plugins: ['expo-screen-orientation', 'expo-status-bar'],
+  plugins: [
+    'expo-screen-orientation',
+    'expo-status-bar',
+    [
+      'expo-splash-screen',
+      {
+        backgroundColor: '#0a0c10',
+        image: './assets/splash.png',
+        resizeMode: 'cover',
+        imageWidth: 300,
+      },
+    ],
+  ],
   extra: {
     gameUrl,
     gameBundle: bundled,

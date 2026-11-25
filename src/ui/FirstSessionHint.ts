@@ -21,7 +21,7 @@ export class FirstSessionHint {
     const profile = touch ? 'touch' : 'desktop';
     this.text = scene.add
       .text(0, 0, '', {
-        fontFamily: 'Segoe UI, sans-serif',
+        fontFamily: 'Spectral, Georgia, serif',
         fontSize: touch
           ? uiFontGameSize('label', 'touch')
           : uiFontSize('label', profile),

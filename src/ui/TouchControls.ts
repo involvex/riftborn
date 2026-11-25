@@ -107,9 +107,12 @@ export class TouchControls {
       onDown: () => gameEvents.emit('combat:attackDown', {}),
       onUp: () => gameEvents.emit('combat:attackUp', {}),
     });
-    this.interact = this.makeBtn('E', 0x6ec6a0, () =>
-      gameEvents.emit('ui:interact', {}),
-    );
+    this.interact = this.makeBtn('E', 0x6ec6a0, {
+      onDown: () => gameEvents.emit('ui:interactDown', {}),
+      onUp: () => gameEvents.emit('ui:interactUp', {}),
+      // Keep mining if the thumb slides a little off the pad.
+      cancelOnOut: false,
+    });
     this.actionBtn = this.makeBtn('ACT', 0x7a6ad4, {
       onDown: () => this.onActionDown(),
       onUp: () => this.onActionUp(),
@@ -539,12 +542,15 @@ export class TouchControls {
           onClick?: () => void;
           onDown?: () => void;
           onUp?: () => void;
+          /** When false, sliding off the pad does not end the hold. */
+          cancelOnOut?: boolean;
         },
   ): Btn {
     const opts =
       typeof onClickOrOpts === 'function'
         ? { onClick: onClickOrOpts }
         : onClickOrOpts;
+    const cancelOnOut = opts.cancelOnOut !== false;
     const bg = this.scene.add
       .circle(0, 0, 28, 0x1a2230, 0.88)
       .setStrokeStyle(2.5, stroke, 0.95)
@@ -573,8 +579,8 @@ export class TouchControls {
     bg.on('pointerupoutside', () => unpress(false));
     bg.on('pointercancel', () => unpress(false));
     bg.on('pointerout', () => {
-      if (pressed) unpress(false);
-      else release();
+      if (pressed && cancelOnOut) unpress(false);
+      else if (!pressed) release();
     });
     const t = this.scene.add
       .text(0, 0, label, {

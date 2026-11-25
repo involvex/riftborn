@@ -71,7 +71,7 @@ export type LootTableDef = {
 
 export type CharacterClassId = 'warrior' | 'mystic' | 'mage';
 
-export type CharacterGender = 'male' | 'female' | 'nonbinary';
+export type CharacterGender = 'male' | 'female';
 
 export type PlayerStats = {
   strength: number;

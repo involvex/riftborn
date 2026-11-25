@@ -22,6 +22,7 @@ import {
 } from '../core/SettingsStore';
 import { Events, gameEvents } from '../core/EventBus';
 import { navEnterTitle, navSetOverlay } from '../core/GameNavState';
+import { addMenuBackdrop, preloadMenuBackdrop } from '../ui/MenuBackdrop';
 
 type BootView = 'title' | 'slots' | 'settings';
 
@@ -42,6 +43,7 @@ export class BootScene extends Phaser.Scene {
     preloadCombatVfx(this);
     preloadItemIcons(this);
     preloadWorldArt(this);
+    preloadMenuBackdrop(this);
     preloadAudio(this);
   }
 
@@ -91,6 +93,8 @@ export class BootScene extends Phaser.Scene {
   private render(): void {
     this.clearRoot();
     navSetOverlay(this.view !== 'title');
+    const bg = addMenuBackdrop(this);
+    if (bg) this.root.add(bg);
     if (this.view === 'title') this.drawTitle();
     else if (this.view === 'slots') this.drawSlots();
     else this.drawSettings();
@@ -350,19 +354,22 @@ export class BootScene extends Phaser.Scene {
   }
 
   private drawSettings(): void {
-    const { width, height } = this.scale;
+    const { width: cssW, height: cssH, scale: s } = uiLayoutSpace(this);
+    const compact = cssH < 520;
+    const cx = uiPx(cssW / 2, s);
     const heading = this.add
-      .text(width / 2, height * 0.12, 'Settings', {
+      .text(cx, uiPx(cssH * (compact ? 0.08 : 0.1), s), 'Settings', {
         fontFamily: 'Georgia, serif',
-        fontSize: uiFont(this, 36, 24, 48),
+        fontSize: uiFont(this, compact ? 26 : 36, 20, 48),
         color: '#e8e4d8',
       })
       .setOrigin(0.5);
     this.root.add(heading);
-    this.settingsBody = this.add.container(width / 2, height * 0.42);
+    this.settingsBody = this.add.container(0, 0);
     this.root.add(this.settingsBody);
     this.renderTitleSettings();
-    const back = this.makeButton(width / 2, height * 0.88, 'Back', () => {
+    const backY = uiPx(Math.min(cssH - 24, cssH * 0.92), s);
+    const back = this.makeButton(cx, backY, 'Back', () => {
       this.view = 'title';
       this.render();
     });
@@ -371,12 +378,14 @@ export class BootScene extends Phaser.Scene {
 
   private renderTitleSettings(): void {
     this.settingsBody.removeAll(true);
-    const s = settingsStore.get();
+    const { width: cssW, height: cssH, scale: s } = uiLayoutSpace(this);
+    const compact = cssH < 520;
+    const store = settingsStore.get();
     const rows: { label: string; onClick: () => void }[] = [
       {
-        label: `Master vol: ${Math.round(s.masterVolume * 100)}%`,
+        label: `Master vol: ${Math.round(store.masterVolume * 100)}%`,
         onClick: () => {
-          const next = (s.masterVolume + 0.1) % 1.1;
+          const next = (store.masterVolume + 0.1) % 1.1;
           settingsStore.save({
             masterVolume: Math.min(1, Number(next.toFixed(1))),
           });
@@ -385,9 +394,9 @@ export class BootScene extends Phaser.Scene {
         },
       },
       {
-        label: `SFX vol: ${Math.round(s.sfxVolume * 100)}%`,
+        label: `SFX vol: ${Math.round(store.sfxVolume * 100)}%`,
         onClick: () => {
-          const next = (s.sfxVolume + 0.1) % 1.1;
+          const next = (store.sfxVolume + 0.1) % 1.1;
           settingsStore.save({
             sfxVolume: Math.min(1, Number(next.toFixed(1))),
           });
@@ -396,9 +405,9 @@ export class BootScene extends Phaser.Scene {
         },
       },
       {
-        label: `Music vol: ${Math.round(s.musicVolume * 100)}%`,
+        label: `Music vol: ${Math.round(store.musicVolume * 100)}%`,
         onClick: () => {
-          const next = (s.musicVolume + 0.1) % 1.1;
+          const next = (store.musicVolume + 0.1) % 1.1;
           settingsStore.save({
             musicVolume: Math.min(1, Number(next.toFixed(1))),
           });
@@ -407,46 +416,46 @@ export class BootScene extends Phaser.Scene {
         },
       },
       {
-        label: `Screen shake: ${s.screenShake ? 'ON' : 'OFF'}`,
+        label: `Screen shake: ${store.screenShake ? 'ON' : 'OFF'}`,
         onClick: () => {
-          settingsStore.save({ screenShake: !s.screenShake });
+          settingsStore.save({ screenShake: !store.screenShake });
           gameEvents.emit(Events.SETTINGS_CHANGED);
           this.renderTitleSettings();
         },
       },
       {
-        label: `Damage numbers: ${s.showDamageNumbers ? 'ON' : 'OFF'}`,
+        label: `Damage numbers: ${store.showDamageNumbers ? 'ON' : 'OFF'}`,
         onClick: () => {
           settingsStore.save({
-            showDamageNumbers: !s.showDamageNumbers,
+            showDamageNumbers: !store.showDamageNumbers,
           });
           gameEvents.emit(Events.SETTINGS_CHANGED);
           this.renderTitleSettings();
         },
       },
       {
-        label: `Haptics: ${s.haptics ? 'ON' : 'OFF'}`,
+        label: `Haptics: ${store.haptics ? 'ON' : 'OFF'}`,
         onClick: () => {
-          settingsStore.save({ haptics: !s.haptics });
+          settingsStore.save({ haptics: !store.haptics });
           gameEvents.emit(Events.SETTINGS_CHANGED);
           this.renderTitleSettings();
         },
       },
       {
-        label: `Shift FX: ${shiftFxIntensityLabel(s.shiftFxIntensity)}`,
+        label: `Shift FX: ${shiftFxIntensityLabel(store.shiftFxIntensity)}`,
         onClick: () => {
           settingsStore.save({
-            shiftFxIntensity: cycleShiftFxIntensity(s.shiftFxIntensity),
+            shiftFxIntensity: cycleShiftFxIntensity(store.shiftFxIntensity),
           });
           gameEvents.emit(Events.SETTINGS_CHANGED);
           this.renderTitleSettings();
         },
       },
       {
-        label: `Graphics: ${graphicsQualityLabel(s.graphicsQuality)}`,
+        label: `Graphics: ${graphicsQualityLabel(store.graphicsQuality)}`,
         onClick: () => {
           settingsStore.save({
-            graphicsQuality: cycleGraphicsQuality(s.graphicsQuality),
+            graphicsQuality: cycleGraphicsQuality(store.graphicsQuality),
           });
           refreshGraphicsProfile();
           gameEvents.emit(Events.SETTINGS_CHANGED);
@@ -454,12 +463,27 @@ export class BootScene extends Phaser.Scene {
         },
       },
     ];
-    let y = -140;
-    for (const row of rows) {
-      const btn = this.makeButton(0, y, row.label, row.onClick);
+
+    const topCss = cssH * (compact ? 0.16 : 0.18);
+    const bottomCss = cssH * 0.86;
+    const bandCss = Math.max(120, bottomCss - topCss);
+    const cols = compact ? 2 : 1;
+    const perCol = Math.ceil(rows.length / cols);
+    const rowStepCss = Math.min(
+      compact ? 36 : 44,
+      bandCss / Math.max(1, perCol),
+    );
+    const colGapCss = compact ? Math.min(220, cssW * 0.42) : 0;
+    const originXCss = cssW / 2 - ((cols - 1) * colGapCss) / 2;
+
+    rows.forEach((row, i) => {
+      const col = cols === 1 ? 0 : Math.floor(i / perCol);
+      const rowIdx = cols === 1 ? i : i % perCol;
+      const x = uiPx(originXCss + col * colGapCss, s);
+      const y = uiPx(topCss + rowIdx * rowStepCss + rowStepCss * 0.35, s);
+      const btn = this.makeButton(x, y, row.label, row.onClick);
       this.settingsBody.add(btn);
-      y += 42;
-    }
+    });
   }
 
   private makeButton(
@@ -496,11 +520,13 @@ export class BootScene extends Phaser.Scene {
     const { width, height } = this.scale;
     const t = this.add
       .text(width / 2, height * 0.78, text, {
-        fontFamily: 'Segoe UI, sans-serif',
-        fontSize: '14px',
+        fontFamily: 'Spectral, Georgia, serif',
+        fontSize: '15px',
         color: '#e8c070',
         backgroundColor: '#000000aa',
-        padding: { x: 10, y: 6 },
+        padding: { x: 12, y: 7 },
+        wordWrap: { width: Math.round(width * 0.72) },
+        align: 'center',
       })
       .setOrigin(0.5);
     this.root.add(t);

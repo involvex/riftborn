@@ -121,7 +121,6 @@ export function playerSpriteKey(
   if (classId === 'mage') return 'spr_player_mage';
   if (classId === 'mystic') return 'spr_player_mystic';
   if (gender === 'female') return 'spr_player_female';
-  if (gender === 'nonbinary') return 'spr_player_nonbinary';
   return 'spr_player_male';
 }
 
@@ -172,7 +171,7 @@ function paletteForPlayer(key: string): Palette {
       boot: '#2a3038',
     };
   }
-  if (key.includes('mystic') || key.includes('nonbinary')) {
+  if (key.includes('mystic')) {
     return {
       outline: '#1a1410',
       skin: '#c9b8a0',

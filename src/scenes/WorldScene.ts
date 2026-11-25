@@ -56,6 +56,7 @@ import {
   canRepeatBasicAttack,
   shouldStartDesktopAttack,
 } from '../systems/AttackHold';
+import { canRepeatGather, gatherApproachDelta } from '../systems/GatherHold';
 import { DASH_INVULN_SEC, blendStickWithAssist } from '../systems/CombatWeight';
 import {
   CRYSTAL_LENS_BARRIER_HP,
@@ -291,6 +292,8 @@ export class WorldScene extends Phaser.Scene {
   private tiles!: Phaser.GameObjects.Graphics;
   /** Painted floor tile sprites (cleared on zone reload). */
   private tileSprites: Phaser.GameObjects.Image[] = [];
+  private floorChunkKeys: string[] = [];
+  private floorChunkSeq = 0;
   private portalMarker: Phaser.GameObjects.Container | null = null;
   /** Blocks double portal / B while fade swap runs. */
   private zoneBusy = false;
@@ -364,9 +367,16 @@ export class WorldScene extends Phaser.Scene {
   private touchDx = 0;
   private touchDy = 0;
   private attackHeld = false;
+  private gatherHeld = false;
+  /** Locked gather node while hold-mining; null until first lock. */
+  private gatherTargetId: string | null = null;
+  private gatherCooldown = 0;
+  /** Soft seek radius so hold-mine can walk up to a nearby node. */
+  private readonly gatherSeekRange = 3.6;
   private assistChase = false;
   private onWindowBlur = (): void => {
     this.clearAttackHold();
+    this.clearGatherHold();
   };
   private lastNearGate = false;
   private lastRangeHintAt = Number.NEGATIVE_INFINITY;
@@ -765,16 +775,33 @@ export class WorldScene extends Phaser.Scene {
       gameEvents.on('combat:attackUp', () => this.clearAttackHold()),
       gameEvents.on('combat:attack', () => this.tryAttack()),
       gameEvents.on('ui:interact', () => this.tryInteract()),
+      gameEvents.on('ui:interactDown', () => this.startInteractHold()),
+      gameEvents.on('ui:interactUp', () => this.clearGatherHold()),
       gameEvents.on('combat:dash', () => {
         this.tryDash(this.touchDx || 0, this.touchDy || 0);
       }),
       gameEvents.on(Events.RESOLVE_DEATH, () => this.finishDeath()),
       // Modals/overlays pause or block combat; don't keep repeating.
-      gameEvents.on('ui:openInventory', () => this.clearAttackHold()),
-      gameEvents.on('ui:openCharacter', () => this.clearAttackHold()),
-      gameEvents.on('ui:openSkills', () => this.clearAttackHold()),
-      gameEvents.on('ui:toggleMenu', () => this.clearAttackHold()),
-      gameEvents.on('ui:toggleMap', () => this.clearAttackHold()),
+      gameEvents.on('ui:openInventory', () => {
+        this.clearAttackHold();
+        this.clearGatherHold();
+      }),
+      gameEvents.on('ui:openCharacter', () => {
+        this.clearAttackHold();
+        this.clearGatherHold();
+      }),
+      gameEvents.on('ui:openSkills', () => {
+        this.clearAttackHold();
+        this.clearGatherHold();
+      }),
+      gameEvents.on('ui:toggleMenu', () => {
+        this.clearAttackHold();
+        this.clearGatherHold();
+      }),
+      gameEvents.on('ui:toggleMap', () => {
+        this.clearAttackHold();
+        this.clearGatherHold();
+      }),
       gameEvents.on(Events.SHIFT_CHANGED, (p) => {
         const d = p as { layer: ShiftLayerId };
         this.applyShiftVisuals(d.layer);
@@ -1739,6 +1766,84 @@ export class WorldScene extends Phaser.Scene {
   private clearTileSprites(): void {
     for (const s of this.tileSprites) s.destroy();
     this.tileSprites = [];
+    for (const key of this.floorChunkKeys) {
+      if (this.textures.exists(key)) this.textures.remove(key);
+    }
+    this.floorChunkKeys = [];
+  }
+
+  /**
+   * Collapse per-tile Images into ~8×8 world-tile RenderTexture chunks.
+   * Cuts hub object count from ~4k to a few dozen; SHIFT tints chunks.
+   */
+  private bakeFloorChunks(): void {
+    const CHUNK = 8;
+    if (this.tileSprites.length === 0) return;
+
+    type Bucket = {
+      imgs: Phaser.GameObjects.Image[];
+      minX: number;
+      minY: number;
+      maxX: number;
+      maxY: number;
+    };
+    const buckets = new Map<string, Bucket>();
+    const pad = 40;
+
+    for (const img of this.tileSprites) {
+      const wx = (img.getData('wx') as number | undefined) ?? 0;
+      const wy = (img.getData('wy') as number | undefined) ?? 0;
+      const cx = Math.floor(wx / CHUNK);
+      const cy = Math.floor(wy / CHUNK);
+      const key = `${cx},${cy}`;
+      let b = buckets.get(key);
+      if (!b) {
+        b = {
+          imgs: [],
+          minX: img.x,
+          minY: img.y,
+          maxX: img.x,
+          maxY: img.y,
+        };
+        buckets.set(key, b);
+      }
+      b.imgs.push(img);
+      b.minX = Math.min(b.minX, img.x);
+      b.minY = Math.min(b.minY, img.y);
+      b.maxX = Math.max(b.maxX, img.x);
+      b.maxY = Math.max(b.maxY, img.y);
+    }
+
+    const chunks: Phaser.GameObjects.Image[] = [];
+    for (const b of buckets.values()) {
+      const left = b.minX - pad;
+      const top = b.minY - pad;
+      const w = Math.max(8, Math.ceil(b.maxX - b.minX + pad * 2));
+      const h = Math.max(8, Math.ceil(b.maxY - b.minY + pad * 2));
+      const rt = this.add
+        .renderTexture(left, top, w, h)
+        .setOrigin(0, 0)
+        .setDepth(-1000);
+      for (const img of b.imgs) {
+        rt.draw(img, img.x - left, img.y - top);
+        img.destroy();
+      }
+      const key = `floor_chunk_${this.floorChunkSeq++}`;
+      rt.saveTexture(key);
+      this.floorChunkKeys.push(key);
+      const midX = left + w / 2;
+      const midY = top + h / 2;
+      const baked = this.add
+        .image(midX, midY, key)
+        .setOrigin(0.5, 0.5)
+        .setDepth(-1000);
+      baked.setData('baseTint', 0xffffff);
+      baked.setData('gate', null);
+      baked.setData('chunk', true);
+      chunks.push(baked);
+      rt.destroy();
+    }
+    this.tileSprites = chunks;
   }
 
   private clearBossArenaOverlay(): void {
@@ -1823,6 +1928,8 @@ export class WorldScene extends Phaser.Scene {
         .setScale(TILE_ART_SCALE)
         .setDepth(-1000);
       img.setData('gate', gate);
+      img.setData('wx', x);
+      img.setData('wy', y);
       const baseTint = tint ?? 0xffffff;
       img.setData('baseTint', baseTint);
       if (tint !== undefined) {
@@ -1997,6 +2104,7 @@ export class WorldScene extends Phaser.Scene {
       }
     }
     this.tiles.setDepth(-999);
+    this.bakeFloorChunks();
     this.cullWorldSprites();
   }
 
@@ -2078,6 +2186,7 @@ export class WorldScene extends Phaser.Scene {
       }
     }
     this.tiles.setDepth(-999);
+    this.bakeFloorChunks();
     this.paintBossArenaRing('idle');
     this.cullWorldSprites();
   }
@@ -2187,6 +2296,27 @@ export class WorldScene extends Phaser.Scene {
       dy = this.touchDy;
     }
 
+    this.gatherCooldown = Math.max(0, this.gatherCooldown - dt);
+
+    const playerSteering = dx !== 0 || dy !== 0;
+    // Hold-mine: auto-walk toward the locked node when out of swing range.
+    if (this.gatherHeld && !playerSteering) {
+      const target = this.resolveGatherTarget();
+      if (target) {
+        const approach = gatherApproachDelta(
+          { x: this.player.worldX, y: this.player.worldY },
+          { x: target.worldX, y: target.worldY },
+          this.player.gatherRange,
+        );
+        if (!approach.inRange) {
+          dx = approach.x;
+          dy = approach.y;
+        }
+      } else {
+        this.clearGatherHold();
+      }
+    }
+
     const manualMove = dx !== 0 || dy !== 0;
     // Stick alone cancels chase; stick + hold-attack blends toward the foe.
     if (manualMove && !this.attackHeld) {
@@ -2199,6 +2329,15 @@ export class WorldScene extends Phaser.Scene {
       })
     ) {
       this.tryAttack();
+    }
+    if (
+      canRepeatGather({
+        held: this.gatherHeld,
+        uiBlocked: false,
+        cooldownLeft: this.gatherCooldown,
+      })
+    ) {
+      this.tryGatherSwing();
     }
     if (this.assistChase && !netClient.connected) {
       const targetables = this.enemies.map((e) => ({
@@ -2271,7 +2410,11 @@ export class WorldScene extends Phaser.Scene {
     gameState.skills.tick(dt);
     gameState.bounties.tick(dt);
 
-    if (Phaser.Input.Keyboard.JustDown(this.keyE)) this.tryInteract();
+    if (Phaser.Input.Keyboard.JustDown(this.keyE)) {
+      this.startInteractHold();
+    } else if (this.gatherHeld && !this.keyE.isDown) {
+      this.clearGatherHold();
+    }
     if (Phaser.Input.Keyboard.JustDown(this.keyF)) this.tryCraftNearby();
     if (Phaser.Input.Keyboard.JustDown(this.keyR)) this.tryPortal();
     if (Phaser.Input.Keyboard.JustDown(this.keyTown)) this.returnToTown();
@@ -2316,7 +2459,13 @@ export class WorldScene extends Phaser.Scene {
 
     this.revealFogAroundPlayer();
     this.mapEmitAcc += dt;
-    if (this.mapEmitAcc >= 0.15 || this.exploredDirty) {
+    const idlePlaza =
+      !gameState.inRift &&
+      inPlaza(Math.floor(this.player.worldX), Math.floor(this.player.worldY)) &&
+      dx === 0 &&
+      dy === 0;
+    const mapInterval = idlePlaza ? 0.4 : 0.15;
+    if (this.mapEmitAcc >= mapInterval || this.exploredDirty) {
       this.mapEmitAcc = 0;
       this.emitMapSnapshot();
     }
@@ -2848,10 +2997,67 @@ export class WorldScene extends Phaser.Scene {
     this.attackHeld = false;
   }
 
+  private clearGatherHold(): void {
+    this.gatherHeld = false;
+    this.gatherTargetId = null;
+  }
+
   private startBasicAttackHold(): void {
     if (this.deathPending) return;
     this.attackHeld = true;
     this.tryAttack();
+  }
+
+  /**
+   * E / Mine press: start hold-mine when gather is the top interact (or a
+   * node is nearby with nothing higher-priority in range); otherwise fire
+   * a one-shot interact (chest, NPC, shrine, …).
+   */
+  private startInteractHold(): void {
+    if (this.deathPending) return;
+    const action = this.resolveCurrentInteract();
+    if (action.kind === 'gather' && action.id) {
+      this.gatherHeld = true;
+      this.gatherTargetId = action.id;
+      this.tryGatherSwing();
+      return;
+    }
+    // Walk-up seek only when nothing else claims the interact button.
+    if (action.kind === 'none') {
+      const seek = this.findNearestGatherNode(this.gatherSeekRange);
+      if (seek) {
+        this.gatherHeld = true;
+        this.gatherTargetId = seek.id;
+        this.tryGatherSwing();
+        return;
+      }
+    }
+    this.clearGatherHold();
+    this.applyInteract(action);
+  }
+
+  private resolveGatherTarget(): ResourceNode | null {
+    if (!this.gatherTargetId) return null;
+    const node = this.nodes.find((n) => n.id === this.gatherTargetId);
+    if (!node || node.depleted) return null;
+    return node;
+  }
+
+  private findNearestGatherNode(range: number): ResourceNode | null {
+    let best: ResourceNode | null = null;
+    let bestDist = range;
+    for (const node of this.nodes) {
+      if (node.depleted) continue;
+      const dist = worldDistance(
+        { x: this.player.worldX, y: this.player.worldY },
+        { x: node.worldX, y: node.worldY },
+      );
+      if (dist <= bestDist) {
+        bestDist = dist;
+        best = node;
+      }
+    }
+    return best;
   }
 
   private tryAttack(): void {
@@ -4052,21 +4258,37 @@ export class WorldScene extends Phaser.Scene {
   }
 
   private tryGather(): void {
-    const dmg = gameState.gathering.gatherDamagePerHit();
-    for (const node of this.nodes) {
-      if (node.depleted) continue;
-      const dist = worldDistance(
-        { x: this.player.worldX, y: this.player.worldY },
-        { x: node.worldX, y: node.worldY },
-      );
-      if (dist > this.player.gatherRange) continue;
-      const depleted = node.applyDamage(dmg);
-      if (depleted) gameState.gathering.grantNodeDrops(node.defId);
+    this.tryGatherSwing();
+  }
+
+  /** One gather swing against the locked node (or nearest in range). */
+  private tryGatherSwing(): void {
+    if (this.gatherCooldown > 0) return;
+    let node = this.resolveGatherTarget();
+    if (!node) {
+      node = this.findNearestGatherNode(this.player.gatherRange);
+      if (node && this.gatherHeld) this.gatherTargetId = node.id;
+    }
+    if (!node) {
+      if (this.gatherHeld) this.clearGatherHold();
       return;
     }
-    gameEvents.emit('ui:toast', {
-      text: 'Mira · Nix · Bram · Board — E near them',
-    });
+    const dist = worldDistance(
+      { x: this.player.worldX, y: this.player.worldY },
+      { x: node.worldX, y: node.worldY },
+    );
+    if (dist > this.player.gatherRange) return;
+
+    const dmg = gameState.gathering.gatherDamagePerHit();
+    const depleted = node.applyDamage(dmg);
+    this.gatherCooldown = gameState.progression.attackCooldown();
+    this.player.faceToward(node.worldX, node.worldY);
+    audioBus.swing();
+    if (depleted) {
+      gameState.gathering.grantNodeDrops(node.defId);
+      this.clearGatherHold();
+      this.persistGame();
+    }
   }
 
   private tryCraftNearby(): void {

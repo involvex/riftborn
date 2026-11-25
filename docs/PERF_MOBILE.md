@@ -1,17 +1,26 @@
 # Mobile performance (M7b — FOV-safe fillrate)
 
-Playtest on Android (Expo WebView) historically showed ~32 fps in combat.
-Jam stance: **best-effort**, FOV must not regress vs desktop.
+Playtest on Android (Expo WebView) historically showed ~32 fps in combat /
+hub before floor-chunk baking. Jam stance: **best-effort**, FOV must not
+regress vs desktop.
 
 ## Measured / observed causes
 
 | Source                             | Why it hurts on WebView                              |
 | ---------------------------------- | ---------------------------------------------------- |
 | Full `devicePixelRatio` canvas     | Phones often render 2–3× CSS pixels; fill-rate bound |
+| Per-tile hub floor Images (~4k)    | Draw-call / batch breaks; mitigated by chunk bake    |
 | Per-hit `add.text` + destroy       | GC spikes every swing / pack                         |
 | Additive particle bursts every hit | Overdraw + blend cost                                |
 | Hitstop + camera shake             | Extra frames stalled + redraw                        |
 | High-res UI text (`resolution: 2`) | Extra glyph raster cost                              |
+
+## Floor chunks (hub / rift)
+
+After `drawHubTiles` / `drawDungeonTiles`, floor Images bake into ~8×8
+world-tile `RenderTexture` chunks (`WorldScene.bakeFloorChunks`). SHIFT
+tints the chunk images + overlay. Ability bar refresh is ~10 Hz; minimap
+markers skip redraw when the player tile and hostile count are unchanged.
 
 ## What ships (Low / Auto on touch)
 
