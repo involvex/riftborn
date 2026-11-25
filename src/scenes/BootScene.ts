@@ -22,7 +22,11 @@ import {
 } from '../core/SettingsStore';
 import { Events, gameEvents } from '../core/EventBus';
 import { navEnterTitle, navSetOverlay } from '../core/GameNavState';
-import { addMenuBackdrop, preloadMenuBackdrop } from '../ui/MenuBackdrop';
+import {
+  addMenuBackdrop,
+  addMenuCrest,
+  preloadMenuBackdrop,
+} from '../ui/MenuBackdrop';
 
 type BootView = 'title' | 'slots' | 'settings';
 
@@ -107,16 +111,16 @@ export class BootScene extends Phaser.Scene {
     const compact = cssH < 520;
     const cx = uiPx(cssW / 2, s);
     const title = this.add
-      .text(cx, uiPx(cssH * (compact ? 0.14 : 0.22), s), 'RIFTBORN', {
+      .text(cx, uiPx(cssH * (compact ? 0.1 : 0.14), s), 'RIFTBORN', {
         fontFamily: 'Georgia, "Times New Roman", serif',
-        fontSize: uiFont(this, compact ? 36 : 52, 24, 64),
+        fontSize: uiFont(this, compact ? 32 : 52, 22, 64),
         color: '#e8e4d8',
       })
       .setOrigin(0.5);
     const sub = this.add
       .text(
         cx,
-        uiPx(cssH * (compact ? 0.26 : 0.32), s),
+        uiPx(cssH * (compact ? 0.2 : 0.24), s),
         'SHIFT between Asche & Schatten',
         {
           fontFamily: 'Segoe UI, sans-serif',
@@ -134,8 +138,20 @@ export class BootScene extends Phaser.Scene {
       continue: 'Continue',
       settings: 'Settings',
     };
-    const gap = uiPx(compact ? Math.max(34, Math.floor(cssH * 0.1)) : 56, s);
-    let y = uiPx(cssH * (compact ? 0.42 : 0.48), s);
+    const gap = uiPx(compact ? Math.max(32, Math.floor(cssH * 0.09)) : 56, s);
+    // Crest sits between subtitle and the button stack.
+    const subFrac = compact ? 0.2 : 0.24;
+    const btnStartFrac = compact ? 0.5 : 0.52;
+    const crestYCss = (cssH * subFrac + cssH * btnStartFrac) / 2;
+    // Use most of the subtitle→button gap so the crest reads clearly.
+    const crestMaxH = uiPx(
+      Math.max(72, cssH * (btnStartFrac - subFrac) * 0.92),
+      s,
+    );
+    const crest = addMenuCrest(this, cx, uiPx(crestYCss, s), crestMaxH);
+    if (crest) this.root.add(crest);
+
+    let y = uiPx(cssH * btnStartFrac, s);
     for (const action of actions) {
       const btn = this.makeButton(cx, y, labels[action], () => {
         if (action === 'newGame') this.onNewGame();

@@ -18,9 +18,19 @@ const transparent = await sharp(data, { raw: info }).png().toBuffer();
 
 const W = 1920;
 const H = 1080;
-const crestSize = 460;
-const resized = await sharp(transparent)
-  .resize(crestSize, crestSize, {
+const splashCrestSize = 460;
+const menuCrestSize = 360;
+
+const splashCrest = await sharp(transparent)
+  .resize(splashCrestSize, splashCrestSize, {
+    fit: 'contain',
+    background: { r: 0, g: 0, b: 0, alpha: 0 },
+  })
+  .png()
+  .toBuffer();
+
+const menuCrest = await sharp(transparent)
+  .resize(menuCrestSize, menuCrestSize, {
     fit: 'contain',
     background: { r: 0, g: 0, b: 0, alpha: 0 },
   })
@@ -37,7 +47,7 @@ const splashSvg = Buffer.from(
     `</svg>`,
 );
 
-// Menu backdrop: crest only — Boot/Create scenes own the title text.
+// Flat fill only — BootScene places the crest between subtitle and buttons.
 const menuSvg = Buffer.from(
   `<svg width="${W}" height="${H}" xmlns="http://www.w3.org/2000/svg">` +
     `<rect width="100%" height="100%" fill="#0a0c10"/>` +
@@ -50,25 +60,17 @@ fs.mkdirSync('public/assets/ui', { recursive: true });
 await sharp(splashSvg)
   .composite([
     {
-      input: resized,
-      left: Math.round((W - crestSize) / 2),
+      input: splashCrest,
+      left: Math.round((W - splashCrestSize) / 2),
       top: Math.round(H * 0.16),
     },
   ])
   .png()
   .toFile('mobile/assets/splash.png');
 
-await sharp(menuSvg)
-  .composite([
-    {
-      input: resized,
-      left: Math.round((W - crestSize) / 2),
-      top: Math.round(H * 0.22),
-    },
-  ])
-  .modulate({ brightness: 0.55 })
-  .png()
-  .toFile('public/assets/ui/menu_bg.png');
+await sharp(menuSvg).png().toFile('public/assets/ui/menu_bg.png');
+
+await sharp(menuCrest).png().toFile('public/assets/ui/menu_crest.png');
 
 fs.copyFileSync('mobile/assets/splash.png', 'public/assets/ui/splash.png');
-console.log('splash + menu_bg written');
+console.log('splash + flat menu_bg + menu_crest written');

@@ -11,7 +11,7 @@
   ],
   "scripts": {
     "dev": "vite",
-    "build": "tsc && vite build",
+    "build": "tsc && vite build && bun run mobile:sync",
     "preview": "vite preview",
     "server": "bun run server/index.ts",
     "dev:all": "concurrently -n client,server -c cyan,magenta \"bun run dev\" \"bun run server\"",
@@ -25,7 +25,7 @@
     "lint": "eslint .",
     "format": "prettier . --write",
     "format:check": "prettier . --check",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "bun check",
     "test": "bun test src",
     "test:smoke": "playwright test e2e/hub.smoke.spec.ts e2e/j1.shift.spec.ts",
     "test:smoke:headed": "playwright test e2e/hub.smoke.spec.ts e2e/j1.shift.spec.ts --headed",
@@ -33,7 +33,9 @@
     "mobile:dev": "bun run scripts/mobile-dev.mjs",
     "mobile:build": "bun run scripts/mobile-build.mjs",
     "mobile:lan": "bun run scripts/mobile-lan.mjs",
-    "build:itch": "bun run scripts/build-itch.mjs"
+    "mobile:sync": "bun run scripts/mobile-sync.mjs",
+    "build:itch": "bun run scripts/build-itch.mjs",
+    "verify": "bun run format && bun run typecheck && bun run lint"
   },
   "build": {
     "appId": "dev.riftborn.game",

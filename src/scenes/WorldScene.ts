@@ -292,8 +292,6 @@ export class WorldScene extends Phaser.Scene {
   private tiles!: Phaser.GameObjects.Graphics;
   /** Painted floor tile sprites (cleared on zone reload). */
   private tileSprites: Phaser.GameObjects.Image[] = [];
-  private floorChunkKeys: string[] = [];
-  private floorChunkSeq = 0;
   private portalMarker: Phaser.GameObjects.Container | null = null;
   /** Blocks double portal / B while fade swap runs. */
   private zoneBusy = false;
@@ -1766,84 +1764,6 @@ export class WorldScene extends Phaser.Scene {
   private clearTileSprites(): void {
     for (const s of this.tileSprites) s.destroy();
     this.tileSprites = [];
-    for (const key of this.floorChunkKeys) {
-      if (this.textures.exists(key)) this.textures.remove(key);
-    }
-    this.floorChunkKeys = [];
-  }
-
-  /**
-   * Collapse per-tile Images into ~8×8 world-tile RenderTexture chunks.
-   * Cuts hub object count from ~4k to a few dozen; SHIFT tints chunks.
-   */
-  private bakeFloorChunks(): void {
-    const CHUNK = 8;
-    if (this.tileSprites.length === 0) return;
-
-    type Bucket = {
-      imgs: Phaser.GameObjects.Image[];
-      minX: number;
-      minY: number;
-      maxX: number;
-      maxY: number;
-    };
-    const buckets = new Map<string, Bucket>();
-    const pad = 40;
-
-    for (const img of this.tileSprites) {
-      const wx = (img.getData('wx') as number | undefined) ?? 0;
-      const wy = (img.getData('wy') as number | undefined) ?? 0;
-      const cx = Math.floor(wx / CHUNK);
-      const cy = Math.floor(wy / CHUNK);
-      const key = `${cx},${cy}`;
-      let b = buckets.get(key);
-      if (!b) {
-        b = {
-          imgs: [],
-          minX: img.x,
-          minY: img.y,
-          maxX: img.x,
-          maxY: img.y,
-        };
-        buckets.set(key, b);
-      }
-      b.imgs.push(img);
-      b.minX = Math.min(b.minX, img.x);
-      b.minY = Math.min(b.minY, img.y);
-      b.maxX = Math.max(b.maxX, img.x);
-      b.maxY = Math.max(b.maxY, img.y);
-    }
-
-    const chunks: Phaser.GameObjects.Image[] = [];
-    for (const b of buckets.values()) {
-      const left = b.minX - pad;
-      const top = b.minY - pad;
-      const w = Math.max(8, Math.ceil(b.maxX - b.minX + pad * 2));
-      const h = Math.max(8, Math.ceil(b.maxY - b.minY + pad * 2));
-      const rt = this.add
-        .renderTexture(left, top, w, h)
-        .setOrigin(0, 0)
-        .setDepth(-1000);
-      for (const img of b.imgs) {
-        rt.draw(img, img.x - left, img.y - top);
-        img.destroy();
-      }
-      const key = `floor_chunk_${this.floorChunkSeq++}`;
-      rt.saveTexture(key);
-      this.floorChunkKeys.push(key);
-      const midX = left + w / 2;
-      const midY = top + h / 2;
-      const baked = this.add
-        .image(midX, midY, key)
-        .setOrigin(0.5, 0.5)
-        .setDepth(-1000);
-      baked.setData('baseTint', 0xffffff);
-      baked.setData('gate', null);
-      baked.setData('chunk', true);
-      chunks.push(baked);
-      rt.destroy();
-    }
-    this.tileSprites = chunks;
   }
 
   private clearBossArenaOverlay(): void {
@@ -1928,8 +1848,6 @@ export class WorldScene extends Phaser.Scene {
         .setScale(TILE_ART_SCALE)
         .setDepth(-1000);
       img.setData('gate', gate);
-      img.setData('wx', x);
-      img.setData('wy', y);
       const baseTint = tint ?? 0xffffff;
       img.setData('baseTint', baseTint);
       if (tint !== undefined) {
@@ -2104,7 +2022,6 @@ export class WorldScene extends Phaser.Scene {
       }
     }
     this.tiles.setDepth(-999);
-    this.bakeFloorChunks();
     this.cullWorldSprites();
   }
 
@@ -2186,7 +2103,6 @@ export class WorldScene extends Phaser.Scene {
       }
     }
     this.tiles.setDepth(-999);
-    this.bakeFloorChunks();
     this.paintBossArenaRing('idle');
     this.cullWorldSprites();
   }
