@@ -1,5 +1,13 @@
 # Third-party art attribution
 
+## Fonts
+
+- **Spectral** (Regular / Bold) — Natanael Gama / Production Type
+  via Google Fonts (`ofl/spectral`)
+- **License:** [SIL Open Font License 1.1](https://scripts.sil.org/OFL)
+- **Used as:** `fonts/Spectral-*.ttf` for gameplay toasts and short popups
+- License text: `fonts/OFL-Spectral.txt`
+
 ## Audio
 
 All SFX and music loops in `public/assets/audio/` are A1b jam audio —

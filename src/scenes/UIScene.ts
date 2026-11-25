@@ -160,14 +160,15 @@ export class UIScene extends Phaser.Scene {
 
     this.toastText = this.add
       .text(this.scale.width / 2, 80, '', {
-        fontFamily: 'Consolas, "Courier New", monospace',
-        fontSize: '17px',
+        fontFamily: 'Spectral, Georgia, serif',
+        fontSize: '18px',
         color: '#f0e6d0',
         backgroundColor: '#000000aa',
-        padding: { x: 14, y: 8 },
+        padding: { x: 16, y: 10 },
         resolution: 2,
         stroke: '#0a0c10',
-        strokeThickness: 2,
+        strokeThickness: 3,
+        align: 'center',
       })
       .setOrigin(0.5)
       .setScrollFactor(0)
@@ -1118,8 +1119,8 @@ export class UIScene extends Phaser.Scene {
     this.menuDismiss?.layout(w, h);
     if (this.menuOpen) {
       this.menuPanel.setPosition(this.scale.width / 2, this.scale.height / 2);
-      // Re-flow root buttons for the live panel height.
-      if (this.menuPage === 'root') this.renderMenuPage();
+      // Re-flow buttons whenever the panel size changes.
+      this.renderMenuPage();
     }
   }
 
@@ -1193,118 +1194,142 @@ export class UIScene extends Phaser.Scene {
       this.menuTitle.setText('Settings');
       const s = settingsStore.get();
       const rs = getAppliedRenderScale();
+      const touch = shouldShowTouchControls();
       const panelH = this.menuBg.height;
-      const row0 =
-        -panelH / 2 + Math.round((shouldShowTouchControls() ? 48 : 56) * rs);
+      const panelW = this.menuBg.width;
+      const rows: { label: string; onClick: () => void }[] = [
+        {
+          label: `Master vol: ${Math.round(s.masterVolume * 100)}%`,
+          onClick: () => {
+            const next = (s.masterVolume + 0.1) % 1.1;
+            settingsStore.save({
+              masterVolume: Math.min(1, Number(next.toFixed(1))),
+            });
+            gameEvents.emit(Events.SETTINGS_CHANGED);
+            this.renderMenuPage();
+          },
+        },
+        {
+          label: `SFX vol: ${Math.round(s.sfxVolume * 100)}%`,
+          onClick: () => {
+            const next = (s.sfxVolume + 0.1) % 1.1;
+            settingsStore.save({
+              sfxVolume: Math.min(1, Number(next.toFixed(1))),
+            });
+            gameEvents.emit(Events.SETTINGS_CHANGED);
+            audioBus.uiClick();
+            this.renderMenuPage();
+          },
+        },
+        {
+          label: `Music vol: ${Math.round(s.musicVolume * 100)}%`,
+          onClick: () => {
+            const next = (s.musicVolume + 0.1) % 1.1;
+            settingsStore.save({
+              musicVolume: Math.min(1, Number(next.toFixed(1))),
+            });
+            gameEvents.emit(Events.SETTINGS_CHANGED);
+            this.renderMenuPage();
+          },
+        },
+        {
+          label: `Mute: ${s.mute ? 'ON' : 'OFF'}`,
+          onClick: () => {
+            settingsStore.save({ mute: !s.mute });
+            gameEvents.emit(Events.SETTINGS_CHANGED);
+            this.renderMenuPage();
+          },
+        },
+        {
+          label: `Screen shake: ${s.screenShake ? 'ON' : 'OFF'}`,
+          onClick: () => {
+            settingsStore.save({ screenShake: !s.screenShake });
+            gameEvents.emit(Events.SETTINGS_CHANGED);
+            this.renderMenuPage();
+          },
+        },
+        {
+          label: `Damage numbers: ${s.showDamageNumbers ? 'ON' : 'OFF'}`,
+          onClick: () => {
+            settingsStore.save({ showDamageNumbers: !s.showDamageNumbers });
+            gameEvents.emit(Events.SETTINGS_CHANGED);
+            this.renderMenuPage();
+          },
+        },
+        {
+          label: `Auto-sell junk: ${s.autoSellJunk ? 'ON' : 'OFF'}`,
+          onClick: () => {
+            settingsStore.save({ autoSellJunk: !s.autoSellJunk });
+            gameEvents.emit(Events.SETTINGS_CHANGED);
+            this.renderMenuPage();
+          },
+        },
+        {
+          label: `Haptics: ${s.haptics ? 'ON' : 'OFF'}`,
+          onClick: () => {
+            settingsStore.save({ haptics: !s.haptics });
+            gameEvents.emit(Events.SETTINGS_CHANGED);
+            this.renderMenuPage();
+          },
+        },
+        {
+          label: `Shift FX: ${shiftFxIntensityLabel(s.shiftFxIntensity)}`,
+          onClick: () => {
+            settingsStore.save({
+              shiftFxIntensity: cycleShiftFxIntensity(s.shiftFxIntensity),
+            });
+            gameEvents.emit(Events.SETTINGS_CHANGED);
+            this.renderMenuPage();
+          },
+        },
+        {
+          label: `Graphics: ${graphicsQualityLabel(s.graphicsQuality)}`,
+          onClick: () => {
+            settingsStore.save({
+              graphicsQuality: cycleGraphicsQuality(s.graphicsQuality),
+            });
+            refreshGraphicsProfile();
+            gameEvents.emit(Events.SETTINGS_CHANGED);
+            this.renderMenuPage();
+          },
+        },
+        {
+          label: 'Hotkeys…',
+          onClick: () => {
+            this.menuPage = 'hotkeys';
+            this.renderMenuPage();
+          },
+        },
+        {
+          label: 'Back',
+          onClick: () => {
+            this.menuPage = 'root';
+            this.renderMenuPage();
+          },
+        },
+      ];
+      const topPad = Math.round((touch ? 40 : 52) * rs);
+      const bottomPad = Math.round((touch ? 28 : 36) * rs);
+      const band = Math.max(80, panelH - topPad - bottomPad);
+      const cols = touch ? 2 : 1;
+      const perCol = Math.ceil(rows.length / cols);
       const rowStep = Math.max(
-        22,
-        Math.round((shouldShowTouchControls() ? 28 : 36) * rs),
+        20,
+        Math.min(
+          Math.round((touch ? 28 : 34) * rs),
+          band / Math.max(1, perCol),
+        ),
       );
-      const row = (i: number) => row0 + i * rowStep;
-      this.menuButton(
-        row(0),
-        `Master vol: ${Math.round(s.masterVolume * 100)}%`,
-        () => {
-          const next = (s.masterVolume + 0.1) % 1.1;
-          settingsStore.save({
-            masterVolume: Math.min(1, Number(next.toFixed(1))),
-          });
-          gameEvents.emit(Events.SETTINGS_CHANGED);
-          this.renderMenuPage();
-        },
-      );
-      this.menuButton(
-        row(1),
-        `SFX vol: ${Math.round(s.sfxVolume * 100)}%`,
-        () => {
-          const next = (s.sfxVolume + 0.1) % 1.1;
-          settingsStore.save({
-            sfxVolume: Math.min(1, Number(next.toFixed(1))),
-          });
-          gameEvents.emit(Events.SETTINGS_CHANGED);
-          audioBus.uiClick();
-          this.renderMenuPage();
-        },
-      );
-      this.menuButton(
-        row(2),
-        `Music vol: ${Math.round(s.musicVolume * 100)}%`,
-        () => {
-          const next = (s.musicVolume + 0.1) % 1.1;
-          settingsStore.save({
-            musicVolume: Math.min(1, Number(next.toFixed(1))),
-          });
-          gameEvents.emit(Events.SETTINGS_CHANGED);
-          this.renderMenuPage();
-        },
-      );
-      this.menuButton(row(3), `Mute: ${s.mute ? 'ON' : 'OFF'}`, () => {
-        settingsStore.save({ mute: !s.mute });
-        gameEvents.emit(Events.SETTINGS_CHANGED);
-        this.renderMenuPage();
-      });
-      this.menuButton(
-        row(4),
-        `Screen shake: ${s.screenShake ? 'ON' : 'OFF'}`,
-        () => {
-          settingsStore.save({ screenShake: !s.screenShake });
-          gameEvents.emit(Events.SETTINGS_CHANGED);
-          this.renderMenuPage();
-        },
-      );
-      this.menuButton(
-        row(5),
-        `Damage numbers: ${s.showDamageNumbers ? 'ON' : 'OFF'}`,
-        () => {
-          settingsStore.save({ showDamageNumbers: !s.showDamageNumbers });
-          gameEvents.emit(Events.SETTINGS_CHANGED);
-          this.renderMenuPage();
-        },
-      );
-      this.menuButton(
-        row(6),
-        `Auto-sell junk: ${s.autoSellJunk ? 'ON' : 'OFF'}`,
-        () => {
-          settingsStore.save({ autoSellJunk: !s.autoSellJunk });
-          gameEvents.emit(Events.SETTINGS_CHANGED);
-          this.renderMenuPage();
-        },
-      );
-      this.menuButton(row(7), `Haptics: ${s.haptics ? 'ON' : 'OFF'}`, () => {
-        settingsStore.save({ haptics: !s.haptics });
-        gameEvents.emit(Events.SETTINGS_CHANGED);
-        this.renderMenuPage();
-      });
-      this.menuButton(
-        row(8),
-        `Shift FX: ${shiftFxIntensityLabel(s.shiftFxIntensity)}`,
-        () => {
-          settingsStore.save({
-            shiftFxIntensity: cycleShiftFxIntensity(s.shiftFxIntensity),
-          });
-          gameEvents.emit(Events.SETTINGS_CHANGED);
-          this.renderMenuPage();
-        },
-      );
-      this.menuButton(
-        row(9),
-        `Graphics: ${graphicsQualityLabel(s.graphicsQuality)}`,
-        () => {
-          settingsStore.save({
-            graphicsQuality: cycleGraphicsQuality(s.graphicsQuality),
-          });
-          refreshGraphicsProfile();
-          gameEvents.emit(Events.SETTINGS_CHANGED);
-          this.renderMenuPage();
-        },
-      );
-      this.menuButton(row(10), 'Hotkeys…', () => {
-        this.menuPage = 'hotkeys';
-        this.renderMenuPage();
-      });
-      this.menuButton(row(11), 'Back', () => {
-        this.menuPage = 'root';
-        this.renderMenuPage();
+      const colGap = cols === 2 ? Math.round(panelW * 0.42) : 0;
+      const originX = -((cols - 1) * colGap) / 2;
+      const row0 = -panelH / 2 + topPad;
+      rows.forEach((row, i) => {
+        const col = cols === 1 ? 0 : Math.floor(i / perCol);
+        const rowIdx = cols === 1 ? i : i % perCol;
+        const x = originX + col * colGap;
+        const y = row0 + rowIdx * rowStep;
+        const btn = this.menuButton(y, row.label, row.onClick);
+        btn.setX(x);
       });
       return;
     }
@@ -1423,12 +1448,7 @@ export class UIScene extends Phaser.Scene {
       eq,
       gameState.inventory.slots,
     );
-    const genderLabel =
-      gameState.gender === 'female'
-        ? 'Female'
-        : gameState.gender === 'nonbinary'
-          ? 'Non-binary'
-          : 'Male';
+    const genderLabel = gameState.gender === 'female' ? 'Female' : 'Male';
     const touch = shouldShowTouchControls();
     const gearLine = (item: GearInstance | null): string => {
       if (!item) return '—';
@@ -1558,15 +1578,16 @@ export class UIScene extends Phaser.Scene {
   private layoutToast(): void {
     const touch = shouldShowTouchControls();
     const s = Math.min(1, Math.max(0.35, getAppliedRenderScale() || 1));
+    this.toastText.setFontFamily('Spectral, Georgia, serif');
     this.toastText.setFontSize(
-      touch ? uiFontGameSize('hint', 'touch') : '16px',
+      touch ? uiFontGameSize('body', 'touch') : '17px',
     );
-    const padX = touch ? Math.max(4, Math.round(8 * s)) : 14;
-    const padY = touch ? Math.max(2, Math.round(3 * s)) : 6;
+    const padX = touch ? Math.max(8, Math.round(12 * s)) : 16;
+    const padY = touch ? Math.max(4, Math.round(6 * s)) : 8;
     this.toastText.setPadding(padX, padY);
     this.toastText.setStroke(
       '#0a0c10',
-      touch ? Math.max(1, Math.round(2 * s)) : 2,
+      touch ? Math.max(2, Math.round(3 * s)) : 3,
     );
     this.toastText.setWordWrapWidth(Math.round(this.scale.width * 0.72));
     if (touch) {
@@ -1594,11 +1615,18 @@ export class UIScene extends Phaser.Scene {
     });
   }
 
+  private abilityRefreshAcc = 0;
+
   update(_time: number, delta: number): void {
     this.fpsHud.tick(delta);
     this.syncNavFlags();
     if (!this.keyMenu) return;
-    this.abilityBar.refresh();
+    // Ability bar CD digits / sweeps only need ~10 Hz, not every frame.
+    this.abilityRefreshAcc += delta;
+    if (this.abilityRefreshAcc >= 100) {
+      this.abilityRefreshAcc = 0;
+      this.abilityBar.refresh();
+    }
     if (this.awaitingRebind) return;
 
     if (Phaser.Input.Keyboard.JustDown(this.keyMenu)) {

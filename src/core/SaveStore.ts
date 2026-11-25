@@ -1,6 +1,12 @@
+import type { CharacterGender } from '../types/game';
 import type { CharacterSave } from '../types/save';
 
 export const SLOT_COUNT = 3;
+
+/** Coerce legacy non-binary saves to male. */
+export function normalizeGender(raw: unknown): CharacterGender {
+  return raw === 'female' ? 'female' : 'male';
+}
 
 const META_KEY = 'riftborn.slots.meta.v1';
 const LEGACY_SINGLE = 'riftborn.character.v4';
@@ -57,7 +63,7 @@ function migrateLegacy(old: LegacySave): CharacterSave {
     version: 5,
     name: old.name,
     classId: old.classId,
-    gender: old.gender ?? 'male',
+    gender: normalizeGender(old.gender),
     level,
     xp: old.xp ?? 0,
     unspentStatPoints: old.unspentStatPoints ?? 0,
@@ -87,9 +93,11 @@ export function migrateCharacterSave(
 ): CharacterSave | null {
   if (!raw || typeof raw !== 'object') return null;
   if (raw.version === 5) {
+    const v5 = raw as CharacterSave;
     return {
-      ...(raw as CharacterSave),
-      riftRun: (raw as CharacterSave).riftRun ?? null,
+      ...v5,
+      gender: normalizeGender(v5.gender),
+      riftRun: v5.riftRun ?? null,
     };
   }
   if (raw.version === 4) {
@@ -98,7 +106,7 @@ export function migrateCharacterSave(
       version: 5,
       name: v4.name,
       classId: v4.classId,
-      gender: v4.gender ?? 'male',
+      gender: normalizeGender(v4.gender),
       level: v4.level,
       xp: v4.xp,
       unspentStatPoints: v4.unspentStatPoints,
