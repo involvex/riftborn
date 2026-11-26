@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import {
-  applyFlipFacing,
+  applySheetFacing,
   depthFromWorld,
   spriteFacingFromDelta,
   worldDistance,
@@ -14,6 +14,11 @@ import {
   ensureGameSprites,
   isPaintedSprite,
 } from '../render/SpriteAtlas';
+import {
+  sheetAnimKey,
+  sheetRowCount,
+  type AnimRangeKey,
+} from '../render/AnimFrames';
 import { critFlashPlan } from '../render/CombatFeel';
 import { settingsStore } from '../core/SettingsStore';
 import { playEnemyTelegraph } from '../render/EnemyTelegraphVfx';
@@ -879,6 +884,12 @@ export class Enemy {
     return { hitPlayer: false, damage: 0, shot: null };
   }
 
+  private sheetRows(): number {
+    const tex = this.sprite.texture;
+    const total = Math.max(0, tex.frameTotal - 1);
+    return sheetRowCount(total);
+  }
+
   private setFacingFromDelta(dx: number, dy: number): void {
     const facing = spriteFacingFromDelta(
       dx,
@@ -886,9 +897,13 @@ export class Enemy {
       this.facing,
       this.facingOctant,
     );
+    const octantChanged = facing.octant !== this.facingOctant;
     this.facing = facing.sign;
     this.facingOctant = facing.octant;
-    applyFlipFacing(this.sprite, facing);
+    applySheetFacing(this.sprite, facing, this.sheetRows());
+    if (octantChanged && this.sheetRows() > 1) {
+      this.playAnim(this.animKind, true);
+    }
   }
 
   /** Snap to target for attacks — full 8-way (sticky flip on pure N/S). */
@@ -896,6 +911,20 @@ export class Enemy {
     const dx = worldX - this.worldX;
     const dy = worldY - this.worldY;
     this.setFacingFromDelta(dx, dy);
+  }
+
+  private resolveAnimKey(
+    kind: 'idle' | 'walk' | 'attack' | 'hit' | 'death',
+  ): string {
+    const rows = this.sheetRows();
+    const keyed = sheetAnimKey(
+      this.textureKey,
+      kind as AnimRangeKey,
+      this.facingOctant,
+      rows,
+    );
+    if (this.sprite.scene.anims.exists(keyed)) return keyed;
+    return `${this.textureKey}_${kind}`;
   }
 
   private playAnim(
@@ -906,7 +935,7 @@ export class Enemy {
     if (this.animKind === 'death' && kind !== 'death') return;
     if (kind !== 'attack' && this.animKind === 'attack' && !force) return;
     if (kind !== 'hit' && this.animKind === 'hit' && !force) return;
-    const key = `${this.textureKey}_${kind}`;
+    const key = this.resolveAnimKey(kind);
     if (!this.sprite.scene.anims.exists(key)) return;
     this.animKind = kind;
     this.sprite.play(key, true);
@@ -917,7 +946,10 @@ export class Enemy {
         if (this.animKind === 'death') return;
         this.animKind =
           this.state === 'chase' || this.state === 'patrol' ? 'walk' : 'idle';
-        this.sprite.play(`${this.textureKey}_${this.animKind}`, true);
+        const next = this.resolveAnimKey(this.animKind);
+        if (this.sprite.scene.anims.exists(next)) {
+          this.sprite.play(next, true);
+        }
       });
     }
   }

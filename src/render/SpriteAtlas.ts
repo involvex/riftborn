@@ -1,13 +1,15 @@
 import Phaser from 'phaser';
 import type { CharacterClassId, CharacterGender } from '../types/game';
 import {
-  ANIM_RANGES,
   CORE_FRAMES,
   DEATH_COUNT,
   HIT_COUNT,
   TOTAL_FRAMES,
+  animRangeForRow,
   deathMotion,
   hitMotion,
+  octantSheetRow,
+  sheetRowCount,
 } from './AnimFrames';
 
 /** Procedural fallback frame size. */
@@ -209,19 +211,41 @@ function paletteForPlayer(key: string): Palette {
 }
 
 function registerAnims(scene: Phaser.Scene): void {
+  const kinds = [
+    { kind: 'idle' as const, rate: 6, loop: true },
+    { kind: 'walk' as const, rate: 18, loop: true },
+    { kind: 'attack' as const, rate: 20, loop: false },
+    { kind: 'hit' as const, rate: 14, loop: false },
+    { kind: 'death' as const, rate: 10, loop: false },
+  ];
+  const octants = ['e', 'se', 's', 'sw', 'w', 'nw', 'n', 'ne'] as const;
+
   for (const key of SHEET_KEYS) {
     if (!scene.textures.exists(key)) continue;
-    const maxFrame = textureFrameCount(scene, key) - 1;
-    const hit = ANIM_RANGES.hit;
-    const death = ANIM_RANGES.death;
-    addAnim(scene, `${key}_idle`, key, 0, 3, 6, true);
-    addAnim(scene, `${key}_walk`, key, 4, 9, 18, true);
-    addAnim(scene, `${key}_attack`, key, 10, 13, 20, false);
-    if (maxFrame >= hit.end) {
-      addAnim(scene, `${key}_hit`, key, hit.start, hit.end, 14, false);
-    }
-    if (maxFrame >= death.end) {
-      addAnim(scene, `${key}_death`, key, death.start, death.end, 10, false);
+    const frameTotal = textureFrameCount(scene, key);
+    const rows = sheetRowCount(frameTotal);
+    const maxFrame = frameTotal - 1;
+
+    for (const { kind, rate, loop } of kinds) {
+      const base = animRangeForRow(kind, 0);
+      if (maxFrame < base.end) continue;
+      // Un-suffixed keys always point at row 0 (1-row sheets + fallback).
+      addAnim(scene, `${key}_${kind}`, key, base.start, base.end, rate, loop);
+      if (rows <= 1) continue;
+      for (const oct of octants) {
+        const row = octantSheetRow(oct, rows);
+        const range = animRangeForRow(kind, row);
+        if (maxFrame < range.end) continue;
+        addAnim(
+          scene,
+          `${key}_${kind}_${oct}`,
+          key,
+          range.start,
+          range.end,
+          rate,
+          loop,
+        );
+      }
     }
   }
 }

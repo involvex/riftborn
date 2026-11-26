@@ -3,12 +3,17 @@ import {
   ANIM_RANGES,
   CORE_FRAMES,
   DEATH_COUNT,
+  DIR_STRIDE,
   HIT_COUNT,
   TOTAL_FRAMES,
+  animRangeForRow,
   deathMotion,
   deathSourceFrame,
   hitMotion,
   hitSourceFrame,
+  octantSheetRow,
+  sheetAnimKey,
+  sheetRowCount,
 } from './AnimFrames';
 
 describe('AnimFrames layout', () => {
@@ -46,5 +51,34 @@ describe('AnimFrames layout', () => {
       expect(src).toBeGreaterThanOrEqual(0);
       expect(src).toBeLessThan(TOTAL_FRAMES);
     }
+  });
+
+  test('sheetRowCount treats 20 as 1-row and 80 as 4-dir', () => {
+    expect(sheetRowCount(20)).toBe(1);
+    expect(sheetRowCount(80)).toBe(4);
+    expect(sheetRowCount(160)).toBe(8);
+    expect(DIR_STRIDE).toBe(20);
+  });
+
+  test('octantSheetRow maps 4-dir LPC and 8-dir strips', () => {
+    expect(octantSheetRow('e', 1)).toBe(0);
+    expect(octantSheetRow('n', 4)).toBe(0);
+    expect(octantSheetRow('w', 4)).toBe(1);
+    expect(octantSheetRow('s', 4)).toBe(2);
+    expect(octantSheetRow('e', 4)).toBe(3);
+    expect(octantSheetRow('e', 8)).toBe(0);
+    expect(octantSheetRow('s', 8)).toBe(2);
+    expect(octantSheetRow('n', 8)).toBe(6);
+  });
+
+  test('animRangeForRow offsets by DIR_STRIDE', () => {
+    const walk = animRangeForRow('walk', 2);
+    expect(walk.start).toBe(ANIM_RANGES.walk.start + 40);
+    expect(walk.end).toBe(ANIM_RANGES.walk.end + 40);
+  });
+
+  test('sheetAnimKey suffixes octant only for multi-row', () => {
+    expect(sheetAnimKey('spr_shade', 'walk', 'n', 1)).toBe('spr_shade_walk');
+    expect(sheetAnimKey('spr_shade', 'walk', 'n', 4)).toBe('spr_shade_walk_n');
   });
 });

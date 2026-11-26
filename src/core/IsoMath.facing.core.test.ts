@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import {
+  applySheetFacing,
   facingFromDelta,
   facingOctantFromDelta,
   octantScreenUnit,
@@ -83,5 +84,18 @@ describe('spriteFacingFromDelta', () => {
     for (const [dx, dy, want] of samples) {
       expect(facingOctantFromDelta(dx, dy)).toBe(want);
     }
+  });
+
+  test('applySheetFacing clears flipX when sheet has facing rows', () => {
+    let flip = true;
+    const sprite = {
+      setFlipX: (v: boolean) => {
+        flip = v;
+      },
+    };
+    applySheetFacing(sprite, -1, 4);
+    expect(flip).toBe(false);
+    applySheetFacing(sprite, -1, 1);
+    expect(flip).toBe(true);
   });
 });

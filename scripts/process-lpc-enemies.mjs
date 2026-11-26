@@ -1,5 +1,5 @@
 /**
- * Build Riftborn 14-frame enemy sheets from Liberated Pixel Cup monsters
+ * Build Riftborn multi-row enemy sheets from Liberated Pixel Cup monsters
  * (Charles Sanchez / LPC — CC-BY-SA 3.0 / GPL).
  *
  * Mapping:
@@ -8,7 +8,8 @@
  *   bee   → spr_wisp
  *   bat   → spr_bat (flying elite)
  *
- * Layout out: idle 0–3, walk 4–9, attack 10–13, hit 14–15, death 16–19.
+ * Layout out: 4 facing rows × 20 frames (idle/walk/attack/hit/death).
+ * LPC rows: 0 up, 1 left, 2 down, 3 right — matches octantSheetRow 4-dir.
  */
 import { mkdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
@@ -29,16 +30,16 @@ const ROOT = path.resolve(import.meta.dirname, '..');
 const LPC = path.join(ROOT, 'assets-src/sprites/lpc');
 const OUT = path.join(ROOT, 'public/assets/sprites/game');
 const FRAMES = TOTAL_FRAMES;
+/** LPC up / left / down / right */
+const FACE_ROWS = [0, 1, 2, 3];
 
-/** @type {{ src: string, out: string, cols: number, rows: number, faceRow: number, walkCols: number[], attackCols: number[] }[]} */
+/** @type {{ src: string, out: string, cols: number, rows: number, walkCols: number[], attackCols: number[] }[]} */
 const MAP = [
   {
     src: 'ghost.png',
     out: 'spr_shade.png',
     cols: 6,
     rows: 4,
-    // LPC: row 2 is typically "down" / toward camera
-    faceRow: 2,
     walkCols: [0, 1, 2, 1, 0, 2],
     attackCols: [4, 5, 5, 4],
   },
@@ -47,27 +48,22 @@ const MAP = [
     out: 'spr_crawler.png',
     cols: 7,
     rows: 4,
-    faceRow: 2,
     walkCols: [0, 1, 2, 3, 2, 1],
     attackCols: [4, 5, 6, 4],
   },
   {
-    // 192×128 → 6×4 of 32px cells
     src: 'bee.png',
     out: 'spr_wisp.png',
     cols: 6,
     rows: 4,
-    faceRow: 2,
     walkCols: [0, 1, 2, 1, 0, 2],
     attackCols: [3, 4, 5, 4],
   },
   {
-    // 448×256 → 7×4 of 64px; row 2 = red-eye aggressive front
     src: 'bat.png',
     out: 'spr_bat.png',
     cols: 7,
     rows: 4,
-    faceRow: 2,
     walkCols: [0, 1, 2, 3, 2, 1],
     attackCols: [4, 5, 6, 5],
   },
@@ -120,7 +116,6 @@ async function toCell(pngBuf, motion = { x: 0, y: 0, scale: 1 }) {
     const maxW = FW - 20;
     const maxH = FH - 24;
     const baseScale = Math.min(maxW / srcW, maxH / srcH);
-    // LPC cells are tiny — upscale, but never larger than the cell
     const scale =
       Math.min(Math.max(baseScale, 2.4), baseScale * 1.15) * motion.scale;
     const tw = Math.max(1, Math.min(maxW, Math.round(srcW * scale)));
@@ -159,21 +154,19 @@ async function toCell(pngBuf, motion = { x: 0, y: 0, scale: 1 }) {
     .toBuffer();
 }
 
-async function buildOne(row) {
-  const sheet = path.join(LPC, row.src);
+/** Build one facing row (20 cells) from an LPC face row. */
+async function buildFacingRow(def, sheet, face) {
   const cells = [];
-  const face = Math.min(row.faceRow, row.rows - 1);
-
   for (let i = 0; i < 4; i++) {
-    const col = row.walkCols[i % row.walkCols.length];
+    const col = def.walkCols[i % def.walkCols.length];
     const bob = Math.round(Math.sin((i / 4) * Math.PI * 2) * 2);
-    const src = await extractCell(sheet, row.cols, row.rows, col, face);
+    const src = await extractCell(sheet, def.cols, def.rows, col, face);
     cells.push(await toCell(src, { x: 0, y: bob, scale: 1 }));
   }
   for (let i = 0; i < 6; i++) {
-    const col = row.walkCols[i % row.walkCols.length];
+    const col = def.walkCols[i % def.walkCols.length];
     const t = (i / 6) * Math.PI * 2;
-    const src = await extractCell(sheet, row.cols, row.rows, col, face);
+    const src = await extractCell(sheet, def.cols, def.rows, col, face);
     cells.push(
       await toCell(src, {
         x: Math.round(Math.sin(t) * 3),
@@ -183,9 +176,9 @@ async function buildOne(row) {
     );
   }
   for (let i = 0; i < 4; i++) {
-    const col = row.attackCols[i % row.attackCols.length];
-    const clamped = Math.min(col, row.cols - 1);
-    const src = await extractCell(sheet, row.cols, row.rows, clamped, face);
+    const col = def.attackCols[i % def.attackCols.length];
+    const clamped = Math.min(col, def.cols - 1);
+    const src = await extractCell(sheet, def.cols, def.rows, clamped, face);
     cells.push(
       await toCell(src, {
         x: i === 1 || i === 2 ? 4 : 0,
@@ -197,7 +190,7 @@ async function buildOne(row) {
 
   if (cells.length !== CORE_FRAMES) {
     throw new Error(
-      `${row.out}: expected ${CORE_FRAMES} core, got ${cells.length}`,
+      `${def.out} face ${face}: expected ${CORE_FRAMES} core, got ${cells.length}`,
     );
   }
 
@@ -231,22 +224,43 @@ async function buildOne(row) {
   }
 
   if (cells.length !== FRAMES) {
-    throw new Error(`${row.out}: expected ${FRAMES}, got ${cells.length}`);
+    throw new Error(
+      `${def.out} face ${face}: expected ${FRAMES}, got ${cells.length}`,
+    );
+  }
+  return cells;
+}
+
+async function buildOne(def) {
+  const sheet = path.join(LPC, def.src);
+  const composites = [];
+  for (let r = 0; r < FACE_ROWS.length; r++) {
+    const face = Math.min(FACE_ROWS[r], def.rows - 1);
+    const cells = await buildFacingRow(def, sheet, face);
+    for (let i = 0; i < cells.length; i++) {
+      composites.push({
+        input: cells[i],
+        left: i * FW,
+        top: r * FH,
+      });
+    }
   }
 
   await sharp({
     create: {
       width: FW * FRAMES,
-      height: FH,
+      height: FH * FACE_ROWS.length,
       channels: 4,
       background: { r: 0, g: 0, b: 0, alpha: 0 },
     },
   })
-    .composite(cells.map((input, i) => ({ input, left: i * FW, top: 0 })))
+    .composite(composites)
     .png()
-    .toFile(path.join(OUT, row.out));
+    .toFile(path.join(OUT, def.out));
 
-  console.log(`wrote ${row.out} from LPC ${row.src}`);
+  console.log(
+    `wrote ${def.out} (${FACE_ROWS.length} facing rows) from LPC ${def.src}`,
+  );
 }
 
 await mkdir(OUT, { recursive: true });
@@ -263,9 +277,9 @@ Liberated Pixel Cup creatures by **Charles Sanchez (CharlesGabriel)**.
 License: **CC-BY-SA 3.0** / **GNU GPL 3.0** (see
 \`public/assets/ATTRIBUTION.md\`).
 
-Processed into \`game/spr_shade.png\`, \`spr_crawler.png\`,
-\`spr_wisp.png\`, \`spr_bat.png\` via
-\`bun run scripts/process-lpc-enemies.mjs\`.
+Processed into 4-facing-row sheets
+\`game/spr_shade.png\`, \`spr_crawler.png\`, \`spr_wisp.png\`,
+\`spr_bat.png\` via \`bun run scripts/process-lpc-enemies.mjs\`.
 `,
 );
 console.log('done LPC enemies');

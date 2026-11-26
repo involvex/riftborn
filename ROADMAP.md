@@ -129,6 +129,12 @@ In-rift choice, SHIFT fight, build fork, map ping, and named drop are in.
 
 _(empty — pick the next slice from Later)_
 
+## Done — 8-dir sprite rows
+
+| #   | Slice                 | Why it matters                           | Done when                                                                                      |
+| --- | --------------------- | ---------------------------------------- | ---------------------------------------------------------------------------------------------- |
+| ✓   | **8-dir sprite rows** | Octant logic shipped; sheets still flipX | Multi-row anim keys + 1-row flip fallback; LPC shade/crawler/wisp/bat rebuilt as 4 facing rows |
+
 ## Done — playtest combat nits
 
 | #   | Slice                    | Why it matters                           | Done when                                                                          |
@@ -155,7 +161,6 @@ Skip inventing new frameworks — extend `WorldArt` / `WorldScene` /
 - Co-op rifts + authoritative loot / gear sync (hub sandbox stays prototype)
 - App Store packaging for Expo shell
 - Seasons, trading, seamless open world
-- Dedicated 8-dir **sprite rows** (logic/octant shipped; sheets still 2-dir flipX)
 
 ## Done — systems polish
 

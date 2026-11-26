@@ -1,8 +1,11 @@
 /**
  * Painted sheet layout + combat-frame derivation params.
- * Sheets: idle 0–3, walk 4–9, attack 10–13, hit 14–15, death 16–19.
+ * One facing row: idle 0–3, walk 4–9, attack 10–13, hit 14–15, death 16–19.
+ * Multi-row sheets stack DIR_STRIDE frames per facing (4-dir LPC or 8-dir).
  * Hit/death cells are derived from idle/attack (no separate pose art).
  */
+
+import type { FacingOctant } from '../core/IsoMath';
 
 export const PAINTED_CELL = 128;
 /** Core poses only (legacy sheets). */
@@ -10,6 +13,8 @@ export const CORE_FRAMES = 14;
 export const HIT_COUNT = 2;
 export const DEATH_COUNT = 4;
 export const TOTAL_FRAMES = CORE_FRAMES + HIT_COUNT + DEATH_COUNT;
+/** Frames per facing row (idle…death). */
+export const DIR_STRIDE = TOTAL_FRAMES;
 
 export const ANIM_RANGES = {
   idle: { start: 0, end: 3 },
@@ -20,6 +25,60 @@ export const ANIM_RANGES = {
 } as const;
 
 export type AnimRangeKey = keyof typeof ANIM_RANGES;
+
+/** How many facing rows a sheet encodes (1 = flipX sheets). */
+export function sheetRowCount(frameTotal: number): number {
+  if (frameTotal < DIR_STRIDE) return 1;
+  return Math.max(1, Math.floor(frameTotal / DIR_STRIDE));
+}
+
+/**
+ * Map screen octant → sheet row.
+ * 8-dir: e,se,s,sw,w,nw,n,ne (matches IsoMath OCTANTS).
+ * 4-dir LPC: 0 up, 1 left, 2 down, 3 right.
+ */
+export function octantSheetRow(octant: FacingOctant, rowCount: number): number {
+  if (rowCount <= 1) return 0;
+  if (rowCount >= 8) {
+    const eight: FacingOctant[] = ['e', 'se', 's', 'sw', 'w', 'nw', 'n', 'ne'];
+    return Math.max(0, eight.indexOf(octant));
+  }
+  // 2–7 rows: treat as 4-dir LPC.
+  switch (octant) {
+    case 'n':
+    case 'ne':
+      return 0;
+    case 'w':
+    case 'nw':
+      return 1;
+    case 's':
+    case 'sw':
+      return 2;
+    default:
+      return 3;
+  }
+}
+
+/** Absolute start/end frame for a kind on a given facing row. */
+export function animRangeForRow(
+  kind: AnimRangeKey,
+  row: number,
+): { start: number; end: number } {
+  const base = ANIM_RANGES[kind];
+  const off = Math.max(0, row) * DIR_STRIDE;
+  return { start: base.start + off, end: base.end + off };
+}
+
+/** Phaser anim key — octant suffix when the sheet has facing rows. */
+export function sheetAnimKey(
+  textureKey: string,
+  kind: AnimRangeKey,
+  octant: FacingOctant,
+  rowCount: number,
+): string {
+  if (rowCount <= 1) return `${textureKey}_${kind}`;
+  return `${textureKey}_${kind}_${octant}`;
+}
 
 export type HitMotion = {
   /** Horizontal knockback in cell px (screen-right positive). */

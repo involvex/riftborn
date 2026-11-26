@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import {
-  applyFlipFacing,
+  applySheetFacing,
   depthFromWorld,
   spriteFacingFromDelta,
   worldToScreen,
@@ -15,6 +15,11 @@ import {
   isPaintedSprite,
   playerSpriteKey,
 } from '../render/SpriteAtlas';
+import {
+  sheetAnimKey,
+  sheetRowCount,
+  type AnimRangeKey,
+} from '../render/AnimFrames';
 import { playCombatBurst } from '../render/CombatVfx';
 import { playerHurtSquashPlan } from '../render/CombatFeel';
 import {
@@ -121,17 +126,28 @@ export class Player {
     this.sprite.setScale(figureDrawScale());
   }
 
+  private sheetRows(): number {
+    const tex = this.sprite.texture;
+    const total = Math.max(0, tex.frameTotal - 1);
+    return sheetRowCount(total);
+  }
+
   private applyFacing(): void {
-    applyFlipFacing(this.sprite, this.facing);
+    applySheetFacing(this.sprite, this.facing, this.sheetRows());
   }
 
   private setFacingState(next: SpriteFacing): void {
+    const octantChanged = next.octant !== this.facingOctant;
     this.facing = next.sign;
     this.facingOctant = next.octant;
-    this.facingLean = next.lean;
+    // Multi-row sheets own silhouette — skip lean so N/S don't tilt.
+    this.facingLean = this.sheetRows() > 1 ? 0 : next.lean;
     this.facingScreenX = next.screenX;
     this.facingScreenY = next.screenY;
     this.applyFacing();
+    if (octantChanged && this.sheetRows() > 1) {
+      this.playAnim(this.animKind, true);
+    }
   }
 
   private applyClassTint(): void {
@@ -321,11 +337,23 @@ export class Player {
     this.slashUntil = this.scene.time.now + 210;
   }
 
+  private resolveAnimKey(kind: AnimKind): string {
+    const rows = this.sheetRows();
+    const keyed = sheetAnimKey(
+      this.textureKey,
+      kind as AnimRangeKey,
+      this.facingOctant,
+      rows,
+    );
+    if (this.scene.anims.exists(keyed)) return keyed;
+    return `${this.textureKey}_${kind}`;
+  }
+
   private playAnim(kind: AnimKind, force = false): void {
     if (!force && this.animKind === kind) return;
     if (kind !== 'attack' && this.animKind === 'attack' && !force) return;
     if (kind !== 'hit' && this.animKind === 'hit' && !force) return;
-    const key = `${this.textureKey}_${kind}`;
+    const key = this.resolveAnimKey(kind);
     if (!this.scene.anims.exists(key)) return;
     this.animKind = kind;
     this.sprite.play(key, true);
@@ -335,7 +363,8 @@ export class Player {
         if (gen !== this.attackGen) return;
         if (this.animKind !== 'attack') return;
         this.animKind = this.moving ? 'walk' : 'idle';
-        this.sprite.play(`${this.textureKey}_${this.animKind}`, true);
+        const next = this.resolveAnimKey(this.animKind);
+        if (this.scene.anims.exists(next)) this.sprite.play(next, true);
       });
     }
   }
@@ -354,7 +383,8 @@ export class Player {
     this.sprite.setRotation(0);
     this.applyScale();
     this.applyClassTint();
-    this.sprite.play(`${this.textureKey}_idle`, true);
+    const idle = this.resolveAnimKey('idle');
+    if (this.scene.anims.exists(idle)) this.sprite.play(idle, true);
   }
 
   tick(dt: number): void {

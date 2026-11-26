@@ -166,6 +166,22 @@ export function applyFlipFacing(
   sprite.setFlipX(flip);
 }
 
+/**
+ * Facing rows ≥2 encode left/right in the sheet — clear flipX.
+ * Single-row sheets keep sticky flipX.
+ */
+export function applySheetFacing(
+  sprite: { setFlipX: (v: boolean) => void },
+  facing: SpriteFacing | FacingSign,
+  rowCount: number,
+): void {
+  if (rowCount > 1) {
+    sprite.setFlipX(false);
+    return;
+  }
+  applyFlipFacing(sprite, facing);
+}
+
 /** Screen unit vector for an octant (east +, south +). */
 export function octantScreenUnit(octant: FacingOctant): {
   x: number;
