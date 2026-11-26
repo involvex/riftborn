@@ -194,6 +194,7 @@ import {
 } from '../ui/MapModel';
 import { mergeExplored, packExplored, unpackExplored } from '../ui/MapFog';
 import { shouldShowTouchControls } from '../ui/TouchControls';
+import { worldLabelStyle } from '../ui/WorldLabelStyle';
 import {
   applyWorldArtFilters,
   DECOR_PROP_KEY,
@@ -1353,22 +1354,27 @@ export class WorldScene extends Phaser.Scene {
     const g = this.add.graphics();
     g.lineStyle(2, style.accent, 0.55);
     g.strokeEllipse(0, 2, 52, 24);
+    const touch = shouldShowTouchControls() ? 'touch' : 'desktop';
+    const titleStyle = worldLabelStyle('poiTitle', touch);
+    const subStyle = worldLabelStyle('poiSub', touch);
     const title = this.add
       .text(0, -36, poi.name, {
-        fontFamily: 'Georgia, serif',
-        fontSize: '13px',
+        fontFamily: titleStyle.fontFamily,
+        fontSize: titleStyle.fontSize,
         color: style.titleColor,
         stroke: '#0a0c10',
-        strokeThickness: 4,
+        strokeThickness: titleStyle.strokeThickness,
+        resolution: titleStyle.resolution,
       })
       .setOrigin(0.5);
     const sub = this.add
       .text(0, -20, style.subtitle, {
-        fontFamily: 'Segoe UI, sans-serif',
-        fontSize: '10px',
+        fontFamily: subStyle.fontFamily,
+        fontSize: subStyle.fontSize,
         color: '#8a9aaa',
         stroke: '#0a0c10',
-        strokeThickness: 3,
+        strokeThickness: subStyle.strokeThickness,
+        resolution: subStyle.resolution,
       })
       .setOrigin(0.5);
     const c = this.add.container(screenX, screenY, [g, title, sub]);
@@ -1629,13 +1635,16 @@ export class WorldScene extends Phaser.Scene {
       }
       parts.push(g);
     }
+    const touch = shouldShowTouchControls() ? 'touch' : 'desktop';
+    const buildingStyle = worldLabelStyle('building', touch);
     const t = this.add
       .text(0, -118, label, {
-        fontFamily: 'Georgia, serif',
-        fontSize: '13px',
+        fontFamily: buildingStyle.fontFamily,
+        fontSize: buildingStyle.fontSize,
         color: '#e0d4bc',
         stroke: '#0a0c10',
-        strokeThickness: 4,
+        strokeThickness: buildingStyle.strokeThickness,
+        resolution: buildingStyle.resolution,
       })
       .setOrigin(0.5)
       .setAlpha(0.92)
@@ -1707,13 +1716,18 @@ export class WorldScene extends Phaser.Scene {
       parts.push(g);
     }
     parts.push(glow);
+    const touch = shouldShowTouchControls() ? 'touch' : 'desktop';
+    const obeliskStyle = worldLabelStyle('prompt', touch);
     const t = this.add
       .text(0, -82, 'Rift Obelisk · R', {
-        fontFamily: 'Segoe UI, sans-serif',
-        fontSize: '11px',
+        fontFamily: obeliskStyle.fontFamily,
+        fontSize: obeliskStyle.fontSize,
         color: '#b8d8ff',
         stroke: '#0a0c10',
-        strokeThickness: 3,
+        strokeThickness: obeliskStyle.strokeThickness,
+        resolution: obeliskStyle.resolution,
+        backgroundColor: obeliskStyle.backgroundColor,
+        padding: obeliskStyle.padding,
       })
       .setOrigin(0.5)
       .setVisible(false);
@@ -1755,13 +1769,18 @@ export class WorldScene extends Phaser.Scene {
     ring.strokeEllipse(0, 4, 42, 18);
     ring.lineStyle(1.5, 0xe8f6ff, 0.55);
     ring.strokeEllipse(0, -20, 22, 28);
+    const touch = shouldShowTouchControls() ? 'touch' : 'desktop';
+    const exitStyle = worldLabelStyle('prompt', touch);
     const t = this.add
       .text(0, -90, 'Exit · R', {
-        fontFamily: 'Segoe UI, sans-serif',
-        fontSize: '11px',
+        fontFamily: exitStyle.fontFamily,
+        fontSize: exitStyle.fontSize,
         color: '#b8e8ff',
         stroke: '#0a0c10',
-        strokeThickness: 3,
+        strokeThickness: exitStyle.strokeThickness,
+        resolution: exitStyle.resolution,
+        backgroundColor: exitStyle.backgroundColor,
+        padding: exitStyle.padding,
       })
       .setOrigin(0.5);
     const c = this.add.container(screenX, screenY, [g, ring, t]);

@@ -3,6 +3,8 @@ import { figureDrawScale, FIGURE_CONTENT_PX } from '../core/FigureScale';
 import { depthFromWorld, worldToScreen } from '../core/IsoMath';
 import { hasArt } from '../render/WorldArt';
 import { PLAZA_NPC_KEY, plazaArtScale } from '../render/PlazaArt';
+import { shouldShowTouchControls } from '../ui/TouchControls';
+import { worldLabelStyle } from '../ui/WorldLabelStyle';
 import type { NpcRole } from '../world/MapGen';
 
 /** Hub NPC graphics were ~30px tall at scale 1; match figure height. */
@@ -83,13 +85,16 @@ export class Npc {
       promptY = 8 * fig;
     }
 
+    const touch = shouldShowTouchControls() ? 'touch' : 'desktop';
+    const nameStyle = worldLabelStyle('name', touch);
     const label = scene.add
       .text(0, labelY, name, {
-        fontFamily: 'Georgia, serif',
-        fontSize: '12px',
+        fontFamily: nameStyle.fontFamily,
+        fontSize: nameStyle.fontSize,
         color: '#e8e4d8',
         stroke: '#0a0c10',
-        strokeThickness: 3,
+        strokeThickness: nameStyle.strokeThickness,
+        resolution: nameStyle.resolution,
       })
       .setOrigin(0.5)
       .setVisible(false);
@@ -102,13 +107,17 @@ export class Npc {
           : role === 'board'
             ? 'E · bounties'
             : 'E · trade / repair';
+    const promptStyle = worldLabelStyle('prompt', touch);
     this.prompt = scene.add
       .text(0, promptY, job, {
-        fontFamily: 'Segoe UI, sans-serif',
-        fontSize: '10px',
+        fontFamily: promptStyle.fontFamily,
+        fontSize: promptStyle.fontSize,
         color: '#ffe08a',
-        backgroundColor: '#0a0c10aa',
-        padding: { x: 4, y: 2 },
+        stroke: '#0a0c10',
+        strokeThickness: promptStyle.strokeThickness,
+        resolution: promptStyle.resolution,
+        backgroundColor: promptStyle.backgroundColor,
+        padding: promptStyle.padding,
       })
       .setOrigin(0.5)
       .setVisible(false);

@@ -13,25 +13,41 @@ import {
 } from './GraphicsQuality';
 
 describe('resolveGraphicsTier', () => {
-  test('explicit high/low win over device', () => {
+  test('explicit high/medium/low win over device', () => {
     expect(resolveGraphicsTier('high', true)).toBe('high');
+    expect(resolveGraphicsTier('medium', false)).toBe('medium');
     expect(resolveGraphicsTier('low', false)).toBe('low');
   });
 
-  test('auto follows touch preference', () => {
-    expect(resolveGraphicsTier('auto', true)).toBe('low');
+  test('auto follows touch preference → Medium on phone', () => {
+    expect(resolveGraphicsTier('auto', true)).toBe('medium');
     expect(resolveGraphicsTier('auto', false)).toBe('high');
   });
 });
 
 describe('profileForTier', () => {
-  test('low cuts render scale and caps', () => {
+  test('low cuts render scale and caps vs medium and high', () => {
     const low = profileForTier('low');
+    const medium = profileForTier('medium');
     const high = profileForTier('high');
-    expect(low.renderScale).toBeLessThan(high.renderScale);
-    expect(low.maxDamageNumbers).toBeLessThan(high.maxDamageNumbers);
-    expect(low.particleCap).toBeLessThan(high.particleCap);
-    expect(low.juiceScale).toBeLessThan(high.juiceScale);
+    expect(low.renderScale).toBeLessThan(medium.renderScale);
+    expect(medium.renderScale).toBeLessThan(high.renderScale);
+    expect(low.maxDamageNumbers).toBeLessThan(medium.maxDamageNumbers);
+    expect(medium.maxDamageNumbers).toBeLessThan(high.maxDamageNumbers);
+    expect(low.particleCap).toBeLessThan(medium.particleCap);
+    expect(medium.particleCap).toBeLessThan(high.particleCap);
+    expect(low.juiceScale).toBeLessThan(medium.juiceScale);
+    expect(medium.juiceScale).toBeLessThan(high.juiceScale);
+  });
+
+  test('low and medium keep textResolution 2 for sharp HUD type', () => {
+    expect(profileForTier('low').textResolution).toBe(2);
+    expect(profileForTier('medium').textResolution).toBe(2);
+    expect(profileForTier('high').textResolution).toBe(2);
+  });
+
+  test('medium renderScale is 0.85', () => {
+    expect(profileForTier('medium').renderScale).toBe(0.85);
   });
 });
 
@@ -111,6 +127,28 @@ describe('render scale vs world FOV', () => {
     expect(lowSpan.tilesX / highSpan.tilesX).toBeCloseTo(1, 2);
     expect(lowSpan.tilesY / highSpan.tilesY).toBeCloseTo(1, 2);
   });
+
+  test('FOV-safe Medium: buffer + zoom*scale matches High tile span', () => {
+    const cssW = 1024;
+    const cssH = 473;
+    const baseZoom = 1.1;
+    const medium = profileForTier('medium');
+    const high = profileForTier('high');
+    const sizes = computeGraphicsResize(cssW, cssH, medium.renderScale);
+    const medZoom = baseZoom * medium.renderScale;
+    const highSpan = visibleWorldTileSpan(
+      cssW,
+      cssH,
+      baseZoom * high.renderScale,
+    );
+    const medSpan = visibleWorldTileSpan(
+      sizes.buffer.width,
+      sizes.buffer.height,
+      medZoom,
+    );
+    expect(medSpan.tilesX / highSpan.tilesX).toBeCloseTo(1, 2);
+    expect(medSpan.tilesY / highSpan.tilesY).toBeCloseTo(1, 2);
+  });
 });
 
 describe('getAppliedCameraZoom', () => {
@@ -130,10 +168,17 @@ describe('readCssViewport', () => {
 });
 
 describe('graphicsQuality helpers', () => {
-  test('cycle and labels', () => {
+  test('cycle Auto → Low → Medium → High → Auto', () => {
     expect(cycleGraphicsQuality('auto')).toBe('low');
-    expect(cycleGraphicsQuality('low')).toBe('high');
+    expect(cycleGraphicsQuality('low')).toBe('medium');
+    expect(cycleGraphicsQuality('medium')).toBe('high');
     expect(cycleGraphicsQuality('high')).toBe('auto');
+  });
+
+  test('labels', () => {
     expect(graphicsQualityLabel('auto')).toBe('Auto');
+    expect(graphicsQualityLabel('low')).toBe('Low');
+    expect(graphicsQualityLabel('medium')).toBe('Medium');
+    expect(graphicsQualityLabel('high')).toBe('High');
   });
 });

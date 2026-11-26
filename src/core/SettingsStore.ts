@@ -19,8 +19,8 @@ export type HotkeyAction =
 
 export type HotkeyMap = Record<HotkeyAction, string>;
 
-/** Auto = Low on touch / coarse devices, High on desktop. */
-export type GraphicsQualitySetting = 'auto' | 'high' | 'low';
+/** Auto = Medium on touch / coarse devices, High on desktop. */
+export type GraphicsQualitySetting = 'auto' | 'high' | 'medium' | 'low';
 
 export type GameSettings = {
   masterVolume: number;
@@ -42,8 +42,8 @@ export type GameSettings = {
   /** 0 / 0.5 / 1 — ash/shadow transition intensity. */
   shiftFxIntensity: number;
   /**
-   * Render/VFX budget. Auto picks Low on phones so WebView stays
-   * near 60 fps; override in Settings.
+   * Render/VFX budget. Auto picks Medium on phones (readable HUD);
+   * Low remains the FPS escape hatch. Override in Settings.
    */
   graphicsQuality: GraphicsQualitySetting;
   hotkeys: HotkeyMap;
@@ -112,7 +112,9 @@ function clamp01(n: number): number {
 }
 
 function parseGraphicsQuality(v: unknown): GraphicsQualitySetting {
-  if (v === 'high' || v === 'low' || v === 'auto') return v;
+  if (v === 'high' || v === 'medium' || v === 'low' || v === 'auto') {
+    return v;
+  }
   return DEFAULT_SETTINGS.graphicsQuality;
 }
 

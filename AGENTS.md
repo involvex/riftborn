@@ -52,6 +52,8 @@ Agent skill: `.agents/skills/expo-android-games` (browser `?touch=1` + phone vie
 
 Touch HUD: `TouchControls` (stick / ATK / E / DASH) + raised ability bar. Desktop: `HotkeyDock` + flush `MiniMap`.
 
+**Graphics quality:** Auto → **Medium** (`renderScale` 0.85) on touch / coarse; **High** on desktop. **Low** (0.65) stays the FPS escape hatch. Cycle Auto → Low → Medium → High. World labels use `WorldLabelStyle` (16px touch); HUD floors at `TOUCH_FONT_MIN_PX` 15.
+
 **Before declaring done:** typecheck + lint + format:check + build. After map/POI/town-safety changes, also run `bun run test:smoke`.
 
 **Git:** commit/push only when the user asks. Do not amend pushed commits or force-push `main`.

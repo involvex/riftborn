@@ -2,8 +2,8 @@ import type Phaser from 'phaser';
 import { TILE_HEIGHT, TILE_WIDTH } from './IsoMath';
 import { settingsStore, type GraphicsQualitySetting } from './SettingsStore';
 
-/** Resolved runtime tier after Auto → High/Low. */
-export type GraphicsTier = 'high' | 'low';
+/** Resolved runtime tier after Auto → High/Medium/Low. */
+export type GraphicsTier = 'high' | 'medium' | 'low';
 
 export type GraphicsProfile = {
   tier: GraphicsTier;
@@ -156,6 +156,16 @@ const HIGH: GraphicsProfile = {
   textResolution: 2,
 };
 
+/** Phone default — sharper than Low without full High fill-rate. */
+const MEDIUM: GraphicsProfile = {
+  tier: 'medium',
+  renderScale: 0.85,
+  maxDamageNumbers: 16,
+  particleCap: 6,
+  juiceScale: 0.7,
+  textResolution: 2,
+};
+
 const LOW: GraphicsProfile = {
   tier: 'low',
   // Buffer resize + camera zoom×scale keep FOV; juice/particles also cut.
@@ -163,7 +173,7 @@ const LOW: GraphicsProfile = {
   maxDamageNumbers: 8,
   particleCap: 3,
   juiceScale: 0.4,
-  textResolution: 1,
+  textResolution: 2,
 };
 
 /** Same heuristics as TouchControls — kept local to avoid import cycles. */
@@ -185,18 +195,21 @@ export function prefersTouchChrome(): boolean {
   return coarse || small;
 }
 
-/** Pure resolve — Auto uses touch / coarse pointer as Low. */
+/** Pure resolve — Auto uses touch / coarse pointer as Medium. */
 export function resolveGraphicsTier(
   setting: GraphicsQualitySetting,
   touchPreferred: boolean,
 ): GraphicsTier {
   if (setting === 'high') return 'high';
+  if (setting === 'medium') return 'medium';
   if (setting === 'low') return 'low';
-  return touchPreferred ? 'low' : 'high';
+  return touchPreferred ? 'medium' : 'high';
 }
 
 export function profileForTier(tier: GraphicsTier): GraphicsProfile {
-  return tier === 'low' ? LOW : HIGH;
+  if (tier === 'low') return LOW;
+  if (tier === 'medium') return MEDIUM;
+  return HIGH;
 }
 
 /** Live profile from settings + device. */
@@ -208,14 +221,17 @@ export function currentGraphicsProfile(): GraphicsProfile {
 export function graphicsQualityLabel(setting: GraphicsQualitySetting): string {
   if (setting === 'auto') return 'Auto';
   if (setting === 'high') return 'High';
+  if (setting === 'medium') return 'Medium';
   return 'Low';
 }
 
+/** Auto → Low → Medium → High → Auto. */
 export function cycleGraphicsQuality(
   current: GraphicsQualitySetting,
 ): GraphicsQualitySetting {
   if (current === 'auto') return 'low';
-  if (current === 'low') return 'high';
+  if (current === 'low') return 'medium';
+  if (current === 'medium') return 'high';
   return 'auto';
 }
 

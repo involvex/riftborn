@@ -1,11 +1,11 @@
 /**
  * Central UI type sizes. Touch profile floors everything at
- * TOUCH_FONT_MIN_PX so HUD copy stays legible on 1024×473 phones.
+ * TOUCH_FONT_MIN_PX so HUD copy stays legible on phone landscape.
  */
 
 import { getAppliedRenderScale } from './GraphicsQuality';
 
-export const TOUCH_FONT_MIN_PX = 12;
+export const TOUCH_FONT_MIN_PX = 15;
 
 export const UI_FONT_ROLES = [
   'title',
@@ -43,17 +43,17 @@ const DESKTOP: Record<UiFontRole, number> = {
 
 const TOUCH: Record<UiFontRole, number> = {
   title: 18,
-  meta: 13,
-  body: 13,
-  hud: 13,
-  label: 13,
-  caption: 12,
-  slot: 12,
-  fps: 12,
-  rift: 12,
-  pad: 13,
-  skill: 12,
-  hint: 12,
+  meta: 15,
+  body: 15,
+  hud: 15,
+  label: 15,
+  caption: 15,
+  slot: 15,
+  fps: 15,
+  rift: 15,
+  pad: 15,
+  skill: 15,
+  hint: 15,
 };
 
 /** Pixel size for a UI role under the given input profile. */
@@ -75,7 +75,9 @@ export function uiFontGamePx(role: UiFontRole, profile: UiFontProfile): number {
   if (profile !== 'touch') return px;
   const s = getAppliedRenderScale();
   if (s >= 0.99) return px;
-  return Math.max(9, Math.round(px * s));
+  // Floor at ~60% of CSS-intent so Low (0.65) still stays readable
+  // after buffer stretch; never drop below 11 game-px.
+  return Math.max(11, Math.round(px * s));
 }
 
 /** Phaser-ready `Npx` string. */

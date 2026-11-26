@@ -79,6 +79,7 @@ earn their keep in feel.
 | ✓   | **Loot readability**     | Payoff after combat soft         | Shipped: magic+ drop icons/beams, boss chest look, rarity-gated loot juice                           |
 | ✓   | **Boss arena beat**      | Boss room = any hall             | Shipped: biome wash + phase ring in boss room (idle → boss → exit)                                   |
 | ✓   | **Phone combat feel**    | Shake on/off; magic loot strobes | Shake Off/Low/Full + Reduce flash; magic no camera flash; loot gap; player hurt squash; touch verify |
+| ✓   | **Phone HUD sharpness**  | Auto→Low 0.65 made type mushy    | Auto→Medium 0.85; Low stays FPS hatch; 16px world labels; TOUCH_FONT_MIN 15; ACT pad floor           |
 
 ## Done — content (keep after feel)
 
@@ -128,6 +129,10 @@ In-rift choice, SHIFT fight, build fork, map ping, and named drop are in.
 
 _No open slice — pick the next loop beat after playtest, or park._
 
+## Later — art variety (parked)
+
+- **2× hub/dungeon tiles + biome floors** — Bing via `D:\repos\image-wizard-cli` (`image-wizard batch`, `--no-post`, ~16 jobs); keep painted pixel style; ask before the run. Copy into `public/assets/tiles/` + wire biome variants in `WorldArt` / `BiomeLook`.
+
 ## Done — unique boss / elite sprites
 
 | #   | Slice                       | Why it matters                                                  | Done when                                                                                            |
@@ -144,6 +149,7 @@ Skip inventing new frameworks — extend `WorldArt` / `WorldScene` /
 - App Store packaging for Expo shell
 - Seasons, trading, seamless open world
 - Dedicated 8-dir **sprite rows** (logic/octant shipped; sheets still 2-dir flipX)
+- See **Later — art variety** for 2× tiles / biome floors
 
 ## Done — systems polish
 

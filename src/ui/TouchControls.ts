@@ -2,7 +2,7 @@ import Phaser from 'phaser';
 import { gameEvents } from '../core/EventBus';
 import { audioBus } from '../core/AudioBus';
 import { hapticTap } from '../core/Haptics';
-import { uiFontPx } from '../core/UiFont';
+import { uiFontGamePx, uiFontPx } from '../core/UiFont';
 import {
   computeGameTouchLayout,
   TOUCH_CHROME_COUNT,
@@ -198,8 +198,9 @@ export class TouchControls {
   setInteractHint(label: string, dimmed: boolean): void {
     this.interactDimmed = dimmed;
     this.interact.label.setText(label);
-    const s = getAppliedRenderScale();
-    const base = Math.max(9, Math.round(uiFontPx('pad', 'touch') * s));
+    // Game-px size already accounts for Low/Medium buffer stretch;
+    // do not shrink further below the pad floor for long ACT copy.
+    const base = uiFontGamePx('pad', 'touch');
     const font =
       label.length >= 5
         ? `${base}px`

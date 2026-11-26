@@ -70,7 +70,9 @@ export function enemyTelegraphStyle(
   return STYLES[kind][phase];
 }
 
-/** Low tier keeps windups but trims concurrent cues harder than high. */
-export function telegraphCap(profile: { tier: 'high' | 'low' }): number {
+/** Low tier keeps windups but trims concurrent cues harder than medium/high. */
+export function telegraphCap(profile: {
+  tier: 'high' | 'medium' | 'low';
+}): number {
   return profile.tier === 'low' ? 7 : 12;
 }

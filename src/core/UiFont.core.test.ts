@@ -7,8 +7,8 @@ import {
 } from './UiFont';
 
 describe('uiFontPx', () => {
-  test('every touch role is at least TOUCH_FONT_MIN_PX (~12 CSS-px)', () => {
-    expect(TOUCH_FONT_MIN_PX).toBeGreaterThanOrEqual(12);
+  test('every touch role is at least TOUCH_FONT_MIN_PX (15 CSS-px)', () => {
+    expect(TOUCH_FONT_MIN_PX).toBe(15);
     for (const role of UI_FONT_ROLES) {
       const px = uiFontPx(role, 'touch');
       expect(px, `touch/${role}`).toBeGreaterThanOrEqual(TOUCH_FONT_MIN_PX);
