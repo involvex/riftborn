@@ -127,11 +127,13 @@ In-rift choice, SHIFT fight, build fork, map ping, and named drop are in.
 
 ## Now
 
-_No open slice — pick the next loop beat after playtest, or park._
+| #   | Slice                         | Why it matters                         | Done when                                                                                          |
+| --- | ----------------------------- | -------------------------------------- | -------------------------------------------------------------------------------------------------- |
+| →   | **2× tiles + biome floors**   | Phone floors still soft after HUD pass | Bing batch `riftborn-tiles-2x.json` (16 jobs, `--no-post`) → normalize 256×128 → ship + BiomeLook |
 
 ## Later — art variety (parked)
 
-- **2× hub/dungeon tiles + biome floors** — Bing via `D:\repos\image-wizard-cli` (`image-wizard batch`, `--no-post`, ~16 jobs); keep painted pixel style; ask before the run. Copy into `public/assets/tiles/` + wire biome variants in `WorldArt` / `BiomeLook`.
+- _(moved to Now)_ 2× hub/dungeon tiles + biome floors — batch started via `D:\repos\image-wizard-cli`
 
 ## Done — unique boss / elite sprites
 
