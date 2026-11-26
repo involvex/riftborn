@@ -57,23 +57,23 @@ from memory without checking the pinned SDK.
 
 ## Detect shell
 
-| Signal | Shell | Meaning |
-|--------|--------|---------|
-| `mobile/` + `react-native-webview` loading Vite/`file://` game | **WebView shell** | Phaser (or other canvas) is the game; Expo is a thin native wrapper |
-| Gameplay in RN/Expo views, Skia, Reanimated, Gesture Handler, no game WebView | **Native Expo** | Logic and draw live in the Expo app |
-| Both present | Prefer WebView for canvas jam games; keep native for menus/IAP/push only if already split that way |
+| Signal                                                                        | Shell                                                                                              | Meaning                                                             |
+| ----------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------- |
+| `mobile/` + `react-native-webview` loading Vite/`file://` game                | **WebView shell**                                                                                  | Phaser (or other canvas) is the game; Expo is a thin native wrapper |
+| Gameplay in RN/Expo views, Skia, Reanimated, Gesture Handler, no game WebView | **Native Expo**                                                                                    | Logic and draw live in the Expo app                                 |
+| Both present                                                                  | Prefer WebView for canvas jam games; keep native for menus/IAP/push only if already split that way |
 
 ### WebView shell (Riftborn default)
 
-| Path | Role |
-|------|------|
-| `src/` + Vite | Real game (Phaser) |
-| `mobile/App.tsx` | Full-screen WebView, landscape lock, Android back → game |
-| `?touch=1` / coarse pointer / small viewport | On-screen controls (`TouchControls`, `TouchLayout`) |
-| `bun run mobile:dev` | LAN Vite URL into `mobile/.env` + debug Android run |
-| `bun run mobile:build` | `build` → sync `www` assets → **release** APK (offline) |
-| `bun run mobile:lan` | Only write LAN `.env` |
-| `bun run mobile:sync` | Copy `dist` into Android assets |
+| Path                                         | Role                                                     |
+| -------------------------------------------- | -------------------------------------------------------- |
+| `src/` + Vite                                | Real game (Phaser)                                       |
+| `mobile/App.tsx`                             | Full-screen WebView, landscape lock, Android back → game |
+| `?touch=1` / coarse pointer / small viewport | On-screen controls (`TouchControls`, `TouchLayout`)      |
+| `bun run mobile:dev`                         | LAN Vite URL into `mobile/.env` + debug Android run      |
+| `bun run mobile:build`                       | `build` → sync `www` assets → **release** APK (offline)  |
+| `bun run mobile:lan`                         | Only write LAN `.env`                                    |
+| `bun run mobile:sync`                        | Copy `dist` into Android assets                          |
 
 Dev game URL pattern: `http://<lan-ip>:5173/?touch=1`.  
 Release Android URI: `file:///android_asset/www/index.html` when
@@ -138,9 +138,9 @@ Always `expo install` for Expo-related packages inside `mobile/`.
 
 ## Verify
 
-| Goal | Check |
-|------|--------|
-| Touch layout | Browser `/?touch=1` at landscape phone size; stick + actions visible |
-| Hub / POIs | `/?smoke=1&touch=1` + `__RIFTBORN` / `bun run test:smoke` when map-related |
-| APK exists | `mobile:build` → print APK path; user installs |
-| Expo health | `cd mobile && bunx expo-doctor` when deps look wrong |
+| Goal         | Check                                                                      |
+| ------------ | -------------------------------------------------------------------------- |
+| Touch layout | Browser `/?touch=1` at landscape phone size; stick + actions visible       |
+| Hub / POIs   | `/?smoke=1&touch=1` + `__RIFTBORN` / `bun run test:smoke` when map-related |
+| APK exists   | `mobile:build` → print APK path; user installs                             |
+| Expo health  | `cd mobile && bunx expo-doctor` when deps look wrong                       |

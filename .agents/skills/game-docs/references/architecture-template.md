@@ -2,57 +2,66 @@
 
 Copy into `ARCHITECTURE.md` next to the GDD once the code has structure that more than one feature depends on (a save format, an event bus, a scene flow), or when the user asks. Until then, the engine is one line in the GDD summary. If the GDD has another file name, change the `[GDD](GDD.md)` link to match. A feature's own modules, data and events go in its `implementation.md`, which links back here for the shared parts.
 
-**Describe the code as it is**: read the repo and use real paths and names. Leave out a section with nothing in it yet. Text in *italics* is guidance; don't copy it.
+**Describe the code as it is**: read the repo and use real paths and names. Leave out a section with nothing in it yet. Text in _italics_ is guidance; don't copy it.
 
-~~~markdown
+````markdown
 # <Title> — Architecture
 
 **Updated:** <YYYY-MM-DD> · [GDD](GDD.md)
 
 ## 1. Stack
-| | |
-|---|---|
-| Engine / framework | <name + exact version> |
-| Language | |
-| Build / bundler | |
-| Target runtime | <browsers, devices, OS versions> |
-| Key libraries | |
-| Hosting / distribution | |
+
+|                        |                                  |
+| ---------------------- | -------------------------------- |
+| Engine / framework     | <name + exact version>           |
+| Language               |                                  |
+| Build / bundler        |                                  |
+| Target runtime         | <browsers, devices, OS versions> |
+| Key libraries          |                                  |
+| Hosting / distribution |                                  |
 
 ## 2. Structure
-*Scenes/states and how control moves between them; the main loop (fixed vs variable step); who owns the game state.*
+
+_Scenes/states and how control moves between them; the main loop (fixed vs variable step); who owns the game state._
+
 ```
 <diagram: e.g. Boot → Title → Play ⇄ Pause → Results, or a module dependency sketch>
 ```
 
 ## 3. Module map
-| Module / folder | Responsibility | Used by features |
-|---|---|---|
+
+| Module / folder         | Responsibility                      | Used by features                             |
+| ----------------------- | ----------------------------------- | -------------------------------------------- |
 | `src/systems/runSim.ts` | one run as pure logic, no rendering | [combo](features/combo/implementation.md), … |
 
 ## 4. Cross-cutting conventions
-- **Events / messaging:** *(bus or direct calls; the list of shared event names and payloads; who may emit)*
-- **Config and tuning:** *(where tunables live, e.g. one `config.ts`; naming; how design.md numbers map to constants)*
-- **Data / content:** *(data file formats, where content tables live)*
-- **Persistence:** *(save format, storage, current save version, migration rule)*
-- **Randomness:** *(seeded RNG? where seeds come from; determinism requirements)*
-- **Rendering / UI layering:** *(canvas vs DOM overlay, scaling, safe areas)*
-- **Input:** *(abstraction layer, devices)*
-- **Assets:** *(pipeline, naming, budgets)*
+
+- **Events / messaging:** _(bus or direct calls; the list of shared event names and payloads; who may emit)_
+- **Config and tuning:** _(where tunables live, e.g. one `config.ts`; naming; how design.md numbers map to constants)_
+- **Data / content:** _(data file formats, where content tables live)_
+- **Persistence:** _(save format, storage, current save version, migration rule)_
+- **Randomness:** _(seeded RNG? where seeds come from; determinism requirements)_
+- **Rendering / UI layering:** _(canvas vs DOM overlay, scaling, safe areas)_
+- **Input:** _(abstraction layer, devices)_
+- **Assets:** _(pipeline, naming, budgets)_
 
 ## 5. File layout
+
 ```
 <tree with a short note per folder>
 ```
 
 ## 6. Performance budget
-*Target and floor FPS on named devices; draw-call, entity, memory and download-size limits; the "no per-frame allocation" kind of rules.*
+
+_Target and floor FPS on named devices; draw-call, entity, memory and download-size limits; the "no per-frame allocation" kind of rules._
 
 ## 7. Testing and tooling
-*Test runner and how to run it; test folder layout; bots / simulations; debug keys and flags; the manual device check routine. Each feature's testing.md points at specific files.*
+
+_Test runner and how to run it; test folder layout; bots / simulations; debug keys and flags; the manual device check routine. Each feature's testing.md points at specific files._
 
 ## 8. Build and release
-*Dev server command and port; build command; versioning; deploy target and steps.*
+
+_Dev server command and port; build command; versioning; deploy target and steps._
 
 ## 9. Open questions and tech risks
-~~~
+````

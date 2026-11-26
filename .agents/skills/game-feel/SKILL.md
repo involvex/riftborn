@@ -47,11 +47,11 @@ offset this skill writes), mixing and ducking (`audio-design`), shader dissolves
 
 ## Tiers
 
-| Tier | Trauma | Hit-stop | Particles | Extra | Example events |
-|------|:------:|:--------:|:---------:|-------|----------------|
-| small | 0.10-0.20 | none | 0-4 | tick SFX | footstep, coin, UI hover |
-| medium | 0.30-0.50 | 0.04-0.06 s | 6-12 | flash | normal hit, landing, pickup |
-| large | 0.70-1.00 | 0.10-0.15 s | 20-40 | flash, zoom, number | crit, boss hit, death, explosion |
+| Tier   |  Trauma   |  Hit-stop   | Particles | Extra               | Example events                   |
+| ------ | :-------: | :---------: | :-------: | ------------------- | -------------------------------- |
+| small  | 0.10-0.20 |    none     |    0-4    | tick SFX            | footstep, coin, UI hover         |
+| medium | 0.30-0.50 | 0.04-0.06 s |   6-12    | flash               | normal hit, landing, pickup      |
+| large  | 0.70-1.00 | 0.10-0.15 s |   20-40   | flash, zoom, number | crit, boss hit, death, explosion |
 
 ## Patterns
 
@@ -179,7 +179,7 @@ retrigger, or two tweens fight and the node ends at the wrong scale.
 Last verified: 2026-11-11.
 
 - Godot 4.7: `SceneTree.create_timer(time_sec, process_always, process_in_physics,
-  ignore_time_scale)`, `Tween.set_ignore_time_scale()`, `Camera2D.ignore_rotation` (default
+ignore_time_scale)`, `Tween.set_ignore_time_scale()`, `Camera2D.ignore_rotation` (default
   `true`); `Engine.time_scale` scales `_process`/`_physics_process` delta, `Timer` and
   `SceneTreeTimer` but not audio (https://docs.godotengine.org/en/4.7/classes/class_engine.html).
 - Unity 6.3 LTS with Cinemachine 3.1 (3.1.7 is the latest release, June 2026):

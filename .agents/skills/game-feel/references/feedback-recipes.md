@@ -1,6 +1,7 @@
 # Feedback recipes
 
 Contents:
+
 1. The trauma model and tuning ranges
 2. Easing cheat sheet, plus an eased pop for Unity without a tween package
 3. The rest of the feedback menu (flash, knockback, number pop, particles, freeze)
@@ -32,17 +33,17 @@ Tunable starting points: `max_offset = (8..16, 6..10) px`, `max_roll = 0.05..0.1
 
 ## 2. Easing cheat sheet — which curve for which job
 
-| Goal | Ease | Godot `Tween` | Notes |
-|------|------|---------------|-------|
-| UI/element "pop" in | overshoot | `TRANS_BACK`, `EASE_OUT` | shoots past target, settles back |
-| Bouncy, lively land | bounce/elastic | `TRANS_ELASTIC`/`TRANS_BOUNCE`, `EASE_OUT` | use sparingly; reads as cartoonish |
-| Settle / decelerate | ease-out | `TRANS_CUBIC`/`TRANS_QUAD`, `EASE_OUT` | the default for "comes to rest" |
-| Anticipation / wind-up | ease-in | `TRANS_CUBIC`, `EASE_IN` | slow start before a fast action |
-| Smooth A→B both ends | ease-in-out | `TRANS_SINE`, `EASE_IN_OUT` | camera moves, menu slides |
+| Goal                   | Ease           | Godot `Tween`                              | Notes                              |
+| ---------------------- | -------------- | ------------------------------------------ | ---------------------------------- |
+| UI/element "pop" in    | overshoot      | `TRANS_BACK`, `EASE_OUT`                   | shoots past target, settles back   |
+| Bouncy, lively land    | bounce/elastic | `TRANS_ELASTIC`/`TRANS_BOUNCE`, `EASE_OUT` | use sparingly; reads as cartoonish |
+| Settle / decelerate    | ease-out       | `TRANS_CUBIC`/`TRANS_QUAD`, `EASE_OUT`     | the default for "comes to rest"    |
+| Anticipation / wind-up | ease-in        | `TRANS_CUBIC`, `EASE_IN`                   | slow start before a fast action    |
+| Smooth A→B both ends   | ease-in-out    | `TRANS_SINE`, `EASE_IN_OUT`                | camera moves, menu slides          |
 
 Unity 6.3 LTS has no built-in tween library; options in order of preference: `Vector3.SmoothDamp`
 for spring-like follow, `Mathf.SmoothStep`/hand-rolled ease in a coroutine, Animator curves,
-or a third-party tween package if the project already uses one. Keep the *curve choice* the
+or a third-party tween package if the project already uses one. Keep the _curve choice_ the
 same regardless of tool.
 
 ```csharp

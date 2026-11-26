@@ -29,15 +29,15 @@ exists in the simulation but won't be displaced by collisions.
 
 ## Movement properties
 
-| Property | Setter | Notes |
-|----------|--------|-------|
-| velocity | `setVelocity(x, y)` / `setVelocityX/Y` | pixels per second |
-| acceleration | `setAcceleration(x, y)` | pixels/sec²; accumulates into velocity |
-| gravity | `setGravity(x, y)` | added on top of world gravity |
-| drag | `setDrag(x, y)` | px/sec² of slowdown, applied only while that axis has no acceleration; with `setDamping(true)` it is the share of velocity kept per second (e.g. `0.05`) |
-| max velocity | `setMaxVelocity(x, y)` | clamp speed |
-| bounce | `setBounce(x, y)` | 0 = stop on hit, 1 = full rebound |
-| friction | `setFriction(x, y)` | share of motion passed to a riding body |
+| Property     | Setter                                 | Notes                                                                                                                                                    |
+| ------------ | -------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| velocity     | `setVelocity(x, y)` / `setVelocityX/Y` | pixels per second                                                                                                                                        |
+| acceleration | `setAcceleration(x, y)`                | pixels/sec²; accumulates into velocity                                                                                                                   |
+| gravity      | `setGravity(x, y)`                     | added on top of world gravity                                                                                                                            |
+| drag         | `setDrag(x, y)`                        | px/sec² of slowdown, applied only while that axis has no acceleration; with `setDamping(true)` it is the share of velocity kept per second (e.g. `0.05`) |
+| max velocity | `setMaxVelocity(x, y)`                 | clamp speed                                                                                                                                              |
+| bounce       | `setBounce(x, y)`                      | 0 = stop on hit, 1 = full rebound                                                                                                                        |
+| friction     | `setFriction(x, y)`                    | share of motion passed to a riding body                                                                                                                  |
 
 `body.stop()` zeroes velocity, acceleration, and speed in one call.
 `body.reset(x, y)` teleports the body and clears motion.
@@ -50,9 +50,9 @@ for a single body with `body.setAllowGravity(false)` (useful for flying enemies)
 The body defaults to the sprite's frame size. Tighten it to the art:
 
 ```js
-sprite.body.setSize(20, 36, true);   // width, height, center on the frame
-sprite.body.setOffset(6, 4);         // nudge the box within the frame
-sprite.body.setCircle(16);           // circular body of radius 16
+sprite.body.setSize(20, 36, true); // width, height, center on the frame
+sprite.body.setOffset(6, 4); // nudge the box within the frame
+sprite.body.setCircle(16); // circular body of radius 16
 ```
 
 `setSize`'s third argument re-centers the body; pass `false` to keep the offset at
@@ -62,13 +62,14 @@ sprite.body.setCircle(16);           // circular body of radius 16
 
 ```js
 const collider = this.physics.add.collider(
-  objectsA, objectsB,
-  collideCallback,   // (objA, objB) => {}   runs after separation
-  processCallback,   // (objA, objB) => boolean  return false to skip this pair
-  this               // callback context
+  objectsA,
+  objectsB,
+  collideCallback, // (objA, objB) => {}   runs after separation
+  processCallback, // (objA, objB) => boolean  return false to skip this pair
+  this, // callback context
 );
 
-collider.active = false;                 // temporarily disable
+collider.active = false; // temporarily disable
 this.physics.world.removeCollider(collider); // remove entirely
 ```
 
@@ -85,11 +86,11 @@ group, so one call can wire up "all bullets vs all enemies".
 After the physics step, each body exposes which sides are touching:
 
 ```js
-body.blocked.down   // can't move down: bounds, tile, or a blocking body below
-body.touching.left  // touching another body on the left this step
-body.onFloor()      // shorthand for blocked.down
-body.onWall()       // blocked.left || blocked.right
-body.wasTouching    // touching state from the previous step (edge detection)
+body.blocked.down; // can't move down: bounds, tile, or a blocking body below
+body.touching.left; // touching another body on the left this step
+body.onFloor(); // shorthand for blocked.down
+body.onWall(); // blocked.left || blocked.right
+body.wasTouching; // touching state from the previous step (edge detection)
 ```
 
 `touching` is set for any body contact. `blocked` means the body cannot move further
@@ -103,10 +104,12 @@ mid-air. Compare `touching` against `wasTouching` to detect the first frame of a
 ## World bounds
 
 ```js
-this.physics.world.setBounds(0, 0, 1600, 1200);        // simulation bounds
-body.setCollideWorldBounds(true);                       // clamp this body
-body.onWorldBounds = true;                              // emit events at edges
-this.physics.world.on('worldbounds', (b, up, down, left, right) => { /* ... */ });
+this.physics.world.setBounds(0, 0, 1600, 1200); // simulation bounds
+body.setCollideWorldBounds(true); // clamp this body
+body.onWorldBounds = true; // emit events at edges
+this.physics.world.on('worldbounds', (b, up, down, left, right) => {
+  /* ... */
+});
 ```
 
 ## Collision categories & masks
@@ -117,15 +120,15 @@ category. Moving a body into a new category therefore also cuts it off from ever
 body you have not touched, because their mask is still `1`:
 
 ```js
-const WORLD  = 1;                                  // the default category
-const PLAYER = this.physics.nextCategory();        // 2, 4, 8, ... (max 32 categories)
-const ENEMY  = this.physics.nextCategory();
+const WORLD = 1; // the default category
+const PLAYER = this.physics.nextCategory(); // 2, 4, 8, ... (max 32 categories)
+const ENEMY = this.physics.nextCategory();
 
 player.setCollisionCategory(PLAYER);
-player.setCollidesWith([WORLD, ENEMY]);            // keep the untouched ground
+player.setCollidesWith([WORLD, ENEMY]); // keep the untouched ground
 
 // The ground still has mask 1, so it would now ignore PLAYER: widen it too.
-ground.setCollidesWith([WORLD, PLAYER, ENEMY]);    // or ground.resetCollisionCategory()
+ground.setCollidesWith([WORLD, PLAYER, ENEMY]); // or ground.resetCollisionCategory()
 ```
 
 When one side of a collider is a group, the group's own category and mask are checked
@@ -133,7 +136,7 @@ When one side of a collider is a group, the group's own category and mask are ch
 
 ```js
 enemies.setCollisionCategory(ENEMY).setCollidesWith([WORLD, PLAYER]);
-const enemy = enemies.create(600, 400, 'enemy');   // and every other member
+const enemy = enemies.create(600, 400, 'enemy'); // and every other member
 enemy.setCollisionCategory(ENEMY).setCollidesWith([WORLD, PLAYER]);
 ```
 
@@ -150,7 +153,7 @@ outlines, and velocity vectors. Per-body overrides:
 
 ```js
 this.physics.world.defaults.debugShowVelocity = true;
-gameObject.setDebug(true, true, 0x00ff00);   // showBody, showVelocity, color
+gameObject.setDebug(true, true, 0x00ff00); // showBody, showVelocity, color
 ```
 
 Turn debug off for release builds; the overlay has a real per-frame cost.

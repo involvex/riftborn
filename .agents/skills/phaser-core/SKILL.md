@@ -53,13 +53,13 @@ import PlayScene from './scenes/PlayScene.js';
 import HudScene from './scenes/HudScene.js';
 
 const config = {
-  type: Phaser.AUTO,               // WebGL, Canvas only as a fallback
-  parent: 'game',                  // id of the element that holds the canvas
+  type: Phaser.AUTO, // WebGL, Canvas only as a fallback
+  parent: 'game', // id of the element that holds the canvas
   width: 800,
   height: 600,
   backgroundColor: '#1d1d28',
   scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH },
-  dom: { createContainer: true },  // only if you use this.add.dom(); needs `parent`
+  dom: { createContainer: true }, // only if you use this.add.dom(); needs `parent`
   scene: [BootScene, PlayScene, HudScene], // later in the list = drawn on top
 };
 
@@ -85,7 +85,10 @@ export default class PlayScene extends Phaser.Scene {
 
   preload() {
     this.load.image('player', 'assets/player.png');
-    this.load.spritesheet('coin', 'assets/coin.png', { frameWidth: 16, frameHeight: 16 });
+    this.load.spritesheet('coin', 'assets/coin.png', {
+      frameWidth: 16,
+      frameHeight: 16,
+    });
   }
 
   create() {
@@ -95,7 +98,8 @@ export default class PlayScene extends Phaser.Scene {
   }
 
   update(time, delta) {
-    const dir = (this.cursors.right.isDown ? 1 : 0) - (this.cursors.left.isDown ? 1 : 0);
+    const dir =
+      (this.cursors.right.isDown ? 1 : 0) - (this.cursors.left.isDown ? 1 : 0);
     stepRun(this.run, { dir }, delta / 1000); // delta is milliseconds
     this.player.x = this.run.playerX;
     this.registry.set('score', this.run.score);
@@ -123,12 +127,12 @@ this.scene.get('hud').events.emit('show-message', 'Level cleared!');
 
 ```js
 this.scene.start('gameover', { score }); // stop this scene, start the target
-this.scene.launch('hud');                // run in parallel; restarts it if already running
-this.scene.run('hud');                   // wake if asleep, resume if paused, else start
-this.scene.switch('menu');               // sleep this scene, start or wake the target
-this.scene.pause();                      // stop updating, keep drawing (modal menus)
-this.scene.sleep();                      // stop updating and drawing, keep state
-this.scene.bringToTop('hud');            // draw order follows the scene list
+this.scene.launch('hud'); // run in parallel; restarts it if already running
+this.scene.run('hud'); // wake if asleep, resume if paused, else start
+this.scene.switch('menu'); // sleep this scene, start or wake the target
+this.scene.pause(); // stop updating, keep drawing (modal menus)
+this.scene.sleep(); // stop updating and drawing, keep state
+this.scene.bringToTop('hud'); // draw order follows the scene list
 ```
 
 ### 5. HTML over the canvas
@@ -166,9 +170,13 @@ const browser = await chromium.launch();
 const page = await browser.newPage();
 const errors = [];
 page.on('pageerror', (e) => errors.push(e.message));
-page.on('console', (m) => { if (m.type() === 'error') errors.push(m.text()); });
+page.on('console', (m) => {
+  if (m.type() === 'error') errors.push(m.text());
+});
 await page.goto(process.argv[2]);
-await page.waitForFunction(() => window.game?.isRunning, null, { timeout: 15000 });
+await page.waitForFunction(() => window.game?.isRunning, null, {
+  timeout: 15000,
+});
 await page.waitForTimeout(1500); // let the first scenes finish preload
 const state = await page.evaluate(() => ({
   renderer: window.game.config.renderType === 2 ? 'webgl' : 'canvas', // Phaser.WEBGL = 2

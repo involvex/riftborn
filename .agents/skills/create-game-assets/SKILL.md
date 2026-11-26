@@ -64,16 +64,16 @@ one production tool inside a controlled pipeline, never as proof that an asset i
 
 ## Choose the production path
 
-| Need | Default path |
-|------|--------------|
-| Existing asset needs a controlled change | Edit the original/reference; state what must remain unchanged |
-| New 2D visual family | Approve seed → generate/source family → normalize → preview → import |
-| True pixel art | Use generated work as a draft; enforce grid, palette, clusters, and frames with pixel tools |
-| Tileable surface or tileset | Produce a small family; repair seams; test repeated 3×3 before approval |
-| UI art or icons | Keep text and interaction code-native; prefer SVG/vector for simple geometric symbols |
-| 3D model or material | Use concepts as reference; author/clean in a DCC; validate topology, UVs, scale, pivots, and LODs |
-| No generation/edit tool is available | Build the brief and manifest; source licensed assets or keep explicit greybox placeholders |
-| Audio asset | Route sound implementation and mixing to `audio-design`; still track source/license in the manifest |
+| Need                                     | Default path                                                                                        |
+| ---------------------------------------- | --------------------------------------------------------------------------------------------------- |
+| Existing asset needs a controlled change | Edit the original/reference; state what must remain unchanged                                       |
+| New 2D visual family                     | Approve seed → generate/source family → normalize → preview → import                                |
+| True pixel art                           | Use generated work as a draft; enforce grid, palette, clusters, and frames with pixel tools         |
+| Tileable surface or tileset              | Produce a small family; repair seams; test repeated 3×3 before approval                             |
+| UI art or icons                          | Keep text and interaction code-native; prefer SVG/vector for simple geometric symbols               |
+| 3D model or material                     | Use concepts as reference; author/clean in a DCC; validate topology, UVs, scale, pivots, and LODs   |
+| No generation/edit tool is available     | Build the brief and manifest; source licensed assets or keep explicit greybox placeholders          |
+| Audio asset                              | Route sound implementation and mixing to `audio-design`; still track source/license in the manifest |
 
 ## Image-generation handoff
 

@@ -35,7 +35,7 @@ migration (`save-systems`); permadeath runs (`roguelike`).
    and minutes per level at a few points. Starting point: about 3-5 minutes per level for the
    first five levels, rising to 30-60 minutes near the cap.
 3. **Derive the XP table** from those minutes: `xp_to_next(L) = expected_xp_per_minute(L) *
-   minutes_for_level(L)`, where XP per minute comes from the enemies and quests at that
+minutes_for_level(L)`, where XP per minute comes from the enemies and quests at that
    level. A bare formula such as `100 * L^2` is a fine first fill, but tune against minutes.
 4. **Pick one damage family** (below) and set hit targets at equal level: a normal enemy dies
    in 2-4 player hits, the player survives 5-8 normal hits, a boss takes 25-60 hits.
@@ -48,17 +48,17 @@ migration (`save-systems`); permadeath runs (`roguelike`).
 
 ## Formulas that hold up
 
-| Choice | Default | Why |
-|--------|---------|-----|
-| Damage vs defense | ratio: `dmg * K / (K + def)`, K = the defense that should halve damage | each defense point adds the same effective HP (1/K of HP), so defense never makes anyone immune; League of Legends uses K = 100 |
-| Subtractive alternative | `max(1, atk - def)` | crisp at small numbers, but stacking defense quickly zeroes damage |
-| Resist caps | percentage resists capped (Path of Exile: 75% by default) | stacked percentages reach 100% otherwise |
-| Variance | ±10% | wider makes hits-to-kill unpredictable |
-| Crit | 5% base chance, 1.5-2x damage | crit builds need room to grow |
-| Type multipliers | 0.5 / 1 / 2 | clear tells; stack dual types multiplicatively (0.25-4) |
-| XP curve | cubic total XP (Pokemon "Medium Fast": total XP to reach level n is n^3) or a minutes-based table | early levels fast, late ones long |
-| Rarity weights | common 60, uncommon 25, rare 10, epic 4, legendary 1 | with a pity counter for the top tier if drops gate progress |
-| Item level | the level of the monster or chest that dropped it | keeps loot useful while levelling |
+| Choice                  | Default                                                                                           | Why                                                                                                                             |
+| ----------------------- | ------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| Damage vs defense       | ratio: `dmg * K / (K + def)`, K = the defense that should halve damage                            | each defense point adds the same effective HP (1/K of HP), so defense never makes anyone immune; League of Legends uses K = 100 |
+| Subtractive alternative | `max(1, atk - def)`                                                                               | crisp at small numbers, but stacking defense quickly zeroes damage                                                              |
+| Resist caps             | percentage resists capped (Path of Exile: 75% by default)                                         | stacked percentages reach 100% otherwise                                                                                        |
+| Variance                | ±10%                                                                                              | wider makes hits-to-kill unpredictable                                                                                          |
+| Crit                    | 5% base chance, 1.5-2x damage                                                                     | crit builds need room to grow                                                                                                   |
+| Type multipliers        | 0.5 / 1 / 2                                                                                       | clear tells; stack dual types multiplicatively (0.25-4)                                                                         |
+| XP curve                | cubic total XP (Pokemon "Medium Fast": total XP to reach level n is n^3) or a minutes-based table | early levels fast, late ones long                                                                                               |
+| Rarity weights          | common 60, uncommon 25, rare 10, epic 4, legendary 1                                              | with a pity counter for the top tier if drops gate progress                                                                     |
+| Item level              | the level of the monster or chest that dropped it                                                 | keeps loot useful while levelling                                                                                               |
 
 Round once at the end of the damage formula. Sum percentage modifiers of the same kind
 (+20% and +30% = +50%); multiply only across deliberately separate layers.

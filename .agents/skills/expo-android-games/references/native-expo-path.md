@@ -30,12 +30,12 @@ native Expo game). Riftborn’s primary path is WebView; this file is the altern
 
 ## Vs WebView shell
 
-| Concern | Native Expo | WebView shell |
-|---------|-------------|----------------|
-| Hot reload of game | Metro / Expo | Vite HMR into WebView or browser |
-| Pixel games / Phaser | Awkward | Natural fit |
-| Store IAP / push | Straightforward | Native shell + bridge |
-| Touch HUD | RN components | Game canvas HUD (`?touch=1`) |
+| Concern              | Native Expo     | WebView shell                    |
+| -------------------- | --------------- | -------------------------------- |
+| Hot reload of game   | Metro / Expo    | Vite HMR into WebView or browser |
+| Pixel games / Phaser | Awkward         | Natural fit                      |
+| Store IAP / push     | Straightforward | Native shell + bridge            |
+| Touch HUD            | RN components   | Game canvas HUD (`?touch=1`)     |
 
 If unsure, fingerprint the repo: `react-native-webview` loading `EXPO_PUBLIC_GAME_URL`
 or `android_asset/www` → stay on WebView shell.

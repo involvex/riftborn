@@ -7,37 +7,37 @@ known without a catalog skill; use the router's custom-engine fallback in that c
 
 Scan for the highest-confidence signal and stop at the first match in this precedence order.
 
-| # | Engine | Primary signal (project files) | Secondary signals | Skill set root |
-|:-:|--------|--------------------------------|-------------------|----------------|
-| 1 | Godot | `project.godot` | `*.tscn`, `*.gd`, `*.gdshader`, `*.tres`, `export_presets.cfg` | `skills/godot/` |
-| 2 | Unreal | `*.uproject` | `Source/**/*.Build.cs`, `Config/Default*.ini`, `*.uasset`, `Content/` | `skills/unreal/` |
-| 3 | Unity | `Assets/` **and** `ProjectSettings/ProjectVersion.txt` | `*.unity`, `*.prefab`, `*.asmdef`, `Packages/manifest.json` | `skills/unity/` |
-| 4 | Ebitengine | `go.mod` requiring `github.com/hajimehoshi/ebiten/v2` | Go imports of that module, `ebiten.RunGame`, `*.kage` | `skills/ebitengine/` |
-| 5 | Bevy | `Cargo.toml` with a `bevy` dependency | `*.rs` with `App::new()` / `use bevy::prelude` | `skills/other-engines/bevy-ecs/` |
-| 6 | Phaser | `package.json` dep `phaser` | `import Phaser`, `new Phaser.Game` | `skills/web-engines/phaser-core`, `skills/web-engines/phaser-arcade-physics` |
-| 7 | PixiJS | `package.json` dep `pixi.js` | `import * as PIXI`, `new PIXI.Application` | `skills/web-engines/pixijs-rendering/` |
-| 8 | three.js | `package.json` dep `three` | `import * as THREE`, `*.gltf` / `*.glb` | `skills/web-engines/threejs-scene-setup`, `threejs-gltf-loading`, `threejs-materials-lighting` |
-| 9 | Defold | `game.project` | `*.collection`, `*.go`, `*.script`, `*.gui_script`, `*.atlas`, `*.input_binding`, `/builtins/` paths | `skills/other-engines/defold-core/` |
-| 10 | LÖVE | `conf.lua`, or `main.lua` calling `love.*` | `*.love` | `skills/other-engines/love2d-core/` |
-| 11 | pygame | `*.py` with `import pygame` | `pygame.init()`, `pygame.display.set_mode` | `skills/other-engines/pygame-core/` |
-| 12 | Roblox | `*.rbxl` / `*.rbxlx`, or `*.project.json` (Rojo) | `*.luau`, `DataStoreService`, `game:GetService` | `skills/other-engines/roblox-*` (`roblox-luau` first, then the focused Roblox skill) |
+|  #  | Engine     | Primary signal (project files)                         | Secondary signals                                                                                    | Skill set root                                                                                 |
+| :-: | ---------- | ------------------------------------------------------ | ---------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
+|  1  | Godot      | `project.godot`                                        | `*.tscn`, `*.gd`, `*.gdshader`, `*.tres`, `export_presets.cfg`                                       | `skills/godot/`                                                                                |
+|  2  | Unreal     | `*.uproject`                                           | `Source/**/*.Build.cs`, `Config/Default*.ini`, `*.uasset`, `Content/`                                | `skills/unreal/`                                                                               |
+|  3  | Unity      | `Assets/` **and** `ProjectSettings/ProjectVersion.txt` | `*.unity`, `*.prefab`, `*.asmdef`, `Packages/manifest.json`                                          | `skills/unity/`                                                                                |
+|  4  | Ebitengine | `go.mod` requiring `github.com/hajimehoshi/ebiten/v2`  | Go imports of that module, `ebiten.RunGame`, `*.kage`                                                | `skills/ebitengine/`                                                                           |
+|  5  | Bevy       | `Cargo.toml` with a `bevy` dependency                  | `*.rs` with `App::new()` / `use bevy::prelude`                                                       | `skills/other-engines/bevy-ecs/`                                                               |
+|  6  | Phaser     | `package.json` dep `phaser`                            | `import Phaser`, `new Phaser.Game`                                                                   | `skills/web-engines/phaser-core`, `skills/web-engines/phaser-arcade-physics`                   |
+|  7  | PixiJS     | `package.json` dep `pixi.js`                           | `import * as PIXI`, `new PIXI.Application`                                                           | `skills/web-engines/pixijs-rendering/`                                                         |
+|  8  | three.js   | `package.json` dep `three`                             | `import * as THREE`, `*.gltf` / `*.glb`                                                              | `skills/web-engines/threejs-scene-setup`, `threejs-gltf-loading`, `threejs-materials-lighting` |
+|  9  | Defold     | `game.project`                                         | `*.collection`, `*.go`, `*.script`, `*.gui_script`, `*.atlas`, `*.input_binding`, `/builtins/` paths | `skills/other-engines/defold-core/`                                                            |
+| 10  | LÖVE       | `conf.lua`, or `main.lua` calling `love.*`             | `*.love`                                                                                             | `skills/other-engines/love2d-core/`                                                            |
+| 11  | pygame     | `*.py` with `import pygame`                            | `pygame.init()`, `pygame.display.set_mode`                                                           | `skills/other-engines/pygame-core/`                                                            |
+| 12  | Roblox     | `*.rbxl` / `*.rbxlx`, or `*.project.json` (Rojo)       | `*.luau`, `DataStoreService`, `game:GetService`                                                      | `skills/other-engines/roblox-*` (`roblox-luau` first, then the focused Roblox skill)           |
 
 ## Detect the installed version
 
 Engine identity is not enough. Read the version source before using version-sensitive APIs:
 
-| Stack | Version source |
-|-------|----------------|
-| Godot | feature tags in `project.godot`, then the project's documented toolchain or `godot --version` when available |
-| Unity | `ProjectSettings/ProjectVersion.txt` plus package versions in `Packages/manifest.json` / `packages-lock.json` |
-| Unreal | `EngineAssociation` in `*.uproject`, project documentation, or the selected installed engine |
-| Ebitengine | `go.mod` module version, `replace` directives and `go.work`; inspect the replacement checkout when a local replacement is active |
-| Phaser / PixiJS / three.js | `package.json` **and the resolved lockfile**, not a tutorial's version |
-| Bevy | `Cargo.toml` and the resolved `Cargo.lock` entry |
-| pygame-ce | `pyproject.toml`, requirements/lock files, then the active environment |
-| Defold | `game.project` has no engine version key: use the editor or `bob.jar` version the project is built with (a release or sha1 pinned in CI or docs; `java -jar bob.jar --version`), and `library.defold_min_version` when present |
-| LÖVE | `conf.lua` version when declared, then the installed runtime |
-| Roblox | platform APIs are rolling; inspect current Creator Hub documentation for unstable APIs |
+| Stack                      | Version source                                                                                                                                                                                                                 |
+| -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Godot                      | feature tags in `project.godot`, then the project's documented toolchain or `godot --version` when available                                                                                                                   |
+| Unity                      | `ProjectSettings/ProjectVersion.txt` plus package versions in `Packages/manifest.json` / `packages-lock.json`                                                                                                                  |
+| Unreal                     | `EngineAssociation` in `*.uproject`, project documentation, or the selected installed engine                                                                                                                                   |
+| Ebitengine                 | `go.mod` module version, `replace` directives and `go.work`; inspect the replacement checkout when a local replacement is active                                                                                               |
+| Phaser / PixiJS / three.js | `package.json` **and the resolved lockfile**, not a tutorial's version                                                                                                                                                         |
+| Bevy                       | `Cargo.toml` and the resolved `Cargo.lock` entry                                                                                                                                                                               |
+| pygame-ce                  | `pyproject.toml`, requirements/lock files, then the active environment                                                                                                                                                         |
+| Defold                     | `game.project` has no engine version key: use the editor or `bob.jar` version the project is built with (a release or sha1 pinned in CI or docs; `java -jar bob.jar --version`), and `library.defold_min_version` when present |
+| LÖVE                       | `conf.lua` version when declared, then the installed runtime                                                                                                                                                                   |
+| Roblox                     | platform APIs are rolling; inspect current Creator Hub documentation for unstable APIs                                                                                                                                         |
 
 For a new project use the baseline stated in the engine skill (the catalog-wide table is
 `docs/VERSION-SUPPORT.md` in the source repository). For an existing project,
@@ -80,7 +80,7 @@ a file signal nor a named engine is present.
 
 ## Confidence boosters from task files
 
-Some non-project files raise confidence about the *task* (not the engine):
+Some non-project files raise confidence about the _task_ (not the engine):
 
 - `*.yarn` / `*.ink` → `dialogue-systems` (and `visual-novel` if the whole game is one).
 - `steam_appid.txt` / Steamworks SDK → `steam-publish`.

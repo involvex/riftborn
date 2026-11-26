@@ -7,18 +7,18 @@ many assets coherent across generation sessions and contributors.
 
 Define each axis explicitly:
 
-| Axis | Questions to settle |
-|------|---------------------|
-| Shape | Rounded, angular, chunky, slender, geometric, organic? Which shapes signal friendly, dangerous, rare, or interactive? |
-| Silhouette | What must read at game scale? Which parts may never merge into the body mass? |
-| Value | How many value bands? Is the subject readable in grayscale against common backgrounds? |
-| Color | What roles do accent, danger, reward, neutral, environment, and UI colors play? |
-| Edge | Hard pixel clusters, clean vector edges, ink line, painterly lost edges, soft 3D bevels? |
-| Material | How do metal, cloth, skin, stone, foliage, glass, and magic differ? |
-| Light | Direction, softness, contrast, ambient color, rim light, baked shading policy? |
-| Detail | Where is detail concentrated? What disappears at the native viewing size? |
-| Camera | Orthographic/perspective, angle, focal length, horizon, facing and turn conventions? |
-| Motion | Snappy, elastic, weighty, restrained? How far may forms deform in animation? |
+| Axis       | Questions to settle                                                                                                   |
+| ---------- | --------------------------------------------------------------------------------------------------------------------- |
+| Shape      | Rounded, angular, chunky, slender, geometric, organic? Which shapes signal friendly, dangerous, rare, or interactive? |
+| Silhouette | What must read at game scale? Which parts may never merge into the body mass?                                         |
+| Value      | How many value bands? Is the subject readable in grayscale against common backgrounds?                                |
+| Color      | What roles do accent, danger, reward, neutral, environment, and UI colors play?                                       |
+| Edge       | Hard pixel clusters, clean vector edges, ink line, painterly lost edges, soft 3D bevels?                              |
+| Material   | How do metal, cloth, skin, stone, foliage, glass, and magic differ?                                                   |
+| Light      | Direction, softness, contrast, ambient color, rim light, baked shading policy?                                        |
+| Detail     | Where is detail concentrated? What disappears at the native viewing size?                                             |
+| Camera     | Orthographic/perspective, angle, focal length, horizon, facing and turn conventions?                                  |
+| Motion     | Snappy, elastic, weighty, restrained? How far may forms deform in animation?                                          |
 
 Avoid phrases such as “beautiful,” “cinematic,” or “high quality” without observable constraints.
 Avoid using a living artist's name as the style definition. Translate references into properties

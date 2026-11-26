@@ -32,17 +32,17 @@ The same `data` object is passed to `init` and `create`, coming from
 
 ## Transition verbs
 
-| Method | Effect on target | Effect on caller |
-|--------|------------------|------------------|
-| `start(key, data)` | start (or restart) | **stop** the caller |
-| `launch(key, data)` | start in parallel; **restarts** it if already running | caller keeps running |
-| `run(key, data)` | wake if sleeping, resume if paused, otherwise (re)start | caller keeps running |
-| `switch(key)` | wake if sleeping, otherwise start (a paused target restarts) | **sleep** the caller |
-| `pause(key?)` | stop updating, keep rendering | — |
-| `resume(key?)` | resume updating | — |
-| `sleep(key?)` | stop updating AND rendering, keep state | — |
-| `wake(key?)` | resume a sleeping scene | — |
-| `stop(key?)` | shutdown (frees objects) | — |
+| Method              | Effect on target                                             | Effect on caller     |
+| ------------------- | ------------------------------------------------------------ | -------------------- |
+| `start(key, data)`  | start (or restart)                                           | **stop** the caller  |
+| `launch(key, data)` | start in parallel; **restarts** it if already running        | caller keeps running |
+| `run(key, data)`    | wake if sleeping, resume if paused, otherwise (re)start      | caller keeps running |
+| `switch(key)`       | wake if sleeping, otherwise start (a paused target restarts) | **sleep** the caller |
+| `pause(key?)`       | stop updating, keep rendering                                | —                    |
+| `resume(key?)`      | resume updating                                              | —                    |
+| `sleep(key?)`       | stop updating AND rendering, keep state                      | —                    |
+| `wake(key?)`        | resume a sleeping scene                                      | —                    |
+| `stop(key?)`        | shutdown (frees objects)                                     | —                    |
 
 All of these are queued: the Scene Manager applies them at the start of the next game
 step, so the target scene has not started yet on the line after `start`/`launch`.

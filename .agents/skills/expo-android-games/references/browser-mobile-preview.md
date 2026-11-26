@@ -4,11 +4,11 @@ Default verify path for Expo Android game work: **no device required**.
 
 ## URL
 
-| Mode | URL |
-|------|-----|
-| Touch HUD | `http://localhost:5173/?touch=1` |
+| Mode              | URL                                      |
+| ----------------- | ---------------------------------------- |
+| Touch HUD         | `http://localhost:5173/?touch=1`         |
 | Hub smoke + touch | `http://localhost:5173/?smoke=1&touch=1` |
-| Force desktop HUD | `http://localhost:5173/?touch=0` |
+| Force desktop HUD | `http://localhost:5173/?touch=0`         |
 
 Riftborn also enables touch when `window.__RIFTBORN_TOUCH` is set, or when
 `(pointer: coarse)` matches, or `max(innerWidth, innerHeight) <= 900`.
@@ -19,11 +19,11 @@ Prefer an explicit `?touch=1` so desktop DevTools emulation is unambiguous.
 
 Lock **landscape** (matches `expo-screen-orientation` on device).
 
-| Preset | CSS pixels (W×H) | Notes |
-|--------|------------------|--------|
-| Compact landscape | 854×480 | Fast layout stress |
-| Pixel-ish landscape | 915×412 | Common phone |
-| Tall phone rotated | 844×390 | iPhone-class |
+| Preset              | CSS pixels (W×H) | Notes              |
+| ------------------- | ---------------- | ------------------ |
+| Compact landscape   | 854×480          | Fast layout stress |
+| Pixel-ish landscape | 915×412          | Common phone       |
+| Tall phone rotated  | 844×390          | iPhone-class       |
 
 In Cursor browser / CDP:
 

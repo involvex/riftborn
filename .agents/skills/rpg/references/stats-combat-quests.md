@@ -4,6 +4,7 @@ Formulas and data shapes behind `SKILL.md`. Engine-neutral pseudocode. Treat eve
 as a starting point to tune against playtests, not a law.
 
 Contents:
+
 1. Stat block: base, derived and modifiers
 2. Damage formulas
 3. Levelling curves
@@ -84,11 +85,11 @@ and/or skill points on level-up; telegraph the next unlock to pull players forwa
 
 ## 4. Turn-based vs. action combat timelines
 
-| | Turn-based | Action |
-|---|---|---|
-| Time | Discrete; pause to choose | Real-time; reflexes matter |
-| Initiative | Speed stat / ATB gauge orders turns | Cooldowns / attack timing |
-| Strength | Deep tactics, accessible | Visceral, skill-expressive |
+|            | Turn-based                                             | Action                            |
+| ---------- | ------------------------------------------------------ | --------------------------------- |
+| Time       | Discrete; pause to choose                              | Real-time; reflexes matter        |
+| Initiative | Speed stat / ATB gauge orders turns                    | Cooldowns / attack timing         |
+| Strength   | Deep tactics, accessible                               | Visceral, skill-expressive        |
 | Build with | A turn scheduler (the energy scheduler in `roguelike`) | The engine movement/physics skill |
 
 ATB ("active time battle") is a hybrid: a gauge fills by `speed`; when full, the actor may act.
@@ -121,5 +122,5 @@ quest = {
 # Dialogue conditions read quest state; turning in grants rewards and advances dependent quests.
 ```
 
-Keep quest *definitions* as data and quest *progress* in the save. Gate dialogue lines and
+Keep quest _definitions_ as data and quest _progress_ in the save. Gate dialogue lines and
 NPC behavior on quest state via `dialogue-systems` conditions/variables.

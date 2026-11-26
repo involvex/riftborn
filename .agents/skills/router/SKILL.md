@@ -21,7 +21,7 @@ you to read them before acting. It **dispatches and composes** — it does not r
 - Use when the user names an engine or genre, says "make a game", or asks "which skill should I
   use?".
 
-**When *not* to use:** once the right skill is loaded and the task is squarely inside it, work
+**When _not_ to use:** once the right skill is loaded and the task is squarely inside it, work
 from that skill — don't re-run the router every turn. Re-route only when the task **pivots** to a
 new engine or concern (router step 7). A comparison or concept question ("FSM or behavior
 tree?") can be answered from one discipline skill, or directly, without loading an engine set.
@@ -56,20 +56,20 @@ Scan for the highest-confidence signal; **choose exactly one** engine for the ta
 An explicitly identified custom/proprietary engine is a valid result even without a catalog skill.
 Check the target's build and runtime entry point before treating a bundled library/tool as its engine.
 
-| # | Engine | Primary signal | Skill set root |
-|:-:|--------|----------------|----------------|
-| 1 | Godot | `project.godot` | `skills/godot/` |
-| 2 | Unreal | `*.uproject` | `skills/unreal/` |
-| 3 | Unity | `Assets/` **and** `ProjectSettings/ProjectVersion.txt` | `skills/unity/` |
-| 4 | Ebitengine | `go.mod` requiring `github.com/hajimehoshi/ebiten/v2` | `skills/ebitengine/` |
-| 5 | Bevy | `Cargo.toml` with a `bevy` dependency | `skills/other-engines/bevy-ecs/` |
-| 6 | Phaser | `package.json` dep `phaser` | `skills/web-engines/phaser-*` |
-| 7 | PixiJS | `package.json` dep `pixi.js` **in a game** (not a dashboard or chart) | `skills/web-engines/pixijs-rendering/` |
-| 8 | three.js | `package.json` dep `three` | `skills/web-engines/threejs-*` |
-| 9 | Defold | `game.project` | `skills/other-engines/defold-core/` |
-| 10 | LÖVE | `conf.lua` / `main.lua` calling `love.*` | `skills/other-engines/love2d-core/` |
-| 11 | pygame | `*.py` with `import pygame` | `skills/other-engines/pygame-core/` |
-| 12 | Roblox | `*.rbxl(x)` / `*.project.json` (Rojo) | `skills/other-engines/roblox-*` |
+|  #  | Engine     | Primary signal                                                        | Skill set root                         |
+| :-: | ---------- | --------------------------------------------------------------------- | -------------------------------------- |
+|  1  | Godot      | `project.godot`                                                       | `skills/godot/`                        |
+|  2  | Unreal     | `*.uproject`                                                          | `skills/unreal/`                       |
+|  3  | Unity      | `Assets/` **and** `ProjectSettings/ProjectVersion.txt`                | `skills/unity/`                        |
+|  4  | Ebitengine | `go.mod` requiring `github.com/hajimehoshi/ebiten/v2`                 | `skills/ebitengine/`                   |
+|  5  | Bevy       | `Cargo.toml` with a `bevy` dependency                                 | `skills/other-engines/bevy-ecs/`       |
+|  6  | Phaser     | `package.json` dep `phaser`                                           | `skills/web-engines/phaser-*`          |
+|  7  | PixiJS     | `package.json` dep `pixi.js` **in a game** (not a dashboard or chart) | `skills/web-engines/pixijs-rendering/` |
+|  8  | three.js   | `package.json` dep `three`                                            | `skills/web-engines/threejs-*`         |
+|  9  | Defold     | `game.project`                                                        | `skills/other-engines/defold-core/`    |
+| 10  | LÖVE       | `conf.lua` / `main.lua` calling `love.*`                              | `skills/other-engines/love2d-core/`    |
+| 11  | pygame     | `*.py` with `import pygame`                                           | `skills/other-engines/pygame-core/`    |
+| 12  | Roblox     | `*.rbxl(x)` / `*.project.json` (Rojo)                                 | `skills/other-engines/roblox-*`        |
 
 For secondary signals, the Godot-C#/Unity/Bevy, Defold/LÖVE/Lua and multi-web disambiguation
 rules, monorepos, and plain-text engine mentions, read `references/engine-detection.md`.
@@ -142,42 +142,42 @@ File signals sharpen this: `*.yarn`/`*.ink` → `dialogue-systems`/`visual-novel
 
 ### 3b. Disciplines — load **with** the engine skill (concept ↔ engine API)
 
-| Concept (`says:`) | Discipline skill | Pairs with (engine API) |
-|-------------------|------------------|-------------------------|
-| art direction, game assets, sprites, tilesets, textures, icons, AI-generated art | `create-game-assets` | engine importer/rendering skill; `imagegen` when available |
-| enemy AI, FSM, patrol/chase, steering, A* pathfinding, perception | `game-ai` | `unity-navmesh` / `unreal-behavior-trees` / Godot nav |
-| behavior tree code, blackboard, decorator, selector/sequence, utility AI, response curve | `ai-behavior-trees-utility-ai` | `unreal-behavior-trees` for UE assets (BT, EQS, StateTree) |
-| procedural generation, seed, dungeon generator, WFC, noise terrain, loot tables | `procedural-gen` | engine tilemap/grid skill |
-| dialogue, Yarn, Ink, conversation tree, barks | `dialogue-systems` | engine UI skill |
-| save/load, slots, continue button, corrupt saves, save migration | `save-systems` | `roblox-datastores` / engine IO |
-| mixing, volume sliders, ducking, adaptive music, SFX variation | `audio-design` | `godot-audio` / Unity AudioMixer |
-| how an effect works (dissolve, outline, fresnel), GLSL↔HLSL | `shader-programming` | `godot-shaders` / engine material |
-| jitter, tunnelling, "passes through walls", fixed timestep, floaty physics | `physics-tuning` | `godot-physics` / `unity-physics` / `roblox-physics` |
-| level layout, blockout/greybox a level, key and ability gating, pacing | `level-design` | `godot-tilemap` / `unity-tilemap-2d` |
-| rebind, gamepad, deadzone, generic input buffering | `input-systems` | `unity-input-system` / `unreal-enhanced-input` / Godot InputMap |
-| screen shake, hit-stop, juice, squash & stretch, "make it punchy" | `game-feel` | engine animation/tween + `camera-systems` (follow) |
-| camera follow, deadzone, look-ahead, orbit, first-person look | `camera-systems` | `godot-2d-movement` / `godot-3d-essentials` / Cinemachine |
-| HUD, menu, UI layout, scaling, safe area, focus nav | `game-ui-ux` | `godot-ui-control` / `roblox-ui` / Unity UI (load both) |
-| low FPS, stutter, first-use hitch, slows after minutes, draw calls, GC spike | `performance-optimization` | engine profiler + `physics-tuning` |
+| Concept (`says:`)                                                                        | Discipline skill               | Pairs with (engine API)                                         |
+| ---------------------------------------------------------------------------------------- | ------------------------------ | --------------------------------------------------------------- |
+| art direction, game assets, sprites, tilesets, textures, icons, AI-generated art         | `create-game-assets`           | engine importer/rendering skill; `imagegen` when available      |
+| enemy AI, FSM, patrol/chase, steering, A* pathfinding, perception                        | `game-ai`                      | `unity-navmesh` / `unreal-behavior-trees` / Godot nav           |
+| behavior tree code, blackboard, decorator, selector/sequence, utility AI, response curve | `ai-behavior-trees-utility-ai` | `unreal-behavior-trees` for UE assets (BT, EQS, StateTree)      |
+| procedural generation, seed, dungeon generator, WFC, noise terrain, loot tables          | `procedural-gen`               | engine tilemap/grid skill                                       |
+| dialogue, Yarn, Ink, conversation tree, barks                                            | `dialogue-systems`             | engine UI skill                                                 |
+| save/load, slots, continue button, corrupt saves, save migration                         | `save-systems`                 | `roblox-datastores` / engine IO                                 |
+| mixing, volume sliders, ducking, adaptive music, SFX variation                           | `audio-design`                 | `godot-audio` / Unity AudioMixer                                |
+| how an effect works (dissolve, outline, fresnel), GLSL↔HLSL                              | `shader-programming`           | `godot-shaders` / engine material                               |
+| jitter, tunnelling, "passes through walls", fixed timestep, floaty physics               | `physics-tuning`               | `godot-physics` / `unity-physics` / `roblox-physics`            |
+| level layout, blockout/greybox a level, key and ability gating, pacing                   | `level-design`                 | `godot-tilemap` / `unity-tilemap-2d`                            |
+| rebind, gamepad, deadzone, generic input buffering                                       | `input-systems`                | `unity-input-system` / `unreal-enhanced-input` / Godot InputMap |
+| screen shake, hit-stop, juice, squash & stretch, "make it punchy"                        | `game-feel`                    | engine animation/tween + `camera-systems` (follow)              |
+| camera follow, deadzone, look-ahead, orbit, first-person look                            | `camera-systems`               | `godot-2d-movement` / `godot-3d-essentials` / Cinemachine       |
+| HUD, menu, UI layout, scaling, safe area, focus nav                                      | `game-ui-ux`                   | `godot-ui-control` / `roblox-ui` / Unity UI (load both)         |
+| low FPS, stutter, first-use hitch, slows after minutes, draw calls, GC spike             | `performance-optimization`     | engine profiler + `physics-tuning`                              |
 
 ### 3c. Ownership on shared requests
 
 When two skills could answer, the owner below leads and the other joins only for its part.
 
-| Request | Owner | The other skill's part |
-|---------|-------|------------------------|
-| behavior tree or utility AI code, engine-neutral | `ai-behavior-trees-utility-ai` | `game-ai`: FSM, steering, pathfinding, perception, model choice |
-| Unreal BT assets, Blackboard, EQS, StateTree | `unreal-behavior-trees` | `ai-behavior-trees-utility-ai`: portable BT logic only |
-| coyote time, jump buffer, variable jump height | `platformer` | `input-systems`: generic buffering and rebinding; `game-feel`: juice |
-| dungeon or level generation algorithms | `procedural-gen` | `roguelike`: run structure, permadeath, meta-progression, turn order |
-| roguelike deckbuilder | `card-game` | `procedural-gen` for map generation only |
-| items, equipment, rarity, stats | `rpg` | `survival-crafting`: gathering, recipes, carry weight, spoilage |
-| plain "inventory" with no other detail | neither alone | pick from the details above, or ask one question |
-| collision layers, jitter, tunnelling, feel | `physics-tuning` | engine physics skill: the API (`unity-physics` covers 2D too) |
-| Roblox replication, remotes, server authority, hit validation | `roblox-networking` | `roblox-luau`: language, modules; `roblox-physics`: simulation, raycast API |
-| Godot tests in CI | `godot-gdscript-headless-testing` | `godot-export`: export presets and export in CI |
-| menu/HUD design rules vs engine UI API | `game-ui-ux` | engine UI skill: the API; load both for engine UI work |
-| audio or shader technique vs engine API | `audio-design` / `shader-programming` | `godot-audio` / `godot-shaders` etc.: engine syntax; one engine shader needs only its engine skill |
+| Request                                                       | Owner                                 | The other skill's part                                                                             |
+| ------------------------------------------------------------- | ------------------------------------- | -------------------------------------------------------------------------------------------------- |
+| behavior tree or utility AI code, engine-neutral              | `ai-behavior-trees-utility-ai`        | `game-ai`: FSM, steering, pathfinding, perception, model choice                                    |
+| Unreal BT assets, Blackboard, EQS, StateTree                  | `unreal-behavior-trees`               | `ai-behavior-trees-utility-ai`: portable BT logic only                                             |
+| coyote time, jump buffer, variable jump height                | `platformer`                          | `input-systems`: generic buffering and rebinding; `game-feel`: juice                               |
+| dungeon or level generation algorithms                        | `procedural-gen`                      | `roguelike`: run structure, permadeath, meta-progression, turn order                               |
+| roguelike deckbuilder                                         | `card-game`                           | `procedural-gen` for map generation only                                                           |
+| items, equipment, rarity, stats                               | `rpg`                                 | `survival-crafting`: gathering, recipes, carry weight, spoilage                                    |
+| plain "inventory" with no other detail                        | neither alone                         | pick from the details above, or ask one question                                                   |
+| collision layers, jitter, tunnelling, feel                    | `physics-tuning`                      | engine physics skill: the API (`unity-physics` covers 2D too)                                      |
+| Roblox replication, remotes, server authority, hit validation | `roblox-networking`                   | `roblox-luau`: language, modules; `roblox-physics`: simulation, raycast API                        |
+| Godot tests in CI                                             | `godot-gdscript-headless-testing`     | `godot-export`: export presets and export in CI                                                    |
+| menu/HUD design rules vs engine UI API                        | `game-ui-ux`                          | engine UI skill: the API; load both for engine UI work                                             |
+| audio or shader technique vs engine API                       | `audio-design` / `shader-programming` | `godot-audio` / `godot-shaders` etc.: engine syntax; one engine shader needs only its engine skill |
 
 For Roblox, compose cross-engine concepts with the focused engine skill: HUD/menu requests use
 `roblox-ui` + `game-ui-ux` (+ `input-systems` for gameplay bindings); remote exploit or
@@ -204,17 +204,17 @@ pointers, and state the gap.
 A genre skill owns design and structure; it never replaces the engine skill. Load the genre and
 the engine skill together, then only the disciplines the request needs.
 
-| Genre (`says:`) | composes |
-|-----------------|----------|
+| Genre (`says:`)                                                          | composes                                                                                                                            |
+| ------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------- |
 | platformer, Celeste-like, jump feel, coyote time, jump buffer, wall jump | engine movement (`godot-2d-movement` / `phaser-arcade-physics` / `unity-physics`) + `level-design` + `camera-systems` + `game-feel` |
-| roguelike, roguelite, permadeath, meta-progression, daily seed | `procedural-gen` (generation) + engine tilemap + `game-ai` + `save-systems` |
-| RPG, stats, XP curve, damage formula, equipment, quests | `godot-resources`/`unity-scriptableobjects` + `dialogue-systems` + `save-systems` + `game-ui-ux` |
-| FPS, first-person shooter, hitscan, recoil, TTK | `godot-3d-essentials`/`unreal-cpp-gameplay` + `input-systems` + `game-ai` + `camera-systems` + `game-feel` |
-| tower defense, waves, lanes, tower targeting | `game-ai` + engine movement + `level-design` + `game-ui-ux` |
-| card game, deckbuilder, roguelike deckbuilder, TCG | `godot-resources`/`unity-scriptableobjects` + `game-ui-ux` (+ engine UI) |
-| visual novel, dating sim, branching story, Ren'Py | `dialogue-systems` + `save-systems` + `game-ui-ux` |
-| survival, crafting, gathering, carry weight, spoilage | `save-systems` + `godot-resources`/`unity-scriptableobjects` + `procedural-gen` + `game-ui-ux` |
-| puzzle, match-3, Sokoban, grid logic, undo | `godot-tilemap`/`unity-tilemap-2d` + `level-design` + `game-feel` |
+| roguelike, roguelite, permadeath, meta-progression, daily seed           | `procedural-gen` (generation) + engine tilemap + `game-ai` + `save-systems`                                                         |
+| RPG, stats, XP curve, damage formula, equipment, quests                  | `godot-resources`/`unity-scriptableobjects` + `dialogue-systems` + `save-systems` + `game-ui-ux`                                    |
+| FPS, first-person shooter, hitscan, recoil, TTK                          | `godot-3d-essentials`/`unreal-cpp-gameplay` + `input-systems` + `game-ai` + `camera-systems` + `game-feel`                          |
+| tower defense, waves, lanes, tower targeting                             | `game-ai` + engine movement + `level-design` + `game-ui-ux`                                                                         |
+| card game, deckbuilder, roguelike deckbuilder, TCG                       | `godot-resources`/`unity-scriptableobjects` + `game-ui-ux` (+ engine UI)                                                            |
+| visual novel, dating sim, branching story, Ren'Py                        | `dialogue-systems` + `save-systems` + `game-ui-ux`                                                                                  |
+| survival, crafting, gathering, carry weight, spoilage                    | `save-systems` + `godot-resources`/`unity-scriptableobjects` + `procedural-gen` + `game-ui-ux`                                      |
+| puzzle, match-3, Sokoban, grid logic, undo                               | `godot-tilemap`/`unity-tilemap-2d` + `level-design` + `game-feel`                                                                   |
 
 ### 3e. Workflows — engine-independent process & shipping
 
@@ -233,12 +233,12 @@ For the exhaustive per-skill trigger list and every engine binding, read
 Some engine vendors ship their own agent skills or editor connections. When the session
 **already has** one of these, split the work:
 
-| Vendor tool in the session | Signals |
-|----------------------------|---------|
+| Vendor tool in the session                    | Signals                                                                                                                  |
+| --------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
 | Unity's official skills or Unity agent plugin | skill names such as `unity-cli`, `unity-pipeline`, `create-2d-physics`, `initialize-ai-navigation`, or a `unity:` prefix |
-| Roblox Studio agent plugin or Studio MCP | a `roblox-get-started` skill, Studio tools such as `list_roblox_studios` or `execute_luau`, a Studio `skill` tool |
-| Epic's Unreal plugin | an `unreal-mcp` skill or Unreal editor tools |
-| OpenAI's `game-studio` plugin | skills such as `game-studio`, `phaser-2d-game`, `three-webgl-game`, `react-three-fiber-game` |
+| Roblox Studio agent plugin or Studio MCP      | a `roblox-get-started` skill, Studio tools such as `list_roblox_studios` or `execute_luau`, a Studio `skill` tool        |
+| Epic's Unreal plugin                          | an `unreal-mcp` skill or Unreal editor tools                                                                             |
+| OpenAI's `game-studio` plugin                 | skills such as `game-studio`, `phaser-2d-game`, `three-webgl-game`, `react-three-fiber-game`                             |
 
 - **Theirs:** live-editor actions — create or change scenes and assets, run, play-test,
   profile, capture — and topics we do not cover (for example Unity UI Toolkit, URP, IAP and
@@ -261,9 +261,9 @@ Some engine vendors ship their own agent skills or editor connections. When the 
 4. **Re-route on pivot:** if the task changes (movement → saving), select and read the newly
    relevant skill instead of keeping everything loaded.
 
-Announce what you load and why, e.g.: *"Detected Godot 4.7 (`project.godot`). Loading
+Announce what you load and why, e.g.: _"Detected Godot 4.7 (`project.godot`). Loading
 `godot-2d-movement` for the controller and `platformer` for coyote time and jump buffering;
-will open the platformer skill's `feel-tuning.md` reference for the tuning numbers."*
+will open the platformer skill's `feel-tuning.md` reference for the tuning numbers."_
 
 ## 6. Composition rules
 
@@ -308,25 +308,25 @@ and offer to load it if the user confirms.
 
 ## Worked examples
 
-| Request | Detected engine | Skills loaded (in order) |
-|---------|-----------------|--------------------------|
-| "add a double jump to my Godot player" | Godot (`project.godot`) | `godot-2d-movement` → `platformer` |
-| "my jump feels laggy, add coyote time" (Phaser) | Phaser (`package.json`) | `phaser-arcade-physics` → `platformer` |
-| "make an inventory for my Unity RPG" | Unity (`Assets/`+`ProjectSettings/`) | `unity-scriptableobjects` → `rpg` → `save-systems` |
-| "my Rigidbody2D falls through the floor" | Unity | `unity-physics` (2D reference) → `physics-tuning` if it tunnels |
-| "enemy should use EQS to find cover" | Unreal (`*.uproject`) | `unreal-behavior-trees` |
-| "add an inventory to my proprietary C++ RPG" | existing custom engine | custom-engine reference → `rpg` + `save-systems`; bind data/UI to verified project APIs |
-| "build a 2D puzzle in Go with Ebitengine" | Ebitengine (named; later `go.mod`) | `ebitengine-game` → `puzzle` |
-| "add player movement to my Defold game" | Defold (`game.project`) | `defold-core` → `input-systems` |
-| "exploiters spam my sword remote" | Roblox (`*.project.json` / place file) | `roblox-networking` → `roblox-luau` |
-| "rebirths in my Roblox simulator take forever" | Roblox | `roblox-luau` → `roblox-simulator-economy` → `roblox-networking` |
-| "procedural dungeon roguelike in Godot" | Godot | `godot-tilemap` → `procedural-gen` → `roguelike` |
-| "run my GDScript tests in GitHub Actions" | Godot | `godot-gdscript-headless-testing` |
-| "how do I design save slots with migration?" | (none) | `save-systems` only |
-| "publish my game on itch with butler" | (any/none) | `itch-publish` only |
-| "I want to make a game but don't know what to use" | unknown → ask, default Godot | router asks once; then e.g. `godot-nodes-scenes` |
-| "my Unity game drops to 30 FPS, optimize it" | Unity | `performance-optimization` (profile first) → engine skill |
-| "make a cohesive pixel-art player and enemy set" | (detected engine) | `create-game-assets` → relevant engine import/rendering skill |
+| Request                                            | Detected engine                        | Skills loaded (in order)                                                                |
+| -------------------------------------------------- | -------------------------------------- | --------------------------------------------------------------------------------------- |
+| "add a double jump to my Godot player"             | Godot (`project.godot`)                | `godot-2d-movement` → `platformer`                                                      |
+| "my jump feels laggy, add coyote time" (Phaser)    | Phaser (`package.json`)                | `phaser-arcade-physics` → `platformer`                                                  |
+| "make an inventory for my Unity RPG"               | Unity (`Assets/`+`ProjectSettings/`)   | `unity-scriptableobjects` → `rpg` → `save-systems`                                      |
+| "my Rigidbody2D falls through the floor"           | Unity                                  | `unity-physics` (2D reference) → `physics-tuning` if it tunnels                         |
+| "enemy should use EQS to find cover"               | Unreal (`*.uproject`)                  | `unreal-behavior-trees`                                                                 |
+| "add an inventory to my proprietary C++ RPG"       | existing custom engine                 | custom-engine reference → `rpg` + `save-systems`; bind data/UI to verified project APIs |
+| "build a 2D puzzle in Go with Ebitengine"          | Ebitengine (named; later `go.mod`)     | `ebitengine-game` → `puzzle`                                                            |
+| "add player movement to my Defold game"            | Defold (`game.project`)                | `defold-core` → `input-systems`                                                         |
+| "exploiters spam my sword remote"                  | Roblox (`*.project.json` / place file) | `roblox-networking` → `roblox-luau`                                                     |
+| "rebirths in my Roblox simulator take forever"     | Roblox                                 | `roblox-luau` → `roblox-simulator-economy` → `roblox-networking`                        |
+| "procedural dungeon roguelike in Godot"            | Godot                                  | `godot-tilemap` → `procedural-gen` → `roguelike`                                        |
+| "run my GDScript tests in GitHub Actions"          | Godot                                  | `godot-gdscript-headless-testing`                                                       |
+| "how do I design save slots with migration?"       | (none)                                 | `save-systems` only                                                                     |
+| "publish my game on itch with butler"              | (any/none)                             | `itch-publish` only                                                                     |
+| "I want to make a game but don't know what to use" | unknown → ask, default Godot           | router asks once; then e.g. `godot-nodes-scenes`                                        |
+| "my Unity game drops to 30 FPS, optimize it"       | Unity                                  | `performance-optimization` (profile first) → engine skill                               |
+| "make a cohesive pixel-art player and enemy set"   | (detected engine)                      | `create-game-assets` → relevant engine import/rendering skill                           |
 
 ## Gotchas
 

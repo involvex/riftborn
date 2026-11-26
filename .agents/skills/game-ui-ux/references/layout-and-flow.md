@@ -1,6 +1,7 @@
 # Layout, scaling and flow
 
 Contents:
+
 1. Scaling modes per engine
 2. Safe-area maths
 3. Focus navigation (full pattern, modal focus trap)
@@ -15,12 +16,12 @@ Snippets target Godot 4.7 and Unity 6.3 LTS.
 
 **Godot 4.7** (Project Settings → Display → Window → Stretch):
 
-| Setting | Choose | Effect |
-|---------|--------|--------|
-| Mode | `canvas_items` | UI scales with the window (vs `viewport` = pixel-exact, `disabled` = none) |
-| Aspect | `expand` | shows more world/UI space on odd ratios; `keep` letterboxes |
-| Scale | `1.0`+ | global UI multiplier |
-| Scale Mode | `fractional` / `integer` | `integer` keeps pixel-art UI crisp by scaling in whole steps |
+| Setting    | Choose                   | Effect                                                                     |
+| ---------- | ------------------------ | -------------------------------------------------------------------------- |
+| Mode       | `canvas_items`           | UI scales with the window (vs `viewport` = pixel-exact, `disabled` = none) |
+| Aspect     | `expand`                 | shows more world/UI space on odd ratios; `keep` letterboxes                |
+| Scale      | `1.0`+                   | global UI multiplier                                                       |
+| Scale Mode | `fractional` / `integer` | `integer` keeps pixel-art UI crisp by scaling in whole steps               |
 
 Anchor HUD corners so `expand` puts the extra space where you want it. `keep_width`/`keep_height`
 pin one axis for hard 16:9 designs.

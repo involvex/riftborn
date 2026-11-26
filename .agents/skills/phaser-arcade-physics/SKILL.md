@@ -29,7 +29,7 @@ Arcade bodies.
 ## Workflow
 
 1. **Enable the world with debug drawing on**: `physics: { default: 'arcade', arcade: {
-   gravity: { x: 0, y: 600 }, debug: true } }`. Body outlines and velocity lines answer most
+gravity: { x: 0, y: 600 }, debug: true } }`. Body outlines and velocity lines answer most
    "why didn't it collide" questions at a glance. Turn debug off before release.
 2. **Create bodies through the physics factory**: `this.physics.add.sprite` (dynamic),
    `this.physics.add.staticImage` or `staticGroup` (walls and ground), or
@@ -54,7 +54,7 @@ const config = {
     default: 'arcade',
     arcade: {
       gravity: { x: 0, y: 600 }, // top-down games use { x: 0, y: 0 }
-      debug: true,               // body outlines and velocity while building
+      debug: true, // body outlines and velocity while building
     },
   },
   scene: [PlayScene],
@@ -103,7 +103,9 @@ update() {
 
 ```js
 // Push apart, then react.
-this.physics.add.collider(this.player, this.enemies, (player, enemy) => this.hurt(player, enemy));
+this.physics.add.collider(this.player, this.enemies, (player, enemy) =>
+  this.hurt(player, enemy),
+);
 
 // Detect only. The optional 4th argument returns false to skip a pair before the callback.
 this.physics.add.overlap(this.player, this.coins, (player, coin) => {
@@ -145,18 +147,17 @@ update() {
 ```js
 const s = window.game.scene.getScene('play');
 return {
-  bodies: s.physics.world.bodies.size,          // dynamic bodies alive
+  bodies: s.physics.world.bodies.size, // dynamic bodies alive
   staticBodies: s.physics.world.staticBodies.size,
-  playerOnFloor: s.player.body.blocked.down,    // true once the player has landed
+  playerOnFloor: s.player.body.blocked.down, // true once the player has landed
   playerY: Math.round(s.player.y),
 };
 ```
 
-   Expect `playerOnFloor: true` and a `playerY` resting on the ground for a platformer, and a
-   body count that stays flat while firing (the pool is recycling).
-3. With `debug: true`, take a screenshot and check that hitboxes sit on the art. Without
-   browser automation, ask the user to run with `debug: true` and report whether the outlines
-   match the sprites and where the player stops.
+Expect `playerOnFloor: true` and a `playerY` resting on the ground for a platformer, and a
+body count that stays flat while firing (the pool is recycling). 3. With `debug: true`, take a screenshot and check that hitboxes sit on the art. Without
+browser automation, ask the user to run with `debug: true` and report whether the outlines
+match the sprites and where the player stops.
 
 ## Gotchas
 

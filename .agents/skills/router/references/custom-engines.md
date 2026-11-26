@@ -12,13 +12,13 @@ configuration, version/revision, and one working feature closest to the request.
 documentation, public headers, implementation, and tests are the primary sources. Record a
 small integration map in the project's normal design notes:
 
-| Contract | Evidence to record |
-|----------|--------------------|
-| Build and run | Exact existing commands, target/platform, engine revision, test entry point |
-| Lifecycle | Creation/destruction hooks, ownership, scene or entity changes, reload behavior |
-| Time and input | Tick/render order, time units, action mapping, press/release edges |
-| State and assets | Content definitions vs runtime state, stable IDs, asset loading/unloading |
-| Relevant subsystem | Existing physics, UI, events, audio, or persistence API needed by this task |
+| Contract           | Evidence to record                                                              |
+| ------------------ | ------------------------------------------------------------------------------- |
+| Build and run      | Exact existing commands, target/platform, engine revision, test entry point     |
+| Lifecycle          | Creation/destruction hooks, ownership, scene or entity changes, reload behavior |
+| Time and input     | Tick/render order, time units, action mapping, press/release edges              |
+| State and assets   | Content definitions vs runtime state, stable IDs, asset loading/unloading       |
+| Relevant subsystem | Existing physics, UI, events, audio, or persistence API needed by this task     |
 
 For each row needed by the task, name the actual symbol/file and a working call site. Mark
 unverified behavior as unknown. A similar engine's API is not evidence. Read only the subsystems

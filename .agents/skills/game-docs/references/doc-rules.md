@@ -6,15 +6,15 @@ Where each fact lives and how the docs are written. Read this before writing or 
 
 Each fact lives in one place, and everything else links to it. A tuning number lives in its feature's `design.md`; the GDD index gives a one-line summary and a link, `implementation.md` names the config constant that holds the number, and `testing.md` tests it. When you are tempted to copy something, link to it.
 
-| Kind of content | Home |
-|---|---|
-| Pitch, audience, platform, pillars, core loop, tone, art and audio *direction* | GDD |
-| Rules, numbers, UX, feel, art or audio *specific to one feature* | `features/<slug>/design.md` |
-| Which files a feature touches, its data, events, persistence, deviations | `features/<slug>/implementation.md` |
-| Acceptance criteria and their proof, playtest steps, metrics to watch | `features/<slug>/testing.md` |
-| Engine, scene flow, event bus, save format, config conventions, perf budget | ARCHITECTURE (once that code exists) |
-| Decisions that matter beyond today | GDD §Decisions |
-| What changed when | GDD §Change log, and each feature doc's History line |
+| Kind of content                                                                | Home                                                 |
+| ------------------------------------------------------------------------------ | ---------------------------------------------------- |
+| Pitch, audience, platform, pillars, core loop, tone, art and audio _direction_ | GDD                                                  |
+| Rules, numbers, UX, feel, art or audio _specific to one feature_               | `features/<slug>/design.md`                          |
+| Which files a feature touches, its data, events, persistence, deviations       | `features/<slug>/implementation.md`                  |
+| Acceptance criteria and their proof, playtest steps, metrics to watch          | `features/<slug>/testing.md`                         |
+| Engine, scene flow, event bus, save format, config conventions, perf budget    | ARCHITECTURE (once that code exists)                 |
+| Decisions that matter beyond today                                             | GDD §Decisions                                       |
+| What changed when                                                              | GDD §Change log, and each feature doc's History line |
 
 ## What counts as a feature
 
@@ -22,9 +22,9 @@ Anything you can design, build, ship and test as a unit: a mechanic (combo, jump
 
 ## Decision row
 
-| ID | Date | Decision | Alternatives considered | Why | Affects |
-|---|---|---|---|---|---|
-| D-014 | 2026-11-02 | Combo cap ×6 | keep ×5; uncapped | playtests: skilled runs flatline at ×5 by 2 km | combo (a relative link to `features/combo/design.md`) |
+| ID    | Date       | Decision     | Alternatives considered | Why                                            | Affects                                               |
+| ----- | ---------- | ------------ | ----------------------- | ---------------------------------------------- | ----------------------------------------------------- |
+| D-014 | 2026-11-02 | Combo cap ×6 | keep ×5; uncapped       | playtests: skilled runs flatline at ×5 by 2 km | combo (a relative link to `features/combo/design.md`) |
 
 IDs run in sequence and are never reused. A superseded decision stays in the table, with "→ superseded by D-021" added to its Decision cell. "Why" names the evidence (a playtest, a measurement, a constraint), so a later reader can tell whether it still holds.
 

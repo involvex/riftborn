@@ -35,7 +35,7 @@ checks itself; the user decides the concept, plays the build and presses submit.
    title/end screen stub, an export command that has run once, and licensed font and SFX
    sources. Day-one hours are too precious for this.
 3. **Theme to one sentence.** Offer about ten ideas quickly, then help the user commit to one
-   that fits *"You [verb] to [goal] while [constraint]."* If it does not fit one sentence, it is
+   that fits _"You [verb] to [goal] while [constraint]."_ If it does not fit one sentence, it is
    too big. Write it in `JAM.md`.
 4. **Scope to the clock.** Use the budget table (Pattern 1): one core mechanic, one hook,
    everything else on a stretch list in `JAM.md`.
@@ -109,7 +109,7 @@ Run these before submitting, on the exported build, not the editor:
    Read the log or browser console for errors.
 3. **Package check.** List the zip: the executable or `index.html` at the top level, no
    project files, editor folders or debug symbols. For itch.io, run the `butler push
-   --dry-run` check from `itch-publish`.
+--dry-run` check from `itch-publish`.
 4. **Rules check.** Re-read the rules block in `JAM.md` against the build: platforms, controls
    (keyboard and mouse if required), credits and asset licences on the page, AI rule.
 5. **Ask the user** to play the extracted build through once, start to restart, and report

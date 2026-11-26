@@ -6,6 +6,7 @@ set, and notifying players of updates. Verify against the primary docs:
 Last verified 2026-11-11 against butler v15.32.0 (the latest release).
 
 Contents:
+
 1. Authentication for CI (`BUTLER_API_KEY`)
 2. Installing a reviewed butler release in CI
 3. GitHub Actions example
@@ -18,6 +19,7 @@ Interactive `butler login` opens a browser — useless in CI. Instead, set the
 **`BUTLER_API_KEY`** environment variable and butler uses it automatically.
 
 Where to get the key:
+
 - Run `butler login` once locally, then read it from the creds file:
   - Linux: `~/.config/itch/butler_creds`
   - macOS: `~/Library/Application Support/itch/butler_creds`
@@ -57,7 +59,7 @@ credentials; the uploader itself still needs to be trusted even when the key is 
 name: Publish to itch.io
 on:
   push:
-    tags: ["v*"]            # publish when you tag a release
+    tags: ['v*'] # publish when you tag a release
 jobs:
   butler:
     runs-on: ubuntu-latest
@@ -75,7 +77,7 @@ jobs:
           chmod +x butler
       - name: Push builds
         env:
-          BUTLER_API_KEY: ${{ secrets.BUTLER_API_KEY }}   # available only to the uploader
+          BUTLER_API_KEY: ${{ secrets.BUTLER_API_KEY }} # available only to the uploader
         run: |
           VERSION="${GITHUB_REF_NAME#v}"     # tag v1.2.0 -> 1.2.0
           ./butler push ./build/windows leafy/my-game:windows --userversion "$VERSION"
@@ -87,36 +89,37 @@ ordinary build jobs without it. Use the same pinned install and verification seq
 
 ## 4. `butler push` flag reference (checked against butler v15.32.0)
 
-| Flag | Purpose |
-|---|---|
-| `--userversion <v>` | Set an explicit version string instead of itch's auto-incrementing integer. |
-| `--userversion-file <f>` | Read the version string from a file (single line, UTF-8, no BOM). |
-| `--if-changed` | Skip the push if it would be an empty patch (contents identical to the latest build). |
-| `--hidden` | Mark the upload hidden — **only** when the push creates a *new* channel; errors on an existing one. |
-| `--ignore '<glob>'` | Exclude matching files; repeatable (`--ignore '*.pdb' --ignore '*.dSYM'`). Two dashes. |
-| `--dry-run` | List every file that would be pushed (+ a summary); uploads nothing and needs no login. |
-| `--no-auto-unzip` | Push a folder holding a single `.zip` as that one opaque file. By default (`--auto-unzip`) butler pushes the zip's contents instead. |
-| `--dereference` | Follow symlinks and upload copies of their targets (larger builds; use with care). |
-| `--fix-permissions` | On by default: detects Mac and Linux executables and sets their executable bit. `--no-fix-permissions` turns it off. |
-| `--auto-wrap` | On by default: when the source path is a macOS `.app` bundle, keeps the bundle as the top-level folder of the build. |
-| `-i, --identity <file>` | Read/save credentials from another file, to use several itch.io accounts on one machine. |
+| Flag                     | Purpose                                                                                                                              |
+| ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------ |
+| `--userversion <v>`      | Set an explicit version string instead of itch's auto-incrementing integer.                                                          |
+| `--userversion-file <f>` | Read the version string from a file (single line, UTF-8, no BOM).                                                                    |
+| `--if-changed`           | Skip the push if it would be an empty patch (contents identical to the latest build).                                                |
+| `--hidden`               | Mark the upload hidden — **only** when the push creates a _new_ channel; errors on an existing one.                                  |
+| `--ignore '<glob>'`      | Exclude matching files; repeatable (`--ignore '*.pdb' --ignore '*.dSYM'`). Two dashes.                                               |
+| `--dry-run`              | List every file that would be pushed (+ a summary); uploads nothing and needs no login.                                              |
+| `--no-auto-unzip`        | Push a folder holding a single `.zip` as that one opaque file. By default (`--auto-unzip`) butler pushes the zip's contents instead. |
+| `--dereference`          | Follow symlinks and upload copies of their targets (larger builds; use with care).                                                   |
+| `--fix-permissions`      | On by default: detects Mac and Linux executables and sets their executable bit. `--no-fix-permissions` turns it off.                 |
+| `--auto-wrap`            | On by default: when the source path is a macOS `.app` bundle, keeps the bundle as the top-level folder of the build.                 |
+| `-i, --identity <file>`  | Read/save credentials from another file, to use several itch.io accounts on one machine.                                             |
 
 The target may also be given as a numeric game ID or a game page URL
 (`butler push ./build https://leafy.itch.io/my-game:windows`).
 
 Related commands:
 
-| Command | Purpose |
-|---|---|
-| `butler login` / `butler logout` | Authorize / clear local credentials (browser flow). |
-| `butler version` | Print butler's version (confirms install + PATH). |
-| `butler which` | Print the full path to the running butler binary. |
-| `butler status <user>/<game>` | List channels and their latest builds/versions. |
+| Command                                        | Purpose                                                                                                                   |
+| ---------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| `butler login` / `butler logout`               | Authorize / clear local credentials (browser flow).                                                                       |
+| `butler version`                               | Print butler's version (confirms install + PATH).                                                                         |
+| `butler which`                                 | Print the full path to the running butler binary.                                                                         |
+| `butler status <user>/<game>`                  | List channels and their latest builds/versions.                                                                           |
 | `butler push-preview <dir> <user>/<game>:<ch>` | Show `NEW/MODIFIED/DELETED/SAME` vs the last build; add `--changes-only` to hide unchanged. Needs login; uploads nothing. |
-| `butler validate <dir>` | Check a build folder and its `.itch.toml` manifest, if any. Offline. |
-| `butler upgrade` | Update butler itself to the latest version. |
+| `butler validate <dir>`                        | Check a build folder and its `.itch.toml` manifest, if any. Offline.                                                      |
+| `butler upgrade`                               | Update butler itself to the latest version.                                                                               |
 
 Notes:
+
 - Processing: after a push the build is immediately live via a fast "default" patch; itch.io
   then regenerates an optimized (smaller) patch in the background — around 30 minutes for a
   large game, with its status in the channel's build list. Players are never blocked on it.

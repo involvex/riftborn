@@ -26,14 +26,14 @@ Run only when the user asked for game design docs, or when the project already h
      - **A GDD in any other form** (one long file, a wiki page, spec-tool folders). **Edit it in place, in its own format.** Make the smallest edit, in the user's style. Don't add an index, folders or headers to it, and don't suggest restructuring unless the user asks (mode E).
 2. **Pick the mode** and read its section in [references/workflow-modes.md](references/workflow-modes.md):
 
-   | The user wants | Mode |
-   |---|---|
-   | a GDD, and there is none | **A. Draft the GDD** |
-   | a new feature written up | **B. New feature** |
-   | a feature changed after a playtest, tuning, rework or cut | **C. Change a feature** |
-   | the docs to match code that was just written or changed | **D. Sync after coding** |
-   | an existing GDD split into this layout (asked for explicitly) | **E. Migrate** |
-   | a design decision recorded | **F. Record a decision** (also inside every other mode) |
+   | The user wants                                                | Mode                                                    |
+   | ------------------------------------------------------------- | ------------------------------------------------------- |
+   | a GDD, and there is none                                      | **A. Draft the GDD**                                    |
+   | a new feature written up                                      | **B. New feature**                                      |
+   | a feature changed after a playtest, tuning, rework or cut     | **C. Change a feature**                                 |
+   | the docs to match code that was just written or changed       | **D. Sync after coding**                                |
+   | an existing GDD split into this layout (asked for explicitly) | **E. Migrate**                                          |
+   | a design decision recorded                                    | **F. Record a decision** (also inside every other mode) |
 
 3. **Write.** Use the template for the doc you are creating and [references/doc-rules.md](references/doc-rules.md) for where each fact lives, decision rows and proof annotations. Change existing docs with small edits to the affected section; don't regenerate a whole doc, because the user's own wording is part of the design.
 4. **Verify.** Run the checker on the docs folder (paths are relative to this skill's folder; use `python` where `python3` doesn't exist):
@@ -46,12 +46,12 @@ Run only when the user asked for game design docs, or when the project already h
 
 ## What to write, and when
 
-| Moment | Write |
-|---|---|
-| The user asks for a GDD | `GDD.md` from the template, about one page, with the real design in it, plus a `design.md` with a concrete first proposal (rules and starting numbers, `[ASSUMPTION]`-marked) for the 2 or 3 features the core loop needs. Other features are index rows with status `idea` |
-| A feature is designed | its `features/<slug>/design.md` |
-| A feature first gets code (status `in progress`) | its `implementation.md` and `testing.md`, short, written against the real code |
-| Code that several features share appears (save format, event bus, scene flow) | `ARCHITECTURE.md`. Until then, one line in the GDD summary names the engine |
+| Moment                                                                        | Write                                                                                                                                                                                                                                                                       |
+| ----------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| The user asks for a GDD                                                       | `GDD.md` from the template, about one page, with the real design in it, plus a `design.md` with a concrete first proposal (rules and starting numbers, `[ASSUMPTION]`-marked) for the 2 or 3 features the core loop needs. Other features are index rows with status `idea` |
+| A feature is designed                                                         | its `features/<slug>/design.md`                                                                                                                                                                                                                                             |
+| A feature first gets code (status `in progress`)                              | its `implementation.md` and `testing.md`, short, written against the real code                                                                                                                                                                                              |
+| Code that several features share appears (save format, event bus, scene flow) | `ARCHITECTURE.md`. Until then, one line in the GDD summary names the engine                                                                                                                                                                                                 |
 
 Write more only when the user asks for it. A plan for code that doesn't exist yet goes stale before the engine is chosen, so it is not written by default.
 
