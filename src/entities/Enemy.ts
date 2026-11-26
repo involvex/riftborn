@@ -67,6 +67,7 @@ import {
   menderWoundedAllies,
   type MenderAlly,
 } from '../systems/EnemyMender';
+import { enemyClampToWalk, enemyTryMove } from '../systems/EnemyWalk';
 
 const enemies = enemiesData as Record<string, EnemyDef>;
 
@@ -96,6 +97,11 @@ export class Enemy {
   private readonly textureKey: string;
   private animKind: 'idle' | 'walk' | 'attack' | 'hit' | 'death' = 'idle';
   maxBound = 48;
+  /**
+   * Same footprint walk predicate as the player (rift/hub).
+   * Null only in headless tests — then movement uses the box clamp alone.
+   */
+  walkCheck: ((x: number, y: number) => boolean) | null = null;
   private slowMult = 1;
   private slowTimer = 0;
   private stunTimer = 0;
@@ -337,6 +343,19 @@ export class Enemy {
       return { hitPlayer: false, damage: 0, shot: null };
     }
 
+    // Resume / bad clamp can leave a foe in the black — pull home.
+    if (this.walkCheck && !this.walkCheck(this.worldX, this.worldY)) {
+      if (this.walkCheck(this.homeX, this.homeY)) {
+        this.worldX = this.homeX;
+        this.worldY = this.homeY;
+      } else {
+        this.stepBy(
+          (this.homeX - this.worldX) * Math.min(1, dt * 6),
+          (this.homeY - this.worldY) * Math.min(1, dt * 6),
+        );
+      }
+    }
+
     const dist = worldDistance(
       { x: this.worldX, y: this.worldY },
       { x: playerX, y: playerY },
@@ -397,19 +416,31 @@ export class Enemy {
     }
 
     if (this.pounce) {
+      const prevX = this.worldX;
+      const prevY = this.worldY;
       const res = advancePounce(this.pounce, this, dt, {
         worldX: playerX,
         worldY: playerY,
       });
+      const landed = enemyClampToWalk(
+        this.walkCheck,
+        prevX,
+        prevY,
+        this.worldX,
+        this.worldY,
+        this.maxBound,
+      );
+      this.worldX = landed.x;
+      this.worldY = landed.y;
       this.setFacingFromDelta(this.pounce.vx, this.pounce.vy);
       this.playAnim('attack');
       let hitPlayer = false;
       let damage = 0;
-      if (res.hit) {
+      if (res.hit && !landed.blocked) {
         hitPlayer = true;
         damage = this.meleeDamage();
       }
-      if (res.hit || res.landed) {
+      if (res.hit || res.landed || landed.blocked) {
         playEnemyTelegraph(
           this.scene,
           'pounce',
@@ -418,13 +449,11 @@ export class Enemy {
           this.worldY,
         );
       }
-      if (res.landed) {
+      if (res.landed || landed.blocked) {
         this.pounce = null;
         this.attackTimer = POUNCE_COOLDOWN;
         this.applyBaseTint();
       }
-      this.worldX = Phaser.Math.Clamp(this.worldX, 0.5, this.maxBound);
-      this.worldY = Phaser.Math.Clamp(this.worldY, 0.5, this.maxBound);
       this.syncScreen();
       return { hitPlayer, damage, shot: null };
     }
@@ -606,16 +635,17 @@ export class Enemy {
       this.patrolAngle += dt * 0.6;
       const dx = Math.cos(this.patrolAngle);
       const dy = Math.sin(this.patrolAngle);
-      this.worldX += dx * spd * 0.35 * dt;
-      this.worldY += dy * spd * 0.35 * dt;
+      this.stepBy(dx * spd * 0.35 * dt, dy * spd * 0.35 * dt);
       this.setFacingFromDelta(dx, dy);
       const homeDist = worldDistance(
         { x: this.worldX, y: this.worldY },
         { x: this.homeX, y: this.homeY },
       );
       if (homeDist > 3) {
-        this.worldX += (this.homeX - this.worldX) * dt;
-        this.worldY += (this.homeY - this.worldY) * dt;
+        this.stepBy(
+          (this.homeX - this.worldX) * dt,
+          (this.homeY - this.worldY) * dt,
+        );
       }
       this.playAnim('walk');
     } else if (this.state === 'chase') {
@@ -625,8 +655,7 @@ export class Enemy {
           { x: playerX, y: playerY },
           this.kiteStrafeSign,
         );
-        this.worldX += dir.x * spd * dt;
-        this.worldY += dir.y * spd * dt;
+        this.stepBy(dir.x * spd * dt, dir.y * spd * dt);
         this.setFacingFromDelta(dir.x, dir.y);
         this.playAnim('walk');
       } else if (isRushEnemy(this.def.id)) {
@@ -683,16 +712,14 @@ export class Enemy {
         const dx = playerX - this.worldX;
         const dy = playerY - this.worldY;
         const len = Math.hypot(dx, dy) || 1;
-        this.worldX += (dx / len) * moveSpd * dt;
-        this.worldY += (dy / len) * moveSpd * dt;
+        this.stepBy((dx / len) * moveSpd * dt, (dy / len) * moveSpd * dt);
         this.setFacingFromDelta(dx, dy);
         this.playAnim('walk');
       } else {
         const dx = playerX - this.worldX;
         const dy = playerY - this.worldY;
         const len = Math.hypot(dx, dy) || 1;
-        this.worldX += (dx / len) * spd * dt;
-        this.worldY += (dy / len) * spd * dt;
+        this.stepBy((dx / len) * spd * dt, (dy / len) * spd * dt);
         this.setFacingFromDelta(dx, dy);
         this.playAnim('walk');
       }
@@ -732,10 +759,28 @@ export class Enemy {
       }
     }
 
-    this.worldX = Phaser.Math.Clamp(this.worldX, 0.5, this.maxBound);
-    this.worldY = Phaser.Math.Clamp(this.worldY, 0.5, this.maxBound);
+    this.clampBound();
     this.syncScreen();
     return { hitPlayer, damage, shot };
+  }
+
+  /** Slide-step when walkCheck is set; otherwise free move + box clamp. */
+  private stepBy(dx: number, dy: number): void {
+    const next = enemyTryMove(
+      this.walkCheck,
+      this.worldX,
+      this.worldY,
+      dx,
+      dy,
+      this.maxBound,
+    );
+    this.worldX = next.x;
+    this.worldY = next.y;
+  }
+
+  private clampBound(): void {
+    this.worldX = Phaser.Math.Clamp(this.worldX, 0.5, this.maxBound);
+    this.worldY = Phaser.Math.Clamp(this.worldY, 0.5, this.maxBound);
   }
 
   /**
@@ -768,8 +813,7 @@ export class Enemy {
       { x: playerX, y: playerY },
     );
     if (dir.x !== 0 || dir.y !== 0) {
-      this.worldX += dir.x * spd * dt;
-      this.worldY += dir.y * spd * dt;
+      this.stepBy(dir.x * spd * dt, dir.y * spd * dt);
       this.setFacingFromDelta(dir.x, dir.y);
       this.playAnim('walk');
     } else {

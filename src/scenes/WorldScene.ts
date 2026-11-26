@@ -1225,6 +1225,7 @@ export class WorldScene extends Phaser.Scene {
           enemy.maxBound = gameState.inRift
             ? (this.dungeon?.width ?? 22) - 1.5
             : this.hubSize - 0.5;
+          enemy.walkCheck = this.player.walkCheck;
           if (gameState.inRift) {
             enemy.syncShiftLayer(this.shiftSystem.layer);
           }
@@ -2638,6 +2639,7 @@ export class WorldScene extends Phaser.Scene {
           { levelScale: gameState.progression.level },
         );
         enemy.maxBound = this.hubSize - 0.5;
+        enemy.walkCheck = this.player.walkCheck;
         this.enemies.push(enemy);
       }
       gameEvents.emit('ui:toast', { text: 'Ambush — rift shades rise!' });
@@ -3318,7 +3320,8 @@ export class WorldScene extends Phaser.Scene {
         dmgMult: earlyBiomeBossDmgMult(this.riftDepth, this.riftBossDefId),
       },
     );
-    boss.maxBound = 22;
+    boss.maxBound = (this.dungeon?.width ?? 36) - 1.5;
+    boss.walkCheck = this.player.walkCheck;
     const bossLock = riftModLayerLock(this.riftMod);
     boss.setCombatLayer(bossLock ?? this.bossShift.layer);
     boss.syncShiftLayer(this.shiftSystem.layer);
@@ -3680,6 +3683,7 @@ export class WorldScene extends Phaser.Scene {
         enemy.setCombatLayer(row.combatLayer);
       }
       enemy.maxBound = (this.dungeon?.width ?? 22) - 1.5;
+      enemy.walkCheck = this.player.walkCheck;
       enemy.syncShiftLayer(this.shiftSystem.layer);
       this.enemies.push(enemy);
       if (row.boss) {
