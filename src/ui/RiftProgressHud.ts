@@ -1,8 +1,13 @@
 import Phaser from 'phaser';
-import { uiFontSize } from '../core/UiFont';
+import { getAppliedRenderScale } from '../core/GraphicsQuality';
+import { uiFontPx } from '../core/UiFont';
 import { riftHudLabel } from '../systems/RiftGoalCopy';
 import { MiniMap } from './MiniMap';
+import { RIFT_PROGRESS_BASE, riftProgressLayout } from './RiftProgressLayout';
 import { shouldShowTouchControls } from './TouchControls';
+import { computeGameTouchLayout } from './TouchLayout';
+
+export { riftProgressLayout } from './RiftProgressLayout';
 
 /** Side progress bar for rift kill → boss → exit flow. */
 export class RiftProgressHud {
@@ -11,9 +16,10 @@ export class RiftProgressHud {
   private readonly bg: Phaser.GameObjects.Rectangle;
   private readonly fill: Phaser.GameObjects.Rectangle;
   private readonly label: Phaser.GameObjects.Text;
-  private readonly barH = 160;
-  private readonly barW = 14;
+  private barH: number = RIFT_PROGRESS_BASE.barH;
+  private barW: number = RIFT_PROGRESS_BASE.barW;
   private lastPhase: 'fill' | 'boss' | 'exit' | null = null;
+  private lastRatio = 0;
 
   constructor(scene: Phaser.Scene) {
     this.scene = scene;
@@ -28,7 +34,7 @@ export class RiftProgressHud {
     this.label = scene.add
       .text(-18, -80, 'Rift', {
         fontFamily: 'Segoe UI, sans-serif',
-        fontSize: uiFontSize(
+        fontSize: uiFontPx(
           'rift',
           shouldShowTouchControls() ? 'touch' : 'desktop',
         ),
@@ -42,12 +48,42 @@ export class RiftProgressHud {
   }
 
   layout(): void {
-    // Sit below the top-right minimap so frames don't overlap
+    const touch = shouldShowTouchControls();
+    const s = getAppliedRenderScale();
     const mapClearance = MiniMap.displaySize(this.scene) + 24;
-    this.root.setPosition(
-      this.scene.scale.width - 28,
-      Math.max(mapClearance + this.barH / 2, this.scene.scale.height / 2 + 40),
+    let minimap: { x: number; y: number; w: number; h: number } | undefined;
+    let atk: { x: number; y: number; r: number } | undefined;
+    let act: { x: number; y: number; r: number } | undefined;
+    if (touch) {
+      const m = computeGameTouchLayout(
+        this.scene.scale.width,
+        this.scene.scale.height,
+      );
+      minimap = m.minimap;
+      atk = m.atk;
+      act = m.shift;
+    }
+    const L = riftProgressLayout({
+      touch,
+      renderScale: s,
+      gameW: this.scene.scale.width,
+      gameH: this.scene.scale.height,
+      mapClearance,
+      minimap,
+      atk,
+      act,
+    });
+    this.barW = L.barW;
+    this.barH = L.barH;
+    this.bg.setSize(L.barW, L.barH);
+    this.fill.width = Math.max(2, L.barW - 2);
+    this.fill.height = Math.max(2, (L.barH - 2) * this.lastRatio);
+    this.label.setFontSize(L.labelFont);
+    this.label.setPosition(
+      touch ? -Math.round(10 * Math.min(1, Math.max(0.35, s))) : -18,
+      -Math.round(L.barH * 0.5),
     );
+    this.root.setPosition(L.x, L.y);
   }
 
   show(): void {
@@ -70,14 +106,13 @@ export class RiftProgressHud {
     championAlive = false,
   ): void {
     const ratio = goal <= 0 ? 1 : Phaser.Math.Clamp(kills / goal, 0, 1);
-    this.fill.height = Math.max(2, (this.barH - 2) * ratio);
+    this.lastRatio = phase === 'fill' ? ratio : 1;
+    this.fill.height = Math.max(2, (this.barH - 2) * this.lastRatio);
     if (phase === 'fill') this.fill.setFillStyle(0xc62868, 1);
     else if (phase === 'boss') {
       this.fill.setFillStyle(0xff7043, 1);
-      this.fill.height = this.barH - 2;
     } else {
       this.fill.setFillStyle(0x4db6ff, 1);
-      this.fill.height = this.barH - 2;
     }
     this.label.setText(
       riftHudLabel({

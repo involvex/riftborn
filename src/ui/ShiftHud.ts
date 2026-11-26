@@ -7,6 +7,7 @@ import { computeGameTouchLayout } from './TouchLayout';
 import { SHIFT_LAYERS, type ShiftLayerId } from '../data/shiftLayers';
 import { SHIFT_COST, SHIFT_MAX_ENERGY } from '../systems/ShiftSystem';
 import { shouldShowTouchControls } from './TouchControls';
+import { shiftHudTouchMetrics } from './ShiftHudLayout';
 
 export type ShiftHudPayload = {
   active: boolean;
@@ -17,6 +18,8 @@ export type ShiftHudPayload = {
   /** True when standing near a layer-locked gate tile. */
   nearGate?: boolean;
 };
+
+export { shiftHudTouchMetrics } from './ShiftHudLayout';
 
 /** Rift-only layer name + shift energy bar (top-left under HP). */
 export class ShiftHud {
@@ -85,20 +88,33 @@ export class ShiftHud {
     const scene = this.root.scene;
     if (!this.touch) {
       this.root.setPosition(16, 98);
+      this.barW = 160;
+      this.barBg.setSize(160, 10);
+      this.barBg.setPosition(0, 20);
+      this.barFill.setPosition(1, 20);
+      this.barFill.height = 8;
+      this.hint.setPosition(0, 32);
+      if (this.lastPayload) this.apply(this.lastPayload);
       return;
     }
-    const s = Math.min(1, Math.max(0.35, getAppliedRenderScale() || 1));
+    const s = getAppliedRenderScale();
     this.label.setFontSize(uiFontGameSize('label', 'touch'));
     this.hint.setFontSize(uiFontGameSize('hint', 'touch'));
     const m = computeGameTouchLayout(scene.scale.width, scene.scale.height);
-    this.root.setPosition(m.status.x, m.status.y + Math.round(72 * s));
-    const barW = Math.max(72, Math.round(140 * s));
-    this.barW = barW;
-    const barY = Math.round(16 * s);
-    this.barBg.setPosition(0, barY);
-    this.barBg.setSize(barW, Math.max(6, Math.round(8 * s)));
-    this.barFill.setPosition(1, barY);
-    this.hint.setPosition(0, Math.round(26 * s));
+    const L = shiftHudTouchMetrics({
+      statusX: m.status.x,
+      statusY: m.status.y,
+      statusH: m.status.h,
+      renderScale: s,
+    });
+    this.root.setPosition(L.x, L.y);
+    this.barW = L.barW;
+    this.barBg.setPosition(0, L.barY);
+    this.barBg.setSize(L.barW, L.barH);
+    this.barFill.setPosition(1, L.barY);
+    this.barFill.height = Math.max(3, L.barH - 2);
+    this.hint.setPosition(0, L.hintY);
+    if (this.lastPayload) this.apply(this.lastPayload);
   }
 
   apply(p: ShiftHudPayload): void {
