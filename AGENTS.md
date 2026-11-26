@@ -48,6 +48,8 @@ bun run mobile:build    # release APK with game bundled offline (no server)
 bun run mobile:lan      # optional: only write mobile/.env
 ```
 
+Agent skill: `.agents/skills/expo-android-games` (browser `?touch=1` + phone viewport; user runs ADB).
+
 Touch HUD: `TouchControls` (stick / ATK / E / DASH) + raised ability bar. Desktop: `HotkeyDock` + flush `MiniMap`.
 
 **Before declaring done:** typecheck + lint + format:check + build. After map/POI/town-safety changes, also run `bun run test:smoke`.
