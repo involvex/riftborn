@@ -1,18 +1,14 @@
 import Phaser from 'phaser';
 import { tileVariant } from './HubTileBands';
 import { PLAZA_PROP_KEYS } from './PlazaArt';
+import { WORLD_TILE_KEYS, type WorldTileKey } from './WorldTiles';
 
-/** Hub / dungeon floor tiles (public/assets/tiles/{key}.png). */
-export const WORLD_TILE_KEYS = [
-  'tile_hub_0',
-  'tile_hub_1',
-  'tile_hub_2',
-  'tile_hub_3',
-  'tile_hub_4',
-  'tile_dungeon_0',
-  'tile_dungeon_1',
-  'tile_dungeon_2',
-] as const;
+export {
+  TILE_ART_SCALE,
+  WORLD_TILE_KEYS,
+  pickWeightedTileKey,
+  type WorldTileKey,
+} from './WorldTiles';
 
 /** Hub props (public/assets/props/{key}.png). */
 export const WORLD_PROP_KEYS = [
@@ -31,7 +27,6 @@ export const WORLD_PROP_KEYS = [
   'prop_crystal_vein',
 ] as const;
 
-export type WorldTileKey = (typeof WORLD_TILE_KEYS)[number];
 export type WorldPropKey = (typeof WORLD_PROP_KEYS)[number];
 
 export {
@@ -42,9 +37,6 @@ export {
   plazaArtScale,
   type PlazaPropKey,
 } from './PlazaArt';
-
-/** Source diamonds are 128×64; IsoMath tiles are 64×32. */
-export const TILE_ART_SCALE = 0.515;
 
 /** Map HubDecorKind → prop texture key (stall uses tent). */
 export const DECOR_PROP_KEY: Record<string, WorldPropKey> = {

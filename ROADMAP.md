@@ -127,13 +127,15 @@ In-rift choice, SHIFT fight, build fork, map ping, and named drop are in.
 
 ## Now
 
-| #   | Slice                         | Why it matters                         | Done when                                                                                          |
-| --- | ----------------------------- | -------------------------------------- | -------------------------------------------------------------------------------------------------- |
-| →   | **2× tiles + biome floors**   | Phone floors still soft after HUD pass | Bing batch `riftborn-tiles-2x.json` (16 jobs, `--no-post`) → normalize 256×128 → ship + BiomeLook |
+| #   | Slice                    | Why it matters                                       | Done when                                                                   |
+| --- | ------------------------ | ---------------------------------------------------- | --------------------------------------------------------------------------- |
+| →   | **Playtest combat nits** | Floors + HUD shipped; need real device/browser notes | Fix 2–3 notes from landscape `/?touch=1` (or APK when you have device time) |
 
-## Later — art variety (parked)
+## Done — 2× tiles + biome floors
 
-- _(moved to Now)_ 2× hub/dungeon tiles + biome floors — batch started via `D:\repos\image-wizard-cli`
+| #   | Slice                       | Why it matters                         | Done when                                                                                       |
+| --- | --------------------------- | -------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| ✓   | **2× tiles + biome floors** | Phone floors still soft after HUD pass | 16 Bing jobs → 256×128 PNGs; `TILE_ART_SCALE` 0.25; biome `floorTiles` + hub plaza/wet variants |
 
 ## Done — unique boss / elite sprites
 
@@ -146,12 +148,11 @@ Skip inventing new frameworks — extend `WorldArt` / `WorldScene` /
 
 ## Later (parked)
 
-- **Playtest combat nits** — fix 2–3 notes from landscape `/?touch=1` or APK when someone has device time
+- _(moved to Now)_ Playtest combat nits
 - Co-op rifts + authoritative loot / gear sync (hub sandbox stays prototype)
 - App Store packaging for Expo shell
 - Seasons, trading, seamless open world
 - Dedicated 8-dir **sprite rows** (logic/octant shipped; sheets still 2-dir flipX)
-- See **Later — art variety** for 2× tiles / biome floors
 
 ## Done — systems polish
 

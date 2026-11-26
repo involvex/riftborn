@@ -1,6 +1,15 @@
 import type { HubDecorKind } from '../world/MapGen';
 
-export type TileId = 'tile_dungeon_0' | 'tile_dungeon_1' | 'tile_dungeon_2';
+export type TileId =
+  | 'tile_dungeon_0'
+  | 'tile_dungeon_1'
+  | 'tile_dungeon_2'
+  | 'tile_dungeon_ashen'
+  | 'tile_dungeon_ash_grit'
+  | 'tile_dungeon_crystal'
+  | 'tile_dungeon_grove'
+  | 'tile_dungeon_salt'
+  | 'tile_dungeon_salt_crust';
 
 export type EnemyId =
   | 'shade'
@@ -53,9 +62,9 @@ export const ASHEN_CRYPT_BIOME: BiomeDef = {
   bossId: 'rift_lord',
   lootMaterial: 'ashen_bone',
   tileWeights: {
-    tile_dungeon_0: 0.5,
-    tile_dungeon_1: 0.35,
-    tile_dungeon_2: 0.15,
+    tile_dungeon_ashen: 0.5,
+    tile_dungeon_ash_grit: 0.35,
+    tile_dungeon_0: 0.15,
   },
   propWeights: {
     pillar: 0.25,
@@ -95,9 +104,9 @@ export const CRYSTAL_CAVERN_BIOME: BiomeDef = {
   bossId: 'crystal_lord',
   lootMaterial: 'rift_crystal',
   tileWeights: {
-    tile_dungeon_0: 0.25,
-    tile_dungeon_1: 0.35,
-    tile_dungeon_2: 0.4,
+    tile_dungeon_crystal: 0.55,
+    tile_dungeon_1: 0.3,
+    tile_dungeon_0: 0.15,
   },
   propWeights: {
     rock: 0.42,
@@ -137,9 +146,9 @@ export const SHATTERED_WOODS_BIOME: BiomeDef = {
   bossId: 'grove_alpha',
   lootMaterial: 'grove_sap',
   tileWeights: {
-    tile_dungeon_0: 0.4,
-    tile_dungeon_1: 0.4,
-    tile_dungeon_2: 0.2,
+    tile_dungeon_grove: 0.55,
+    tile_dungeon_2: 0.3,
+    tile_dungeon_0: 0.15,
   },
   propWeights: {
     bush: 0.32,
@@ -177,9 +186,9 @@ export const SALT_WASTES_BIOME: BiomeDef = {
   bossId: 'salt_warden',
   lootMaterial: 'salt_shard',
   tileWeights: {
-    tile_dungeon_0: 0.55,
-    tile_dungeon_1: 0.3,
-    tile_dungeon_2: 0.15,
+    tile_dungeon_salt: 0.5,
+    tile_dungeon_salt_crust: 0.35,
+    tile_dungeon_0: 0.15,
   },
   propWeights: {
     rock: 0.35,

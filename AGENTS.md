@@ -54,6 +54,8 @@ Touch HUD: `TouchControls` (stick / ATK / E / DASH) + raised ability bar. Deskto
 
 **Graphics quality:** Auto → **Medium** (`renderScale` 0.85) on touch / coarse; **High** on desktop. **Low** (0.65) stays the FPS escape hatch. Cycle Auto → Low → Medium → High. World labels use `WorldLabelStyle` (16px touch); HUD floors at `TOUCH_FONT_MIN_PX` 15.
 
+**Floor tiles:** `public/assets/tiles/*.png` are **256×128** iso diamonds (`TILE_ART_SCALE` 0.25). Biome floors via `BiomeLook.floorTiles` + `biome.tileWeights` / `pickWeightedTileKey`; hub plaza uses `tile_hub_plaza_warm` / `tile_hub_cobble_wet`. Import: `bun run scripts/import-tiles-2x.mjs`.
+
 **Before declaring done:** typecheck + lint + format:check + build. After map/POI/town-safety changes, also run `bun run test:smoke`.
 
 **Git:** commit/push only when the user asks. Do not amend pushed commits or force-push `main`.

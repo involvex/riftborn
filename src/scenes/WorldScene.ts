@@ -199,6 +199,7 @@ import {
   applyWorldArtFilters,
   DECOR_PROP_KEY,
   hasArt,
+  pickWeightedTileKey,
   propArtScale,
   TILE_ART_SCALE,
 } from '../render/WorldArt';
@@ -2094,25 +2095,21 @@ export class WorldScene extends Phaser.Scene {
     const look = biomeLook(biome.id);
     const bossRoom = dungeonBossRoom(map.rooms);
     this.bossArenaRoom = bossRoom;
-    const w0 = biome.tileWeights.tile_dungeon_0 ?? 0.6;
-    const w1 = biome.tileWeights.tile_dungeon_1 ?? 0.3;
-    const w2 = biome.tileWeights.tile_dungeon_2 ?? 0.1;
-    const wSum = Math.max(0.0001, w0 + w1 + w2);
-    const t0 = w0 / wSum;
-    const t1 = t0 + w1 / wSum;
+    // Prefer biome tileWeights; fall back to look.floorTiles even weights.
+    const weights =
+      Object.keys(biome.tileWeights).length > 0
+        ? biome.tileWeights
+        : {
+            [look.floorTiles[0]]: 0.5,
+            [look.floorTiles[1]]: 0.35,
+            [look.floorTiles[2]]: 0.15,
+          };
 
     for (let y = 0; y < map.height; y++) {
       for (let x = 0; x < map.width; x++) {
         if (map.cells[y][x] !== 1) continue;
         const n = valueNoise(x, y, 4);
-        let key: string;
-        if (n < t0) {
-          key = 'tile_dungeon_0';
-        } else if (n < t1) {
-          key = 'tile_dungeon_1';
-        } else {
-          key = 'tile_dungeon_2';
-        }
+        const key = pickWeightedTileKey(n, weights, look.floorTiles[0]);
         const gate = map.layerGates[y]![x] ?? null;
         const inArena = !!(bossRoom && tileInArenaRoom(x, y, bossRoom));
         const floorTint = inArena ? bossArenaFloorTint(look) : look.floorTint;
@@ -2120,7 +2117,7 @@ export class WorldScene extends Phaser.Scene {
         const speckEvery = inArena
           ? bossArenaSpeckEvery(look)
           : look.speckEvery;
-        // Floor tint is the main biome read — painted sheets alone look identical.
+        // Biome floors are painted; light tint keeps color without washing out.
         this.placeFloorTile(x, y, key, floorTint, gate, floorTint);
         if (!gate && isDungeonFloorEdge(map.cells, x, y)) {
           this.strokeIsoTileOutline(this.tiles, x, y, look.accent, edgeA);

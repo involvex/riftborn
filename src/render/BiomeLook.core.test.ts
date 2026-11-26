@@ -14,6 +14,18 @@ describe('BiomeLook', () => {
       expect(look.speckEvery).toBeGreaterThan(5);
       expect(look.speckRadius).toBeGreaterThan(1);
       expect(look.background.startsWith('#')).toBe(true);
+      expect(look.floorTiles.length).toBe(3);
+      expect(look.floorTiles[0]).not.toBe(look.floorTiles[1]);
+    }
+  });
+
+  test('biome tileWeights keys match look.floorTiles', () => {
+    for (const b of RIFT_BIOMES) {
+      const look = biomeLook(b.id);
+      const weightKeys = Object.keys(b.tileWeights);
+      for (const k of look.floorTiles) {
+        expect(weightKeys, `${b.id} missing ${k}`).toContain(k);
+      }
     }
   });
 

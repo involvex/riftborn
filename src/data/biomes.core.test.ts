@@ -10,11 +10,6 @@ const BIOME_IDS = [
   'shattered_woods',
   'salt_wastes',
 ] as const;
-const TILE_KEYS = [
-  'tile_dungeon_0',
-  'tile_dungeon_1',
-  'tile_dungeon_2',
-] as const;
 const FORBIDDEN_PROP_KEYS = ['tree', 'crystal_vein'] as const;
 const ALLOWED_ENEMY_IDS = new Set([
   'shade',
@@ -37,10 +32,16 @@ const ALLOWED_ENEMY_IDS = new Set([
 
 function assertBiomeShape(b: BiomeDef): void {
   expect(BIOME_IDS as readonly string[]).toContain(b.id);
-  for (const k of TILE_KEYS) {
-    expect(typeof b.tileWeights[k]).toBe('number');
-    expect((b.tileWeights[k] ?? 0) > 0).toBe(true);
+  const tileEntries = Object.entries(b.tileWeights);
+  expect(tileEntries.length).toBeGreaterThanOrEqual(2);
+  let weightSum = 0;
+  for (const [k, w] of tileEntries) {
+    expect(k.startsWith('tile_')).toBe(true);
+    expect(typeof w).toBe('number');
+    expect((w ?? 0) > 0).toBe(true);
+    weightSum += w ?? 0;
   }
+  expect(weightSum).toBeGreaterThan(0);
   const propKeys = Object.keys(b.propWeights);
   expect(propKeys.length).toBeGreaterThan(0);
   for (const k of propKeys) {
