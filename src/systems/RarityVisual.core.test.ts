@@ -43,9 +43,11 @@ describe('RarityVisual', () => {
     expect(rarityDropScale('rare')).toBeGreaterThan(rarityDropScale('common'));
   });
 
-  test('camera flash and burst gate commons / low tiers', () => {
+  test('camera flash is rare+ only; burst stays rare+', () => {
     expect(rarityWantsCameraFlash('common')).toBe(false);
-    expect(rarityWantsCameraFlash('magic')).toBe(true);
+    expect(rarityWantsCameraFlash('magic')).toBe(false);
+    expect(rarityWantsCameraFlash('rare')).toBe(true);
+    expect(rarityWantsCameraFlash('legendary')).toBe(true);
     expect(rarityWantsBurst('magic')).toBe(false);
     expect(rarityWantsBurst('rare')).toBe(true);
     expect(rarityWantsBurst('legendary')).toBe(true);

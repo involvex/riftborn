@@ -45,8 +45,11 @@ export function playSkillVfx(scene: Phaser.Scene, req: SkillVfxRequest): void {
         ease: 'Cubic.Out',
         onComplete: () => g.destroy(),
       });
-      if (settingsStore.get().screenShake) {
-        scene.cameras.main.shake(120, 0.004);
+      {
+        const strength = settingsStore.get().shakeStrength;
+        if (strength > 0) {
+          scene.cameras.main.shake(120, 0.004 * strength);
+        }
       }
       break;
     }

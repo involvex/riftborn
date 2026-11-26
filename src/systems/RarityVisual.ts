@@ -61,9 +61,12 @@ export function rarityDropScale(rarity: GearRarity): number {
   }
 }
 
-/** Camera flash on spawn — skip commons in Dense packs. */
+/**
+ * Camera flash on spawn — rare+ only.
+ * Magic keeps beam / glow / toast without a full-screen strobe.
+ */
 export function rarityWantsCameraFlash(rarity: GearRarity): boolean {
-  return rarity !== 'common';
+  return rarity === 'rare' || rarity === 'legendary';
 }
 
 /** Combat-style burst on spawn / boss open. */

@@ -15,6 +15,7 @@ import {
   isPaintedSprite,
 } from '../render/SpriteAtlas';
 import { critFlashPlan } from '../render/CombatFeel';
+import { settingsStore } from '../core/SettingsStore';
 import { playEnemyTelegraph } from '../render/EnemyTelegraphVfx';
 import type { EnemyDef } from '../types/game';
 import enemiesData from '../data/enemies.json';
@@ -935,7 +936,7 @@ export class Enemy {
   /** Hit frames + warm flash. Crits flash white for 40ms and pop harder. */
   flashHit(crit = false): void {
     if (!this.alive) return;
-    const plan = critFlashPlan(crit);
+    const plan = critFlashPlan(crit, settingsStore.get().reduceFlashing);
     const hitKey = `${this.textureKey}_hit`;
     const hasHit = this.sprite.scene.anims.exists(hitKey);
     if (hasHit) {

@@ -11,9 +11,10 @@ import {
   critFlashPlan,
   hitstopMsScaled,
   isCombatCrit,
+  playerHurtSquashPlan,
   shakeParamsScaled,
+  shouldPlayCameraFlash,
 } from './CombatFeel';
-
 describe('isCombatCrit', () => {
   test('threshold sits above level-1 basics so skills punch', () => {
     expect(COMBAT_FEEL.critDamageThreshold).toBeGreaterThanOrEqual(18);
@@ -93,13 +94,100 @@ describe('critFlashPlan', () => {
     expect(crit.whiteMs).toBe(40);
     expect(crit.scale).toBeGreaterThan(critFlashPlan(false).scale);
   });
+
+  test('reduceFlashing zeros the white frame and keeps the pop', () => {
+    const crit = critFlashPlan(true, true);
+    expect(crit.whiteMs).toBe(0);
+    expect(crit.scale).toBe(1.28);
+  });
+});
+
+describe('shouldPlayCameraFlash', () => {
+  test('reduceFlashing blocks every flash', () => {
+    expect(
+      shouldPlayCameraFlash({
+        kind: 'beat',
+        reduceFlashing: true,
+        nowMs: 1000,
+        lastLootFlashAtMs: 0,
+      }).play,
+    ).toBe(false);
+  });
+
+  test('loot inside the gap is denied; a beat still plays', () => {
+    const loot = shouldPlayCameraFlash({
+      kind: 'loot',
+      reduceFlashing: false,
+      rarityAllows: true,
+      nowMs: 200,
+      lastLootFlashAtMs: 0,
+      gapMs: 350,
+    });
+    expect(loot.play).toBe(true);
+    expect(
+      shouldPlayCameraFlash({
+        kind: 'loot',
+        reduceFlashing: false,
+        rarityAllows: true,
+        nowMs: 200 + 100,
+        lastLootFlashAtMs: loot.nextLootFlashAtMs,
+        gapMs: 350,
+      }).play,
+    ).toBe(false);
+    expect(
+      shouldPlayCameraFlash({
+        kind: 'beat',
+        reduceFlashing: false,
+        nowMs: 200 + 100,
+        lastLootFlashAtMs: loot.nextLootFlashAtMs,
+      }).play,
+    ).toBe(true);
+  });
+
+  test('loot without rarity allow is denied', () => {
+    expect(
+      shouldPlayCameraFlash({
+        kind: 'loot',
+        reduceFlashing: false,
+        rarityAllows: false,
+        nowMs: 1000,
+        lastLootFlashAtMs: 0,
+      }).play,
+    ).toBe(false);
+  });
+});
+
+describe('playerHurtSquashPlan', () => {
+  test('keeps area roughly constant and finishes under 150ms', () => {
+    const p = playerHurtSquashPlan();
+    expect(p.scaleX * p.scaleY).toBeCloseTo(1, 1);
+    expect(p.ms).toBeLessThanOrEqual(150);
+  });
 });
 
 describe('combatShakeParams', () => {
   test('returns finite non-negative values when enabled', () => {
-    const p = combatShakeParams('hit');
+    const p = combatShakeParams('hit', { shakeStrength: 1, juiceScale: 1 });
     expect(p.ms).toBeGreaterThanOrEqual(0);
     expect(p.intensity).toBeGreaterThanOrEqual(0);
+  });
+
+  test('scales intensity by shakeStrength; Off zeros shake', () => {
+    const full = combatShakeParams('hit', {
+      shakeStrength: 1,
+      juiceScale: 1,
+    });
+    const half = combatShakeParams('hit', {
+      shakeStrength: 0.5,
+      juiceScale: 1,
+    });
+    const off = combatShakeParams('hit', {
+      shakeStrength: 0,
+      juiceScale: 1,
+    });
+    expect(half.ms).toBe(full.ms);
+    expect(half.intensity).toBeCloseTo(full.intensity * 0.5);
+    expect(off).toEqual({ ms: 0, intensity: 0 });
   });
 });
 

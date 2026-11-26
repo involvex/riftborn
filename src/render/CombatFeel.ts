@@ -4,7 +4,7 @@ import { settingsStore } from '../core/SettingsStore';
 /**
  * Toggleable combat juice (hitstop, shake, damage-number styling).
  * Flip `enabled` or individual flags to mute without deleting call sites.
- * Player-facing screen shake also respects SettingsStore.screenShake.
+ * Player-facing screen shake scales with SettingsStore.shakeStrength.
  * Mobile Low quality scales durations via GraphicsQuality.juiceScale.
  */
 
@@ -40,6 +40,14 @@ export const COMBAT_FEEL = {
   /** Hitting this many foes in one swing upgrades juice to multi-cleave. */
   multiHitJuiceCount: 2,
 
+  /** Sprite-only hurt squash (area ≈ constant). */
+  hurtSquashX: 1.12,
+  hurtSquashY: 0.86,
+  hurtSquashMs: 120,
+
+  /** Min gap between loot camera flashes so packs do not strobe. */
+  lootFlashGapMs: 350,
+
   damageNumbers: {
     enemyColor: '#ffe08a',
     critColor: '#fff6c8',
@@ -54,14 +62,21 @@ export const COMBAT_FEEL = {
 
 export type CombatShakeKind = 'hit' | 'crit' | 'boss' | 'playerHit';
 
-export function combatShakeParams(kind: CombatShakeKind): {
+/** Why a camera flash was requested — loot is gap-gated; beats are not. */
+export type CameraFlashKind = 'loot' | 'beat';
+
+export function combatShakeParams(
+  kind: CombatShakeKind,
+  opts?: { shakeStrength?: number; juiceScale?: number },
+): {
   ms: number;
   intensity: number;
 } {
   const c = COMBAT_FEEL;
   if (!c.enabled || !c.shakeEnabled) return { ms: 0, intensity: 0 };
-  if (!settingsStore.get().screenShake) return { ms: 0, intensity: 0 };
-  const juice = currentGraphicsProfile().juiceScale;
+  const strength = opts?.shakeStrength ?? settingsStore.get().shakeStrength;
+  if (strength <= 0) return { ms: 0, intensity: 0 };
+  const juice = opts?.juiceScale ?? currentGraphicsProfile().juiceScale;
   let ms: number = c.shakeHitMs;
   let intensity: number = c.shakeHitIntensity;
   switch (kind) {
@@ -80,7 +95,8 @@ export function combatShakeParams(kind: CombatShakeKind): {
     default:
       break;
   }
-  return shakeParamsScaled(kind, juice, ms, intensity);
+  const scaled = shakeParamsScaled(kind, juice, ms, intensity);
+  return { ms: scaled.ms, intensity: scaled.intensity * strength };
 }
 
 /**
@@ -140,12 +156,61 @@ export function hitstopMsScaled(
 }
 
 /** Crit connects flash white before the warm tint and pop harder. */
-export function critFlashPlan(crit: boolean): {
+export function critFlashPlan(
+  crit: boolean,
+  reduceFlashing = false,
+): {
   whiteMs: number;
   scale: number;
 } {
-  if (crit) return { whiteMs: 40, scale: 1.28 };
-  return { whiteMs: 0, scale: 1.14 };
+  if (!crit) return { whiteMs: 0, scale: 1.14 };
+  return {
+    whiteMs: reduceFlashing ? 0 : 40,
+    scale: 1.28,
+  };
+}
+
+/** Sprite-only hurt squash multipliers + duration. */
+export function playerHurtSquashPlan(): {
+  scaleX: number;
+  scaleY: number;
+  ms: number;
+} {
+  return {
+    scaleX: COMBAT_FEEL.hurtSquashX,
+    scaleY: COMBAT_FEEL.hurtSquashY,
+    ms: COMBAT_FEEL.hurtSquashMs,
+  };
+}
+
+/**
+ * Pure gate for full-screen camera flashes.
+ * `reduceFlashing` skips every flash. Loot needs rarity + a gap since last loot flash.
+ */
+export function shouldPlayCameraFlash(opts: {
+  kind: CameraFlashKind;
+  reduceFlashing: boolean;
+  /** For loot: whether rarity wants a flash. Beats ignore this. */
+  rarityAllows?: boolean;
+  nowMs: number;
+  lastLootFlashAtMs: number;
+  gapMs?: number;
+}): { play: boolean; nextLootFlashAtMs: number } {
+  const gap = opts.gapMs ?? COMBAT_FEEL.lootFlashGapMs;
+  if (opts.reduceFlashing) {
+    return { play: false, nextLootFlashAtMs: opts.lastLootFlashAtMs };
+  }
+  if (opts.kind === 'beat') {
+    return { play: true, nextLootFlashAtMs: opts.lastLootFlashAtMs };
+  }
+  if (opts.rarityAllows === false) {
+    return { play: false, nextLootFlashAtMs: opts.lastLootFlashAtMs };
+  }
+  const last = opts.lastLootFlashAtMs;
+  if (last > 0 && opts.nowMs - last < gap) {
+    return { play: false, nextLootFlashAtMs: last };
+  }
+  return { play: true, nextLootFlashAtMs: opts.nowMs };
 }
 
 export function combatHitstopMs(kind: CombatHitstopKind = 'hit'): number {

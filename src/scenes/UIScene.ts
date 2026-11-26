@@ -13,8 +13,10 @@ import {
   refreshGraphicsProfile,
 } from '../core/GraphicsQuality';
 import {
+  cycleShakeStrength,
   cycleShiftFxIntensity,
   settingsStore,
+  shakeStrengthLabel,
   shiftFxIntensityLabel,
   type HotkeyAction,
   DEFAULT_HOTKEYS,
@@ -1241,9 +1243,19 @@ export class UIScene extends Phaser.Scene {
           },
         },
         {
-          label: `Screen shake: ${s.screenShake ? 'ON' : 'OFF'}`,
+          label: `Shake: ${shakeStrengthLabel(s.shakeStrength)}`,
           onClick: () => {
-            settingsStore.save({ screenShake: !s.screenShake });
+            settingsStore.save({
+              shakeStrength: cycleShakeStrength(s.shakeStrength),
+            });
+            gameEvents.emit(Events.SETTINGS_CHANGED);
+            this.renderMenuPage();
+          },
+        },
+        {
+          label: `Reduce flash: ${s.reduceFlashing ? 'ON' : 'OFF'}`,
+          onClick: () => {
+            settingsStore.save({ reduceFlashing: !s.reduceFlashing });
             gameEvents.emit(Events.SETTINGS_CHANGED);
             this.renderMenuPage();
           },

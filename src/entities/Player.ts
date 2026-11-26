@@ -16,6 +16,7 @@ import {
   playerSpriteKey,
 } from '../render/SpriteAtlas';
 import { playCombatBurst } from '../render/CombatVfx';
+import { playerHurtSquashPlan } from '../render/CombatFeel';
 import {
   DASH_INVULN_SEC,
   SWING_SLOW_SEC,
@@ -256,9 +257,14 @@ export class Player {
     } else {
       this.sprite.setTint(0xff6060);
     }
-    this.scene.time.delayedCall(140, () => {
+    const squash = playerHurtSquashPlan();
+    const base = figureDrawScale();
+    this.sprite.setScale(base * squash.scaleX, base * squash.scaleY);
+    const restoreMs = Math.max(140, squash.ms);
+    this.scene.time.delayedCall(restoreMs, () => {
       if (this.scene.time.now < this.hitFlashUntil) return;
       this.applyClassTint();
+      this.applyScale();
       if (this.animKind === 'hit') {
         this.animKind = this.moving ? 'walk' : 'idle';
         this.sprite.play(`${this.textureKey}_${this.animKind}`, true);

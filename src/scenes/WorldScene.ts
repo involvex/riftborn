@@ -27,7 +27,6 @@ import { ResourceNode } from '../entities/ResourceNode';
 import { describeGear, gearDropChance, rollGearDrop } from '../systems/ItemGen';
 import {
   rarityCss,
-  rarityPhaser,
   rarityWantsBurst,
   rarityWantsCameraFlash,
 } from '../systems/RarityVisual';
@@ -126,6 +125,8 @@ import {
   combatHitstopMs,
   combatShakeParams,
   isCombatCrit,
+  shouldPlayCameraFlash,
+  type CameraFlashKind,
   type CombatHitstopKind,
   type CombatShakeKind,
 } from '../render/CombatFeel';
@@ -353,6 +354,8 @@ export class WorldScene extends Phaser.Scene {
   };
   /** Wall-clock ms — skip sim briefly for hitstop juice. */
   private hitstopUntil = 0;
+  /** Wall-clock ms — last loot camera flash (pack strobe gap). */
+  private lastLootFlashAtMs = 0;
   private enemyShots: {
     shot: EnemyShot;
     graphic: Phaser.GameObjects.Graphics;
@@ -638,8 +641,22 @@ export class WorldScene extends Phaser.Scene {
     red: number,
     green: number,
     blue: number,
-    force = false,
+    opts: {
+      force?: boolean;
+      kind?: CameraFlashKind;
+      rarityAllows?: boolean;
+    } = {},
   ): void {
+    const kind = opts.kind ?? 'beat';
+    const gate = shouldPlayCameraFlash({
+      kind,
+      reduceFlashing: settingsStore.get().reduceFlashing,
+      rarityAllows: opts.rarityAllows,
+      nowMs: performance.now(),
+      lastLootFlashAtMs: this.lastLootFlashAtMs,
+    });
+    if (!gate.play) return;
+    if (kind === 'loot') this.lastLootFlashAtMs = gate.nextLootFlashAtMs;
     try {
       // Prevent a stuck/stacked flash from permanently tinting the world.
       this.resetCameraFx();
@@ -648,7 +665,7 @@ export class WorldScene extends Phaser.Scene {
         red,
         green,
         blue,
-        force,
+        opts.force ?? false,
         undefined,
         this,
       );
@@ -3450,13 +3467,11 @@ export class WorldScene extends Phaser.Scene {
             : 'common';
     audioBus.loot(tone);
     if (!rarityWantsCameraFlash(rarity)) return;
-    const flash =
-      rarity === 'legendary'
-        ? [255, 180, 60]
-        : rarity === 'rare'
-          ? [120, 160, 255]
-          : [80, 200, 140];
-    this.safeCameraFlash(140, flash[0], flash[1], flash[2]);
+    const flash = rarity === 'legendary' ? [255, 180, 60] : [120, 160, 255];
+    this.safeCameraFlash(140, flash[0], flash[1], flash[2], {
+      kind: 'loot',
+      rarityAllows: true,
+    });
     if (
       rarityWantsBurst(rarity) &&
       worldX !== undefined &&
@@ -4017,8 +4032,6 @@ export class WorldScene extends Phaser.Scene {
             ? 'rare'
             : 'magic',
       );
-      const c = rarityPhaser(g.rarity);
-      this.safeCameraFlash(70, (c >> 16) & 0xff, (c >> 8) & 0xff, c & 0xff);
     }
     this.persistGame();
     const chase =

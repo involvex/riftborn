@@ -28,8 +28,13 @@ export type GameSettings = {
   musicVolume: number;
   mute: boolean;
   showDamageNumbers: boolean;
-  /** Camera shake on hits / crits / boss. */
-  screenShake: boolean;
+  /** 0 / 0.5 / 1 — camera shake intensity (Off / Low / Full). */
+  shakeStrength: number;
+  /**
+   * Skip full-screen camera flashes and crit white frames
+   * (photosensitivity). Beams / tint / shake still run.
+   */
+  reduceFlashing: boolean;
   /** Auto-convert common gear drops to gold. */
   autoSellJunk: boolean;
   /** Touch pad vibration via navigator.vibrate when available. */
@@ -72,7 +77,8 @@ export const DEFAULT_SETTINGS: GameSettings = {
   musicVolume: 0.5,
   mute: false,
   showDamageNumbers: true,
-  screenShake: true,
+  shakeStrength: 1,
+  reduceFlashing: false,
   autoSellJunk: false,
   haptics: true,
   shiftFxIntensity: 1,
@@ -92,6 +98,15 @@ export function shiftFxIntensityLabel(v: number): string {
   return 'Off';
 }
 
+/** Same cycle as Shift FX: Full → Off → Low → Full. */
+export function cycleShakeStrength(current: number): number {
+  return cycleShiftFxIntensity(current);
+}
+
+export function shakeStrengthLabel(v: number): string {
+  return shiftFxIntensityLabel(v);
+}
+
 function clamp01(n: number): number {
   return Math.min(1, Math.max(0, n));
 }
@@ -101,6 +116,25 @@ function parseGraphicsQuality(v: unknown): GraphicsQualitySetting {
   return DEFAULT_SETTINGS.graphicsQuality;
 }
 
+/**
+ * Resolve shake strength from a raw settings blob.
+ * Migrates legacy `screenShake: false` → 0, `true` / missing → 1.
+ */
+export function parseShakeStrength(raw: {
+  shakeStrength?: unknown;
+  screenShake?: unknown;
+}): number {
+  if (
+    typeof raw.shakeStrength === 'number' &&
+    Number.isFinite(raw.shakeStrength)
+  ) {
+    return clamp01(raw.shakeStrength);
+  }
+  if (raw.screenShake === false) return 0;
+  if (raw.screenShake === true) return 1;
+  return DEFAULT_SETTINGS.shakeStrength;
+}
+
 export class SettingsStore {
   private data: GameSettings = structuredClone(DEFAULT_SETTINGS);
 
@@ -108,14 +142,10 @@ export class SettingsStore {
     try {
       const raw = localStorage.getItem(SETTINGS_KEY);
       if (!raw) return this.data;
-      const parsed = JSON.parse(raw) as Partial<GameSettings>;
+      const parsed = JSON.parse(raw) as Partial<GameSettings> & {
+        screenShake?: boolean;
+      };
       this.data = {
-        ...DEFAULT_SETTINGS,
-        ...parsed,
-        hotkeys: {
-          ...DEFAULT_HOTKEYS,
-          ...(parsed.hotkeys ?? {}),
-        },
         masterVolume: clamp01(
           parsed.masterVolume ?? DEFAULT_SETTINGS.masterVolume,
         ),
@@ -123,15 +153,22 @@ export class SettingsStore {
         musicVolume: clamp01(
           parsed.musicVolume ?? DEFAULT_SETTINGS.musicVolume,
         ),
+        mute: parsed.mute ?? DEFAULT_SETTINGS.mute,
         showDamageNumbers:
           parsed.showDamageNumbers ?? DEFAULT_SETTINGS.showDamageNumbers,
-        screenShake: parsed.screenShake ?? DEFAULT_SETTINGS.screenShake,
+        shakeStrength: parseShakeStrength(parsed),
+        reduceFlashing:
+          parsed.reduceFlashing ?? DEFAULT_SETTINGS.reduceFlashing,
         autoSellJunk: parsed.autoSellJunk ?? DEFAULT_SETTINGS.autoSellJunk,
         haptics: parsed.haptics ?? DEFAULT_SETTINGS.haptics,
         shiftFxIntensity: clamp01(
           parsed.shiftFxIntensity ?? DEFAULT_SETTINGS.shiftFxIntensity,
         ),
         graphicsQuality: parseGraphicsQuality(parsed.graphicsQuality),
+        hotkeys: {
+          ...DEFAULT_HOTKEYS,
+          ...(parsed.hotkeys ?? {}),
+        },
       };
     } catch {
       this.data = structuredClone(DEFAULT_SETTINGS);

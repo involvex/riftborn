@@ -16,8 +16,10 @@ import {
   refreshGraphicsProfile,
 } from '../core/GraphicsQuality';
 import {
+  cycleShakeStrength,
   cycleShiftFxIntensity,
   settingsStore,
+  shakeStrengthLabel,
   shiftFxIntensityLabel,
 } from '../core/SettingsStore';
 import { Events, gameEvents } from '../core/EventBus';
@@ -432,9 +434,19 @@ export class BootScene extends Phaser.Scene {
         },
       },
       {
-        label: `Screen shake: ${store.screenShake ? 'ON' : 'OFF'}`,
+        label: `Shake: ${shakeStrengthLabel(store.shakeStrength)}`,
         onClick: () => {
-          settingsStore.save({ screenShake: !store.screenShake });
+          settingsStore.save({
+            shakeStrength: cycleShakeStrength(store.shakeStrength),
+          });
+          gameEvents.emit(Events.SETTINGS_CHANGED);
+          this.renderTitleSettings();
+        },
+      },
+      {
+        label: `Reduce flash: ${store.reduceFlashing ? 'ON' : 'OFF'}`,
+        onClick: () => {
+          settingsStore.save({ reduceFlashing: !store.reduceFlashing });
           gameEvents.emit(Events.SETTINGS_CHANGED);
           this.renderTitleSettings();
         },

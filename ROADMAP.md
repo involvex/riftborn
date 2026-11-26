@@ -70,14 +70,15 @@ Prefer sessions that make the existing Hub → Rift → Boss → Exit loop
 **clearer and prettier**. Skip jam-theme work and new systems unless they
 earn their keep in feel.
 
-| #   | Slice                    | Why it matters               | Done when                                                                                            |
-| --- | ------------------------ | ---------------------------- | ---------------------------------------------------------------------------------------------------- |
-| ✓   | **Rift biomes readable** | Same tiles — biomes alike    | Shipped: `BiomeLook` floor tint / accents / void bg + enter biome name                               |
-| ✓   | **Hub atmosphere**       | Town still reads flat        | Shipped: `HubLook` plaza glow / POI tints / dirt-road edges / lanterns                               |
-| ✓   | **Combat readability**   | Hits/boss moments still soft | Shipped: warmer hit flash/knock, Low-tier hit bursts, skill hit VFX, boss scale-in + crit kill juice |
-| ✓   | **LoopBeat / portals**   | Enter/clear/exit still soft  | Shipped: zone fade + portal sting; exit gate at boss anchor; HUD phase pulse                         |
-| ✓   | **Loot readability**     | Payoff after combat soft     | Shipped: magic+ drop icons/beams, boss chest look, rarity-gated loot juice                           |
-| ✓   | **Boss arena beat**      | Boss room = any hall         | Shipped: biome wash + phase ring in boss room (idle → boss → exit)                                   |
+| #   | Slice                    | Why it matters                   | Done when                                                                                            |
+| --- | ------------------------ | -------------------------------- | ---------------------------------------------------------------------------------------------------- |
+| ✓   | **Rift biomes readable** | Same tiles — biomes alike        | Shipped: `BiomeLook` floor tint / accents / void bg + enter biome name                               |
+| ✓   | **Hub atmosphere**       | Town still reads flat            | Shipped: `HubLook` plaza glow / POI tints / dirt-road edges / lanterns                               |
+| ✓   | **Combat readability**   | Hits/boss moments still soft     | Shipped: warmer hit flash/knock, Low-tier hit bursts, skill hit VFX, boss scale-in + crit kill juice |
+| ✓   | **LoopBeat / portals**   | Enter/clear/exit still soft      | Shipped: zone fade + portal sting; exit gate at boss anchor; HUD phase pulse                         |
+| ✓   | **Loot readability**     | Payoff after combat soft         | Shipped: magic+ drop icons/beams, boss chest look, rarity-gated loot juice                           |
+| ✓   | **Boss arena beat**      | Boss room = any hall             | Shipped: biome wash + phase ring in boss room (idle → boss → exit)                                   |
+| ✓   | **Phone combat feel**    | Shake on/off; magic loot strobes | Shake Off/Low/Full + Reduce flash; magic no camera flash; loot gap; player hurt squash; touch verify |
 
 ## Done — content (keep after feel)
 

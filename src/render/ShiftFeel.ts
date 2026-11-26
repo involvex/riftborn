@@ -11,14 +11,15 @@ function clamp01(n: number): number {
 
 export function shiftShakeParams(
   fxIntensity: number,
-  opts?: { screenShake?: boolean; juiceScale?: number },
+  opts?: { shakeStrength?: number; juiceScale?: number },
 ): { ms: number; intensity: number } {
-  const screenShake = opts?.screenShake ?? settingsStore.get().screenShake;
+  const strength = opts?.shakeStrength ?? settingsStore.get().shakeStrength;
   const juiceScale = opts?.juiceScale ?? currentGraphicsProfile().juiceScale;
   const i = clamp01(fxIntensity);
-  if (!screenShake || i <= 0) return { ms: 0, intensity: 0 };
+  if (strength <= 0 || i <= 0) return { ms: 0, intensity: 0 };
   return {
     ms: Math.round(SHIFT_SHAKE_MS * juiceScale * i),
-    intensity: SHIFT_SHAKE_INTENSITY * Math.min(1, juiceScale + 0.25) * i,
+    intensity:
+      SHIFT_SHAKE_INTENSITY * Math.min(1, juiceScale + 0.25) * i * strength,
   };
 }
