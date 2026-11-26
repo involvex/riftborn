@@ -36,16 +36,19 @@ export class FpsHud {
 
   layout(): void {
     const touch = shouldShowTouchControls();
-    // Just under the status block (bars + bounty + set) on touch
+    // Above the stick on touch — keeps FPS off set-chase / SHIFT lines.
     if (touch) {
       const m = computeGameTouchLayout(
         this.scene.scale.width,
         this.scene.scale.height,
       );
       this.label.setFontSize(uiFontGameSize('fps', 'touch'));
-      // Bottom of the reserved status block (below set chase line).
       this.label.setOrigin(0, 1);
-      this.root.setPosition(m.status.x, m.status.y + m.status.h - 4);
+      const stickTop = m.stick.y - m.stick.r;
+      this.root.setPosition(
+        m.stick.x - m.stick.r,
+        Math.max(m.status.y + m.status.h + 8, stickTop - 6),
+      );
     } else {
       this.label.setOrigin(0, 1);
       this.root.setPosition(10, this.scene.scale.height - 8);

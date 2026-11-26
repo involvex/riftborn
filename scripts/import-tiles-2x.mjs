@@ -16,7 +16,6 @@ const OUT = path.join(ROOT, 'public/assets/tiles');
 const BACKUP = path.join(ROOT, 'assets-src/tiles/legacy-128');
 const TW = 256;
 const TH = 128;
-const MAX_COLORS = 48;
 
 /**
  * Magenta chroma key — JPEG compresses #FF00FF into a wide pink band.

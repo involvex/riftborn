@@ -81,9 +81,10 @@ export class FirstSessionHint {
     this.text.setFontSize(uiFontGameSize('label', 'touch'));
     this.bg.setSize(this.text.width + 4, this.text.height + 2);
     const m = computeGameTouchLayout(scene.scale.width, scene.scale.height);
+    // Below SHIFT strip (status + ~34px) so the banner does not cover energy.
     this.root.setPosition(
       Math.round(scene.scale.width / 2),
-      m.status.y + m.status.h + Math.round(8 * s),
+      m.status.y + m.status.h + Math.round(40 * s),
     );
   }
 

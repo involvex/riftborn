@@ -127,9 +127,13 @@ In-rift choice, SHIFT fight, build fork, map ping, and named drop are in.
 
 ## Now
 
-| #   | Slice                    | Why it matters                                       | Done when                                                                   |
-| --- | ------------------------ | ---------------------------------------------------- | --------------------------------------------------------------------------- |
-| →   | **Playtest combat nits** | Floors + HUD shipped; need real device/browser notes | Fix 2–3 notes from landscape `/?touch=1` (or APK when you have device time) |
+_(empty — pick the next slice from Later)_
+
+## Done — playtest combat nits
+
+| #   | Slice                    | Why it matters                           | Done when                                                                          |
+| --- | ------------------------ | ---------------------------------------- | ---------------------------------------------------------------------------------- |
+| ✓   | **Playtest combat nits** | Landscape touch combat felt unfair/muddy | Pack members spread to free tiles; FPS above stick; first-session hint below SHIFT |
 
 ## Done — 2× tiles + biome floors
 
@@ -148,7 +152,6 @@ Skip inventing new frameworks — extend `WorldArt` / `WorldScene` /
 
 ## Later (parked)
 
-- _(moved to Now)_ Playtest combat nits
 - Co-op rifts + authoritative loot / gear sync (hub sandbox stays prototype)
 - App Store packaging for Expo shell
 - Seasons, trading, seamless open world

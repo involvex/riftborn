@@ -173,6 +173,7 @@ import {
   findSplitPackTile,
   isSplitPack,
 } from '../world/ShiftSplitPack';
+import { resolvePackMemberTile } from '../world/PackSpread';
 import {
   gearUpgradeHighlight,
   riftEndPay,
@@ -1165,6 +1166,8 @@ export class WorldScene extends Phaser.Scene {
     // keep them on their tile; hub still jitters around the pack center.
     // Resume path skips packs and restores living foes from riftRun.
     if (!opts.skipPacks) {
+      // Rift: one foe per tile so packs read as a group, not a stack.
+      const riftOccupied = new Set<string>();
       for (const pack of layout.packs) {
         if (!gameState.inRift && inPlaza(pack.x, pack.y)) continue;
         // Support / champion / split stay lone — mods never clone them.
@@ -1177,18 +1180,24 @@ export class WorldScene extends Phaser.Scene {
             ? this.riftMod.packCountBonus + this.depthRule.packCountBonus
             : 0);
         for (let i = 0; i < count; i++) {
-          let p = snapToTile(pack.x, pack.y);
+          let p: { x: number; y: number };
           if (!gameState.inRift) {
             const ox = (Math.random() - 0.5) * 1.8;
             const oy = (Math.random() - 0.5) * 1.8;
             p = snapToTile(pack.x + ox, pack.y + oy);
             if (inPlaza(p.x, p.y)) continue;
-          } else if (i > 0) {
-            // Extra mod bonus foes: nudge within the same floor tile family
-            const ox = (Math.random() - 0.5) * 0.6;
-            const oy = (Math.random() - 0.5) * 0.6;
-            const cand = snapToTile(pack.x + ox, pack.y + oy);
-            if (this.player.walkCheck?.(cand.x, cand.y)) p = cand;
+          } else if (isSplit) {
+            // Split halves intentionally share a tile across layers.
+            p = snapToTile(pack.x, pack.y);
+          } else {
+            p = resolvePackMemberTile(
+              pack.x,
+              pack.y,
+              i,
+              count,
+              riftOccupied,
+              (x, y) => !!this.player.walkCheck?.(x, y),
+            );
           }
           const eliteChance = gameState.inRift
             ? riftPackBonus(this.riftDepth).eliteChance
