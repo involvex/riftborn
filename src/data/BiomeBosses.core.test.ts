@@ -26,17 +26,20 @@ describe('biome bosses (P2)', () => {
     }
   });
 
-  test('biome bosses reuse existing sheets (no new art)', () => {
-    for (const bossId of [
+  test('biome bosses each use a distinct painted sheet', () => {
+    const keys = [
       'rift_lord',
       'crystal_lord',
       'grove_alpha',
       'salt_warden',
-    ]) {
-      const key = enemySpriteKey(bossId);
-      expect(key).not.toBe('spr_shade');
-      expect(key).toMatch(/^spr_/);
-    }
+    ].map((id) => enemySpriteKey(id));
+    expect(new Set(keys).size).toBe(4);
+    expect(keys).toEqual([
+      'spr_rift_lord',
+      'spr_crystal_lord',
+      'spr_grove_alpha',
+      'spr_salt_warden',
+    ]);
   });
 
   test('each biome has its own boss identity', () => {

@@ -118,6 +118,9 @@ Touch (`/?touch=1` or coarse/small): virtual stick · ATK · E · DASH · SHIFT 
   stays out of the web build (sources, ~42 MB).
 - **Gen tools:** HF Qwen MCP, `D:\repos\involvex\image-worker`
   (`bun run src/index.ts generate …`), `D:\repos\image-wizard-cli` (Bing).
+  Character / enemy sheets stay **128×128** through `process-sprites`
+  (`synthOnly` idle → bob/lunge); use Bing `--no-post` — do not run the
+  CLI `enemies` 64px post category on figure sources.
   Fill gaps: `bun run scripts/synth-extra-walk-poses.mjs`.
 - **SFX:** [sfxr.me](https://sfxr.me/) / ChipTone → drop into
   `public/assets/audio/sfx/`.

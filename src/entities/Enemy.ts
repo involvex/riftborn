@@ -187,9 +187,9 @@ export class Enemy {
         : 24;
     shadow.fillStyle(0x000000, this.isBoss ? 0.4 : 0.3);
     shadow.fillEllipse(0, 5, sw, sw * 0.42);
-    // Boss silhouette accent — unique crown/horn so reskins read apart.
+    // Boss silhouette accent — crown/horn only when sharing a trash sheet.
     const accent = scene.add.graphics();
-    if (this.isBoss) {
+    if (this.isBoss && !isPaintedSprite(this.textureKey)) {
       drawBossSilhouetteAccent(accent, this.def.id);
     }
     this.body = scene.add.container(0, 0, [
@@ -235,12 +235,12 @@ export class Enemy {
     const painted = isPaintedSprite(this.textureKey);
     if (this.def.id === 'ash_scamp') {
       this.sprite.setTint(0xb08a60);
-    } else if (this.def.id === 'ash_scout') {
+    } else if (this.def.id === 'ash_scout' && !painted) {
       this.sprite.setTint(0xd4a060);
     } else if (this.def.id === 'ash_bat') {
       // Red-eye bat sheet already reads aggressive; light violet punch
       this.sprite.setTint(0xc8a0ff);
-    } else if (this.def.id === 'ash_bramble') {
+    } else if (this.def.id === 'ash_bramble' && !painted) {
       this.sprite.setTint(0x6abf5a);
     } else if (
       (this.def.isElite || this.elitePack || this.isBoss) &&

@@ -34,6 +34,12 @@ const SHEET_KEYS = [
   'spr_enemy_shadow_wolf',
   'spr_enemy_bone_archer',
   'spr_enemy_rift_wraith',
+  'spr_crystal_lord',
+  'spr_grove_alpha',
+  'spr_salt_warden',
+  'spr_ash_scout',
+  'spr_ash_bramble',
+  'spr_rift_mender',
 ] as const;
 
 const NODE_KEYS = ['spr_tree', 'spr_vein'] as const;
@@ -93,6 +99,18 @@ export function ensureGameSprites(scene: Phaser.Scene): void {
       generateEnemy(scene, key, '#9A8A7A', '#C4B090', 'shade');
     } else if (key === 'spr_enemy_rift_wraith') {
       generateEnemy(scene, key, '#7A9AA0', '#A0C8D0', 'wisp');
+    } else if (key === 'spr_crystal_lord') {
+      generateEnemy(scene, key, '#4DB6FF', '#A8E0FF', 'lord');
+    } else if (key === 'spr_grove_alpha') {
+      generateEnemy(scene, key, '#4A8030', '#6ABF5A', 'wisp');
+    } else if (key === 'spr_salt_warden') {
+      generateEnemy(scene, key, '#D8D0C0', '#E8D8A0', 'lord');
+    } else if (key === 'spr_ash_scout') {
+      generateEnemy(scene, key, '#6A5A48', '#D4A060', 'shade');
+    } else if (key === 'spr_ash_bramble') {
+      generateEnemy(scene, key, '#5A9A48', '#6ABF5A', 'crawler');
+    } else if (key === 'spr_rift_mender') {
+      generateEnemy(scene, key, '#5AC08A', '#A0E8B8', 'wisp');
     } else {
       generateEnemy(scene, key, '#5A3A6A', '#8A5A9A', 'shade');
     }
@@ -125,22 +143,21 @@ export function playerSpriteKey(
 }
 
 export function enemySpriteKey(defId: string): string {
-  if (defId === 'ash_scamp' || defId === 'ash_scout') return 'spr_shade';
+  if (defId === 'ash_scamp') return 'spr_shade';
+  if (defId === 'ash_scout') return 'spr_ash_scout';
   if (defId === 'ash_bat') return 'spr_bat';
-  if (defId === 'ash_bramble') return 'spr_crawler';
+  if (defId === 'ash_bramble') return 'spr_ash_bramble';
   if (defId === 'crawler') return 'spr_crawler';
   if (defId === 'wisp') return 'spr_wisp';
   if (defId === 'rift_lord') return 'spr_rift_lord';
-  // P2 boss variants — reskinned on existing sheets (no new art).
-  if (defId === 'crystal_lord') return 'spr_enemy_rift_wraith';
-  if (defId === 'grove_alpha') return 'spr_enemy_shadow_wolf';
-  if (defId === 'salt_warden') return 'spr_enemy_bone_archer';
+  if (defId === 'crystal_lord') return 'spr_crystal_lord';
+  if (defId === 'grove_alpha') return 'spr_grove_alpha';
+  if (defId === 'salt_warden') return 'spr_salt_warden';
   if (defId === 'enemy_rift_goblin') return 'spr_enemy_rift_goblin';
   if (defId === 'enemy_shadow_wolf') return 'spr_enemy_shadow_wolf';
   if (defId === 'enemy_bone_archer') return 'spr_enemy_bone_archer';
   if (defId === 'enemy_rift_wraith') return 'spr_enemy_rift_wraith';
-  // Support foe: wisp sheet recolored (no new art).
-  if (defId === 'rift_mender') return 'spr_wisp';
+  if (defId === 'rift_mender') return 'spr_rift_mender';
   return 'spr_shade';
 }
 

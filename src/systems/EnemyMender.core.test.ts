@@ -63,7 +63,7 @@ describe('mender data', () => {
 
   test('mender is wired into rendering, layer and telegraph systems', () => {
     expect(enemyShiftLayer('rift_mender')).toBe('both');
-    expect(enemySpriteKey('rift_mender')).toBe('spr_wisp');
+    expect(enemySpriteKey('rift_mender')).toBe('spr_rift_mender');
     expect(enemyTelegraphKind('rift_mender')).toBe('wail');
   });
 

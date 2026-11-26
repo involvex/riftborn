@@ -25,18 +25,24 @@ Pose sources under `public/assets/sprites/`: `{base}_idle.png`,
 
 ## Enemy sheets
 
-| Key             | Source                      | idle        | walk        | attack      | hit     | death   | dirs                 |
-| --------------- | --------------------------- | ----------- | ----------- | ----------- | ------- | ------- | -------------------- |
-| `spr_shade`     | LPC `ghost.png` (row 2)     | yes         | yes         | yes         | derived | derived | 2 (LPC down + flipX) |
-| `spr_crawler`   | LPC `snake.png`             | yes         | yes         | yes         | derived | derived | 2                    |
-| `spr_wisp`      | LPC `bee.png`               | yes         | yes         | yes         | derived | derived | 2                    |
-| `spr_bat`       | LPC `bat.png` (Nightwing)   | yes         | yes         | yes         | derived | derived | 2                    |
-| `spr_rift_lord` | `enemy_rift_lord.png` synth | yes (synth) | yes (synth) | yes (synth) | derived | derived | 2                    |
+| Key                | Source                         | idle        | walk        | attack      | hit     | death   | dirs                 |
+| ------------------ | ------------------------------ | ----------- | ----------- | ----------- | ------- | ------- | -------------------- |
+| `spr_shade`        | LPC `ghost.png` (row 2)        | yes         | yes         | yes         | derived | derived | 2 (LPC down + flipX) |
+| `spr_crawler`      | LPC `snake.png`                | yes         | yes         | yes         | derived | derived | 2                    |
+| `spr_wisp`         | LPC `bee.png`                  | yes         | yes         | yes         | derived | derived | 2                    |
+| `spr_bat`          | LPC `bat.png` (Nightwing)      | yes         | yes         | yes         | derived | derived | 2                    |
+| `spr_rift_lord`    | `enemy_rift_lord.png` synth    | yes (synth) | yes (synth) | yes (synth) | derived | derived | 2                    |
+| `spr_crystal_lord` | `enemy_crystal_lord.png` synth | yes (synth) | yes (synth) | yes (synth) | derived | derived | 2                    |
+| `spr_grove_alpha`  | `enemy_grove_alpha.png` synth  | yes (synth) | yes (synth) | yes (synth) | derived | derived | 2                    |
+| `spr_salt_warden`  | `enemy_salt_warden.png` synth  | yes (synth) | yes (synth) | yes (synth) | derived | derived | 2                    |
+| `spr_ash_scout`    | `enemy_ash_scout.png` synth    | yes (synth) | yes (synth) | yes (synth) | derived | derived | 2                    |
+| `spr_ash_bramble`  | `enemy_ash_bramble.png` synth  | yes (synth) | yes (synth) | yes (synth) | derived | derived | 2                    |
+| `spr_rift_mender`  | `enemy_rift_mender.png` synth  | yes (synth) | yes (synth) | yes (synth) | derived | derived | 2                    |
 
 Legacy AI pedestals (`enemy_shade.png` etc.) are **not** used for sheets;
-LPC path owns shade/crawler/wisp/bat. Rift lord is `synthOnly` bob/lunge from
-idle. Runtime: `Enemy.flashHit` / `playDeath` use sheet anims (tint/fade
-fallback if missing).
+LPC path owns shade/crawler/wisp/bat. Biome bosses + Ash Scout / Ash Bramble /
+Rift Mender are `synthOnly` bob/lunge from idle. Runtime: `Enemy.flashHit` /
+`playDeath` use sheet anims (tint/fade fallback if missing).
 
 ## AnimGen / runtime
 

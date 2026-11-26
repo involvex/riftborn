@@ -90,6 +90,72 @@
         "walk_2": "heavy step right foot forward",
         "attack": "both arms raised slamming downward"
       }
+    },
+    {
+      "id": "enemy_crystal_lord",
+      "look": "tall jagged cyan crystal humanoid, hollow glow, floating shards, no sword",
+      "poses": {
+        "idle": "standing idle, shards hovering",
+        "walk_0": "crystal stride left",
+        "walk_1": "mid-stride, shards trailing",
+        "walk_2": "crystal stride right",
+        "attack": "shards lunging forward"
+      }
+    },
+    {
+      "id": "enemy_grove_alpha",
+      "look": "huge moss wolf, thorn mane, on all fours",
+      "poses": {
+        "idle": "crouched idle on all fours",
+        "walk_0": "heavy paw left forward",
+        "walk_1": "mid-lope, mane bristling",
+        "walk_2": "heavy paw right forward",
+        "attack": "lunging bite with jaws open"
+      }
+    },
+    {
+      "id": "enemy_salt_warden",
+      "look": "tall bleached bone sentinel, salt-white cloak, staff",
+      "poses": {
+        "idle": "standing idle with staff upright",
+        "walk_0": "slow step left, cloak trailing",
+        "walk_1": "mid-step, staff planted",
+        "walk_2": "slow step right",
+        "attack": "staff thrust forward"
+      }
+    },
+    {
+      "id": "enemy_ash_scout",
+      "look": "lean bronze-ash ranger, spear and ember lantern",
+      "poses": {
+        "idle": "standing idle, spear planted",
+        "walk_0": "scout stride left",
+        "walk_1": "mid-stride, lantern swing",
+        "walk_2": "scout stride right",
+        "attack": "spear thrust forward"
+      }
+    },
+    {
+      "id": "enemy_ash_bramble",
+      "look": "shambling thorn-bush beast, vine limbs",
+      "poses": {
+        "idle": "hunched idle, vines still",
+        "walk_0": "shambling step left",
+        "walk_1": "mid-shamble, thorns bristling",
+        "walk_2": "shambling step right",
+        "attack": "vine claws reaching forward"
+      }
+    },
+    {
+      "id": "enemy_rift_mender",
+      "look": "small floating green mend-spirit, soft leaf glow, no stinger",
+      "poses": {
+        "idle": "hovering idle, leaves soft",
+        "walk_0": "drifting left",
+        "walk_1": "drifting forward, glow stretched",
+        "walk_2": "drifting right",
+        "attack": "leaf glow pulsing outward"
+      }
     }
   ]
 }

@@ -95,6 +95,42 @@ const MAP = [
     out: 'spr_enemy_rift_wraith.png',
     synthOnly: true,
   },
+  {
+    base: 'enemy_crystal_lord',
+    idle: 'enemy_crystal_lord.png',
+    out: 'spr_crystal_lord.png',
+    synthOnly: true,
+  },
+  {
+    base: 'enemy_grove_alpha',
+    idle: 'enemy_grove_alpha.png',
+    out: 'spr_grove_alpha.png',
+    synthOnly: true,
+  },
+  {
+    base: 'enemy_salt_warden',
+    idle: 'enemy_salt_warden.png',
+    out: 'spr_salt_warden.png',
+    synthOnly: true,
+  },
+  {
+    base: 'enemy_ash_scout',
+    idle: 'enemy_ash_scout.png',
+    out: 'spr_ash_scout.png',
+    synthOnly: true,
+  },
+  {
+    base: 'enemy_ash_bramble',
+    idle: 'enemy_ash_bramble.png',
+    out: 'spr_ash_bramble.png',
+    synthOnly: true,
+  },
+  {
+    base: 'enemy_rift_mender',
+    idle: 'enemy_rift_mender.png',
+    out: 'spr_rift_mender.png',
+    synthOnly: true,
+  },
 ];
 
 async function exists(p) {

@@ -62,6 +62,7 @@ Solo evenings, one shippable slice at a time. Prefer **feel → content → syst
 - **4pc skill glow** — ability bar gold rim on family skills while 4pc is worn
 - **Skill fork clarity (K)** — bar summary + ON/FORK/→ badges; replaced starters dim
 - **Hub sink proximity** — Mira/Bram toast + E prompt when a chase slot is open
+- **Unique boss / elite sprites** — Crystal / Grove / Salt bosses + Ash Scout / Ash Bramble / Rift Mender own sheets
 
 ## Done — feel & look (core loop)
 
@@ -126,16 +127,11 @@ In-rift choice, SHIFT fight, build fork, map ping, and named drop are in.
 
 _No open slice — pick the next loop beat after playtest, or park._
 
-| #   | Slice                      | Why it matters                          | Done when                                                              |
-| --- | -------------------------- | --------------------------------------- | ---------------------------------------------------------------------- |
-| ✓   | **Rare set variety**       | One set per class; set armor too common | Alternate set per class; set drops ~12–28%; chase owned incomplete set |
-| ✓   | **Set drop juice**         | Rare sets still felt like generic loot  | Magic+ floor on set armor; chase toast names set / slot / need         |
-| ✓   | **Set bonus UI (C)**       | Active sets only; other kit invisible   | Both class kits; ✓/· 2pc·4pc; need slots from bag + worn               |
-| ✓   | **Hub set sink**           | Set chase only advances in rifts        | Mira chase; Bram Set Patch; forge bounty pays missing slot             |
-| ✓   | **Set breakpoint toast**   | Activating 2pc/4pc was silent           | Equip toast names bonus; magic/rare sting                              |
-| ✓   | **4pc skill glow**         | Family buff invisible on the bar        | Gold rim on buffed skills while 4pc worn                               |
-| ✓   | **Skill fork clarity (K)** | Second forks easy to miss vs starters   | Header bar 1–4; ON/FORK/→ badges; replaced nodes dim                   |
-| ✓   | **Hub sink proximity**     | Mira/Bram chase easy to walk past       | Enter toast + E · Chase/Patch prompt when sink open                    |
+## Done — unique boss / elite sprites
+
+| #   | Slice                       | Why it matters                                                  | Done when                                                                                            |
+| --- | --------------------------- | --------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
+| ✓   | **Unique boss / elite art** | Biome bosses + Ash Scout / Bramble / Mender shared trash sheets | Distinct `spr_*` sheets; four boss keys unique; painted idles via Bing → `process-sprites` synthOnly |
 
 Skip inventing new frameworks — extend `WorldArt` / `WorldScene` /
 `Npc` / `LootChest` / `public/assets/props/`.
