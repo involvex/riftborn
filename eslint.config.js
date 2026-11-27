@@ -14,6 +14,8 @@ export default tseslint.config(
       'artifacts/**',
       'test-results/**',
       'playwright-report/**',
+      // Google Apps Script paste-ins (Apps Script globals; not Node)
+      'scripts/*-appscript.js',
     ],
   },
   js.configs.recommended,
