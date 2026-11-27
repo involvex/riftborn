@@ -31,6 +31,7 @@ In-game press **P**. If port `8787` is busy the server auto-picks the next free 
 bun run desktop          # Vite + Electron together
 bun run desktop:prod     # uses dist/ (no Vite needed)
 bun run build:portable   # → release/Riftborn-*-portable.exe
+bun run build:msstore    # → release/Riftborn-*-store.appx (MS Store)
 ```
 
 ### Releases

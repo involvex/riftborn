@@ -40,3 +40,4 @@ artifacts/*
 .phases/
 .superpowers/
 .env
+electron/build/msstore-builder.json

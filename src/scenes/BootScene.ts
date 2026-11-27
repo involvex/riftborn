@@ -22,6 +22,7 @@ import {
   shakeStrengthLabel,
   shiftFxIntensityLabel,
 } from '../core/SettingsStore';
+import { isFullscreen, setFullscreen } from '../core/Fullscreen';
 import { Events, gameEvents } from '../core/EventBus';
 import { navEnterTitle, navSetOverlay } from '../core/GameNavState';
 import {
@@ -399,7 +400,11 @@ export class BootScene extends Phaser.Scene {
     const { width: cssW, height: cssH, scale: s } = uiLayoutSpace(this);
     const compact = cssH < 520;
     const store = settingsStore.get();
-    const rows: { label: string; onClick: () => void }[] = [
+    const rows: {
+      label: string;
+      onClick: () => void;
+      interactive?: boolean;
+    }[] = [
       {
         label: `Master vol: ${Math.round(store.masterVolume * 100)}%`,
         onClick: () => {
@@ -490,6 +495,22 @@ export class BootScene extends Phaser.Scene {
           this.renderTitleSettings();
         },
       },
+      {
+        label: `Fullscreen: ${store.fullscreen || isFullscreen() ? 'ON' : 'OFF'} (F11)`,
+        onClick: () => {
+          const want = !(store.fullscreen || isFullscreen());
+          void setFullscreen(want).then((on) => {
+            settingsStore.save({ fullscreen: on });
+            gameEvents.emit(Events.SETTINGS_CHANGED);
+            this.renderTitleSettings();
+          });
+        },
+      },
+      {
+        label: `v${__APP_VERSION__}`,
+        onClick: () => {},
+        interactive: false,
+      },
     ];
 
     const topCss = cssH * (compact ? 0.16 : 0.18);
@@ -509,6 +530,17 @@ export class BootScene extends Phaser.Scene {
       const rowIdx = cols === 1 ? i : i % perCol;
       const x = uiPx(originXCss + col * colGapCss, s);
       const y = uiPx(topCss + rowIdx * rowStepCss + rowStepCss * 0.35, s);
+      if (row.interactive === false) {
+        const label = this.add
+          .text(x, y, row.label, {
+            fontFamily: 'Georgia, serif',
+            fontSize: uiFont(this, compact ? 12 : 14, 11, 16),
+            color: '#8a8494',
+          })
+          .setOrigin(0.5);
+        this.settingsBody.add(label);
+        return;
+      }
       const btn = this.makeButton(x, y, row.label, row.onClick);
       this.settingsBody.add(btn);
     });

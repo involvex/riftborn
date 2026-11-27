@@ -21,7 +21,97 @@ git push origin v0.1.0
 Each release includes:
 
 - **Windows portable**: `Riftborn-<version>-portable.exe` (built via `bun run build:portable`)
+- **Windows Store AppX**: `Riftborn-<version>-store.appx` (built via `bun run build:msstore`)
 - **Android APK**: `Riftborn-<version>.apk` (built via `bun run mobile:build` with CI-safe Android build)
+
+## Microsoft Store (tester / hidden listing)
+
+Desktop Store builds are **AppX** (MSIX product). Portable EXE is for
+GitHub / friends only — it is not the Store package.
+
+### Build
+
+1. Put Partner Center **Product identity** in `.env` either as:
+   - `KEY=value` (see [`.env.example`](../.env.example)), or
+   - the pasted Product identity page (tab-separated
+     `Package/Identity/Name` lines — `build:msstore` parses both).
+2. `bun run build:msstore` → `release/Riftborn-<version>-store.appx`
+3. Microsoft re-signs on ingest; local code signing is not required
+   (`CSC_IDENTITY_AUTO_DISCOVERY=false`). The produced `.appx` is
+   intentionally unsigned — `Add-AppxPackage` sideload will fail with
+   `0x800B0100` until Store certification re-signs it (or you sign for
+   enterprise sideload). Smoke the same game via
+   `bun run desktop:prod` / portable EXE.
+
+### First submission (human — Partner Center)
+
+1. Complete listing: description (below), IARC age rating, category
+   **Games → Action / Role playing**, support contact.
+2. Privacy URL (after Pages deploy):
+   `https://involvex.github.io/riftborn/privacy.html`
+3. **Pricing and availability → Discoverability:** available but
+   **not discoverable**; choose **Stop acquisition** so only
+   promotional-code holders (or prior owners) can install.
+4. Do **not** switch to Public audience (one-way lock).
+5. Upload the `.appx` under **Packages**, then **Submit**.
+6. After **Published**: **Promotional codes** → generate and send to
+   testers (Microsoft account required on their Windows sign-in).
+
+Package flights appear only after a submission is published. Later
+tester updates can reuse the same hidden listing (redeemers get Store
+auto-updates) or use flights for a riskier subgroup.
+
+### Later package-only updates (CLI)
+
+```text
+msstore apps get <productId>
+msstore publish -i release/Riftborn-<ver>-store.appx -id <productId> --noCommit
+# confirm draft still has Stop acquisition, then:
+msstore submission publish <productId>
+```
+
+Do not pass `--flightId` until a flight exists. Prefer `--noCommit` on
+the first CLI upload so you can inspect the draft.
+
+### Store listing copy (paste-ready)
+
+**Short description**
+
+2.5D isometric ARPG — hub town, procedural rifts, SHIFT ash/shadow
+layers, gear sets, and a Diablo-leaning combat loop.
+
+**Full description**
+
+Riftborn is a Diablo-leaning isometric ARPG: safe hub, wilderness POIs,
+and procedural rifts across four biomes (Ash, Crystal, Grove, Salt).
+
+SHIFT: kills fill shift energy. Press Q to swap Ash and Shadow layers —
+phase through foes on the other layer and open layer-locked gates. Loop:
+explore town → enter the Obelisk (R) → clear packs → Rift Lord → Exit
+portal. Mid-rift reloads resume the same run.
+
+Classes: Warrior, Mystic, Mage — four abilities each plus one passive.
+Depth D1–D10; random rift mods. Chase class armor sets. Optional local
+LAN co-op (P) is a hub sandbox prototype — not online multiplayer.
+
+Controls: WASD move, LMB attack, 1–4 skills, E interact, F craft,
+Q SHIFT, R rift, B town, I/M/K/Esc menus. F11 fullscreen.
+
+**Credits / disclosure**
+
+- Audio: procedural CC0 (`public/assets/ATTRIBUTION.md`).
+- LPC monsters (Charles Sanchez): CC-BY-SA 3.0 → shade / crawler / wisp / bat.
+- Particles (hackcraft.de): CC-BY.
+- Some character/enemy sheet sources used generative image tools
+  (Bing / Hugging Face) then processed into game sprites; disclose as
+  generative art in Partner Center if asked.
+
+### Store screenshots
+
+Partner Center desktop wants **1920×1080** (or 1366×768) stills — at
+least four: hub, rift/SHIFT, combat, UI. Existing
+`docs/screenshots/*.png` may need a resize or a smoke capture at that
+size. GIF is itch-only.
 
 ## Android signing (optional)
 
@@ -64,5 +154,6 @@ Der Landingpage-Workflow baut zusätzlich das Spiel unter [`/play/`](https://inv
 ## Local builds
 
 - Windows portable: `bun run build:portable`
+- Windows Store AppX: `bun run build:msstore` → `release/Riftborn-*-store.appx`
 - Android APK (release): `bun run mobile:build`
 - itch.io Web-ZIP: `bun run build:itch` → `release/riftborn-web.zip`

@@ -146,7 +146,47 @@ await sharp({
   .png()
   .toFile(path.join(mobileAssets, 'splash-icon.png'));
 
+// Microsoft Store AppX tile logos (electron-builder buildResources/appx)
+const appxDir = path.join(buildDir, 'appx');
+fs.mkdirSync(appxDir, { recursive: true });
+const appxTiles = [
+  { name: 'StoreLogo.png', w: 50, h: 50 },
+  { name: 'Square44x44Logo.png', w: 44, h: 44 },
+  { name: 'Square71x71Logo.png', w: 71, h: 71 },
+  { name: 'Square150x150Logo.png', w: 150, h: 150 },
+  { name: 'Square310x310Logo.png', w: 310, h: 310 },
+  { name: 'Wide310x150Logo.png', w: 310, h: 150 },
+];
+for (const tile of appxTiles) {
+  const out = path.join(appxDir, tile.name);
+  if (tile.w === tile.h) {
+    await sharp(master1024).resize(tile.w, tile.h).png().toFile(out);
+  } else {
+    // Wide tile: brand bar + centered square mark
+    const mark = Math.min(tile.h - 16, 120);
+    const markBuf = await sharp(master1024).resize(mark, mark).png().toBuffer();
+    await sharp({
+      create: {
+        width: tile.w,
+        height: tile.h,
+        channels: 3,
+        background: BG,
+      },
+    })
+      .composite([
+        {
+          input: markBuf,
+          top: Math.round((tile.h - mark) / 2),
+          left: Math.round((tile.w - mark) / 2),
+        },
+      ])
+      .png()
+      .toFile(out);
+  }
+}
+
 console.log('Wrote', pngPath);
 console.log('Wrote', icoPath);
 console.log('Wrote', faviconOut);
 console.log('Wrote mobile/assets/{icon,splash,android-icon-*}.png');
+console.log('Wrote electron/build/appx/{StoreLogo,Square*,Wide*}.png');

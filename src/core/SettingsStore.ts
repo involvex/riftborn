@@ -46,6 +46,8 @@ export type GameSettings = {
    * Low remains the FPS escape hatch. Override in Settings.
    */
   graphicsQuality: GraphicsQualitySetting;
+  /** Desktop fullscreen (F11 / Settings). Touch ignores. */
+  fullscreen: boolean;
   hotkeys: HotkeyMap;
 };
 
@@ -83,6 +85,7 @@ export const DEFAULT_SETTINGS: GameSettings = {
   haptics: true,
   shiftFxIntensity: 1,
   graphicsQuality: 'auto',
+  fullscreen: false,
   hotkeys: { ...DEFAULT_HOTKEYS },
 };
 
@@ -167,6 +170,7 @@ export class SettingsStore {
           parsed.shiftFxIntensity ?? DEFAULT_SETTINGS.shiftFxIntensity,
         ),
         graphicsQuality: parseGraphicsQuality(parsed.graphicsQuality),
+        fullscreen: parsed.fullscreen ?? DEFAULT_SETTINGS.fullscreen,
         hotkeys: {
           ...DEFAULT_HOTKEYS,
           ...(parsed.hotkeys ?? {}),

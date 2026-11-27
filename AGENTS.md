@@ -38,7 +38,14 @@ bun run test:smoke       # Playwright hub + SHIFT specs → artifacts/
 bunx playwright install chromium   # once per machine
 ```
 
-Desktop: `bun run desktop` / `bun run desktop:prod`. Icons: put art in `electron/build/source-icon.jpg` then `bun run icons` (Electron ICO + Expo `mobile/assets` + favicon).
+Desktop: `bun run desktop` / `bun run desktop:prod`. Icons: put art in `electron/build/source-icon.jpg` then `bun run icons` (Electron ICO + Expo `mobile/assets` + favicon + Store AppX tiles).
+
+Microsoft Store AppX (tester / hidden listing): put Partner Center
+Product identity in `.env` (KEY=value per `.env.example`, or paste the
+identity page). Then `bun run build:msstore` →
+`release/Riftborn-*-store.appx`. First upload + promo codes: see
+[`docs/RELEASE.md`](docs/RELEASE.md). Privacy page:
+`site/privacy.html` → `https://involvex.github.io/riftborn/privacy.html`.
 
 Mobile (Expo WebView, not a React Native rewrite of the game):
 

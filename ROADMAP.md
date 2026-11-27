@@ -160,6 +160,7 @@ Skip inventing new frameworks — extend `WorldArt` / `WorldScene` /
 
 - Co-op rifts + authoritative loot / gear sync (hub sandbox stays prototype)
 - App Store packaging for Expo shell
+- Microsoft Store: finish Partner Center listing (IARC, screenshots 1920×1080), submit hidden + promo-code tester build (`bun run build:msstore` → `docs/RELEASE.md`)
 - Seasons, trading, seamless open world
 
 ## Done — systems polish

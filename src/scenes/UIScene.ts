@@ -21,6 +21,7 @@ import {
   type HotkeyAction,
   DEFAULT_HOTKEYS,
 } from '../core/SettingsStore';
+import { isFullscreen, setFullscreen } from '../core/Fullscreen';
 import { DamageNumberPool } from '../ui/DamageNumberPool';
 import {
   attachOverlayDismiss,
@@ -1199,7 +1200,11 @@ export class UIScene extends Phaser.Scene {
       const touch = shouldShowTouchControls();
       const panelH = this.menuBg.height;
       const panelW = this.menuBg.width;
-      const rows: { label: string; onClick: () => void }[] = [
+      const rows: {
+        label: string;
+        onClick: () => void;
+        interactive?: boolean;
+      }[] = [
         {
           label: `Master vol: ${Math.round(s.masterVolume * 100)}%`,
           onClick: () => {
@@ -1306,11 +1311,27 @@ export class UIScene extends Phaser.Scene {
           },
         },
         {
+          label: `Fullscreen: ${s.fullscreen || isFullscreen() ? 'ON' : 'OFF'} (F11)`,
+          onClick: () => {
+            const want = !(s.fullscreen || isFullscreen());
+            void setFullscreen(want).then((on) => {
+              settingsStore.save({ fullscreen: on });
+              gameEvents.emit(Events.SETTINGS_CHANGED);
+              this.renderMenuPage();
+            });
+          },
+        },
+        {
           label: 'Hotkeys…',
           onClick: () => {
             this.menuPage = 'hotkeys';
             this.renderMenuPage();
           },
+        },
+        {
+          label: `v${__APP_VERSION__}`,
+          onClick: () => {},
+          interactive: false,
         },
         {
           label: 'Back',
@@ -1340,6 +1361,17 @@ export class UIScene extends Phaser.Scene {
         const rowIdx = cols === 1 ? i : i % perCol;
         const x = originX + col * colGap;
         const y = row0 + rowIdx * rowStep;
+        if (row.interactive === false) {
+          const t = this.add
+            .text(x, y, row.label, {
+              fontFamily: 'Georgia, serif',
+              fontSize: `${Math.round(14 * rs)}px`,
+              color: '#8a8494',
+            })
+            .setOrigin(0.5);
+          this.menuBody.add(t);
+          return;
+        }
         const btn = this.menuButton(y, row.label, row.onClick);
         btn.setX(x);
       });

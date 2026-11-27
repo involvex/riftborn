@@ -1,4 +1,4 @@
-const { app, BrowserWindow, dialog, shell } = require('electron');
+const { app, BrowserWindow, dialog, screen, shell } = require('electron');
 const fs = require('fs');
 const path = require('path');
 
@@ -6,6 +6,66 @@ const forceDist =
   app.isPackaged ||
   process.argv.includes('--dist') ||
   process.env.ELECTRON_FORCE_DIST === '1';
+
+const BOUNDS_FILE = 'window-bounds.json';
+
+function boundsPath() {
+  return path.join(app.getPath('userData'), BOUNDS_FILE);
+}
+
+function loadBounds() {
+  try {
+    const raw = fs.readFileSync(boundsPath(), 'utf8');
+    const parsed = JSON.parse(raw);
+    if (
+      typeof parsed?.width === 'number' &&
+      typeof parsed?.height === 'number'
+    ) {
+      return parsed;
+    }
+  } catch {
+    /* first run */
+  }
+  return null;
+}
+
+function saveBounds(win) {
+  if (!win || win.isDestroyed()) return;
+  if (win.isMinimized()) return;
+  const bounds = win.getBounds();
+  const payload = {
+    x: bounds.x,
+    y: bounds.y,
+    width: bounds.width,
+    height: bounds.height,
+    isMaximized: win.isMaximized(),
+  };
+  try {
+    fs.writeFileSync(boundsPath(), JSON.stringify(payload));
+  } catch {
+    /* ignore */
+  }
+}
+
+function clampBounds(bounds) {
+  const displays = screen.getAllDisplays();
+  const intersects = displays.some((d) => {
+    const b = d.bounds;
+    return (
+      bounds.x < b.x + b.width &&
+      bounds.x + bounds.width > b.x &&
+      bounds.y < b.y + b.height &&
+      bounds.y + bounds.height > b.y
+    );
+  });
+  if (intersects) return bounds;
+  const primary = screen.getPrimaryDisplay().workArea;
+  return {
+    ...bounds,
+    x: primary.x + 40,
+    y: primary.y + 40,
+  };
+}
 
 function findDistIndex() {
   const candidates = [
@@ -55,9 +115,10 @@ async function loadApp(win) {
 
 async function createWindow() {
   const iconPath = path.join(__dirname, 'build', 'icon.png');
-  const win = new BrowserWindow({
-    width: 1280,
-    height: 720,
+  const saved = loadBounds();
+  const opts = {
+    width: saved?.width ?? 1280,
+    height: saved?.height ?? 720,
     minWidth: 960,
     minHeight: 540,
     title: 'Riftborn',
@@ -69,10 +130,30 @@ async function createWindow() {
       nodeIntegration: false,
       sandbox: true,
     },
-  });
+  };
+  if (typeof saved?.x === 'number' && typeof saved?.y === 'number') {
+    const clamped = clampBounds({
+      x: saved.x,
+      y: saved.y,
+      width: opts.width,
+      height: opts.height,
+    });
+    opts.x = clamped.x;
+    opts.y = clamped.y;
+  }
+
+  const win = new BrowserWindow(opts);
 
   win.removeMenu();
-  win.once('ready-to-show', () => win.show());
+  win.once('ready-to-show', () => {
+    if (saved?.isMaximized) win.maximize();
+    win.show();
+  });
+
+  const persist = () => saveBounds(win);
+  win.on('resize', persist);
+  win.on('move', persist);
+  win.on('close', persist);
 
   win.webContents.setWindowOpenHandler(({ url }) => {
     shell.openExternal(url);
@@ -80,6 +161,11 @@ async function createWindow() {
   });
 
   await loadApp(win);
+}
+
+// Taskbar grouping: portable uses appId; Store AppX overrides via identity.
+if (process.platform === 'win32') {
+  app.setAppUserModelId(process.env.APPX_IDENTITY_NAME || 'dev.riftborn.game');
 }
 
 app.whenReady().then(() => {
