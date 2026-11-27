@@ -12,7 +12,10 @@ import {
   gameSizeForProfile,
   readCssViewport,
 } from './core/GraphicsQuality';
-import { installFullscreenControls } from './core/Fullscreen';
+import {
+  applyFullscreenSetting,
+  installFullscreenControls,
+} from './core/Fullscreen';
 
 const parent = document.getElementById('app');
 // Logical size = CSS viewport (never physical/DPR pixels).
@@ -54,6 +57,7 @@ const game = new Phaser.Game({
 
 applyGraphicsProfile(game);
 installFullscreenControls();
+void applyFullscreenSetting();
 
 /** Android / browser Back stays in-game until the title screen. */
 const backHandlers = {

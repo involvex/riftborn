@@ -63,6 +63,8 @@ Solo evenings, one shippable slice at a time. Prefer **feel → content → syst
 - **Skill fork clarity (K)** — bar summary + ON/FORK/→ badges; replaced starters dim
 - **Hub sink proximity** — Mira/Bram toast + E prompt when a chase slot is open
 - **Unique boss / elite sprites** — Crystal / Grove / Salt bosses + Ash Scout / Ash Bramble / Rift Mender own sheets
+- **Microsoft Store tester build** — AppX via `bun run build:msstore`; hidden listing + promo codes live ([9PK475MX7JFQ](https://apps.microsoft.com/store/detail/9PK475MX7JFQ)); CI token scope + `openExternal` allowlist
+- **Store tester triage (v0.2.2)** — skip AUMID override under `process.windowsStore`; restore fullscreen setting on boot; Store URL on site + RELEASE; package update path documented
 
 ## Done — feel & look (core loop)
 
@@ -127,7 +129,12 @@ In-rift choice, SHIFT fight, build fork, map ping, and named drop are in.
 
 ## Now
 
-_(empty — pick the next slice from Later)_
+Post-Store feature track. One unchecked slice at a time (`/ship`).
+
+| #   | Slice                     | Why it matters                                      | Done when                                                                                     |
+| --- | ------------------------- | --------------------------------------------------- | --------------------------------------------------------------------------------------------- |
+| ☐   | **Hero 8-dir sheets**     | Heroes still 1-row flip while trash has facing rows | Warrior/Mystic/Mage idle+walk multi-row sheets in `game/`; attack can stay synth              |
+| ☐   | **Desktop chrome polish** | Store players live in Electron, not the browser tab | Window title/taskbar, first-run tutorial skip/restore, F11 + settings path obvious on desktop |
 
 ## Done — 8-dir sprite rows
 
@@ -156,12 +163,37 @@ _(empty — pick the next slice from Later)_
 Skip inventing new frameworks — extend `WorldArt` / `WorldScene` /
 `Npc` / `LootChest` / `public/assets/props/`.
 
-## Later (parked)
+## Later (feature backlog)
 
+Ordered roughly by leverage for a solo ARPG after the Store tester loop.
+
+### Content & chase
+
+- **Named uniques** — 1–2 boss/elite uniques per biome (not full Diablo DB)
+- **Fifth rift biome** — new floor pack + boss signature + craft sink
+- **Bounty board season 2** — weekly-ish rotating objectives (local clock)
+- **Stash / shared bank** — cross-character mats + gear parking (3 slots)
+
+### Combat & builds
+
+- **Active skill gems / runes lite** — socket one modifier on a bar skill
+- **Elite affix telegraph** — named pack mods with readable windups
+- **Boss phase 2** — one biome lord gets a clear second pattern
+
+### Co-op & platforms
+
+- [ ] Share Store tester build: free announcement draft in `SHARE.md`
 - Co-op rifts + authoritative loot / gear sync (hub sandbox stays prototype)
+- Package flight for riskier Store builds (after stable tester baseline)
+- Public Store discoverability (only when stop-acquisition is intentionally lifted)
 - App Store packaging for Expo shell
-- Microsoft Store: finish Partner Center listing (IARC, screenshots 1920×1080), submit hidden + promo-code tester build (`bun run build:msstore` → `docs/RELEASE.md`)
+- itch.io desktop channel parity with Store version tags
+- Follow-up Store triage from promo redeemers (crash/blocker list → next package)
+
+### Systems / long shots
+
 - Seasons, trading, seamless open world
+- Cloud save / Microsoft account sync (only if Store demands it)
 
 ## Done — systems polish
 

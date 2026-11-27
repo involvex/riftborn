@@ -40,10 +40,11 @@ bunx playwright install chromium   # once per machine
 
 Desktop: `bun run desktop` / `bun run desktop:prod`. Icons: put art in `electron/build/source-icon.jpg` then `bun run icons` (Electron ICO + Expo `mobile/assets` + favicon + Store AppX tiles).
 
-Microsoft Store AppX (tester / hidden listing): put Partner Center
-Product identity in `.env` (KEY=value per `.env.example`, or paste the
-identity page). Then `bun run build:msstore` →
-`release/Riftborn-*-store.appx`. First upload + promo codes: see
+Microsoft Store AppX (tester / hidden listing):
+[9PK475MX7JFQ](https://apps.microsoft.com/store/detail/9PK475MX7JFQ).
+Put Partner Center identity in `.env` (KEY=value per `.env.example`,
+or paste the identity page). Then `bun run build:msstore` →
+`release/Riftborn-*-store.appx`. Updates + promo notes:
 [`docs/RELEASE.md`](docs/RELEASE.md). Privacy page:
 `site/privacy.html` → `https://involvex.github.io/riftborn/privacy.html`.
 
@@ -169,3 +170,8 @@ Save version is in `SaveStore` / `CharacterSave` (v5). Mid-rift runs persist via
 - Don’t assert gameplay via DOM text alone; use `__RIFTBORN` or smoke.
 - Don’t commit `artifacts/*.png` (gitignored); keep `artifacts/.gitkeep`.
 - Don’t push without explicit user permission.
+
+## Current work
+
+See [`ROADMAP.md`](ROADMAP.md) — **Now** is hero 8-dir sheets → desktop
+chrome polish; feature backlog under **Later**.
