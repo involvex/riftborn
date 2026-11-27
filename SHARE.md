@@ -11,16 +11,17 @@ Windows friends who can redeem a Microsoft Store promo code.
 
 ### Announcement
 
-Riftborn is on the Microsoft Store as a hidden tester listing:
-https://apps.microsoft.com/store/detail/9PK475MX7JFQ — use the promo
-code I send (Microsoft account on that PC). Hub → rifts → boss → exit;
-report your one worst bug. Portable EXE and browser play stay available
-if Store redeem fails.
+Riftborn is on the Microsoft Store as a hidden tester listing.
+Request a key (emailed, one per person):
+https://involvex.github.io/riftborn/beta.html
+Store: https://apps.microsoft.com/store/detail/9PK475MX7JFQ
+(Microsoft account on that Windows PC). Hub → rifts → boss → exit;
+report your one worst bug.
 
 ### Free channels (pick one)
 
-- DM / Discord with promo code + Store link
-- GitHub Discussions (no codes in public posts — codes are single-use)
+- Share the beta form / Pages link (never paste raw codes in public)
+- DM / Discord with the beta.html link
 
 ### Do not
 
@@ -32,9 +33,10 @@ if Store redeem fails.
 
 **Microsoft Store (tester / promo code)**
 
+Key request form: https://involvex.github.io/riftborn/beta.html  
 Listing: https://apps.microsoft.com/store/detail/9PK475MX7JFQ  
-Package: `bun run build:msstore` → `release/Riftborn-<ver>-store.appx`  
-Publish update: see `docs/RELEASE.md` (`msstore publish … -id 9PK475MX7JFQ`).
+Ops: `docs/BETA_KEYS.md` · Package: `bun run build:msstore`  
+Publish update: see `docs/RELEASE.md`.
 
 **Desktop (Windows portable)**
 

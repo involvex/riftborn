@@ -47,6 +47,9 @@ or paste the identity page). Then `bun run build:msstore` →
 `release/Riftborn-*-store.appx`. Updates + promo notes:
 [`docs/RELEASE.md`](docs/RELEASE.md). Privacy page:
 `site/privacy.html` → `https://involvex.github.io/riftborn/privacy.html`.
+Beta key form (no codes in git): `site/beta.html` →
+`https://involvex.github.io/riftborn/beta.html` — ops in
+[`docs/BETA_KEYS.md`](docs/BETA_KEYS.md).
 
 Mobile (Expo WebView, not a React Native rewrite of the game):
 
