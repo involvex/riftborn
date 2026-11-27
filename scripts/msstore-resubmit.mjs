@@ -10,7 +10,10 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const productId = '9PK475MX7JFQ';
 const privacyUrl = 'https://involvex.github.io/riftborn/privacy.html';
 const uploadDir = path.join(root, 'artifacts', 'msstore-upload');
-const pkgName = 'Riftborn-0.2.1-store.msix';
+const appVersion = JSON.parse(
+  fs.readFileSync(path.join(root, 'package.json'), 'utf8'),
+).version;
+const pkgName = `Riftborn-${appVersion}-store.msix`;
 const pkgSrc = path.join(uploadDir, pkgName);
 const zipPath = path.join(uploadDir, 'submission.zip');
 const patchedPath = path.join(root, 'artifacts', 'msstore-draft-patched.json');
@@ -157,8 +160,7 @@ const patched = {
           'Depth D1–D10 with rift modifiers',
           'Local LAN co-op hub sandbox (prototype)',
         ],
-        ReleaseNotes:
-          'Tester build 0.2.1 — hidden listing for promotional-code installs.',
+        ReleaseNotes: `Tester build ${appVersion} — hidden listing for promotional-code installs. Beta keys: https://involvex.github.io/riftborn/beta.html`,
         PrivacyPolicyUrl: privacyUrl,
         SupportContact: 'https://github.com/involvex/riftborn/issues',
         WebsiteUrl: 'https://involvex.github.io/riftborn/',

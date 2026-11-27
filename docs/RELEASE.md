@@ -85,6 +85,13 @@ via `msstore` CLI). Public giveaway form + sheet ops:
 [`docs/BETA_KEYS.md`](BETA_KEYS.md) · site:
 https://involvex.github.io/riftborn/beta.html
 
+Patch listing release notes to match `package.json` version (keeps
+hidden / stop-acquisition; commits a new submission):
+
+```text
+bun run scripts/msstore-patch-release-notes.mjs
+```
+
 ### Store listing copy (paste-ready)
 
 **Short description**
