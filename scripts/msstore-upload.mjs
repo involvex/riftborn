@@ -139,7 +139,11 @@ function patchSubmission(draft) {
       'Depth D1–D10 with rift modifiers',
       'Local LAN co-op hub sandbox (prototype)',
     ],
-    releaseNotes: `Tester build ${process.env.npm_package_version || '0.2.1'} — hidden listing, promotional-code install.`,
+    releaseNotes: `Tester build ${
+      process.env.npm_package_version ||
+      JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'))
+        .version
+    } — hidden listing for promotional-code installs. Beta keys: https://involvex.github.io/riftborn/beta.html`,
   };
   listings['en-us'] = en;
   next.listings = listings;

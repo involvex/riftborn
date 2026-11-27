@@ -58,8 +58,9 @@ GitHub / friends only — it is not the Store package.
    promotional-code holders (or prior owners) can install.
 4. Do **not** switch to Public audience (one-way lock).
 5. Upload the `.appx` under **Packages**, then **Submit**.
-6. After **Published**: **Promotional codes** → generate and send to
-   testers (Microsoft account required on their Windows sign-in).
+6. After **Published**: **Promotional codes** → import into the Beta
+   Tester sheet / form pipeline (`docs/BETA_KEYS.md`); public request
+   page: https://involvex.github.io/riftborn/beta.html
 
 Package flights appear only after a submission is published. Later
 tester updates can reuse the same hidden listing (redeemers get Store
@@ -80,7 +81,16 @@ Do not pass `--flightId` until a flight exists. Prefer `--noCommit` on
 the first CLI upload so you can inspect the draft.
 
 Promo codes: Partner Center → **Attract → Promo codes** (not available
-via `msstore` CLI).
+via `msstore` CLI). Public giveaway form + sheet ops:
+[`docs/BETA_KEYS.md`](BETA_KEYS.md) · site:
+https://involvex.github.io/riftborn/beta.html
+
+Patch listing release notes to match `package.json` version (keeps
+hidden / stop-acquisition; commits a new submission):
+
+```text
+bun run scripts/msstore-patch-release-notes.mjs
+```
 
 ### Store listing copy (paste-ready)
 

@@ -23,6 +23,10 @@ const zipPath = path.join(
   'submission.zip',
 );
 const privacyUrl = 'https://involvex.github.io/riftborn/privacy.html';
+const appVersion = JSON.parse(
+  fs.readFileSync(path.join(root, 'package.json'), 'utf8'),
+).version;
+const storePkgName = `Riftborn-${appVersion}-store.msix`;
 
 const SHORT =
   '2.5D isometric ARPG — hub town, procedural rifts, SHIFT ash/shadow layers, gear sets, and a Diablo-leaning combat loop.';
@@ -80,12 +84,7 @@ async function zipFiles(entries) {
   ]);
 }
 
-const pkgSrc = path.join(
-  root,
-  'artifacts',
-  'msstore-upload',
-  'Riftborn-0.2.1-store.msix',
-);
+const pkgSrc = path.join(root, 'artifacts', 'msstore-upload', storePkgName);
 if (!fs.existsSync(pkgSrc)) {
   console.error('Missing', pkgSrc);
   process.exit(1);
@@ -101,7 +100,7 @@ const shots = [
 ].filter((n) => fs.existsSync(path.join(shotDir, n)));
 
 console.log('[fulfill] building zip…');
-const zipEntries = [['Riftborn-0.2.1-store.msix', pkgSrc]];
+const zipEntries = [[storePkgName, pkgSrc]];
 for (const n of shots) {
   zipEntries.push([`images/${n}`, path.join(shotDir, n)]);
 }
@@ -143,7 +142,7 @@ const patched = {
   },
   ApplicationPackages: [
     {
-      FileName: 'Riftborn-0.2.1-store.msix',
+      FileName: storePkgName,
       FileStatus: 'PendingUpload',
       MinimumDirectXVersion: 'None',
       MinimumSystemRam: 'None',
@@ -163,8 +162,7 @@ const patched = {
           'Depth D1–D10 with rift modifiers',
           'Local LAN co-op hub sandbox (prototype)',
         ],
-        ReleaseNotes:
-          'Tester build 0.2.1 — hidden listing for promotional-code installs.',
+        ReleaseNotes: `Tester build ${appVersion} — hidden listing for promotional-code installs. Beta keys: https://involvex.github.io/riftborn/beta.html`,
         PrivacyPolicyUrl: privacyUrl,
         SupportContact: 'https://github.com/involvex/riftborn/issues',
         WebsiteUrl: 'https://involvex.github.io/riftborn/',

@@ -41,3 +41,9 @@ artifacts/*
 .superpowers/
 .env
 electron/build/msstore-builder.json
+
+# Microsoft Store promo codes (never commit)
+**/Beta Tester.tsv
+**/*promo*codes*.tsv
+**/*promotional*code*.csv
+**/msstore-codes*.tsv
