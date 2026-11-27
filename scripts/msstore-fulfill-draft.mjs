@@ -16,7 +16,12 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const productId = '9PK475MX7JFQ';
 const draftPath = path.join(root, 'artifacts', 'msstore-draft.json');
 const patchedPath = path.join(root, 'artifacts', 'msstore-draft-patched.json');
-const zipPath = path.join(root, 'artifacts', 'msstore-upload', 'submission.zip');
+const zipPath = path.join(
+  root,
+  'artifacts',
+  'msstore-upload',
+  'submission.zip',
+);
 const privacyUrl = 'https://involvex.github.io/riftborn/privacy.html';
 
 const SHORT =
@@ -158,7 +163,8 @@ const patched = {
           'Depth D1–D10 with rift modifiers',
           'Local LAN co-op hub sandbox (prototype)',
         ],
-        ReleaseNotes: 'Tester build 0.2.1 — hidden listing for promotional-code installs.',
+        ReleaseNotes:
+          'Tester build 0.2.1 — hidden listing for promotional-code installs.',
         PrivacyPolicyUrl: privacyUrl,
         SupportContact: 'https://github.com/involvex/riftborn/issues',
         WebsiteUrl: 'https://involvex.github.io/riftborn/',

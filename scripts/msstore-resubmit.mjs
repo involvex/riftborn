@@ -97,15 +97,7 @@ async function ensureZip() {
 console.log('[resubmit] creating draft via publish (expect interactive fail)…');
 await run(
   'msstore',
-  [
-    'publish',
-    pkgSrc,
-    '-id',
-    productId,
-    '--noCommit',
-    '--uploadTimeout',
-    '600',
-  ],
+  ['publish', pkgSrc, '-id', productId, '--noCommit', '--uploadTimeout', '600'],
   { allowFail: true },
 );
 
@@ -223,7 +215,9 @@ const put = await fetch(uploadUrl, {
   body: zipBuf,
 });
 if (!put.ok) {
-  throw new Error(`Blob upload ${put.status}: ${(await put.text()).slice(0, 400)}`);
+  throw new Error(
+    `Blob upload ${put.status}: ${(await put.text()).slice(0, 400)}`,
+  );
 }
 console.log('[resubmit] blob ok', put.status);
 
