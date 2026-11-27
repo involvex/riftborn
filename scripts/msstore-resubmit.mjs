@@ -267,6 +267,6 @@ try {
       2,
     ),
   );
-} catch (e) {
+} catch {
   console.log('get_after_commit:', (gotFinal.out + gotFinal.err).slice(0, 800));
 }
