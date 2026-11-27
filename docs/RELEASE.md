@@ -26,6 +26,10 @@ Each release includes:
 
 ## Microsoft Store (tester / hidden listing)
 
+**Live listing (promo-code / stop-acquisition):**
+[Riftborn on Microsoft Store](https://apps.microsoft.com/store/detail/9PK475MX7JFQ)
+(`9PK475MX7JFQ`). First published 2026-11-27.
+
 Desktop Store builds are **AppX** (MSIX product). Portable EXE is for
 GitHub / friends only — it is not the Store package.
 
@@ -64,14 +68,19 @@ auto-updates) or use flights for a riskier subgroup.
 ### Later package-only updates (CLI)
 
 ```text
-msstore apps get <productId>
-msstore publish -i release/Riftborn-<ver>-store.appx -id <productId> --noCommit
-# confirm draft still has Stop acquisition, then:
-msstore submission publish <productId>
+msstore apps get 9PK475MX7JFQ
+bun run build:msstore
+# Pass the .msix/.appx *file* path (directory -i triggers a broken npm probe):
+msstore publish release/Riftborn-<ver>-store.appx -id 9PK475MX7JFQ --noCommit --uploadTimeout 600
+# confirm draft still has Stop acquisition / Hidden, then:
+msstore submission publish 9PK475MX7JFQ
 ```
 
 Do not pass `--flightId` until a flight exists. Prefer `--noCommit` on
 the first CLI upload so you can inspect the draft.
+
+Promo codes: Partner Center → **Attract → Promo codes** (not available
+via `msstore` CLI).
 
 ### Store listing copy (paste-ready)
 

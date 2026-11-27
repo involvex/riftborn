@@ -170,8 +170,9 @@ async function createWindow() {
   await loadApp(win);
 }
 
-// Taskbar grouping: portable uses appId; Store AppX overrides via identity.
-if (process.platform === 'win32') {
+// Taskbar grouping for portable/dev. Store AppX already owns the AUMID —
+// overriding it with a non-package id breaks jump lists / toast grouping.
+if (process.platform === 'win32' && !process.windowsStore) {
   app.setAppUserModelId(process.env.APPX_IDENTITY_NAME || 'dev.riftborn.game');
 }
 

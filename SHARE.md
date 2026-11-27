@@ -3,7 +3,38 @@
 Send **one** build + this page. Ask for **one** top complaint — that
 becomes the next evening’s only task.
 
+## Share draft (Store testers)
+
+### Audience
+
+Windows friends who can redeem a Microsoft Store promo code.
+
+### Announcement
+
+Riftborn is on the Microsoft Store as a hidden tester listing:
+https://apps.microsoft.com/store/detail/9PK475MX7JFQ — use the promo
+code I send (Microsoft account on that PC). Hub → rifts → boss → exit;
+report your one worst bug. Portable EXE and browser play stay available
+if Store redeem fails.
+
+### Free channels (pick one)
+
+- DM / Discord with promo code + Store link
+- GitHub Discussions (no codes in public posts — codes are single-use)
+
+### Do not
+
+- Paid ads, boosts, or new SaaS accounts
+- Cold-message strangers at scale
+- Post promo codes publicly
+
 ## Builds
+
+**Microsoft Store (tester / promo code)**
+
+Listing: https://apps.microsoft.com/store/detail/9PK475MX7JFQ  
+Package: `bun run build:msstore` → `release/Riftborn-<ver>-store.appx`  
+Publish update: see `docs/RELEASE.md` (`msstore publish … -id 9PK475MX7JFQ`).
 
 **Desktop (Windows portable)**
 
@@ -11,7 +42,7 @@ becomes the next evening’s only task.
 bun run build:portable
 ```
 
-Artifact: `release/Riftborn-0.1.0-portable.exe` (~130 MB).  
+Artifact: `release/Riftborn-<version>-portable.exe`.  
 Close any running Riftborn.exe before rebuilding (Windows locks
 `release/win-unpacked`).
 
