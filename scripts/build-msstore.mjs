@@ -154,6 +154,9 @@ const builderConfig = {
     displayName: identity.displayName,
     languages: ['en-US'],
     backgroundColor: '#0a0c10',
+    // Store rejects MinVersion <= 10.0.17134.0
+    minVersion: '10.0.17763.0',
+    maxVersionTested: '10.0.22621.0',
     artifactName: 'Riftborn-${version}-store.${ext}',
   },
 };
