@@ -22,6 +22,7 @@ import {
   DEFAULT_HOTKEYS,
 } from '../core/SettingsStore';
 import { isFullscreen, setFullscreen } from '../core/Fullscreen';
+import { createVolumeSlider } from '../ui/VolumeSlider';
 import { DamageNumberPool } from '../ui/DamageNumberPool';
 import {
   attachOverlayDismiss,
@@ -1200,49 +1201,61 @@ export class UIScene extends Phaser.Scene {
       const touch = shouldShowTouchControls();
       const panelH = this.menuBg.height;
       const panelW = this.menuBg.width;
+      const sliderW = Math.min(280, Math.round(panelW * (touch ? 0.4 : 0.62)));
+      const sliderStep = Math.round((touch ? 36 : 44) * rs);
+      const volTop = -panelH / 2 + Math.round((touch ? 44 : 56) * rs);
+      const saveVol = (
+        partial: Partial<{
+          masterVolume: number;
+          sfxVolume: number;
+          musicVolume: number;
+        }>,
+        previewSfx = false,
+      ) => {
+        settingsStore.save(partial);
+        audioBus.applyMusicVolume();
+        gameEvents.emit(Events.SETTINGS_CHANGED);
+        if (previewSfx) audioBus.uiClick();
+      };
+      const volSliders: {
+        label: string;
+        value: number;
+        key: 'masterVolume' | 'sfxVolume' | 'musicVolume';
+        previewSfx?: boolean;
+      }[] = [
+        { label: 'Master', value: s.masterVolume, key: 'masterVolume' },
+        {
+          label: 'SFX',
+          value: s.sfxVolume,
+          key: 'sfxVolume',
+          previewSfx: true,
+        },
+        { label: 'Music', value: s.musicVolume, key: 'musicVolume' },
+      ];
+      volSliders.forEach((row, i) => {
+        const slider = createVolumeSlider(this, {
+          x: 0,
+          y: volTop + i * sliderStep,
+          width: sliderW,
+          label: row.label,
+          value: row.value,
+          compact: touch,
+          onChange: (v) => {
+            saveVol({ [row.key]: v }, row.previewSfx);
+          },
+        });
+        this.menuBody.add(slider);
+      });
       const rows: {
         label: string;
         onClick: () => void;
         interactive?: boolean;
       }[] = [
         {
-          label: `Master vol: ${Math.round(s.masterVolume * 100)}%`,
-          onClick: () => {
-            const next = (s.masterVolume + 0.1) % 1.1;
-            settingsStore.save({
-              masterVolume: Math.min(1, Number(next.toFixed(1))),
-            });
-            gameEvents.emit(Events.SETTINGS_CHANGED);
-            this.renderMenuPage();
-          },
-        },
-        {
-          label: `SFX vol: ${Math.round(s.sfxVolume * 100)}%`,
-          onClick: () => {
-            const next = (s.sfxVolume + 0.1) % 1.1;
-            settingsStore.save({
-              sfxVolume: Math.min(1, Number(next.toFixed(1))),
-            });
-            gameEvents.emit(Events.SETTINGS_CHANGED);
-            audioBus.uiClick();
-            this.renderMenuPage();
-          },
-        },
-        {
-          label: `Music vol: ${Math.round(s.musicVolume * 100)}%`,
-          onClick: () => {
-            const next = (s.musicVolume + 0.1) % 1.1;
-            settingsStore.save({
-              musicVolume: Math.min(1, Number(next.toFixed(1))),
-            });
-            gameEvents.emit(Events.SETTINGS_CHANGED);
-            this.renderMenuPage();
-          },
-        },
-        {
           label: `Mute: ${s.mute ? 'ON' : 'OFF'}`,
           onClick: () => {
             settingsStore.save({ mute: !s.mute });
+            audioBus.applyMusicVolume();
             gameEvents.emit(Events.SETTINGS_CHANGED);
             this.renderMenuPage();
           },
@@ -1341,9 +1354,10 @@ export class UIScene extends Phaser.Scene {
           },
         },
       ];
-      const topPad = Math.round((touch ? 40 : 52) * rs);
+      const row0 =
+        volTop + volSliders.length * sliderStep + Math.round(12 * rs);
       const bottomPad = Math.round((touch ? 28 : 36) * rs);
-      const band = Math.max(80, panelH - topPad - bottomPad);
+      const band = Math.max(80, panelH / 2 - bottomPad - row0);
       const cols = touch ? 2 : 1;
       const perCol = Math.ceil(rows.length / cols);
       const rowStep = Math.max(
@@ -1355,7 +1369,6 @@ export class UIScene extends Phaser.Scene {
       );
       const colGap = cols === 2 ? Math.round(panelW * 0.42) : 0;
       const originX = -((cols - 1) * colGap) / 2;
-      const row0 = -panelH / 2 + topPad;
       rows.forEach((row, i) => {
         const col = cols === 1 ? 0 : Math.floor(i / perCol);
         const rowIdx = cols === 1 ? i : i % perCol;

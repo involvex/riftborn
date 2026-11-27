@@ -216,9 +216,28 @@ class AudioBus {
     }
   }
 
+  /**
+   * Push current musicGain into the playing loop. If volume was 0 when
+   * playMusic ran (no BaseSound yet), recreate the track once gain > 0.
+   */
   applyMusicVolume(): void {
-    if (!this.music) return;
     const vol = this.musicGain();
+    const track = this.musicTrack;
+    const scene = this.scene;
+
+    if (!this.music && track && scene && vol > 0.001) {
+      const key = MUSIC_KEYS[track];
+      if (!scene.cache.audio.exists(key)) return;
+      try {
+        this.music = scene.sound.add(key, { loop: true, volume: vol });
+        this.music.play();
+      } catch {
+        this.music = null;
+      }
+      return;
+    }
+
+    if (!this.music) return;
     if ('setVolume' in this.music) {
       (this.music as Phaser.Sound.WebAudioSound).setVolume(vol);
     }

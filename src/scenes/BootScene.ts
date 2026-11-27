@@ -30,6 +30,7 @@ import {
   addMenuCrest,
   preloadMenuBackdrop,
 } from '../ui/MenuBackdrop';
+import { createVolumeSlider } from '../ui/VolumeSlider';
 
 type BootView = 'title' | 'slots' | 'settings';
 
@@ -400,40 +401,61 @@ export class BootScene extends Phaser.Scene {
     const { width: cssW, height: cssH, scale: s } = uiLayoutSpace(this);
     const compact = cssH < 520;
     const store = settingsStore.get();
+    const saveVol = (
+      partial: Partial<{
+        masterVolume: number;
+        sfxVolume: number;
+        musicVolume: number;
+      }>,
+      previewSfx = false,
+    ) => {
+      settingsStore.save(partial);
+      audioBus.applyMusicVolume();
+      gameEvents.emit(Events.SETTINGS_CHANGED);
+      if (previewSfx) audioBus.uiClick();
+    };
+
+    const sliderWCss = Math.min(compact ? 200 : 320, cssW * 0.55);
+    const sliderStepCss = compact ? 40 : 48;
+    const volTopCss = cssH * (compact ? 0.14 : 0.15);
+    const volRows: {
+      label: string;
+      value: number;
+      key: 'masterVolume' | 'sfxVolume' | 'musicVolume';
+      previewSfx?: boolean;
+    }[] = [
+      { label: 'Master', value: store.masterVolume, key: 'masterVolume' },
+      {
+        label: 'SFX',
+        value: store.sfxVolume,
+        key: 'sfxVolume',
+        previewSfx: true,
+      },
+      { label: 'Music', value: store.musicVolume, key: 'musicVolume' },
+    ];
+    volRows.forEach((row, i) => {
+      const slider = createVolumeSlider(this, {
+        x: uiPx(cssW / 2, s),
+        y: uiPx(volTopCss + i * sliderStepCss, s),
+        width: uiPx(sliderWCss, s),
+        label: row.label,
+        value: row.value,
+        compact,
+        onChange: (v) => saveVol({ [row.key]: v }, row.previewSfx),
+      });
+      this.settingsBody.add(slider);
+    });
+
     const rows: {
       label: string;
       onClick: () => void;
       interactive?: boolean;
     }[] = [
       {
-        label: `Master vol: ${Math.round(store.masterVolume * 100)}%`,
+        label: `Mute: ${store.mute ? 'ON' : 'OFF'}`,
         onClick: () => {
-          const next = (store.masterVolume + 0.1) % 1.1;
-          settingsStore.save({
-            masterVolume: Math.min(1, Number(next.toFixed(1))),
-          });
-          gameEvents.emit(Events.SETTINGS_CHANGED);
-          this.renderTitleSettings();
-        },
-      },
-      {
-        label: `SFX vol: ${Math.round(store.sfxVolume * 100)}%`,
-        onClick: () => {
-          const next = (store.sfxVolume + 0.1) % 1.1;
-          settingsStore.save({
-            sfxVolume: Math.min(1, Number(next.toFixed(1))),
-          });
-          gameEvents.emit(Events.SETTINGS_CHANGED);
-          this.renderTitleSettings();
-        },
-      },
-      {
-        label: `Music vol: ${Math.round(store.musicVolume * 100)}%`,
-        onClick: () => {
-          const next = (store.musicVolume + 0.1) % 1.1;
-          settingsStore.save({
-            musicVolume: Math.min(1, Number(next.toFixed(1))),
-          });
+          settingsStore.save({ mute: !store.mute });
+          audioBus.applyMusicVolume();
           gameEvents.emit(Events.SETTINGS_CHANGED);
           this.renderTitleSettings();
         },
@@ -513,7 +535,7 @@ export class BootScene extends Phaser.Scene {
       },
     ];
 
-    const topCss = cssH * (compact ? 0.16 : 0.18);
+    const topCss = volTopCss + volRows.length * sliderStepCss + 8;
     const bottomCss = cssH * 0.86;
     const bandCss = Math.max(120, bottomCss - topCss);
     const cols = compact ? 2 : 1;
