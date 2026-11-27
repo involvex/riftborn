@@ -156,7 +156,14 @@ async function createWindow() {
   win.on('close', persist);
 
   win.webContents.setWindowOpenHandler(({ url }) => {
-    shell.openExternal(url);
+    try {
+      const { protocol } = new URL(url);
+      if (protocol === 'https:' || protocol === 'http:') {
+        void shell.openExternal(url);
+      }
+    } catch {
+      /* ignore malformed / non-URL open attempts */
+    }
     return { action: 'deny' };
   });
 
