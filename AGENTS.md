@@ -92,7 +92,7 @@ Do not rely on paste-a-screenshot alone after map/POI edits — prefer smoke + `
 - **Ember Shrine:** **E** near altar → timed damage buff (`SkillSystem.applyShrineBuff`), 90s shrine cooldown.
 - **Ash Scout:** elite; kill toast names rarity; gear floor magic+.
 - **Chests:** **E** to open — gold / mats / gear by `lootTier`.
-- **Facing:** `spriteFacingFromDelta` in `IsoMath.ts` — 8-way octant + lean. Multi-row sheets (`DIR_STRIDE` 20) play `${key}_${kind}_${octant}`; 1-row sheets keep sticky `flipX`. LPC trash (`spr_shade` / crawler / wisp / bat) ship 4 facing rows; heroes/bosses stay 1-row until painted.
+- **Facing:** `spriteFacingFromDelta` in `IsoMath.ts` — 8-way octant + lean. Multi-row sheets (`DIR_STRIDE` 20) play `${key}_${kind}_${octant}`; 1-row sheets keep sticky `flipX`. Heroes ship **8 facing rows** (`process-hero-facing.mjs` ← `assets-src/sprites/facing/`); LPC trash (`spr_shade` / crawler / wisp / bat) ship 4; bosses stay 1-row flip.
 - **Passive HP regen:** `GameState.tickRegen` — none for ~5s after a hit; out of combat regenerates fast (~3.5–5.5% max HP/s + STA), stronger in town.
 - **Inventory icons:** `ItemIcons.ts` maps gear/materials to `public/assets/icons/` (LootLoop-sourced painted icons).
 - **Vendor:** Mira shop Buy/Sell tabs; item `sellValue` + `gearSellValue()`; **Sort** in bag; Esc → Settings → Auto-sell junk (common gear → gold on loot). **Chase · Set Slot** offer when a class set is incomplete (`hubSetSinkTarget` / `set_chase`). Walk-up toast + `E · Chase …` prompt (`hubSinkProximityToast`).
@@ -128,11 +128,14 @@ Touch (`/?touch=1` or coarse/small): virtual stick · ATK · E · DASH · SHIFT 
   and icons in `public/assets/icons/` (Libresprite).
 - **Character poses:** put sources in `assets-src/sprites/` as
   `{base}_idle.png`, `{base}_walk_0..n.png`, `{base}_attack_0..n.png`
-  (prompts in `public/assets/sprites/_prompts/poses.json`). Run
+  (prompts in `public/assets/sprites/_prompts/poses.json`). Hero facing
+  extras: `assets-src/sprites/facing/{base}_idle_{n|ne|e|s}.png` →
+  `bun run scripts/import-hero-facing.mjs` then
+  `process-hero-facing.mjs` (8×20 sheets). Run
   `bun run sprites:process` →
-  14-frame sheets in `public/assets/sprites/game/spr_*.png`. Numbered walks
-  beat idle-only bob. Only `game/` ships — everything under `assets-src/`
-  stays out of the web build (sources, ~42 MB).
+  sheets in `public/assets/sprites/game/spr_*.png` (heroes overwritten
+  last to 8-dir). Numbered walks beat idle-only bob. Only `game/` ships —
+  everything under `assets-src/` stays out of the web build (sources).
 - **Gen tools:** HF Qwen MCP, `D:\repos\involvex\image-worker`
   (`bun run src/index.ts generate …`), `D:\repos\image-wizard-cli` (Bing).
   Character / enemy sheets stay **128×128** through `process-sprites`
@@ -151,7 +154,8 @@ Touch (`/?touch=1` or coarse/small): virtual stick · ATK · E · DASH · SHIFT 
 - **Ash Scout / Nightwing:** named elites; kill toast + gear floor magic+.
 - **Particles** (hackcraft.de CC-BY): `vfx/particles/` → combat bursts in
   `CombatVfx.ts` (`process-particles.mjs`).
-- `bun run sprites:process` runs AI sheets, then LPC enemies, then particles.
+- `bun run sprites:process` runs AI sheets, LPC enemies, combat-frame
+  append, hero 8-dir facing, then particles.
 - First-run tutorial: `TutorialOverlay` (`localStorage` key
   `riftborn.tutorial.v2`); skipped on `/?smoke=1`.
 
@@ -176,5 +180,5 @@ Save version is in `SaveStore` / `CharacterSave` (v5). Mid-rift runs persist via
 
 ## Current work
 
-See [`ROADMAP.md`](ROADMAP.md) — **Now** is hero 8-dir sheets → desktop
-chrome polish; feature backlog under **Later**.
+See [`ROADMAP.md`](ROADMAP.md) — **Now** is Replay intro (I6); feature
+backlog under **Later**.

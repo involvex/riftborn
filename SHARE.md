@@ -3,6 +3,30 @@
 Send **one** build + this page. Ask for **one** top complaint — that
 becomes the next evening’s only task.
 
+## Share draft (hero 8-dir)
+
+### Audience
+
+Friends who already play Riftborn (Store or portable) and notice
+facing / silhouette while walking the hub.
+
+### Announcement
+
+Heroes now turn with real facing rows (eight directions) instead of
+a flat flip — Warrior, Mage, and Mystic all included. Grab the latest
+portable or Store build, walk a circle in town, and tell me if any
+facing looks wrong. Hub → rifts still the same loop.
+
+### Free channels (pick one)
+
+- Discord / DM with the portable EXE or Store beta link
+- GitHub release notes when this lands on `main`
+
+### Do not
+
+- Paid ads, boosts, or new SaaS accounts
+- Cold-message strangers at scale
+
 ## Share draft (Store testers)
 
 ### Audience
