@@ -48,6 +48,11 @@ export type GameSettings = {
   graphicsQuality: GraphicsQualitySetting;
   /** Desktop fullscreen (F11 / Settings). Touch ignores. */
   fullscreen: boolean;
+  /**
+   * Co-op WebSocket URL (Pause → Co-op). Empty = discover via
+   * `coop-port.json` / `ws://127.0.0.1:8787`.
+   */
+  coopHostUrl: string;
   hotkeys: HotkeyMap;
 };
 
@@ -86,6 +91,7 @@ export const DEFAULT_SETTINGS: GameSettings = {
   shiftFxIntensity: 1,
   graphicsQuality: 'auto',
   fullscreen: false,
+  coopHostUrl: '',
   hotkeys: { ...DEFAULT_HOTKEYS },
 };
 
@@ -171,6 +177,10 @@ export class SettingsStore {
         ),
         graphicsQuality: parseGraphicsQuality(parsed.graphicsQuality),
         fullscreen: parsed.fullscreen ?? DEFAULT_SETTINGS.fullscreen,
+        coopHostUrl:
+          typeof parsed.coopHostUrl === 'string'
+            ? parsed.coopHostUrl
+            : DEFAULT_SETTINGS.coopHostUrl,
         hotkeys: {
           ...DEFAULT_HOTKEYS,
           ...(parsed.hotkeys ?? {}),

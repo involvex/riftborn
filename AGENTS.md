@@ -190,5 +190,5 @@ Save version is in `SaveStore` / `CharacterSave` (v5). Mid-rift runs persist via
 
 ## Current work
 
-See [`ROADMAP.md`](ROADMAP.md) — **Now** is Co-op host URL (I4);
+See [`ROADMAP.md`](ROADMAP.md) — **Now** is CI build + mobile (I5);
 feature backlog under **Later**.

@@ -1,16 +1,30 @@
 import { describe, expect, test } from 'bun:test';
 import {
   COOP_PROTOTYPE,
+  DEFAULT_COOP_WS,
   coopConnectingToast,
   coopJoinBlockedReason,
   coopLeftToast,
   coopRiftBlockedReason,
   coopWelcomeToast,
+  normalizeCoopHostUrl,
 } from './CoopGate';
 
 describe('CoopGate', () => {
   test('prototype flag is on for the jam build', () => {
     expect(COOP_PROTOTYPE).toBe(true);
+  });
+
+  test('normalizeCoopHostUrl accepts bare host and http(s)', () => {
+    expect(normalizeCoopHostUrl('')).toBe('');
+    expect(normalizeCoopHostUrl('  ')).toBe('');
+    expect(normalizeCoopHostUrl('192.168.1.10:8787')).toBe(
+      'ws://192.168.1.10:8787',
+    );
+    expect(normalizeCoopHostUrl('ws://host:9')).toBe('ws://host:9');
+    expect(normalizeCoopHostUrl('http://host:8787')).toBe('ws://host:8787');
+    expect(normalizeCoopHostUrl('https://host:8787')).toBe('wss://host:8787');
+    expect(DEFAULT_COOP_WS).toContain('127.0.0.1');
   });
 
   test('blocks join while in a rift', () => {
