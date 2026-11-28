@@ -70,6 +70,7 @@ Solo evenings, one shippable slice at a time. Prefer **feel → content → syst
 - **Audio sliders** — master / SFX / music volume + mute; music restores correctly after mute
 - **Share announcement** — Store tester draft + free channels live in `SHARE.md`
 - **Desktop chrome baseline** — window title + AUMID/taskbar grouping, persisted/clamped bounds, F11 and Settings fullscreen, first-run tutorial overlay with debug replay
+- **Hero 8-dir sheets** — Warrior/Female/Mystic/Mage `2560×1024` (8×20) in `game/`; N/NE/E/S painted idles + W/NW/SW mirrors; SE keeps real walk; attack synth
 
 ## Now
 
@@ -77,11 +78,10 @@ Post-Store feature track. One unchecked slice at a time (`/ship`).
 
 | #   | Slice                 | Why it matters                                      | Done when                                                                                                     |
 | --- | --------------------- | --------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
-| ☐   | **Hero 8-dir sheets** | Heroes still 1-row flip while trash has facing rows | Warrior/Mystic/Mage idle+walk multi-row sheets in `game/`; attack can stay synth                              |
 | ☐   | **Replay intro (I6)** | Tutorial only reopens from the debug API            | Settings row clears `riftborn.tutorial.v2` (+ first-session key) and emits `ui:showTutorial`; desktop + touch |
 
 Desktop chrome (title/taskbar, bounds, F11 + settings path) is **shipped** above;
-the only open part was tutorial replay, now tracked as **I6**.
+tutorial replay remains as **I6**. Hero 8-dir sheets are **shipped**.
 
 ## Next — verification & infra
 
@@ -189,11 +189,12 @@ In-rift choice, SHIFT fight, build fork, map ping, and named drop are in.
 
 ## Done — 8-dir sprite rows
 
-Octant logic and LPC facing rows shipped; hero sheets are the remaining `Now` slice.
+Octant logic, LPC trash rows, and hero 8-dir sheets are in.
 
 | #   | Slice                 | Why it matters                                | Done when                                                                                      |
 | --- | --------------------- | --------------------------------------------- | ---------------------------------------------------------------------------------------------- |
 | ✓   | **8-dir sprite rows** | Octant logic shipped; hero sheets still flipX | Multi-row anim keys + 1-row flip fallback; LPC shade/crawler/wisp/bat rebuilt as 4 facing rows |
+| ✓   | **Hero 8-dir sheets** | Heroes still 1-row flip while trash has rows  | 8×20 player sheets; facing idles in `assets-src/sprites/facing/`; `process-hero-facing.mjs`    |
 
 ## Done — playtest combat nits
 
@@ -228,6 +229,8 @@ or an external decision.
 
 ### Content & chase
 
+- **Share hero 8-dir:** free announcement draft in `SHARE.md` (turn-in-place reads as real facings)
+- **Hero facing walk paint** — non-SE rows still bob from idle; optional painted walk cycles per facing
 - **Named uniques** — 1–2 boss/elite uniques per biome (not full Diablo DB)
 - **Fifth rift biome** — new floor pack + boss signature + craft sink
 - **Bounty board season 2** — weekly-ish rotating objectives (local clock)
