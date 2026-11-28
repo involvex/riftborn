@@ -39,6 +39,7 @@ bun run test:smoke       # Playwright hub + SHIFT specs → artifacts/
 bun run test:e2e         # Full Playwright suite (23 tests); CI uses this
 bun run verify           # format:check → typecheck → lint → test → build → smoke
                          # (non-mutating except build/smoke artifacts)
+# CI also: bun run build + bun check -p mobile (before Playwright)
 bunx playwright install chromium   # once per machine
 ```
 
@@ -190,5 +191,5 @@ Save version is in `SaveStore` / `CharacterSave` (v5). Mid-rift runs persist via
 
 ## Current work
 
-See [`ROADMAP.md`](ROADMAP.md) — **Now** is CI build + mobile (I5);
+See [`ROADMAP.md`](ROADMAP.md) — **Now** is Version + tag (I7);
 feature backlog under **Later**.

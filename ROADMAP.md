@@ -76,16 +76,17 @@ Solo evenings, one shippable slice at a time. Prefer **feel → content → syst
 - **Non-mutating verify (I2)** — `bun run verify` = format:check → typecheck → lint → unit → build → smoke (no mutating `format`)
 - **Full e2e suite (I3)** — `bun run test:e2e` runs all 23 Playwright tests; CI uses full suite; screenshots assert non-blank canvas via `e2e/canvasShot.ts`
 - **Co-op host URL (I4)** — Pause → Co-op edits/persists `coopHostUrl`; server drops unused enemy/node broadcasts; hub seed aligned to **42**; LAN URL in `coop-port.json`
+- **CI build + mobile (I5)** — CI already runs `bun run build` + `bun check -p mobile`; confirmed green locally (prod bundle + Expo shell types)
 
 ## Now
 
 Post-Store feature track. One unchecked slice at a time (`/ship`).
 
-| #   | Slice                      | Why it matters                                 | Done when                                                                               |
-| --- | -------------------------- | ---------------------------------------------- | --------------------------------------------------------------------------------------- |
-| ☐   | **CI build + mobile (I5)** | CI never bundled prod or checked the APK shell | CI runs `bun run build` + `bun check -p mobile`; both green (verify if already on main) |
+| #   | Slice                  | Why it matters                                    | Done when                                                                              |
+| --- | ---------------------- | ------------------------------------------------- | -------------------------------------------------------------------------------------- |
+| ☐   | **Version + tag (I7)** | Root 0.2.2 / mobile 0.2.0 / Gradle code 1; no tag | One version source (root → mobile/Gradle) and a `v0.2.2` tag so `release.yml` can fire |
 
-Next `/ship` takes I5. Player-facing quick wins stay under **Next**.
+Next `/ship` takes I7. Player-facing quick wins stay under **Next**.
 
 ## Next — verification & infra
 
@@ -97,7 +98,7 @@ Keep the green gate honest; these are one-session slices, no new frameworks.
 | ✓   | **Non-mutating verify** | `verify` ran `format` and hid CI failures         | Shipped: `verify` uses format:check; documented in AGENTS                              |
 | ✓   | **Full e2e suite**      | 13 of 15 specs never run; blank canvas can pass   | Shipped: `test:e2e` (23 tests) + CI job; `screenshotCanvasNonBlank` on canvas shots    |
 | ✓   | **Co-op host URL**      | `ws://127.0.0.1` fails on remote devices          | Shipped: Pause → Co-op URL + seed 42 + no unused enemy/node broadcast                  |
-| I5  | **CI build + mobile**   | CI never bundled prod or checked the APK shell    | CI runs `bun run build` + `bun check -p mobile`; both green                            |
+| ✓   | **CI build + mobile**   | CI never bundled prod or checked the APK shell    | Shipped: CI `build` + `bun check -p mobile`; verified green                            |
 | ✓   | **Replay intro**        | Intro cannot be reopened by a player              | Shipped: Settings → Replay intro via `resetIntroProgress` + `ui:showTutorial`          |
 | I7  | **Version + tag**       | Root 0.2.2 / mobile 0.2.0 / Gradle code 1; no tag | One version source (root → mobile/Gradle) and a `v0.2.2` tag so `release.yml` can fire |
 
