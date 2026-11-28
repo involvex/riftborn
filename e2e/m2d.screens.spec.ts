@@ -1,4 +1,5 @@
-import { expect, test } from '@playwright/test';
+import { test } from '@playwright/test';
+import { screenshotCanvasNonBlank } from './canvasShot';
 import fs from 'node:fs';
 import path from 'node:path';
 
@@ -20,11 +21,10 @@ test.describe('m2d screens', () => {
     await page.waitForTimeout(1000);
 
     // Town with roads
-    await page
-      .locator('canvas')
-      .first()
-      .screenshot({ path: path.join(outDir, 'm2d-town-roads.png') });
-    expect(fs.existsSync(path.join(outDir, 'm2d-town-roads.png'))).toBe(true);
+    await screenshotCanvasNonBlank(
+      page,
+      path.join(outDir, 'm2d-town-roads.png'),
+    );
 
     // Try to move towards a POI to show road to POI
     await page.evaluate(() => {
@@ -43,10 +43,6 @@ test.describe('m2d screens', () => {
     await page.waitForTimeout(300);
     await page.keyboard.up('d');
     await page.waitForTimeout(500);
-    await page
-      .locator('canvas')
-      .first()
-      .screenshot({ path: path.join(outDir, 'm2d-road-poi.png') });
-    expect(fs.existsSync(path.join(outDir, 'm2d-road-poi.png'))).toBe(true);
+    await screenshotCanvasNonBlank(page, path.join(outDir, 'm2d-road-poi.png'));
   });
 });

@@ -1,4 +1,5 @@
-import { expect, test } from '@playwright/test';
+import { test } from '@playwright/test';
+import { screenshotCanvasNonBlank } from './canvasShot';
 import fs from 'node:fs';
 import path from 'node:path';
 
@@ -35,13 +36,11 @@ test.describe('F1 first-session hints (touch)', () => {
     await page.waitForTimeout(250);
 
     const movePath = path.join(OUT, 'f1-hint-move.png');
-    await page.locator('canvas').first().screenshot({ path: movePath });
-    expect(fs.existsSync(movePath)).toBe(true);
+    await screenshotCanvasNonBlank(page, movePath);
 
     await page.evaluate(() => window.__RIFTBORN?.showFirstSession('rift'));
     await page.waitForTimeout(250);
     const riftPath = path.join(OUT, 'f1-hint-rift.png');
-    await page.locator('canvas').first().screenshot({ path: riftPath });
-    expect(fs.existsSync(riftPath)).toBe(true);
+    await screenshotCanvasNonBlank(page, riftPath);
   });
 });

@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import { screenshotCanvasNonBlank } from './canvasShot';
 import fs from 'node:fs';
 import path from 'node:path';
 
@@ -45,8 +46,7 @@ test.describe('M2b touch readability 1024x473', () => {
     await page.evaluate(() => window.__RIFTBORN?.openInventory());
     await page.waitForTimeout(400);
     const invPath = path.join(OUT, 'm2b-inventory.png');
-    await page.locator('canvas').first().screenshot({ path: invPath });
-    expect(fs.existsSync(invPath)).toBe(true);
+    await screenshotCanvasNonBlank(page, invPath);
 
     await page.evaluate(() => {
       // Close inventory by toggling menu then dismissing isn't needed —
@@ -74,7 +74,6 @@ test.describe('M2b touch readability 1024x473', () => {
     await page.waitForTimeout(250);
 
     const riftPath = path.join(OUT, 'm2b-rift.png');
-    await page.locator('canvas').first().screenshot({ path: riftPath });
-    expect(fs.existsSync(riftPath)).toBe(true);
+    await screenshotCanvasNonBlank(page, riftPath);
   });
 });

@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import { screenshotCanvasNonBlank } from './canvasShot';
 import fs from 'node:fs';
 import path from 'node:path';
 
@@ -63,7 +64,6 @@ test.describe('M1h rift enemies + touch town button', () => {
     await page.waitForTimeout(500);
 
     const outPath = path.join(OUT, 'm1h-rift-enemies.png');
-    await page.locator('canvas').first().screenshot({ path: outPath });
-    expect(fs.existsSync(outPath)).toBe(true);
+    await screenshotCanvasNonBlank(page, outPath);
   });
 });

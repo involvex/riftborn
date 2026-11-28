@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import { screenshotCanvasNonBlank } from './canvasShot';
 import fs from 'node:fs';
 import path from 'node:path';
 
@@ -41,8 +42,7 @@ async function shot(
 ): Promise<void> {
   fs.mkdirSync(OUT, { recursive: true });
   const file = path.join(OUT, `m2a-${screen}-${sizeName}.png`);
-  await page.locator('canvas').first().screenshot({ path: file });
-  expect(fs.existsSync(file)).toBe(true);
+  await screenshotCanvasNonBlank(page, file);
 }
 
 async function assertTouchHitsInViewport(
@@ -51,9 +51,15 @@ async function assertTouchHitsInViewport(
   height: number,
 ): Promise<void> {
   const hits = await page.evaluate(() => window.__RIFTBORN?.touchHits() ?? []);
+  // Hits are in buffer space; Low/Medium renderScale shrinks them vs CSS ≥44.
+  const scale =
+    (await page.evaluate(
+      () => window.__RIFTBORN?.graphicsProfile()?.renderScale ?? 1,
+    )) || 1;
+  const minHit = MIN_HIT * scale - 0.5;
   expect(hits.length).toBeGreaterThan(5);
   for (const h of hits) {
-    expect(h.minSide, `${h.name} minSide`).toBeGreaterThanOrEqual(MIN_HIT);
+    expect(h.minSide, `${h.name} minSide`).toBeGreaterThanOrEqual(minHit);
     expect(h.x, `${h.name}.x`).toBeGreaterThanOrEqual(-1);
     expect(h.y, `${h.name}.y`).toBeGreaterThanOrEqual(-1);
     expect(h.x + h.w, `${h.name} right`).toBeLessThanOrEqual(width + 1);
@@ -74,7 +80,8 @@ for (const size of SIZES) {
       // —— Title ——
       await page.goto('/?touch=1');
       await page.waitForSelector('canvas', { timeout: 30_000 });
-      await page.waitForTimeout(1000);
+      // BootScene → title can need a few frames after canvas appears.
+      await page.waitForTimeout(2000);
       await shot(page, 'title', size.name);
 
       // —— Character create (tap New Game) ——

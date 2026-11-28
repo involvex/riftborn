@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import { screenshotCanvasNonBlank } from './canvasShot';
 import fs from 'node:fs';
 import path from 'node:path';
 
@@ -52,8 +53,7 @@ test.describe('hub smoke', () => {
     const outDir = path.resolve('artifacts');
     fs.mkdirSync(outDir, { recursive: true });
     const shotPath = path.join(outDir, 'hub.png');
-    await page.locator('canvas').first().screenshot({ path: shotPath });
-    expect(fs.existsSync(shotPath)).toBe(true);
+    await screenshotCanvasNonBlank(page, shotPath);
   });
 
   test('M3d: low/touch 1024x473 shows wide town FOV', async ({ page }) => {
@@ -88,8 +88,7 @@ test.describe('hub smoke', () => {
     const outDir = path.resolve('artifacts');
     fs.mkdirSync(outDir, { recursive: true });
     const shotPath = path.join(outDir, 'm3d-town-fov.png');
-    await page.locator('canvas').first().screenshot({ path: shotPath });
-    expect(fs.existsSync(shotPath)).toBe(true);
+    await screenshotCanvasNonBlank(page, shotPath);
   });
 
   test('P1: low/touch 1024x473 town FOV (tile culling)', async ({ page }) => {
@@ -124,7 +123,6 @@ test.describe('hub smoke', () => {
     const outDir = path.resolve('artifacts');
     fs.mkdirSync(outDir, { recursive: true });
     const shotPath = path.join(outDir, 'p1-town-fov.png');
-    await page.locator('canvas').first().screenshot({ path: shotPath });
-    expect(fs.existsSync(shotPath)).toBe(true);
+    await screenshotCanvasNonBlank(page, shotPath);
   });
 });

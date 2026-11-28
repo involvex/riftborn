@@ -74,16 +74,17 @@ Solo evenings, one shippable slice at a time. Prefer **feel → content → syst
 - **Replay intro (I6)** — Settings → Replay intro clears tutorial + first-session keys and shows the welcome modal (desktop + touch)
 - **EOL config (I1)** — `.gitattributes` `* text=auto eol=lf` + Prettier `endOfLine: auto` (landed with verify/CI alignment; no mass reformat)
 - **Non-mutating verify (I2)** — `bun run verify` = format:check → typecheck → lint → unit → build → smoke (no mutating `format`)
+- **Full e2e suite (I3)** — `bun run test:e2e` runs all 23 Playwright tests; CI uses full suite; screenshots assert non-blank canvas via `e2e/canvasShot.ts`
 
 ## Now
 
 Post-Store feature track. One unchecked slice at a time (`/ship`).
 
-| #   | Slice                   | Why it matters                                  | Done when                                                                          |
-| --- | ----------------------- | ----------------------------------------------- | ---------------------------------------------------------------------------------- |
-| ☐   | **Full e2e suite (I3)** | 13 of 15 specs never run; blank canvas can pass | `test:e2e` script for all specs + CI job; screenshot specs assert non-blank canvas |
+| #   | Slice                   | Why it matters                           | Done when                                                                                                |
+| --- | ----------------------- | ---------------------------------------- | -------------------------------------------------------------------------------------------------------- |
+| ☐   | **Co-op host URL (I4)** | `ws://127.0.0.1` fails on remote devices | Pause → Co-op accepts a host URL; render or stop unused enemy/node broadcasts; align hub seed (99 vs 42) |
 
-Next `/ship` takes I3. Player-facing quick wins stay under **Next**.
+Next `/ship` takes I4. Player-facing quick wins stay under **Next**.
 
 ## Next — verification & infra
 
@@ -93,7 +94,7 @@ Keep the green gate honest; these are one-session slices, no new frameworks.
 | --- | ----------------------- | ------------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
 | ✓   | **EOL config fix**      | Windows checkout has CRLF; Prettier expects LF    | Shipped: `.gitattributes` + Prettier `endOfLine: auto`; `format:check` green Win/Linux                   |
 | ✓   | **Non-mutating verify** | `verify` ran `format` and hid CI failures         | Shipped: `verify` uses format:check; documented in AGENTS                                                |
-| I3  | **Full e2e suite**      | 13 of 15 specs never run; blank canvas can pass   | `test:e2e` script for all 23 tests + CI job; screenshot specs assert non-blank canvas                    |
+| ✓   | **Full e2e suite**      | 13 of 15 specs never run; blank canvas can pass   | Shipped: `test:e2e` (23 tests) + CI job; `screenshotCanvasNonBlank` on canvas shots                      |
 | I4  | **Co-op host URL**      | `ws://127.0.0.1` fails on remote devices          | Pause → Co-op accepts a host URL; render or stop unused enemy/node broadcasts; align hub seed (99 vs 42) |
 | I5  | **CI build + mobile**   | CI never bundled prod or checked the APK shell    | CI runs `bun run build` + `bun check -p mobile`; both green                                              |
 | ✓   | **Replay intro**        | Intro cannot be reopened by a player              | Shipped: Settings → Replay intro via `resetIntroProgress` + `ui:showTutorial`                            |

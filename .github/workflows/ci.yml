@@ -50,5 +50,6 @@ jobs:
       - name: Install Playwright Chromium
         run: bunx playwright install --with-deps chromium
 
-      - name: Smoke tests
-        run: bun run test:smoke
+      # Full suite includes hub.smoke + j1.shift (local `verify` still uses test:smoke).
+      - name: Full e2e suite
+        run: bun run test:e2e

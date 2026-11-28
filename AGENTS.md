@@ -36,6 +36,7 @@ bun run format:check     # read-only; used by verify + CI
 bun run build
 bun run test             # unit tests under src/
 bun run test:smoke       # Playwright hub + SHIFT specs → artifacts/
+bun run test:e2e         # Full Playwright suite (23 tests); CI uses this
 bun run verify           # format:check → typecheck → lint → test → build → smoke
                          # (non-mutating except build/smoke artifacts)
 bunx playwright install chromium   # once per machine
@@ -189,5 +190,5 @@ Save version is in `SaveStore` / `CharacterSave` (v5). Mid-rift runs persist via
 
 ## Current work
 
-See [`ROADMAP.md`](ROADMAP.md) — **Now** is Full e2e suite (I3);
+See [`ROADMAP.md`](ROADMAP.md) — **Now** is Co-op host URL (I4);
 feature backlog under **Later**.

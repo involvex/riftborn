@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import { screenshotCanvasNonBlank } from './canvasShot';
 import fs from 'node:fs';
 import path from 'node:path';
 
@@ -40,8 +41,9 @@ test.describe('M1g touch HUD chrome + context E', () => {
     fs.mkdirSync(OUT, { recursive: true });
     await bootReady(page, '/?smoke=1&touch=1');
 
+    // Auto → Medium on touch / coarse (see GraphicsQuality + AGENTS.md).
     const gfx = await page.evaluate(() => window.__RIFTBORN?.graphicsProfile());
-    expect(gfx?.tier).toBe('low');
+    expect(gfx?.tier).toBe('medium');
     expect(gfx?.setting).toBe('auto');
 
     await page.evaluate(() => window.__RIFTBORN?.setTouchChrome(false));
@@ -52,8 +54,7 @@ test.describe('M1g touch HUD chrome + context E', () => {
     expect(collapsedOpen).toBe(false);
 
     const collapsedPath = path.join(OUT, 'm1g-hud-collapsed.png');
-    await page.locator('canvas').first().screenshot({ path: collapsedPath });
-    expect(fs.existsSync(collapsedPath)).toBe(true);
+    await screenshotCanvasNonBlank(page, collapsedPath);
 
     await page.evaluate(() => window.__RIFTBORN?.setTouchChrome(true));
     await page.waitForTimeout(250);
@@ -63,8 +64,7 @@ test.describe('M1g touch HUD chrome + context E', () => {
     expect(expandedOpen).toBe(true);
 
     const expandedPath = path.join(OUT, 'm1g-hud-expanded.png');
-    await page.locator('canvas').first().screenshot({ path: expandedPath });
-    expect(fs.existsSync(expandedPath)).toBe(true);
+    await screenshotCanvasNonBlank(page, expandedPath);
 
     await page.evaluate(() => window.__RIFTBORN?.setTouchChrome(false));
     const spawned = await page.evaluate(
@@ -78,7 +78,6 @@ test.describe('M1g touch HUD chrome + context E', () => {
     expect(hint?.dimmed).toBe(false);
 
     const lootPath = path.join(OUT, 'm1g-e-loot.png');
-    await page.locator('canvas').first().screenshot({ path: lootPath });
-    expect(fs.existsSync(lootPath)).toBe(true);
+    await screenshotCanvasNonBlank(page, lootPath);
   });
 });

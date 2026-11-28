@@ -1,4 +1,5 @@
-import { expect, test } from '@playwright/test';
+import { test } from '@playwright/test';
+import { screenshotCanvasNonBlank } from './canvasShot';
 import fs from 'node:fs';
 import path from 'node:path';
 
@@ -36,8 +37,7 @@ test.describe('inventory layout screenshots', () => {
         outDir,
         `inventory-${size.name}-${size.width}x${size.height}.png`,
       );
-      await page.locator('canvas').first().screenshot({ path: shotPath });
-      expect(fs.existsSync(shotPath)).toBe(true);
+      await screenshotCanvasNonBlank(page, shotPath);
     });
   }
 });

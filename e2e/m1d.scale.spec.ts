@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import { screenshotCanvasNonBlank } from './canvasShot';
 import fs from 'node:fs';
 import path from 'node:path';
 
@@ -51,8 +52,7 @@ test.describe('M1d rift scale phone', () => {
     await enterRift(page);
 
     const riftPath = path.join(OUT, 'm1d-rift-phone.png');
-    await page.locator('canvas').first().screenshot({ path: riftPath });
-    expect(fs.existsSync(riftPath)).toBe(true);
+    await screenshotCanvasNonBlank(page, riftPath);
 
     await page.evaluate(() => {
       window.__RIFTBORN?.openInventory();
@@ -60,8 +60,7 @@ test.describe('M1d rift scale phone', () => {
     await page.waitForTimeout(500);
 
     const invPath = path.join(OUT, 'm1d-inv-phone.png');
-    await page.locator('canvas').first().screenshot({ path: invPath });
-    expect(fs.existsSync(invPath)).toBe(true);
+    await screenshotCanvasNonBlank(page, invPath);
   });
 });
 
@@ -77,7 +76,6 @@ test.describe('M1d rift scale desktop', () => {
     await enterRift(page);
 
     const deskPath = path.join(OUT, 'm1d-rift-desktop.png');
-    await page.locator('canvas').first().screenshot({ path: deskPath });
-    expect(fs.existsSync(deskPath)).toBe(true);
+    await screenshotCanvasNonBlank(page, deskPath);
   });
 });

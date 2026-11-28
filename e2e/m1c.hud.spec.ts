@@ -1,4 +1,5 @@
-import { expect, test } from '@playwright/test';
+import { test } from '@playwright/test';
+import { screenshotCanvasNonBlank } from './canvasShot';
 import fs from 'node:fs';
 import path from 'node:path';
 
@@ -41,8 +42,7 @@ test.describe('M1c HUD / inventory phone screenshots', () => {
     await bootReady(page, '/?smoke=1&touch=1');
 
     const hudPath = path.join(OUT, 'm1c-hud-phone.png');
-    await page.locator('canvas').first().screenshot({ path: hudPath });
-    expect(fs.existsSync(hudPath)).toBe(true);
+    await screenshotCanvasNonBlank(page, hudPath);
 
     await page.evaluate(() => {
       window.__RIFTBORN?.openInventory();
@@ -50,8 +50,7 @@ test.describe('M1c HUD / inventory phone screenshots', () => {
     await page.waitForTimeout(500);
 
     const invPath = path.join(OUT, 'm1c-inv-phone.png');
-    await page.locator('canvas').first().screenshot({ path: invPath });
-    expect(fs.existsSync(invPath)).toBe(true);
+    await screenshotCanvasNonBlank(page, invPath);
   });
 });
 
@@ -66,7 +65,6 @@ test.describe('M1c HUD desktop screenshot', () => {
     await bootReady(page, '/?smoke=1&touch=0');
 
     const deskPath = path.join(OUT, 'm1c-hud-desktop.png');
-    await page.locator('canvas').first().screenshot({ path: deskPath });
-    expect(fs.existsSync(deskPath)).toBe(true);
+    await screenshotCanvasNonBlank(page, deskPath);
   });
 });

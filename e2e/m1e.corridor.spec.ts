@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import { screenshotCanvasNonBlank } from './canvasShot';
 import fs from 'node:fs';
 import path from 'node:path';
 
@@ -57,8 +58,7 @@ test.describe('M1e rift corridor phone', () => {
     await enterRiftAtDiagonal(page);
 
     const riftPath = path.join(OUT, 'm1e-rift-phone.png');
-    await page.locator('canvas').first().screenshot({ path: riftPath });
-    expect(fs.existsSync(riftPath)).toBe(true);
+    await screenshotCanvasNonBlank(page, riftPath);
   });
 });
 
@@ -76,7 +76,6 @@ test.describe('M1e rift corridor desktop', () => {
     await enterRiftAtDiagonal(page);
 
     const deskPath = path.join(OUT, 'm1e-rift-desktop.png');
-    await page.locator('canvas').first().screenshot({ path: deskPath });
-    expect(fs.existsSync(deskPath)).toBe(true);
+    await screenshotCanvasNonBlank(page, deskPath);
   });
 });
