@@ -31,10 +31,13 @@ bun install
 bun run dev              # http://localhost:5173
 bun run typecheck
 bun run lint
-bun run format
-bun run format:check
+bun run format           # mutates files — local fix only, not CI
+bun run format:check     # read-only; used by verify + CI
 bun run build
+bun run test             # unit tests under src/
 bun run test:smoke       # Playwright hub + SHIFT specs → artifacts/
+bun run verify           # format:check → typecheck → lint → test → build → smoke
+                         # (non-mutating except build/smoke artifacts)
 bunx playwright install chromium   # once per machine
 ```
 
@@ -67,7 +70,8 @@ Touch HUD: `TouchControls` (stick / ATK / E / DASH) + raised ability bar. Deskto
 
 **Floor tiles:** `public/assets/tiles/*.png` are **256×128** iso diamonds (`TILE_ART_SCALE` 0.25). Biome floors via `BiomeLook.floorTiles` + `biome.tileWeights` / `pickWeightedTileKey`; hub plaza uses `tile_hub_plaza_warm` / `tile_hub_cobble_wet`. Import: `bun run scripts/import-tiles-2x.mjs`.
 
-**Before declaring done:** typecheck + lint + format:check + build. After map/POI/town-safety changes, also run `bun run test:smoke`.
+**Before declaring done:** `bun run verify` (or the same stages by hand).
+After map/POI/town-safety changes, smoke is already in `verify`.
 
 **Git:** commit/push only when the user asks. Do not amend pushed commits or force-push `main`.
 
@@ -185,5 +189,5 @@ Save version is in `SaveStore` / `CharacterSave` (v5). Mid-rift runs persist via
 
 ## Current work
 
-See [`ROADMAP.md`](ROADMAP.md) — **Now** is Non-mutating verify (I2);
+See [`ROADMAP.md`](ROADMAP.md) — **Now** is Full e2e suite (I3);
 feature backlog under **Later**.

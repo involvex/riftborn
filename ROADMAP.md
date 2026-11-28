@@ -73,30 +73,31 @@ Solo evenings, one shippable slice at a time. Prefer **feel → content → syst
 - **Hero 8-dir sheets** — Warrior/Female/Mystic/Mage `2560×1024` (8×20) in `game/`; N/NE/E/S painted idles + W/NW/SW mirrors; SE keeps real walk; attack synth
 - **Replay intro (I6)** — Settings → Replay intro clears tutorial + first-session keys and shows the welcome modal (desktop + touch)
 - **EOL config (I1)** — `.gitattributes` `* text=auto eol=lf` + Prettier `endOfLine: auto` (landed with verify/CI alignment; no mass reformat)
+- **Non-mutating verify (I2)** — `bun run verify` = format:check → typecheck → lint → unit → build → smoke (no mutating `format`)
 
 ## Now
 
 Post-Store feature track. One unchecked slice at a time (`/ship`).
 
-| #   | Slice                        | Why it matters                               | Done when                                                                                                               |
-| --- | ---------------------------- | -------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
-| ☐   | **Non-mutating verify (I2)** | Confirm `verify` stays read-only / CI-honest | Document or trim any leftover mutating steps; `bun run verify` = format:check → typecheck → lint → unit → build → smoke |
+| #   | Slice                   | Why it matters                                  | Done when                                                                          |
+| --- | ----------------------- | ----------------------------------------------- | ---------------------------------------------------------------------------------- |
+| ☐   | **Full e2e suite (I3)** | 13 of 15 specs never run; blank canvas can pass | `test:e2e` script for all specs + CI job; screenshot specs assert non-blank canvas |
 
-Next `/ship` takes I2 (code may already match — confirm Done when). Player-facing quick wins stay under **Next**.
+Next `/ship` takes I3. Player-facing quick wins stay under **Next**.
 
 ## Next — verification & infra
 
 Keep the green gate honest; these are one-session slices, no new frameworks.
 
-| #   | Slice                   | Why it matters                                    | Done when                                                                                                   |
-| --- | ----------------------- | ------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
-| ✓   | **EOL config fix**      | Windows checkout has CRLF; Prettier expects LF    | Shipped: `.gitattributes` + Prettier `endOfLine: auto`; `format:check` green Win/Linux                      |
-| I2  | **Non-mutating verify** | `verify` ran `format` and hid CI failures         | `bun run verify` = format:check → typecheck → lint → unit → build → smoke; read-only except build artifacts |
-| I3  | **Full e2e suite**      | 13 of 15 specs never run; blank canvas can pass   | `test:e2e` script for all 23 tests + CI job; screenshot specs assert non-blank canvas                       |
-| I4  | **Co-op host URL**      | `ws://127.0.0.1` fails on remote devices          | Pause → Co-op accepts a host URL; render or stop unused enemy/node broadcasts; align hub seed (99 vs 42)    |
-| I5  | **CI build + mobile**   | CI never bundled prod or checked the APK shell    | CI runs `bun run build` + `bun check -p mobile`; both green                                                 |
-| ✓   | **Replay intro**        | Intro cannot be reopened by a player              | Shipped: Settings → Replay intro via `resetIntroProgress` + `ui:showTutorial`                               |
-| I7  | **Version + tag**       | Root 0.2.2 / mobile 0.2.0 / Gradle code 1; no tag | One version source (root → mobile/Gradle) and a `v0.2.2` tag so `release.yml` can fire                      |
+| #   | Slice                   | Why it matters                                    | Done when                                                                                                |
+| --- | ----------------------- | ------------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
+| ✓   | **EOL config fix**      | Windows checkout has CRLF; Prettier expects LF    | Shipped: `.gitattributes` + Prettier `endOfLine: auto`; `format:check` green Win/Linux                   |
+| ✓   | **Non-mutating verify** | `verify` ran `format` and hid CI failures         | Shipped: `verify` uses format:check; documented in AGENTS                                                |
+| I3  | **Full e2e suite**      | 13 of 15 specs never run; blank canvas can pass   | `test:e2e` script for all 23 tests + CI job; screenshot specs assert non-blank canvas                    |
+| I4  | **Co-op host URL**      | `ws://127.0.0.1` fails on remote devices          | Pause → Co-op accepts a host URL; render or stop unused enemy/node broadcasts; align hub seed (99 vs 42) |
+| I5  | **CI build + mobile**   | CI never bundled prod or checked the APK shell    | CI runs `bun run build` + `bun check -p mobile`; both green                                              |
+| ✓   | **Replay intro**        | Intro cannot be reopened by a player              | Shipped: Settings → Replay intro via `resetIntroProgress` + `ui:showTutorial`                            |
+| I7  | **Version + tag**       | Root 0.2.2 / mobile 0.2.0 / Gradle code 1; no tag | One version source (root → mobile/Gradle) and a `v0.2.2` tag so `release.yml` can fire                   |
 
 ## Next — player-facing quick wins
 
@@ -259,7 +260,7 @@ or an external decision.
 ## Pace guide (solo)
 
 - **1 slice / session** when tired; **2** if hot
-- Always leave a green `bun run verify` (format:check + typecheck + lint + unit + build + smoke); map/POI → also `test:smoke`
+- Always leave a green `bun run verify` (format:check → typecheck → lint → unit → build → smoke); never put mutating `format` in verify/CI
 - Prettier EOL config keeps Windows and Linux checks aligned — never "fix" a local CRLF warning with a mass `format` run
 - Share a portable build with one friend once a slice feels good
 
