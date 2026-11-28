@@ -1,24 +1,22 @@
 import Phaser from 'phaser';
 import { formatHotkey } from '../core/Hotkeys';
 import { audioBus } from '../core/AudioBus';
+import {
+  TUTORIAL_STORAGE_KEY,
+  clearTutorialSeen,
+  hasTutorialSeenFlag,
+  markTutorialSeenFlag,
+} from '../systems/IntroReplay';
 import { shouldShowTouchControls } from './TouchControls';
 
-const STORAGE_KEY = 'riftborn.tutorial.v2';
+export { TUTORIAL_STORAGE_KEY, clearTutorialSeen };
 
 export function hasSeenTutorial(): boolean {
-  try {
-    return localStorage.getItem(STORAGE_KEY) === '1';
-  } catch {
-    return false;
-  }
+  return hasTutorialSeenFlag();
 }
 
 export function markTutorialSeen(): void {
-  try {
-    localStorage.setItem(STORAGE_KEY, '1');
-  } catch {
-    // ignore quota / private mode
-  }
+  markTutorialSeenFlag();
 }
 
 function isSmokeBoot(): boolean {
@@ -138,6 +136,16 @@ export class TutorialOverlay {
     this.root.setVisible(false);
     this.root.removeAll(true);
     this.scene.events.emit('tutorial:dismissed');
+  }
+
+  /** Force-show even if previously dismissed (caller clears storage). */
+  replay(): void {
+    if (this.open) {
+      this.open = false;
+      this.root.setVisible(false);
+      this.root.removeAll(true);
+    }
+    this.show();
   }
 
   destroy(): void {

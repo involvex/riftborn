@@ -71,17 +71,17 @@ Solo evenings, one shippable slice at a time. Prefer **feel → content → syst
 - **Share announcement** — Store tester draft + free channels live in `SHARE.md`
 - **Desktop chrome baseline** — window title + AUMID/taskbar grouping, persisted/clamped bounds, F11 and Settings fullscreen, first-run tutorial overlay with debug replay
 - **Hero 8-dir sheets** — Warrior/Female/Mystic/Mage `2560×1024` (8×20) in `game/`; N/NE/E/S painted idles + W/NW/SW mirrors; SE keeps real walk; attack synth
+- **Replay intro (I6)** — Settings → Replay intro clears tutorial + first-session keys and shows the welcome modal (desktop + touch)
 
 ## Now
 
 Post-Store feature track. One unchecked slice at a time (`/ship`).
 
-| #   | Slice                 | Why it matters                           | Done when                                                                                                     |
-| --- | --------------------- | ---------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
-| ☐   | **Replay intro (I6)** | Tutorial only reopens from the debug API | Settings row clears `riftborn.tutorial.v2` (+ first-session key) and emits `ui:showTutorial`; desktop + touch |
+| #   | Slice               | Why it matters                           | Done when                                                                                                              |
+| --- | ------------------- | ---------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| ☐   | **EOL config (I1)** | Windows CRLF breaks Linux `format:check` | `.gitattributes` (`* text=auto eol=lf`) + Prettier `endOfLine: auto`; green on Windows **and** Linux; no mass reformat |
 
-Desktop chrome (title/taskbar, bounds, F11 + settings path) is **shipped** above;
-tutorial replay remains as **I6**. Hero 8-dir sheets are **shipped**.
+Next `/ship` takes I1 from verification. Player-facing quick wins stay under **Next**.
 
 ## Next — verification & infra
 
@@ -94,7 +94,7 @@ Keep the green gate honest; these are one-session slices, no new frameworks.
 | I3  | **Full e2e suite**      | 13 of 15 specs never run; blank canvas can pass   | `test:e2e` script for all 23 tests + CI job; screenshot specs assert non-blank canvas                                                 |
 | I4  | **Co-op host URL**      | `ws://127.0.0.1` fails on remote devices          | Pause → Co-op accepts a host URL; render or stop unused enemy/node broadcasts; align hub seed (99 vs 42)                              |
 | I5  | **CI build + mobile**   | CI never bundled prod or checked the APK shell    | CI runs `bun run build` + `bun check -p mobile`; both green                                                                           |
-| I6  | **Replay intro**        | Intro cannot be reopened by a player              | Settings row resets tutorial + first-session keys, shows modal on desktop and touch                                                   |
+| ✓   | **Replay intro**        | Intro cannot be reopened by a player              | Shipped: Settings → Replay intro via `resetIntroProgress` + `ui:showTutorial`                                                         |
 | I7  | **Version + tag**       | Root 0.2.2 / mobile 0.2.0 / Gradle code 1; no tag | One version source (root → mobile/Gradle) and a `v0.2.2` tag so `release.yml` can fire                                                |
 
 ## Next — player-facing quick wins
@@ -229,6 +229,7 @@ or an external decision.
 
 ### Content & chase
 
+- **Share Replay intro:** free note in `SHARE.md` (Esc → Settings → Replay intro)
 - **Share hero 8-dir:** free announcement draft in `SHARE.md` (turn-in-place reads as real facings)
 - **Hero facing walk paint** — non-SE rows still bob from idle; optional painted walk cycles per facing
 - **Named uniques** — 1–2 boss/elite uniques per biome (not full Diablo DB)
