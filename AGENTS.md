@@ -167,6 +167,9 @@ Touch (`/?touch=1` or coarse/small): virtual stick · ATK · E · DASH · SHIFT 
 - Match existing Phaser patterns (containers, `worldToScreen`, `snapToTile`).
 - Prefer extending `MapGen` / `WorldScene` / systems over new frameworks.
 - Line length ~80 where practical; Prettier owns formatting.
+- **EOL:** `.gitattributes` forces LF (`* text=auto eol=lf`); Prettier
+  `endOfLine: auto`. Never “fix” a CRLF `format:check` warning with a
+  mass `bun run format` — fix the checkout / attributes instead.
 - Data-driven content in `src/data/*.json` when adding enemies, loot, skills, items.
 
 ## Save note
@@ -182,5 +185,5 @@ Save version is in `SaveStore` / `CharacterSave` (v5). Mid-rift runs persist via
 
 ## Current work
 
-See [`ROADMAP.md`](ROADMAP.md) — **Now** is EOL config (I1); feature
-backlog under **Later**.
+See [`ROADMAP.md`](ROADMAP.md) — **Now** is Non-mutating verify (I2);
+feature backlog under **Later**.
