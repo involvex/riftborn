@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import { screenshotCanvasNonBlank } from './canvasShot';
 import fs from 'node:fs';
 import path from 'node:path';
 
@@ -57,8 +58,7 @@ test.describe('J1 shift clarity (touch)', () => {
     expect(ash?.layer).toBe('ash');
 
     const ashPath = path.join(OUT, 'j1-ash.png');
-    await page.locator('canvas').first().screenshot({ path: ashPath });
-    expect(fs.existsSync(ashPath)).toBe(true);
+    await screenshotCanvasNonBlank(page, ashPath);
 
     await page.evaluate(() => window.__RIFTBORN?.setShiftLayer('shadow'));
     await page.waitForTimeout(350);
@@ -68,8 +68,7 @@ test.describe('J1 shift clarity (touch)', () => {
     expect(shadow?.layer).toBe('shadow');
 
     const shadowPath = path.join(OUT, 'j1-shadow.png');
-    await page.locator('canvas').first().screenshot({ path: shadowPath });
-    expect(fs.existsSync(shadowPath)).toBe(true);
+    await screenshotCanvasNonBlank(page, shadowPath);
   });
 
   test('tutorial overlay → artifacts/j1-tutorial.png', async ({ page }) => {
@@ -78,7 +77,6 @@ test.describe('J1 shift clarity (touch)', () => {
     await page.evaluate(() => window.__RIFTBORN?.showTutorial());
     await page.waitForTimeout(350);
     const outPath = path.join(OUT, 'j1-tutorial.png');
-    await page.locator('canvas').first().screenshot({ path: outPath });
-    expect(fs.existsSync(outPath)).toBe(true);
+    await screenshotCanvasNonBlank(page, outPath);
   });
 });

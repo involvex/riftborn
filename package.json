@@ -31,6 +31,8 @@
     "test:smoke": "playwright test e2e/hub.smoke.spec.ts e2e/j1.shift.spec.ts",
     "test:smoke:headed": "playwright test e2e/hub.smoke.spec.ts e2e/j1.shift.spec.ts --headed",
     "test:smoke:hub": "playwright test e2e/hub.smoke.spec.ts",
+    "test:e2e": "playwright test",
+    "test:e2e:headed": "playwright test --headed",
     "mobile:dev": "bun run scripts/mobile-dev.mjs",
     "mobile:build": "bun run scripts/mobile-build.mjs",
     "mobile:lan": "bun run scripts/mobile-lan.mjs",

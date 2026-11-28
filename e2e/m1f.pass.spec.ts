@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import { screenshotCanvasNonBlank } from './canvasShot';
 import fs from 'node:fs';
 import path from 'node:path';
 
@@ -55,7 +56,6 @@ test.describe('M1f rift stair pass', () => {
     await page.waitForTimeout(400);
 
     const outPath = path.join(OUT, 'm1f-rift-pass.png');
-    await page.locator('canvas').first().screenshot({ path: outPath });
-    expect(fs.existsSync(outPath)).toBe(true);
+    await screenshotCanvasNonBlank(page, outPath);
   });
 });

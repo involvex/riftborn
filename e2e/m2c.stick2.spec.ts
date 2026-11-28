@@ -1,4 +1,5 @@
-import { expect, test } from '@playwright/test';
+import { test } from '@playwright/test';
+import { screenshotCanvasNonBlank } from './canvasShot';
 import fs from 'node:fs';
 import path from 'node:path';
 
@@ -25,12 +26,9 @@ test.describe('m2c stick2', () => {
     await page.keyboard.up('w');
     await page.keyboard.up('d');
     await page.waitForTimeout(500);
-    await page
-      .locator('canvas')
-      .first()
-      .screenshot({ path: path.join(outDir, 'm2c-stick-diagonal.png') });
-    expect(fs.existsSync(path.join(outDir, 'm2c-stick-diagonal.png'))).toBe(
-      true,
+    await screenshotCanvasNonBlank(
+      page,
+      path.join(outDir, 'm2c-stick-diagonal.png'),
     );
   });
 });
