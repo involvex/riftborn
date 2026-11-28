@@ -83,8 +83,10 @@ import {
   navSetOverlay,
   navSetPaused,
 } from '../core/GameNavState';
+import { netClient } from '../net/NetClient';
+import { DEFAULT_COOP_WS, normalizeCoopHostUrl } from '../systems/CoopGate';
 
-type MenuPage = 'root' | 'settings' | 'hotkeys';
+type MenuPage = 'root' | 'settings' | 'hotkeys' | 'coop';
 
 export class UIScene extends Phaser.Scene {
   private hudBars!: HudBars;
@@ -1183,8 +1185,8 @@ export class UIScene extends Phaser.Scene {
         this.renderMenuPage();
       });
       this.menuButton(top + gap * 2, 'Co-op', () => {
-        this.hideMenu();
-        gameEvents.emit('ui:toggleCoop', {});
+        this.menuPage = 'coop';
+        this.renderMenuPage();
       });
       this.menuButton(top + gap * 3, 'Back to title', () => {
         gameState.persist();
@@ -1400,6 +1402,61 @@ export class UIScene extends Phaser.Scene {
         }
         const btn = this.menuButton(y, row.label, row.onClick);
         btn.setX(x);
+      });
+      return;
+    }
+
+    if (this.menuPage === 'coop') {
+      this.menuTitle.setText('Co-op');
+      const rs = getAppliedRenderScale();
+      const touch = shouldShowTouchControls();
+      const saved = settingsStore.get().coopHostUrl.trim();
+      const display =
+        normalizeCoopHostUrl(saved) || `(auto) ${DEFAULT_COOP_WS}`;
+      const connected = netClient.connected;
+      const urlText = this.add
+        .text(0, touch ? -70 : -90, display, {
+          fontFamily: 'Consolas, monospace',
+          fontSize: `${Math.max(11, Math.round(13 * rs))}px`,
+          color: '#c8c0b0',
+          align: 'center',
+          wordWrap: { width: Math.round(this.menuBg.width * 0.85) },
+        })
+        .setOrigin(0.5);
+      this.menuBody.add(urlText);
+      const hint = this.add
+        .text(
+          0,
+          touch ? -40 : -50,
+          'LAN: paste host PC URL · leave empty for auto',
+          {
+            fontFamily: 'Georgia, serif',
+            fontSize: `${Math.max(10, Math.round(12 * rs))}px`,
+            color: '#8a8494',
+          },
+        )
+        .setOrigin(0.5);
+      this.menuBody.add(hint);
+      let y = touch ? -5 : 0;
+      this.menuButton(y, 'Edit host URL', () => {
+        const current =
+          settingsStore.get().coopHostUrl.trim() || DEFAULT_COOP_WS;
+        const next = window.prompt('Co-op host WebSocket URL', current);
+        if (next === null) return;
+        settingsStore.save({
+          coopHostUrl: normalizeCoopHostUrl(next),
+        });
+        this.renderMenuPage();
+      });
+      y += touch ? 36 : 44;
+      this.menuButton(y, connected ? 'Leave co-op' : 'Connect', () => {
+        this.hideMenu();
+        gameEvents.emit('ui:toggleCoop', {});
+      });
+      y += touch ? 36 : 44;
+      this.menuButton(y, 'Back', () => {
+        this.menuPage = 'root';
+        this.renderMenuPage();
       });
       return;
     }

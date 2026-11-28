@@ -23,7 +23,7 @@ Open http://localhost:5173 — create a **Warrior / Mystic / Mage**.
 bun run dev:all
 ```
 
-In-game press **P**. If port `8787` is busy the server auto-picks the next free port and writes `public/coop-port.json` for the client.
+In-game: Pause → **Co-op** (or **P**) — set a host WebSocket URL for LAN devices (`ws://<pc-ip>:8787`). If port `8787` is busy the server auto-picks the next free port and writes `public/coop-port.json` (prefers a LAN address).
 
 ### Desktop (Electron)
 

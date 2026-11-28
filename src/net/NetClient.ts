@@ -1,13 +1,16 @@
 import type { CharacterSave } from '../types/save';
 import { gameState } from '../systems/GameState';
+import { settingsStore } from '../core/SettingsStore';
+import { DEFAULT_COOP_WS, normalizeCoopHostUrl } from '../systems/CoopGate';
 
 export type NetMessage =
   | { type: 'welcome'; playerId: string; host: boolean }
   | {
       type: 'state';
       players: NetPlayer[];
-      enemies: NetEnemy[];
-      nodes: NetNode[];
+      /** Legacy — server no longer sends these (I4). */
+      enemies?: NetEnemy[];
+      nodes?: NetNode[];
     }
   | { type: 'chat'; from: string; text: string }
   | {
@@ -51,7 +54,8 @@ type Listener = (msg: NetMessage) => void;
 
 /**
  * Thin WebSocket client for self-hosted co-op.
- * Default server: ws://localhost:8787
+ * Resolve order: `__RIFTBORN_WS__` → settings `coopHostUrl` →
+ * `/coop-port.json` → `DEFAULT_COOP_WS`.
  */
 export class NetClient {
   private ws: WebSocket | null = null;
@@ -64,10 +68,12 @@ export class NetClient {
     return () => this.listeners.delete(fn);
   }
 
-  async resolveUrl(fallback = 'ws://127.0.0.1:8787'): Promise<string> {
+  async resolveUrl(fallback = DEFAULT_COOP_WS): Promise<string> {
     const injected = (window as unknown as { __RIFTBORN_WS__?: string })
       .__RIFTBORN_WS__;
     if (injected) return injected;
+    const saved = normalizeCoopHostUrl(settingsStore.get().coopHostUrl);
+    if (saved) return saved;
     try {
       const res = await fetch('/coop-port.json', { cache: 'no-store' });
       if (res.ok) {

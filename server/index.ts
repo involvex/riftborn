@@ -1,16 +1,18 @@
 /**
  * Riftborn self-hosted co-op server (max 4 players).
- * Authoritative movement + session reward writeback tokens.
+ * Authoritative player positions + session reward writeback tokens.
+ * Hub layout seed matches the client (`generateHub(42)`).
  *
  * Run: bun run server
- * Client: press P in-game to connect to ws://127.0.0.1:8787
+ * Client: Pause → Co-op (or P) — paste LAN URL if not on the host machine.
  */
 
 import type { ServerWebSocket } from 'bun';
 import { clampHubCoord, generateHub, HUB_SPAWN } from '../src/world/MapGen';
-import enemiesData from '../src/data/enemies.json';
-import nodesData from '../src/data/nodes.json';
-import loottables from '../src/data/loottables.json';
+import { advertiseWs } from './lanHosts';
+
+/** Must match WorldScene hub seed so layout stays aligned. */
+const HUB_SEED = 42;
 
 const PORT = Number(process.env.PORT ?? 8787);
 const MAX_PLAYERS = 4;
@@ -43,83 +45,12 @@ type ClientData = {
   joinedAt: number;
 };
 
-type EnemyState = {
-  id: string;
-  defId: string;
-  x: number;
-  y: number;
-  hp: number;
-  maxHp: number;
-  alive: boolean;
-};
-
-type NodeState = {
-  id: string;
-  defId: string;
-  x: number;
-  y: number;
-  hp: number;
-  depleted: boolean;
-};
-
-const enemies = enemiesData as Record<
-  string,
-  {
-    hp: number;
-    damage: number;
-    speed: number;
-    attackRange: number;
-    xp: number;
-    lootTable: string;
-  }
->;
-const nodes = nodesData as Record<
-  string,
-  { hp: number; drops: { itemId: string; qtyMin: number; qtyMax: number }[] }
->;
-const tables = loottables as Record<
-  string,
-  {
-    rolls: { itemId: string; chance: number; qtyMin: number; qtyMax: number }[];
-  }
->;
-
 const clients = new Map<ServerWebSocket<ClientData>, ClientData>();
-let enemiesState: EnemyState[] = [];
-let nodesState: NodeState[] = [];
 let rewardSeq = 0;
 
 function resetWorld(): void {
-  const layout = generateHub(99);
-  enemiesState = [];
-  nodesState = [];
-  let ei = 0;
-  let ni = 0;
-  for (const pack of layout.packs) {
-    for (let i = 0; i < pack.count; i++) {
-      const def = enemies[pack.enemyId] ?? enemies.shade;
-      enemiesState.push({
-        id: `e${ei++}`,
-        defId: pack.enemyId,
-        x: pack.x + (Math.random() - 0.5) * 2,
-        y: pack.y + (Math.random() - 0.5) * 2,
-        hp: def.hp,
-        maxHp: def.hp,
-        alive: true,
-      });
-    }
-  }
-  for (const n of layout.nodes) {
-    const def = nodes[n.defId];
-    nodesState.push({
-      id: `n${ni++}`,
-      defId: n.defId,
-      x: n.x,
-      y: n.y,
-      hp: def?.hp ?? 30,
-      depleted: false,
-    });
-  }
+  // Align with client hub; packs/nodes stay local-only (I4 — no unused broadcast).
+  generateHub(HUB_SEED);
 }
 
 resetWorld();
@@ -133,129 +64,6 @@ function broadcast(obj: unknown): void {
       /* ignore */
     }
   }
-}
-
-function rollLoot(tableId: string): { itemId: string; qty: number }[] {
-  const table = tables[tableId];
-  if (!table) return [];
-  const out: { itemId: string; qty: number }[] = [];
-  for (const roll of table.rolls) {
-    if (Math.random() > roll.chance) continue;
-    const qty =
-      roll.qtyMin + Math.floor(Math.random() * (roll.qtyMax - roll.qtyMin + 1));
-    if (qty > 0) out.push({ itemId: roll.itemId, qty });
-  }
-  return out;
-}
-
-function grantTo(
-  client: ClientData,
-  xp: number,
-  items: { itemId: string; qty: number }[],
-): void {
-  client.sessionXp += xp;
-  for (const it of items) {
-    client.sessionItems.set(
-      it.itemId,
-      (client.sessionItems.get(it.itemId) ?? 0) + it.qty,
-    );
-  }
-}
-
-function tick(dt: number): void {
-  for (const client of clients.values()) {
-    const len = Math.hypot(client.dx, client.dy) || 1;
-    if (client.dx || client.dy) {
-      client.x += (client.dx / len) * 4.2 * dt;
-      client.y += (client.dy / len) * 4.2 * dt;
-      client.x = clampHubCoord(client.x);
-      client.y = clampHubCoord(client.y);
-    }
-    client.attackCd = Math.max(0, client.attackCd - dt);
-
-    if (client.attack && client.attackCd <= 0) {
-      client.attackCd = 0.35;
-      const dmg = 8 + Math.floor(client.name.length * 0.2);
-      for (const enemy of enemiesState) {
-        if (!enemy.alive) continue;
-        const dist = Math.hypot(enemy.x - client.x, enemy.y - client.y);
-        if (dist > 1.3) continue;
-        enemy.hp -= dmg;
-        if (enemy.hp <= 0) {
-          enemy.alive = false;
-          const def = enemies[enemy.defId] ?? enemies.shade;
-          grantTo(client, def.xp, rollLoot(def.lootTable));
-        }
-      }
-    }
-
-    if (client.gather) {
-      for (const node of nodesState) {
-        if (node.depleted) continue;
-        const dist = Math.hypot(node.x - client.x, node.y - client.y);
-        if (dist > 1.4) continue;
-        node.hp -= 10;
-        if (node.hp <= 0) {
-          node.depleted = true;
-          const def = nodes[node.defId];
-          if (def) {
-            const drops: { itemId: string; qty: number }[] = [];
-            for (const d of def.drops) {
-              const qty =
-                d.qtyMin +
-                Math.floor(Math.random() * (d.qtyMax - d.qtyMin + 1));
-              if (qty > 0) drops.push({ itemId: d.itemId, qty });
-            }
-            grantTo(client, 0, drops);
-          }
-        }
-        break;
-      }
-    }
-
-    client.attack = false;
-    client.gather = false;
-    client.skill = false;
-  }
-
-  // Simple chase AI toward nearest player
-  for (const enemy of enemiesState) {
-    if (!enemy.alive) continue;
-    const def = enemies[enemy.defId] ?? enemies.shade;
-    let nearest: ClientData | null = null;
-    let best = Infinity;
-    for (const c of clients.values()) {
-      const d = Math.hypot(c.x - enemy.x, c.y - enemy.y);
-      if (d < best) {
-        best = d;
-        nearest = c;
-      }
-    }
-    if (!nearest || best > 6) continue;
-    if (best < (def.attackRange ?? 1)) {
-      nearest.hp = Math.max(0, nearest.hp - def.damage * dt * 0.5);
-    } else {
-      const dx = nearest.x - enemy.x;
-      const dy = nearest.y - enemy.y;
-      const len = Math.hypot(dx, dy) || 1;
-      enemy.x += (dx / len) * def.speed * dt;
-      enemy.y += (dy / len) * def.speed * dt;
-    }
-  }
-
-  broadcast({
-    type: 'state',
-    players: [...clients.values()].map((c) => ({
-      id: c.id,
-      name: c.name,
-      x: c.x,
-      y: c.y,
-      hp: c.hp,
-      maxHp: c.maxHp,
-    })),
-    enemies: enemiesState,
-    nodes: nodesState,
-  });
 }
 
 function issueRewards(
@@ -276,6 +84,35 @@ function issueRewards(
       items,
     }),
   );
+}
+
+function tick(dt: number): void {
+  for (const client of clients.values()) {
+    const len = Math.hypot(client.dx, client.dy) || 1;
+    if (client.dx || client.dy) {
+      client.x += (client.dx / len) * 4.2 * dt;
+      client.y += (client.dy / len) * 4.2 * dt;
+      client.x = clampHubCoord(client.x);
+      client.y = clampHubCoord(client.y);
+    }
+    client.attackCd = Math.max(0, client.attackCd - dt);
+    // Attack / gather stay local on each client — hub co-op syncs ghosts only.
+    client.attack = false;
+    client.gather = false;
+    client.skill = false;
+  }
+
+  broadcast({
+    type: 'state',
+    players: [...clients.values()].map((c) => ({
+      id: c.id,
+      name: c.name,
+      x: c.x,
+      y: c.y,
+      hp: c.hp,
+      maxHp: c.maxHp,
+    })),
+  });
 }
 
 const websocketHandlers = {
@@ -378,10 +215,12 @@ function startServer(preferredPort: number) {
             },
           });
           if (ok) return undefined;
+          const { ws, lan } = advertiseWs(port);
           return new Response(
             JSON.stringify({
               name: 'Riftborn co-op',
-              ws: `ws://127.0.0.1:${port}`,
+              ws,
+              lan,
               maxPlayers: MAX_PLAYERS,
             }),
             { headers: { 'content-type': 'application/json' } },
@@ -390,9 +229,11 @@ function startServer(preferredPort: number) {
         websocket: websocketHandlers,
       });
 
+      const { ws, lan } = advertiseWs(server.port);
       const info = {
         port: server.port,
-        ws: `ws://127.0.0.1:${server.port}`,
+        ws,
+        lan,
         updatedAt: new Date().toISOString(),
       };
       try {
@@ -400,7 +241,11 @@ function startServer(preferredPort: number) {
       } catch {
         /* optional for clients */
       }
-      console.log(`Riftborn co-op listening on ${info.ws}`);
+      console.log(`Riftborn co-op listening on ${ws}`);
+      console.log(`  loopback: ws://127.0.0.1:${server.port}`);
+      for (const url of info.lan) {
+        console.log(`  LAN:      ${url}`);
+      }
       if (port !== preferredPort) {
         console.log(`(port ${preferredPort} was busy — using ${port} instead)`);
       }

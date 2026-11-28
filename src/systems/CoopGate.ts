@@ -5,6 +5,23 @@
 
 export const COOP_PROTOTYPE = true;
 
+/** Default loopback when no setting / discovery file is present. */
+export const DEFAULT_COOP_WS = 'ws://127.0.0.1:8787';
+
+/**
+ * Normalize a typed host URL for WebSocket connect.
+ * Empty → '' (caller falls through to discovery / default).
+ * Bare `host:port` → `ws://host:port`. `http(s)` → `ws(s)`.
+ */
+export function normalizeCoopHostUrl(raw: string): string {
+  const t = raw.trim();
+  if (!t) return '';
+  if (/^wss?:\/\//i.test(t)) return t;
+  if (/^https:\/\//i.test(t)) return `wss://${t.slice('https://'.length)}`;
+  if (/^http:\/\//i.test(t)) return `ws://${t.slice('http://'.length)}`;
+  return `ws://${t}`;
+}
+
 export function coopJoinBlockedReason(inRift: boolean): string | null {
   if (!COOP_PROTOTYPE) return null;
   if (inRift) return 'Leave the rift before joining co-op (hub prototype)';
