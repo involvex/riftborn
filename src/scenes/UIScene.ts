@@ -57,6 +57,7 @@ import { computeGameTouchLayout } from '../ui/TouchLayout';
 import { shouldShowTouchControls, TouchControls } from '../ui/TouchControls';
 import { TutorialOverlay } from '../ui/TutorialOverlay';
 import { FirstSessionHint } from '../ui/FirstSessionHint';
+import { resetIntroProgress } from '../systems/IntroReplay';
 import {
   hasCompletedFirstSession,
   markFirstSessionCompleted,
@@ -467,7 +468,8 @@ export class UIScene extends Phaser.Scene {
         this.syncNavFlags();
       }),
       gameEvents.on('ui:showTutorial', () => {
-        this.tutorial.show();
+        this.closeAllPanels();
+        this.tutorial.replay();
         this.syncNavFlags();
       }),
       gameEvents.on('ui:dismissTutorial', () => {
@@ -1339,6 +1341,17 @@ export class UIScene extends Phaser.Scene {
           onClick: () => {
             this.menuPage = 'hotkeys';
             this.renderMenuPage();
+          },
+        },
+        {
+          label: 'Replay intro',
+          onClick: () => {
+            resetIntroProgress();
+            this.firstSessionMoved = false;
+            this.firstSessionKilled = false;
+            this.firstSessionDebugStep = null;
+            this.firstSessionHint.setStep(null);
+            gameEvents.emit('ui:showTutorial', {});
           },
         },
         {

@@ -157,7 +157,9 @@ Touch (`/?touch=1` or coarse/small): virtual stick · ATK · E · DASH · SHIFT 
 - `bun run sprites:process` runs AI sheets, LPC enemies, combat-frame
   append, hero 8-dir facing, then particles.
 - First-run tutorial: `TutorialOverlay` (`localStorage` key
-  `riftborn.tutorial.v2`); skipped on `/?smoke=1`.
+  `riftborn.tutorial.v2`); skipped on `/?smoke=1`. Replay from
+  Esc → Settings → **Replay intro** (`resetIntroProgress` clears
+  tutorial + `riftborn.firstsession.v1`, then `ui:showTutorial`).
 
 ## Coding conventions
 
@@ -180,5 +182,5 @@ Save version is in `SaveStore` / `CharacterSave` (v5). Mid-rift runs persist via
 
 ## Current work
 
-See [`ROADMAP.md`](ROADMAP.md) — **Now** is Replay intro (I6); feature
+See [`ROADMAP.md`](ROADMAP.md) — **Now** is EOL config (I1); feature
 backlog under **Later**.

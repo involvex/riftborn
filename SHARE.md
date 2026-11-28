@@ -3,6 +3,27 @@
 Send **one** build + this page. Ask for **one** top complaint — that
 becomes the next evening’s only task.
 
+## Share draft (Replay intro)
+
+### Audience
+
+Friends who dismissed the welcome tips and want them again.
+
+### Announcement
+
+Missed the first-run tips? Esc → Settings → Replay intro brings the
+welcome modal back (and restarts the short coach banner after you
+dismiss it). Works on desktop and touch.
+
+### Free channels (pick one)
+
+- Discord / DM with the portable EXE or Store beta link
+- GitHub release notes when this lands on `main`
+
+### Do not
+
+- Paid ads, boosts, or new SaaS accounts
+
 ## Share draft (hero 8-dir)
 
 ### Audience

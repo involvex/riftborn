@@ -28,6 +28,15 @@ export function markFirstSessionCompleted(): void {
   }
 }
 
+/** Clear so Settings → Replay intro can restart the coach banner. */
+export function clearFirstSessionCompleted(): void {
+  try {
+    localStorage.removeItem(FIRST_SESSION_KEY);
+  } catch {
+    // ignore quota / private mode
+  }
+}
+
 /**
  * Pure step selection for the non-blocking first-session hint banner.
  * Returns `null` when no hint should be shown, `'done'` when the flow is
