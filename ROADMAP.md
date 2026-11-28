@@ -76,9 +76,9 @@ Solo evenings, one shippable slice at a time. Prefer **feel → content → syst
 
 Post-Store feature track. One unchecked slice at a time (`/ship`).
 
-| #   | Slice                 | Why it matters                                      | Done when                                                                                                     |
-| --- | --------------------- | --------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
-| ☐   | **Replay intro (I6)** | Tutorial only reopens from the debug API            | Settings row clears `riftborn.tutorial.v2` (+ first-session key) and emits `ui:showTutorial`; desktop + touch |
+| #   | Slice                 | Why it matters                           | Done when                                                                                                     |
+| --- | --------------------- | ---------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
+| ☐   | **Replay intro (I6)** | Tutorial only reopens from the debug API | Settings row clears `riftborn.tutorial.v2` (+ first-session key) and emits `ui:showTutorial`; desktop + touch |
 
 Desktop chrome (title/taskbar, bounds, F11 + settings path) is **shipped** above;
 tutorial replay remains as **I6**. Hero 8-dir sheets are **shipped**.
