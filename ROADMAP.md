@@ -45,7 +45,7 @@ Solo evenings, one shippable slice at a time. Prefer **feel → content → syst
 - **Biome pack identity** — opening packs per biome (grind / kite / rush / poke)
 - **Boss signature beats** — Ash hop / Crystal wail / Grove charge / Salt volley
 - **Full rift resume** — mid-rift reload restores seed/mod/progress/foes/loot/SHIFT/fog/skill CDs/barrier/shrine buff (`riftRun` v5)
-- **8-dir facing** — screen octant + lean + slash aim; sheets remain 2-dir flipX
+- **8-dir facing** — screen octant + lean + slash aim; LPC trash has 4 facing rows, heroes stay 1-row
 - **Share-ready** — `SHARE.md` + `docs/ITCH_PAGE.md` current loop; co-op hub toasts (`CoopGate`)
 - **Optional rift champion** — side-room elite off the boss path; skip freely; kill pays this-run buff + magic gear (not kill-goal)
 - **D3+ kill quota ~60%** — skip trash / take elite / fight boss is a real route (D1–D2 stay ~80%+)
@@ -65,6 +65,66 @@ Solo evenings, one shippable slice at a time. Prefer **feel → content → syst
 - **Unique boss / elite sprites** — Crystal / Grove / Salt bosses + Ash Scout / Ash Bramble / Rift Mender own sheets
 - **Microsoft Store tester build** — AppX via `bun run build:msstore`; hidden listing + promo codes live ([9PK475MX7JFQ](https://apps.microsoft.com/store/detail/9PK475MX7JFQ)); CI token scope + `openExternal` allowlist
 - **Store tester triage (v0.2.2)** — skip AUMID override under `process.windowsStore`; restore fullscreen setting on boot; Store URL on site + RELEASE; package update path documented
+- **2× floor tiles + biome floors** — 256×128 iso PNGs; `TILE_ART_SCALE` 0.25; plaza warm/wet variants
+- **Branded chrome** — splash/menu art, in-scene menu crest, hold-to-mine, hub floor chunks
+- **Audio sliders** — master / SFX / music volume + mute; music restores correctly after mute
+- **Share announcement** — Store tester draft + free channels live in `SHARE.md`
+- **Desktop chrome baseline** — window title + AUMID/taskbar grouping, persisted/clamped bounds, F11 and Settings fullscreen, first-run tutorial overlay with debug replay
+
+## Now
+
+Post-Store feature track. One unchecked slice at a time (`/ship`).
+
+| #   | Slice                 | Why it matters                                      | Done when                                                                                                     |
+| --- | --------------------- | --------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
+| ☐   | **Hero 8-dir sheets** | Heroes still 1-row flip while trash has facing rows | Warrior/Mystic/Mage idle+walk multi-row sheets in `game/`; attack can stay synth                              |
+| ☐   | **Replay intro (I6)** | Tutorial only reopens from the debug API            | Settings row clears `riftborn.tutorial.v2` (+ first-session key) and emits `ui:showTutorial`; desktop + touch |
+
+Desktop chrome (title/taskbar, bounds, F11 + settings path) is **shipped** above;
+the only open part was tutorial replay, now tracked as **I6**.
+
+## Next — verification & infra
+
+Keep the green gate honest; these are one-session slices, no new frameworks.
+
+| #   | Slice                   | Why it matters                                    | Done when                                                                                                                             |
+| --- | ----------------------- | ------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| I1  | **EOL config fix**      | Windows checkout has CRLF; Prettier expects LF    | `.gitattributes` (`* text=auto eol=lf`) + Prettier `endOfLine: auto`; `format:check` green on Windows **and** Linux; no mass reformat |
+| I2  | **Non-mutating verify** | `verify` ran `format` and hid CI failures         | `bun run verify` = format:check → typecheck → lint → unit → build → smoke; read-only except build artifacts                           |
+| I3  | **Full e2e suite**      | 13 of 15 specs never run; blank canvas can pass   | `test:e2e` script for all 23 tests + CI job; screenshot specs assert non-blank canvas                                                 |
+| I4  | **Co-op host URL**      | `ws://127.0.0.1` fails on remote devices          | Pause → Co-op accepts a host URL; render or stop unused enemy/node broadcasts; align hub seed (99 vs 42)                              |
+| I5  | **CI build + mobile**   | CI never bundled prod or checked the APK shell    | CI runs `bun run build` + `bun check -p mobile`; both green                                                                           |
+| I6  | **Replay intro**        | Intro cannot be reopened by a player              | Settings row resets tutorial + first-session keys, shows modal on desktop and touch                                                   |
+| I7  | **Version + tag**       | Root 0.2.2 / mobile 0.2.0 / Gradle code 1; no tag | One version source (root → mobile/Gradle) and a `v0.2.2` tag so `release.yml` can fire                                                |
+
+## Next — player-facing quick wins
+
+All extend existing systems; each lands with a pure helper + unit test and, where visual, a touch screenshot.
+
+| #   | Slice                   | Why it matters                               | Done when                                                                                     |
+| --- | ----------------------- | -------------------------------------------- | --------------------------------------------------------------------------------------------- |
+| P1  | **Wire shard reroll**   | `AffixReroll` is complete but unreachable    | "Reroll · 1 shard" button on selected gear in bag; shards spent, affixes rolled, save + toast |
+| P2  | **`P#` pressure HUD**   | Pressure changes difficulty but is invisible | `pressureHudLabel` shown on rift HUD + clear card (with run time)                             |
+| P3  | **Boss HP strip**       | Boss fight has no readable HP bar            | Boss name + HP% bar in HUD, hidden on death/exit; `isBoss` added to debug snapshot            |
+| P4  | **Bag filter chips**    | 48 slots with no quick rarity view           | All / Gear / Mats / Magic+ / Set chips + rarity sort; touch-safe cells                        |
+| P5  | **Auto-sell threshold** | Junk toggle is all-or-nothing                | Off / Common / Magic+ setting, migrating the old boolean                                      |
+| P6  | **Save export/import**  | Local-only saves have no backup              | JSON download/upload with `migrateCharacterSave` validation + overwrite confirm               |
+| P7  | **Show FPS toggle**     | FPS readout is always on                     | Setting defaults Off, persists, reachable in Settings                                         |
+| P8  | **Hotkeys reset bug**   | Reset wipes _all_ settings, not just keys    | Hotkeys page resets only `hotkeys` via partial save + unit test                               |
+| P9  | **Music fallback**      | SFX have WebAudio fallback, music does not   | Music still plays (or degrades cleanly) when the Phaser cache misses                          |
+| P10 | **Gate debug API**      | Cheat hooks ship to every player             | `installRiftbornDebug` only under `import.meta.env.DEV` or `?smoke=1`; smoke still works      |
+
+Skip inventing new frameworks — extend `WorldArt` / `WorldScene` / `Npc` /
+`LootChest` / `public/assets/props/`.
+
+## Release-gated
+
+Need credentials, an external account, or a human decision — not evening slices.
+
+- **Android signing** — implement documented `KEYSTORE_*` secrets in Gradle + `release.yml`, or label the debug-signed APK tester-only
+- **Store ops** — centralize the hardcoded product ID, add package aliases for `msstore-*` scripts, fix `IsGameDvrEnabled` drift
+- **itch desktop parity** — web ZIP exists; add a portable-EXE channel with version tags
+- **Public Store discoverability / flights** — only when stop-acquisition is intentionally lifted
 
 ## Done — feel & look (core loop)
 
@@ -89,7 +149,7 @@ earn their keep in feel.
 | --- | -------------------------- | ----------------------------------------- | -------------------------------------------------------------------- |
 | ✓   | **Biome pack identity**    | Biomes tint floors; packs fight alike     | Shipped: opening packs (grind / kite / rush / poke) + skewed mixes   |
 | ✓   | **Boss signature beats**   | Arena looks special; fight is one pattern | Shipped: hop / wail / charge / volley on shared beat cadence         |
-| ✓   | **Set chase readability**  | Loot pops; keeping gear is thin           | Shipped: missing-slot drop bias + HUD/bag “need X” from 1pc          |
+| ✓   | **Set chase readability**  | Loot pops; keeping gear is thin           | Shipped: missing-slot drop bias + HUD/bag "need X" from 1pc          |
 | ✓   | **Rare set variety**       | One set per class; set armor too common   | Alternate set per class; set drops ~12–28%; chase owned incomplete   |
 | ✓   | **Set drop juice**         | Rare sets still felt like generic loot    | Magic+ floor on set armor; chase toast names set / slot / need       |
 | ✓   | **Set bonus UI (C)**       | Active sets only; other kit invisible     | Both class kits; ✓/· 2pc·4pc; need slots from bag + worn             |
@@ -127,20 +187,13 @@ In-rift choice, SHIFT fight, build fork, map ping, and named drop are in.
 | ✓   | **Champion loot line**        | Spur buff alone is soft payoff          | Drop renamed `Champion's …`; prize toast on kill                                          |
 | ✓   | **Rift clear names the spur** | Clear card skipped the Elite choice     | Clear / death / abandon line says Elite slain or skipped; names `Champion's …` if dropped |
 
-## Now
-
-Post-Store feature track. One unchecked slice at a time (`/ship`).
-
-| #   | Slice                     | Why it matters                                      | Done when                                                                                     |
-| --- | ------------------------- | --------------------------------------------------- | --------------------------------------------------------------------------------------------- |
-| ☐   | **Hero 8-dir sheets**     | Heroes still 1-row flip while trash has facing rows | Warrior/Mystic/Mage idle+walk multi-row sheets in `game/`; attack can stay synth              |
-| ☐   | **Desktop chrome polish** | Store players live in Electron, not the browser tab | Window title/taskbar, first-run tutorial skip/restore, F11 + settings path obvious on desktop |
-
 ## Done — 8-dir sprite rows
 
-| #   | Slice                 | Why it matters                           | Done when                                                                                      |
-| --- | --------------------- | ---------------------------------------- | ---------------------------------------------------------------------------------------------- |
-| ✓   | **8-dir sprite rows** | Octant logic shipped; sheets still flipX | Multi-row anim keys + 1-row flip fallback; LPC shade/crawler/wisp/bat rebuilt as 4 facing rows |
+Octant logic and LPC facing rows shipped; hero sheets are the remaining `Now` slice.
+
+| #   | Slice                 | Why it matters                                | Done when                                                                                      |
+| --- | --------------------- | --------------------------------------------- | ---------------------------------------------------------------------------------------------- |
+| ✓   | **8-dir sprite rows** | Octant logic shipped; hero sheets still flipX | Multi-row anim keys + 1-row flip fallback; LPC shade/crawler/wisp/bat rebuilt as 4 facing rows |
 
 ## Done — playtest combat nits
 
@@ -160,12 +213,18 @@ Post-Store feature track. One unchecked slice at a time (`/ship`).
 | --- | --------------------------- | --------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
 | ✓   | **Unique boss / elite art** | Biome bosses + Ash Scout / Bramble / Mender shared trash sheets | Distinct `spr_*` sheets; four boss keys unique; painted idles via Bing → `process-sprites` synthOnly |
 
-Skip inventing new frameworks — extend `WorldArt` / `WorldScene` /
-`Npc` / `LootChest` / `public/assets/props/`.
+## Done — systems polish
 
-## Later (feature backlog)
+| #   | Slice                | Why it matters                | Done when                                                                                                                         |
+| --- | -------------------- | ----------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| ✓   | **Full rift resume** | Reload mid-rift wiped the run | Shipped: `riftRun` v5 snapshot (seed/mod/foes/loot/SHIFT/fog/skill CDs/barrier/shrine buff); HubResume plaza only if blob corrupt |
+| ✓   | **8-dir facing**     | Only screen-X flip read flat  | Shipped: octant + lean + slash aim vector; LPC trash 4 rows, hero/boss sheets still flipX                                         |
+| ✓   | **Share-ready**      | Friend build + copy stale     | Shipped: SHARE + itch copy (resume/biomes/sets/co-op); leave/connect hub toasts                                                   |
 
-Ordered roughly by leverage for a solo ARPG after the Store tester loop.
+## Later (parked, with why)
+
+Ordered roughly by leverage for a solo ARPG; each needs more than one evening
+or an external decision.
 
 ### Content & chase
 
@@ -182,31 +241,21 @@ Ordered roughly by leverage for a solo ARPG after the Store tester loop.
 
 ### Co-op & platforms
 
-- [ ] Share Store tester build: free announcement draft in `SHARE.md`
-- Co-op rifts + authoritative loot / gear sync (hub sandbox stays prototype)
-- Package flight for riskier Store builds (after stable tester baseline)
-- Public Store discoverability (only when stop-acquisition is intentionally lifted)
-- App Store packaging for Expo shell
-- itch.io desktop channel parity with Store version tags
+- Co-op rifts + authoritative loot / gear sync (hub sandbox stays prototype until I4 lands)
+- itch.io desktop channel parity with Store version tags (see Release-gated)
 - Follow-up Store triage from promo redeemers (crash/blocker list → next package)
+- App Store packaging for Expo shell (no `ios/` or EAS config yet)
 
 ### Systems / long shots
 
 - Seasons, trading, seamless open world
 - Cloud save / Microsoft account sync (only if Store demands it)
 
-## Done — systems polish
-
-| #   | Slice                | Why it matters                | Done when                                                                                                                         |
-| --- | -------------------- | ----------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
-| ✓   | **Full rift resume** | Reload mid-rift wiped the run | Shipped: `riftRun` v5 snapshot (seed/mod/foes/loot/SHIFT/fog/skill CDs/barrier/shrine buff); HubResume plaza only if blob corrupt |
-| ✓   | **8-dir facing**     | Only screen-X flip read flat  | Shipped: octant + lean + slash aim vector; sheets still 2-dir flip (hit/death frames already derived)                             |
-| ✓   | **Share-ready**      | Friend build + copy stale     | Shipped: SHARE + itch copy (resume/biomes/sets/co-op); leave/connect hub toasts                                                   |
-
 ## Pace guide (solo)
 
 - **1 slice / session** when tired; **2** if hot
-- Always leave a green `typecheck` + `lint` + `build`; map/POI → also `test:smoke`
+- Always leave a green `bun run verify` (format:check + typecheck + lint + unit + build + smoke); map/POI → also `test:smoke`
+- Prettier EOL config keeps Windows and Linux checks aligned — never "fix" a local CRLF warning with a mass `format` run
 - Share a portable build with one friend once a slice feels good
 
 ## Archive

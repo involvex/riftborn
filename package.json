@@ -36,7 +36,7 @@
     "mobile:lan": "bun run scripts/mobile-lan.mjs",
     "mobile:sync": "bun run scripts/mobile-sync.mjs",
     "build:itch": "bun run scripts/build-itch.mjs",
-    "verify": "bun run format && bun run typecheck && bun run lint"
+    "verify": "bun run format:check && bun run typecheck && bun run lint && bun run test && bun run build && bun run test:smoke"
   },
   "build": {
     "appId": "dev.riftborn.game",
